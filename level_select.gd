@@ -20,7 +20,7 @@ func _ready() -> void:
 	level_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	level_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	
-	# FIX: Triggers the node tree generator generation immediately on load
+	# Triggers the node tree generator generation immediately on load
 	populate_level_menu()
 
 func populate_level_menu() -> void:
@@ -60,8 +60,15 @@ func get_sorted_level_files() -> Array:
 		dir.list_dir_begin()
 		var file_name = dir.get_next()
 		while file_name != "":
-			if not dir.current_is_dir() and file_name.ends_with(".tres"):
-				files.append(LEVELS_DIR + file_name)
+			if not dir.current_is_dir():
+				# Check for standard PC text resource files
+				if file_name.ends_with(".tres"):
+					files.append(LEVELS_DIR + file_name)
+				# Check for compiled mobile files (.remap extensions)
+				elif file_name.ends_with(".tres.remap"):
+					var clean_name = file_name.replace(".remap", "")
+					files.append(LEVELS_DIR + clean_name)
+					
 			file_name = dir.get_next()
 		dir.list_dir_end()
 		
