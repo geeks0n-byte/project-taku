@@ -6,6 +6,9 @@ extends Node2D
 # Editor Debug Configuration
 @export var show_debug_tools: bool = true 
 
+# Level Progression Array (Drag & drop your .tres level resources here in the Inspector!)
+@export var levels: Array[LevelData] = []
+
 # Main Screen UI References
 @onready var level_label = $LevelLabel 
 @onready var status_label = $StatusLabel
@@ -19,6 +22,12 @@ extends Node2D
 @onready var pause_reset_button = $PauseLayer/PausePanel/ResetButton
 @onready var pause_main_menu_button = $PauseLayer/PausePanel/MainMenuButton
 @onready var pause_auto_win_button = $PauseLayer/PausePanel/AutoWinButton
+@onready var pause_how_to_play_button = $PauseLayer/PausePanel/HowToPlayButton
+
+# How To Play UI References (Inside HowToPlayLayer)
+@onready var how_to_play_panel = $HowToPlayLayer/HowToPlayPanel
+@onready var how_to_play_label = $HowToPlayLayer/HowToPlayPanel/HowToPlayLabel
+@onready var how_to_play_back_button = $HowToPlayLayer/HowToPlayPanel/BackButton
 
 # Victory Panel UI References (Inside VictoryLayer)
 @onready var victory_panel = $VictoryLayer/VictoryPanel
@@ -33,29 +42,27 @@ const CELL_SIZE = 120
 var elapsed_seconds: int = 0
 var is_game_active: bool = true
 var is_paused: bool = false 
-
-# Level Progression Variables
 var current_level_index: int = 0
-var levels: Array = []
 
 # Dictionary to hold active cell nodes: { Vector2i(x, y): CellNode }
 var board_cells = {}
-
-# Array lists to accumulate feedback messages per frame
 var error_messages = []
 
 func _ready():
-	setup_levels_data()
-	
-	# Connect Main Victory Screen Connections
+	# Verification step to ensure maps are assigned safely before game loops start
+	if levels.size() == 0:
+		push_error("No level resources assigned to the Level manager array inside the Main Inspector panel!")
+		return
+		
 	restart_button.pressed.connect(_on_restart_pressed)
 	main_menu_button.pressed.connect(_on_main_menu_pressed)
 	
-	# Connect Core Pause Menu Triggers
 	pause_button.pressed.connect(_on_pause_pressed)
 	pause_resume_button.pressed.connect(_on_resume_pressed)
 	pause_reset_button.pressed.connect(_on_reset_pressed)
 	pause_main_menu_button.pressed.connect(_on_main_menu_pressed)
+	pause_how_to_play_button.pressed.connect(_on_how_to_play_pressed)
+	how_to_play_back_button.pressed.connect(_on_how_to_play_back_pressed)
 	
 	if pause_auto_win_button:
 		pause_auto_win_button.pressed.connect(_on_auto_win_pressed)
@@ -66,31 +73,6 @@ func _ready():
 		
 	setup_ui_elements()
 	generate_board()
-
-func setup_levels_data():
-	# LEVEL 1
-	var level_1 = {
-		Vector2i(0,0): -1, Vector2i(1,0): -1, Vector2i(2,0): 2,  Vector2i(3,0): -1, Vector2i(4,0): -1, Vector2i(5,0): -1, Vector2i(6,0): -1,
-		Vector2i(0,1): -1, Vector2i(1,1): -1, Vector2i(2,1): -1, Vector2i(3,1): -1, Vector2i(4,1): 2,  Vector2i(5,1): -1, Vector2i(6,1): -1,
-		Vector2i(0,2): 2,  Vector2i(1,2): -1, Vector2i(2,2): 0,  Vector2i(3,2): -1, Vector2i(4,2): -1, Vector2i(5,2): -1,  Vector2i(6,2): -1,
-		Vector2i(0,3): -1, Vector2i(1,3): -1, Vector2i(2,3): -1, Vector2i(3,3): -1, Vector2i(4,3): -1, Vector2i(5,3): -2,  Vector2i(6,3): -1,
-		Vector2i(0,4): -1, Vector2i(1,4): -1, Vector2i(2,4): -1, Vector2i(3,4): -2,  Vector2i(4,4): -1, Vector2i(5,4): -1, Vector2i(6,4): -1,
-		Vector2i(0,5): 1,  Vector2i(1,5): -1, Vector2i(2,5): -1, Vector2i(3,5): -1, Vector2i(4,5): -1, Vector2i(5,5): 1,  Vector2i(6,5): 2,
-		Vector2i(0,6): -1, Vector2i(1,6): 2,  Vector2i(2,6): -1, Vector2i(3,6): 0,  Vector2i(4,6): -1, Vector2i(5,6): -1, Vector2i(6,6): -1,
-	}
-	
-	# LEVEL 2
-	var level_2 = {
-		Vector2i(0,0): -1, Vector2i(1,0): -1, Vector2i(2,0): -1, Vector2i(3,0): -1, Vector2i(4,0): 1,  Vector2i(5,0): -1, Vector2i(6,0): -1,
-		Vector2i(0,1): -1, Vector2i(1,1): -2, Vector2i(2,1): -1, Vector2i(3,1): 2,  Vector2i(4,1): -1, Vector2i(5,1): -1, Vector2i(6,1): -1,
-		Vector2i(0,2): 0,  Vector2i(1,2): -1, Vector2i(2,2): -1, Vector2i(3,2): -1, Vector2i(4,2): -1, Vector2i(5,2): 2,  Vector2i(6,2): -1,
-		Vector2i(0,3): -1, Vector2i(1,3): -1, Vector2i(2,3): 1,  Vector2i(3,3): -1, Vector2i(4,3): 0,  Vector2i(5,3): -1, Vector2i(6,3): -1,
-		Vector2i(0,4): -1, Vector2i(1,4): 2,  Vector2i(2,4): -1, Vector2i(3,4): -1, Vector2i(4,4): -1, Vector2i(5,4): -1, Vector2i(6,4): 0,
-		Vector2i(0,5): -1, Vector2i(1,5): -1, Vector2i(2,5): -1, Vector2i(3,5): 0,  Vector2i(4,5): -1, Vector2i(5,5): -2, Vector2i(6,5): -1,
-		Vector2i(0,6): -1, Vector2i(1,6): -1, Vector2i(2,6): -1, Vector2i(3,6): -1, Vector2i(4,6): -1, Vector2i(5,6): -1, Vector2i(6,6): 1,
-	}
-	
-	levels = [level_1, level_2]
 
 func _on_pause_pressed():
 	if not is_game_active or is_paused: return
@@ -103,6 +85,14 @@ func _on_resume_pressed():
 	is_paused = false
 	if timer_node: timer_node.start()
 	if pause_panel: pause_panel.visible = false
+
+func _on_how_to_play_pressed():
+	if pause_panel: pause_panel.visible = false
+	if how_to_play_panel: how_to_play_panel.visible = true
+
+func _on_how_to_play_back_pressed():
+	if how_to_play_panel: how_to_play_panel.visible = false
+	if pause_panel: pause_panel.visible = true
 
 func _on_reset_pressed():
 	is_paused = false
@@ -123,7 +113,7 @@ func _on_auto_win_pressed():
 	if not is_game_active: return
 	is_paused = false
 	if pause_panel: 
-		pause_panel.visible = false # Explicitly hide pause menu panel cleanly here
+		pause_panel.visible = false 
 	trigger_victory()
 
 func setup_ui_elements():
@@ -145,53 +135,107 @@ func setup_ui_elements():
 		level_label.position = Vector2(120, 120)
 		level_label.size = Vector2(400, 50)
 
-	if win_label:
-		win_label.add_theme_font_size_override("font_size", 36)
-		win_label.modulate = Color(1.0, 0.84, 0.0)
-
-	if restart_button:
-		restart_button.add_theme_font_size_override("font_size", 28)
-
-	if main_menu_button:
-		main_menu_button.text = "Main Menu"
-		main_menu_button.add_theme_font_size_override("font_size", 28)
+	var panel_size = Vector2(400, 500)
+	var square_panel_size = Vector2(400, 450)
+	var panel_pos = Vector2(340, 300)
+	var menu_button_size = Vector2(300, 60)
+	var button_center_x = (panel_size.x - menu_button_size.x) / 2 
+	var spacing_y = 80 
 
 	if pause_panel:
-		pause_panel.custom_minimum_size = Vector2(400, 450)
-		pause_panel.size = Vector2(400, 450)
-		pause_panel.position = Vector2(340, 300)
+		pause_panel.custom_minimum_size = panel_size
+		pause_panel.position = panel_pos
+		pause_panel.set_deferred("size", panel_size)
 
-	var start_y = 40
-	var spacing_y = 90
-	var p_button_size = Vector2(300, 60)
-	var center_x = (pause_panel.size.x - p_button_size.x) / 2 
+	var p_start_y = 35
 
 	if pause_resume_button:
 		pause_resume_button.text = "Resume"
 		pause_resume_button.add_theme_font_size_override("font_size", 28)
-		pause_resume_button.position = Vector2(center_x, start_y)
-		pause_resume_button.size = p_button_size
-	start_y += spacing_y
+		pause_resume_button.position = Vector2(button_center_x, p_start_y)
+		pause_resume_button.size = menu_button_size
+	p_start_y += spacing_y
 
 	if pause_reset_button:
 		pause_reset_button.text = "Reset"
 		pause_reset_button.add_theme_font_size_override("font_size", 28)
-		pause_reset_button.position = Vector2(center_x, start_y)
-		pause_reset_button.size = p_button_size
-	start_y += spacing_y
+		pause_reset_button.position = Vector2(button_center_x, p_start_y)
+		pause_reset_button.size = menu_button_size
+	p_start_y += spacing_y
+
+	if pause_how_to_play_button:
+		pause_how_to_play_button.text = "How to Play"
+		pause_how_to_play_button.add_theme_font_size_override("font_size", 28)
+		pause_how_to_play_button.position = Vector2(button_center_x, p_start_y)
+		pause_how_to_play_button.size = menu_button_size
+	p_start_y += spacing_y
 
 	if pause_main_menu_button:
 		pause_main_menu_button.text = "Main Menu"
 		pause_main_menu_button.add_theme_font_size_override("font_size", 28)
-		pause_main_menu_button.position = Vector2(center_x, start_y)
-		pause_main_menu_button.size = p_button_size
-	start_y += spacing_y
+		pause_main_menu_button.position = Vector2(button_center_x, p_start_y)
+		pause_main_menu_button.size = menu_button_size
+	p_start_y += spacing_y
 
 	if pause_auto_win_button:
 		pause_auto_win_button.text = "DEBUG: Auto-Win"
-		pause_auto_win_button.add_theme_font_size_override("font_size", 20)
-		pause_auto_win_button.position = Vector2(center_x, start_y)
-		pause_auto_win_button.size = p_button_size
+		pause_auto_win_button.add_theme_font_size_override("font_size", 28) 
+		pause_auto_win_button.position = Vector2(button_center_x, p_start_y)
+		pause_auto_win_button.size = menu_button_size
+
+	if how_to_play_panel:
+		how_to_play_panel.custom_minimum_size = panel_size
+		how_to_play_panel.position = panel_pos
+		how_to_play_panel.set_deferred("size", panel_size)
+
+	if how_to_play_label:
+		how_to_play_label.text = "RULES:\n\n1. Fill grid with 0s and 1s.\n2. Max 2 identical symbols in a row/col.\n3. Equal amount of 0s and 1s per line.\n4. Walls (-2) break lines.\n5. Jokers (2) match anything."
+		how_to_play_label.add_theme_font_size_override("font_size", 20)
+		how_to_play_label.modulate = Color(0.9, 0.9, 0.9)
+		how_to_play_label.size = Vector2(panel_size.x - 40, 320)
+		how_to_play_label.position = Vector2(20, 30)
+		how_to_play_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+		how_to_play_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+	if how_to_play_back_button:
+		how_to_play_back_button.text = "Back"
+		how_to_play_back_button.add_theme_font_size_override("font_size", 28)
+		how_to_play_back_button.position = Vector2(button_center_x, 400)
+		how_to_play_back_button.size = menu_button_size
+
+	if victory_panel:
+		victory_panel.custom_minimum_size = square_panel_size
+		victory_panel.position = panel_pos 
+		victory_panel.set_deferred("size", square_panel_size)
+
+	if win_label:
+		win_label.add_theme_font_size_override("font_size", 32) 
+		win_label.modulate = Color(1.0, 0.84, 0.0)
+		win_label.size = Vector2(square_panel_size.x, 70) 
+		win_label.position = Vector2(0, 20)
+		win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER 
+		win_label.autowrap_mode = TextServer.AUTOWRAP_WORD 
+		
+	if time_result_label:
+		time_result_label.add_theme_font_size_override("font_size", 24)
+		time_result_label.modulate = Color(0.9, 0.9, 0.9)
+		time_result_label.size = Vector2(square_panel_size.x, 40)
+		time_result_label.position = Vector2(0, 115)
+		time_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER 
+
+	var v_start_y = 210 
+
+	if restart_button:
+		restart_button.add_theme_font_size_override("font_size", 28)
+		restart_button.position = Vector2(button_center_x, v_start_y)
+		restart_button.size = menu_button_size
+	v_start_y += spacing_y
+
+	if main_menu_button:
+		main_menu_button.text = "Main Menu"
+		main_menu_button.add_theme_font_size_override("font_size", 28)
+		main_menu_button.position = Vector2(button_center_x, v_start_y)
+		main_menu_button.size = menu_button_size
 
 func _on_timer_timeout():
 	if is_game_active and not is_paused:
@@ -210,6 +254,7 @@ func get_formatted_time() -> String:
 func generate_board():
 	if victory_panel: victory_panel.visible = false
 	if pause_panel: pause_panel.visible = false
+	if how_to_play_panel: how_to_play_panel.visible = false
 	
 	elapsed_seconds = 0
 	is_game_active = true
@@ -220,8 +265,13 @@ func generate_board():
 	
 	grid_container.position = Vector2(120, 180) 
 	
+	# Extract data directly from the dynamic resource object instead of raw dictionaries
+	var current_level_resource = levels[current_level_index]
+	var active_level_data = current_level_resource.layout
+	var display_num = current_level_resource.level_number
+	
 	if level_label:
-		level_label.text = "Level %d" % [current_level_index + 1]
+		level_label.text = "Level %d" % display_num
 	
 	if status_label:
 		status_label.text = "Fill the board following the rules!"
@@ -234,8 +284,6 @@ func generate_board():
 	for child in grid_container.get_children():
 		child.queue_free()
 	board_cells.clear()
-
-	var active_level_data = levels[current_level_index]
 
 	for coord in active_level_data:
 		var starting_state = active_level_data[coord]
@@ -290,21 +338,20 @@ func trigger_victory():
 	status_label.modulate = Color(1.0, 0.84, 0.0)
 	status_label.text = "Puzzle Solved!"
 	
+	var display_num = levels[current_level_index].level_number
+	
 	if current_level_index < levels.size() - 1:
-		if win_label: win_label.text = "Level Completed!"
+		if win_label: win_label.text = "Level %d Completed!" % display_num
 		restart_button.text = "Next Level"
 	else:
-		if win_label: win_label.text = "All Puzzles Solved! You Win!"
+		if win_label: win_label.text = "All Levels %d Completed!\nYou Win!" % display_num
 		restart_button.text = "Play Again"
 		
 	if time_result_label:
-		time_result_label.add_theme_font_size_override("font_size", 28)
 		time_result_label.text = "Completion Time: %s" % get_formatted_time()
 		
-	victory_panel.custom_minimum_size = Vector2(600, 400)
-	victory_panel.size = Vector2(600, 400)
-	victory_panel.position = Vector2(60, 400)
-	victory_panel.visible = true
+	if victory_panel:
+		victory_panel.visible = true
 
 func check_win_condition(all_lines_valid: bool) -> bool:
 	var board_full = true

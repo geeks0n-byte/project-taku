@@ -60,6 +60,11 @@ text = "Options"
 layout_mode = 2
 text = "Exit"
 
+[node name="LevelEditor" type="Button" parent="MarginContainer/MainLayout/ButtonList" unique_id=130638756]
+layout_mode = 2
+text = "Level Editor"
+
 [connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/StartButton" to="." method="_on_start_button_pressed"]
 [connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/Options" to="." method="_on_options_pressed"]
 [connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/Exit" to="." method="_on_exit_pressed"]
+[connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/LevelEditor" to="." method="_on_level_editor_pressed"]
