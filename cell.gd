@@ -39,22 +39,19 @@ func update_visuals():
 		1: texture_normal = texture_one
 		2: texture_normal = texture_wildcard
 		
-	# Visual adjustments based on cell type
-	if not is_playable:
-		modulate = Color(0.4, 0.4, 0.4) # Darken walls automatically if no unique texture
-	elif is_locked:
-		modulate = Color(0.6, 0.6, 0.6) # Dim locked cells
-	else:
-		modulate = Color(1.0, 1.0, 1.0) 
+	_apply_modulation()
 
-func highlight_error():
-	if is_playable:
-		modulate = Color(1.0, 0.4, 0.4)
-
-func clear_highlight():
+func _apply_modulation():
 	if not is_playable:
 		modulate = Color(0.4, 0.4, 0.4)
 	elif is_locked:
 		modulate = Color(0.6, 0.6, 0.6)
 	else:
 		modulate = Color(1.0, 1.0, 1.0)
+
+func highlight_error():
+	if is_playable:
+		modulate = Color(1.0, 0.4, 0.4)
+
+func clear_highlight():
+	_apply_modulation()

@@ -25,3 +25,7 @@ func _on_exit_pressed() -> void:
 # FIXES ERROR: Missing connected method '_on_level_editor_pressed'
 func _on_level_editor_pressed() -> void:
 	get_tree().change_scene_to_file("res://level_editor.tscn")
+
+# NEW: Connect to level select screen
+func _on_level_select_pressed() -> void:
+	get_tree().change_scene_to_file("res://level_select.tscn")

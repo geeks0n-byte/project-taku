@@ -129,8 +129,9 @@ func setup_ui_elements():
 		pause_button.position = Vector2(120, 40) 
 		pause_button.size = Vector2(180, 60)
 		
+	# Standardized label styling across the main game view
 	if level_label:
-		level_label.add_theme_font_size_override("font_size", 36)
+		level_label.add_theme_font_size_override("font_size", 32)
 		level_label.modulate = Color(1.0, 1.0, 1.0)
 		level_label.position = Vector2(120, 120)
 		level_label.size = Vector2(400, 50)
@@ -252,6 +253,7 @@ func get_formatted_time() -> String:
 	return "%02d:%02d" % [minutes, seconds]
 
 func generate_board():
+	if current_level_index >= levels.size(): return
 	if victory_panel: victory_panel.visible = false
 	if pause_panel: pause_panel.visible = false
 	if how_to_play_panel: how_to_play_panel.visible = false
@@ -344,7 +346,7 @@ func trigger_victory():
 		if win_label: win_label.text = "Level %d Completed!" % display_num
 		restart_button.text = "Next Level"
 	else:
-		if win_label: win_label.text = "All Levels %d Completed!\nYou Win!" % display_num
+		if win_label: win_label.text = "All Levels Completed!\nYou Win!" % display_num
 		restart_button.text = "Play Again"
 		
 	if time_result_label:
