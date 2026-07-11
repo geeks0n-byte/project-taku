@@ -1,0 +1,29 @@
+# Godot 4+ specific ignores
+.godot/
+.import/
+export.cfg
+export_presets.cfg
+*.import
+
+# Build and platform-specific
+/build/
+/android/
+/ios/
+
+# Editor and System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# VS Code / IDE files (Optional - remove if you don't use these)
+.vscode/
+.vs/
+.idea/
+
+# Godot logs or temporary data
+*.log

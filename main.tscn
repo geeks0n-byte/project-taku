@@ -1,0 +1,70 @@
+[gd_scene format=3 uid="uid://cuf448q3tm0yy"]
+
+[ext_resource type="Script" uid="uid://cu6cq88gr24e3" path="res://main.gd" id="1_ig7tw"]
+
+[node name="Main" type="Node2D" unique_id=1789331107]
+script = ExtResource("1_ig7tw")
+
+[node name="GridContainer2D" type="Node2D" parent="." unique_id=206224717]
+
+[node name="StatusLabel" type="Label" parent="." unique_id=685700372]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="ResetButton" type="Button" parent="." unique_id=1111989897]
+offset_right = 8.0
+offset_bottom = 8.0
+text = "Reset"
+
+[node name="Timer" type="Timer" parent="." unique_id=901403189]
+autostart = true
+
+[node name="TimerLabel" type="Label" parent="." unique_id=1930471526]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="VictoryLayer" type="CanvasLayer" parent="." unique_id=123771825]
+
+[node name="VictoryPanel" type="ColorRect" parent="VictoryLayer" unique_id=1482484342]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7058824)
+
+[node name="WinLabel" type="Label" parent="VictoryLayer/VictoryPanel" unique_id=440959304]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -11.5
+offset_right = 64.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+text = "PUZZLE SOLVED!"
+
+[node name="RestartButton" type="Button" parent="VictoryLayer/VictoryPanel" unique_id=1980193957]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -44.0
+offset_top = 35.0
+offset_right = 44.0
+offset_bottom = 66.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Play Again"
+
+[node name="TimeResultLabel" type="Label" parent="VictoryLayer/VictoryPanel" unique_id=763166549]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0

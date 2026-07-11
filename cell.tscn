@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://j4t3jm7v17ag"]
+
+[ext_resource type="Script" uid="uid://d25rxch5oti18" path="res://cell.gd" id="1_yh0nt"]
+[ext_resource type="Texture2D" uid="uid://cxifparv3cyhn" path="res://ui/office/icon-zz-ui.svg" id="2_24dme"]
+[ext_resource type="Texture2D" uid="uid://cplqf1ttmyn28" path="res://3d/coding/icon-crop-3d.svg" id="3_24dme"]
+[ext_resource type="Texture2D" uid="uid://cn72fskdeh50h" path="res://node/coding/icon-crop.svg" id="5_d5rym"]
+[ext_resource type="Texture2D" uid="uid://djsf0cfbff8ye" path="res://2d/coding/icon-crop-2d.svg" id="5_gk7jc"]
+
+[node name="Cell" type="TextureButton" unique_id=258424194]
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_yh0nt")
+texture_empty = ExtResource("2_24dme")
+texture_zero = ExtResource("3_24dme")
+texture_one = ExtResource("5_gk7jc")
+texture_wildcard = ExtResource("5_d5rym")
