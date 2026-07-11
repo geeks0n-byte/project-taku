@@ -6,26 +6,33 @@ extends Node2D
 # Editor Debug Configuration
 @export var show_debug_tools: bool = true 
 
-# UI Node References
+# Main Screen UI References
+@onready var level_label = $LevelLabel 
+@onready var status_label = $StatusLabel
+@onready var pause_button = $PauseButton 
+@onready var timer_node = $Timer
+@onready var timer_label = $TimerLabel
+
+# Pause Menu UI References (Inside PauseLayer)
+@onready var pause_panel = $PauseLayer/PausePanel
+@onready var pause_resume_button = $PauseLayer/PausePanel/ResumeButton
+@onready var pause_reset_button = $PauseLayer/PausePanel/ResetButton
+@onready var pause_main_menu_button = $PauseLayer/PausePanel/MainMenuButton
+@onready var pause_auto_win_button = $PauseLayer/PausePanel/AutoWinButton
+
+# Victory Panel UI References (Inside VictoryLayer)
 @onready var victory_panel = $VictoryLayer/VictoryPanel
 @onready var restart_button = $VictoryLayer/VictoryPanel/RestartButton
 @onready var main_menu_button = $VictoryLayer/VictoryPanel/MainMenuButton 
 @onready var time_result_label = $VictoryLayer/VictoryPanel/TimeResultLabel
 @onready var win_label = $VictoryLayer/VictoryPanel/WinLabel 
-@onready var status_label = $StatusLabel
-@onready var level_label = $LevelLabel 
-@onready var auto_win_button = $AutoWinButton 
-
-# New UI & Timer System References
-@onready var reset_button = $ResetButton
-@onready var timer_node = $Timer
-@onready var timer_label = $TimerLabel
 
 const CELL_SIZE = 120 
 
-# Time Tracking Variables
+# State Management Variables
 var elapsed_seconds: int = 0
 var is_game_active: bool = true
+var is_paused: bool = false 
 
 # Level Progression Variables
 var current_level_index: int = 0
@@ -40,15 +47,19 @@ var error_messages = []
 func _ready():
 	setup_levels_data()
 	
+	# Connect Main Victory Screen Connections
 	restart_button.pressed.connect(_on_restart_pressed)
 	main_menu_button.pressed.connect(_on_main_menu_pressed)
 	
-	if auto_win_button:
-		auto_win_button.pressed.connect(_on_auto_win_pressed)
-		auto_win_button.visible = show_debug_tools 
+	# Connect Core Pause Menu Triggers
+	pause_button.pressed.connect(_on_pause_pressed)
+	pause_resume_button.pressed.connect(_on_resume_pressed)
+	pause_reset_button.pressed.connect(_on_reset_pressed)
+	pause_main_menu_button.pressed.connect(_on_main_menu_pressed)
 	
-	if reset_button:
-		reset_button.pressed.connect(_on_reset_pressed)
+	if pause_auto_win_button:
+		pause_auto_win_button.pressed.connect(_on_auto_win_pressed)
+		pause_auto_win_button.visible = show_debug_tools
 	
 	if timer_node:
 		timer_node.timeout.connect(_on_timer_timeout)
@@ -81,6 +92,22 @@ func setup_levels_data():
 	
 	levels = [level_1, level_2]
 
+func _on_pause_pressed():
+	if not is_game_active or is_paused: return
+	is_paused = true
+	if timer_node: timer_node.stop()
+	if pause_panel: pause_panel.visible = true
+
+func _on_resume_pressed():
+	if not is_paused: return
+	is_paused = false
+	if timer_node: timer_node.start()
+	if pause_panel: pause_panel.visible = false
+
+func _on_reset_pressed():
+	is_paused = false
+	generate_board()
+
 func _on_restart_pressed():
 	if not is_game_active:
 		if current_level_index < levels.size() - 1:
@@ -89,15 +116,14 @@ func _on_restart_pressed():
 			current_level_index = 0 
 	generate_board()
 
-func _on_reset_pressed():
-	generate_board()
-
 func _on_main_menu_pressed():
 	get_tree().change_scene_to_file("res://main_menu.tscn")
 
 func _on_auto_win_pressed():
-	if not is_game_active:
-		return
+	if not is_game_active: return
+	is_paused = false
+	if pause_panel: 
+		pause_panel.visible = false # Explicitly hide pause menu panel cleanly here
 	trigger_victory()
 
 func setup_ui_elements():
@@ -107,36 +133,68 @@ func setup_ui_elements():
 		timer_label.position = Vector2(650, 40)
 		timer_label.size = Vector2(300, 50)
 		
-	if reset_button:
-		reset_button.add_theme_font_size_override("font_size", 28)
-		reset_button.position = Vector2(120, 40)
-		reset_button.size = Vector2(180, 60)
+	if pause_button:
+		pause_button.text = "Pause"
+		pause_button.add_theme_font_size_override("font_size", 28)
+		pause_button.position = Vector2(120, 40) 
+		pause_button.size = Vector2(180, 60)
 		
 	if level_label:
 		level_label.add_theme_font_size_override("font_size", 36)
 		level_label.modulate = Color(1.0, 1.0, 1.0)
 		level_label.position = Vector2(120, 120)
 		level_label.size = Vector2(400, 50)
-		
-	if restart_button:
-		restart_button.add_theme_font_size_override("font_size", 28) # Matched sizing override
-
-	if main_menu_button:
-		main_menu_button.text = "Main Menu"
-		main_menu_button.add_theme_font_size_override("font_size", 28) # Scaled up to match 28 uniform size
 
 	if win_label:
 		win_label.add_theme_font_size_override("font_size", 36)
 		win_label.modulate = Color(1.0, 0.84, 0.0)
 
-	if auto_win_button:
-		auto_win_button.text = "DEBUG: Auto-Win"
-		auto_win_button.add_theme_font_size_override("font_size", 20)
-		auto_win_button.position = Vector2(650, 120)
-		auto_win_button.size = Vector2(200, 50)
+	if restart_button:
+		restart_button.add_theme_font_size_override("font_size", 28)
+
+	if main_menu_button:
+		main_menu_button.text = "Main Menu"
+		main_menu_button.add_theme_font_size_override("font_size", 28)
+
+	if pause_panel:
+		pause_panel.custom_minimum_size = Vector2(400, 450)
+		pause_panel.size = Vector2(400, 450)
+		pause_panel.position = Vector2(340, 300)
+
+	var start_y = 40
+	var spacing_y = 90
+	var p_button_size = Vector2(300, 60)
+	var center_x = (pause_panel.size.x - p_button_size.x) / 2 
+
+	if pause_resume_button:
+		pause_resume_button.text = "Resume"
+		pause_resume_button.add_theme_font_size_override("font_size", 28)
+		pause_resume_button.position = Vector2(center_x, start_y)
+		pause_resume_button.size = p_button_size
+	start_y += spacing_y
+
+	if pause_reset_button:
+		pause_reset_button.text = "Reset"
+		pause_reset_button.add_theme_font_size_override("font_size", 28)
+		pause_reset_button.position = Vector2(center_x, start_y)
+		pause_reset_button.size = p_button_size
+	start_y += spacing_y
+
+	if pause_main_menu_button:
+		pause_main_menu_button.text = "Main Menu"
+		pause_main_menu_button.add_theme_font_size_override("font_size", 28)
+		pause_main_menu_button.position = Vector2(center_x, start_y)
+		pause_main_menu_button.size = p_button_size
+	start_y += spacing_y
+
+	if pause_auto_win_button:
+		pause_auto_win_button.text = "DEBUG: Auto-Win"
+		pause_auto_win_button.add_theme_font_size_override("font_size", 20)
+		pause_auto_win_button.position = Vector2(center_x, start_y)
+		pause_auto_win_button.size = p_button_size
 
 func _on_timer_timeout():
-	if is_game_active:
+	if is_game_active and not is_paused:
 		elapsed_seconds += 1
 		update_timer_display()
 
@@ -150,10 +208,12 @@ func get_formatted_time() -> String:
 	return "%02d:%02d" % [minutes, seconds]
 
 func generate_board():
-	victory_panel.visible = false
+	if victory_panel: victory_panel.visible = false
+	if pause_panel: pause_panel.visible = false
 	
 	elapsed_seconds = 0
 	is_game_active = true
+	is_paused = false
 	update_timer_display()
 	if timer_node:
 		timer_node.start()
@@ -203,7 +263,7 @@ func generate_board():
 	queue_redraw()
 
 func _on_cell_changed(_coord: Vector2i):
-	if not is_game_active:
+	if not is_game_active or is_paused:
 		return
 		
 	for coord in board_cells:

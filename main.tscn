@@ -11,7 +11,7 @@ script = ExtResource("1_ig7tw")
 offset_right = 40.0
 offset_bottom = 23.0
 
-[node name="ResetButton" type="Button" parent="." unique_id=1111989897]
+[node name="PauseButton" type="Button" parent="." unique_id=1111989897]
 offset_right = 8.0
 offset_bottom = 8.0
 text = "Reset"
@@ -27,7 +27,29 @@ autostart = true
 offset_right = 40.0
 offset_bottom = 23.0
 
-[node name="AutoWinButton" type="Button" parent="." unique_id=336708106]
+[node name="PauseLayer" type="CanvasLayer" parent="." unique_id=573366286]
+
+[node name="PausePanel" type="Panel" parent="PauseLayer" unique_id=313700373]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="ResumeButton" type="Button" parent="PauseLayer/PausePanel" unique_id=1029560142]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="ResetButton" type="Button" parent="PauseLayer/PausePanel" unique_id=96924098]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="MainMenuButton" type="Button" parent="PauseLayer/PausePanel" unique_id=734597848]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="AutoWinButton" type="Button" parent="PauseLayer/PausePanel" unique_id=680986204]
+layout_mode = 0
 offset_right = 8.0
 offset_bottom = 8.0
 
