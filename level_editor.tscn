@@ -59,6 +59,14 @@ layout_mode = 2
 [node name="MainMenuButton" type="Button" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=729333557]
 layout_mode = 2
 
+[node name="TestButton" type="Button" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=1856170781]
+layout_mode = 2
+text = "TEST LEVEL"
+
+[node name="ExitTestButton" type="Button" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=589975085]
+layout_mode = 2
+text = "EXIT TEST"
+
 [node name="StatusLabel" type="Label" parent="EditorUI/ControlPanel" unique_id=1868498315]
 custom_minimum_size = Vector2(360, 100)
 layout_mode = 0
@@ -67,3 +75,13 @@ offset_top = 200.0
 offset_right = 380.0
 offset_bottom = 480.0
 autowrap_mode = 2
+
+[node name="PlaytestVictoryPanel" type="CanvasLayer" parent="EditorUI" unique_id=1293236093]
+
+[node name="LayoutTextEdit" type="TextEdit" parent="EditorUI/PlaytestVictoryPanel" unique_id=2072301035]
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="ReturnButton" type="Button" parent="EditorUI/PlaytestVictoryPanel" unique_id=2045544752]
+offset_right = 8.0
+offset_bottom = 8.0
