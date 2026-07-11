@@ -4,11 +4,17 @@
 [ext_resource type="Script" uid="uid://d2bajo514w3iq" path="res://level_data.gd" id="2_1bvp3"]
 [ext_resource type="Resource" uid="uid://cvgihyp3qm80j" path="res://levels/level_1.tres" id="3_1bvp3"]
 [ext_resource type="Resource" uid="uid://d1t72qrbd2nac" path="res://levels/level_2.tres" id="4_1bvp3"]
-[ext_resource type="Resource" path="res://levels/level_3.tres" id="5_lquwl"]
+[ext_resource type="Resource" uid="uid://5vggql2cn2ix" path="res://levels/level_3.tres" id="5_lquwl"]
+[ext_resource type="Resource" path="res://levels/level_4.tres" id="6_efxa6"]
+[ext_resource type="Resource" path="res://levels/level_5.tres" id="7_dg77c"]
+[ext_resource type="Resource" path="res://levels/level_6.tres" id="8_ycdy4"]
+[ext_resource type="Resource" path="res://levels/level_7.tres" id="9_w48qg"]
+[ext_resource type="Resource" path="res://levels/level_8.tres" id="10_vivmo"]
+[ext_resource type="Resource" path="res://levels/level_9.tres" id="11_2cqfq"]
 
 [node name="Main" type="Node2D" unique_id=1789331107]
 script = ExtResource("1_ig7tw")
-levels = Array[ExtResource("2_1bvp3")]([ExtResource("3_1bvp3"), ExtResource("4_1bvp3"), ExtResource("5_lquwl")])
+levels = Array[ExtResource("2_1bvp3")]([ExtResource("3_1bvp3"), ExtResource("4_1bvp3"), ExtResource("5_lquwl"), ExtResource("6_efxa6"), ExtResource("7_dg77c"), ExtResource("8_ycdy4"), ExtResource("9_w48qg"), ExtResource("10_vivmo"), ExtResource("11_2cqfq")])
 
 [node name="GridContainer2D" type="Node2D" parent="." unique_id=206224717]
 
