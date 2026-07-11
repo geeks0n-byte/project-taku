@@ -26,7 +26,7 @@ var board_cells = {}
 # Array lists to accumulate feedback messages per frame
 var error_messages = []
 
-# Updated board layout with custom blank (b) configuration
+# Updated board layout with custom blank (b) configuration (-2 = Wall)
 var level_7x7_data = {
 	# Row 0: bb2bbbb
 	Vector2i(0,0): -1, Vector2i(1,0): -1, Vector2i(2,0): 2,  Vector2i(3,0): -1, Vector2i(4,0): -1, Vector2i(5,0): -1, Vector2i(6,0): -1,
@@ -35,9 +35,9 @@ var level_7x7_data = {
 	# Row 2: 2b1bb0b
 	Vector2i(0,2): 2,  Vector2i(1,2): -1, Vector2i(2,2): 0,  Vector2i(3,2): -1, Vector2i(4,2): -1, Vector2i(5,2): -1,  Vector2i(6,2): -1,
 	# Row 3: bbbbb2b
-	Vector2i(0,3): -1, Vector2i(1,3): -1, Vector2i(2,3): -1, Vector2i(3,3): -1, Vector2i(4,3): -1, Vector2i(5,3): 2,  Vector2i(6,3): -1,
+	Vector2i(0,3): -1, Vector2i(1,3): -1, Vector2i(2,3): -1, Vector2i(3,3): -1, Vector2i(4,3): -1, Vector2i(5,3): -2,  Vector2i(6,3): -1,
 	# Row 4: bbb2bbb
-	Vector2i(0,4): -1, Vector2i(1,4): -1, Vector2i(2,4): -1, Vector2i(3,4): 2,  Vector2i(4,4): -1, Vector2i(5,4): -1, Vector2i(6,4): -1,
+	Vector2i(0,4): -1, Vector2i(1,4): -1, Vector2i(2,4): -1, Vector2i(3,4): -2,  Vector2i(4,4): -1, Vector2i(5,4): -1, Vector2i(6,4): -1,
 	# Row 5: 1bbbb12
 	Vector2i(0,5): 1,  Vector2i(1,5): -1, Vector2i(2,5): -1, Vector2i(3,5): -1, Vector2i(4,5): -1, Vector2i(5,5): 1,  Vector2i(6,5): 2,
 	# Row 6: b2b0bbb
@@ -118,16 +118,23 @@ func generate_board():
 		cell.position = Vector2(float(coord.x * CELL_SIZE), float(coord.y * CELL_SIZE))
 		cell.cell_clicked.connect(_on_cell_changed)
 		
-		if starting_state != -1:
-			cell.state = starting_state
+		cell.state = starting_state
+		if starting_state == -2:
+			cell.is_playable = false
+			cell.is_locked = true
+		elif starting_state != -1:
+			cell.is_playable = true
 			cell.is_locked = true
 		else:
-			cell.state = -1
+			cell.is_playable = true
 			cell.is_locked = false
 			
 		grid_container.add_child(cell)
 		board_cells[coord] = cell
 		cell.update_visuals()
+		
+	# Requests engine to execute custom line canvas processing
+	queue_redraw()
 
 func _on_cell_changed(_coord: Vector2i):
 	if not is_game_active:
@@ -166,7 +173,7 @@ func _on_cell_changed(_coord: Vector2i):
 func check_win_condition(all_lines_valid: bool) -> bool:
 	var board_full = true
 	for coord in board_cells:
-		if board_cells[coord].state == -1:
+		if board_cells[coord].is_playable and board_cells[coord].state == -1:
 			board_full = false
 			break
 			
@@ -178,6 +185,10 @@ func validate_lines() -> bool:
 	var syntax_pass = true
 	
 	for coord in board_cells:
+		# Exclude walls completely from tracking layout lines
+		if not board_cells[coord].is_playable:
+			continue
+			
 		if coord.y not in rows:
 			rows[coord.y] = []
 		if coord.x not in cols:
@@ -247,3 +258,15 @@ func check_line_validity(coords: Array, is_horizontal: bool, index: int) -> bool
 			error_messages.append(line_name + " does not have an equal amount of 0s and 1s!")
 		
 	return line_is_valid
+
+func _draw():
+	var offset = grid_container.position
+	var line_color = Color.BLACK
+	var line_width = 4.0 
+	
+	for coord in board_cells:
+		var cell = board_cells[coord]
+		if cell.is_playable:
+			var cell_pos = offset + Vector2(coord.x * CELL_SIZE, coord.y * CELL_SIZE)
+			var rect = Rect2(cell_pos, Vector2(CELL_SIZE, CELL_SIZE))
+			draw_rect(rect, line_color, false, line_width)
