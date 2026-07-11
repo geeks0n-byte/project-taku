@@ -49,6 +49,28 @@ var board_cells = {}
 var error_messages = []
 
 func _ready():
+	# 1. Check if a level resource was passed globally from the Level Select grid menu
+	if GlobalGameManager.selected_level_resource != null:
+		var custom_level = GlobalGameManager.selected_level_resource
+		print("Gameplay Engine: Intercepted level selection resource for Level ", custom_level.level_number)
+		
+		# Immediately clear the global courier reference to maintain clean transitions
+		GlobalGameManager.selected_level_resource = null
+		
+		# Synchronize the selection with your campaign array index if it exists there
+		var found_index = -1
+		for i in range(levels.size()):
+			if levels[i].level_number == custom_level.level_number:
+				found_index = i
+				break
+				
+		if found_index != -1:
+			current_level_index = found_index
+		else:
+			# If a completely loose custom file was loaded, append it so things don't crash
+			levels.append(custom_level)
+			current_level_index = levels.size() - 1
+
 	# Verification step to ensure maps are assigned safely before game loops start
 	if levels.size() == 0:
 		push_error("No level resources assigned to the Level manager array inside the Main Inspector panel!")
@@ -129,7 +151,6 @@ func setup_ui_elements():
 		pause_button.position = Vector2(120, 40) 
 		pause_button.size = Vector2(180, 60)
 		
-	# Standardized label styling across the main game view
 	if level_label:
 		level_label.add_theme_font_size_override("font_size", 32)
 		level_label.modulate = Color(1.0, 1.0, 1.0)
@@ -267,7 +288,6 @@ func generate_board():
 	
 	grid_container.position = Vector2(120, 180) 
 	
-	# Extract data directly from the dynamic resource object instead of raw dictionaries
 	var current_level_resource = levels[current_level_index]
 	var active_level_data = current_level_resource.layout
 	var display_num = current_level_resource.level_number
@@ -346,7 +366,7 @@ func trigger_victory():
 		if win_label: win_label.text = "Level %d Completed!" % display_num
 		restart_button.text = "Next Level"
 	else:
-		if win_label: win_label.text = "All Levels Completed!\nYou Win!" % display_num
+		if win_label: win_label.text = "All Levels Completed!\nYou Win!"
 		restart_button.text = "Play Again"
 		
 	if time_result_label:

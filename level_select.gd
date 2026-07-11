@@ -81,9 +81,12 @@ func get_sorted_level_files() -> Array:
 	return files
 
 func _on_level_selected(level_resource: LevelData) -> void:
-	print("Loading Selected Map: Level ", level_resource.level_number)
+	print("Passing to Global Courier: Level ", level_resource.level_number)
 	
-	# Replace with your actual gameplay main scene path!
+	# FIX: Save the clicked resource globally before transitioning scenes
+	GlobalGameManager.selected_level_resource = level_resource
+	
+	# Redirect directly to your updated main loop layout loader
 	var gameplay_scene_path = "res://main.tscn" 
 	get_tree().change_scene_to_file(gameplay_scene_path)
 
