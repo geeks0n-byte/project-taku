@@ -3,11 +3,18 @@ extends Node2D
 @export var cell_scene: PackedScene = preload("res://cell.tscn")
 @onready var grid_container = $GridContainer2D
 
+# Editor Debug Configuration
+@export var show_debug_tools: bool = true 
+
 # UI Node References
 @onready var victory_panel = $VictoryLayer/VictoryPanel
 @onready var restart_button = $VictoryLayer/VictoryPanel/RestartButton
+@onready var main_menu_button = $VictoryLayer/VictoryPanel/MainMenuButton 
 @onready var time_result_label = $VictoryLayer/VictoryPanel/TimeResultLabel
+@onready var win_label = $VictoryLayer/VictoryPanel/WinLabel 
 @onready var status_label = $StatusLabel
+@onready var level_label = $LevelLabel 
+@onready var auto_win_button = $AutoWinButton 
 
 # New UI & Timer System References
 @onready var reset_button = $ResetButton
@@ -20,48 +27,80 @@ const CELL_SIZE = 120
 var elapsed_seconds: int = 0
 var is_game_active: bool = true
 
+# Level Progression Variables
+var current_level_index: int = 0
+var levels: Array = []
+
 # Dictionary to hold active cell nodes: { Vector2i(x, y): CellNode }
 var board_cells = {}
 
 # Array lists to accumulate feedback messages per frame
 var error_messages = []
 
-# Updated board layout with custom blank (b) configuration (-2 = Wall)
-var level_7x7_data = {
-	# Row 0: bb2bbbb
-	Vector2i(0,0): -1, Vector2i(1,0): -1, Vector2i(2,0): 2,  Vector2i(3,0): -1, Vector2i(4,0): -1, Vector2i(5,0): -1, Vector2i(6,0): -1,
-	# Row 1: bbbb2bb
-	Vector2i(0,1): -1, Vector2i(1,1): -1, Vector2i(2,1): -1, Vector2i(3,1): -1, Vector2i(4,1): 2,  Vector2i(5,1): -1, Vector2i(6,1): -1,
-	# Row 2: 2b1bb0b
-	Vector2i(0,2): 2,  Vector2i(1,2): -1, Vector2i(2,2): 0,  Vector2i(3,2): -1, Vector2i(4,2): -1, Vector2i(5,2): -1,  Vector2i(6,2): -1,
-	# Row 3: bbbbb2b
-	Vector2i(0,3): -1, Vector2i(1,3): -1, Vector2i(2,3): -1, Vector2i(3,3): -1, Vector2i(4,3): -1, Vector2i(5,3): -2,  Vector2i(6,3): -1,
-	# Row 4: bbb2bbb
-	Vector2i(0,4): -1, Vector2i(1,4): -1, Vector2i(2,4): -1, Vector2i(3,4): -2,  Vector2i(4,4): -1, Vector2i(5,4): -1, Vector2i(6,4): -1,
-	# Row 5: 1bbbb12
-	Vector2i(0,5): 1,  Vector2i(1,5): -1, Vector2i(2,5): -1, Vector2i(3,5): -1, Vector2i(4,5): -1, Vector2i(5,5): 1,  Vector2i(6,5): 2,
-	# Row 6: b2b0bbb
-	Vector2i(0,6): -1, Vector2i(1,6): 2,  Vector2i(2,6): -1, Vector2i(3,6): 0,  Vector2i(4,6): -1, Vector2i(5,6): -1, Vector2i(6,6): -1,
-}
-
 func _ready():
+	setup_levels_data()
+	
 	restart_button.pressed.connect(_on_restart_pressed)
+	main_menu_button.pressed.connect(_on_main_menu_pressed)
+	
+	if auto_win_button:
+		auto_win_button.pressed.connect(_on_auto_win_pressed)
+		auto_win_button.visible = show_debug_tools 
+	
 	if reset_button:
 		reset_button.pressed.connect(_on_reset_pressed)
 	
 	if timer_node:
 		timer_node.timeout.connect(_on_timer_timeout)
 		
-	setup_timer_ui()
+	setup_ui_elements()
 	generate_board()
 
+func setup_levels_data():
+	# LEVEL 1
+	var level_1 = {
+		Vector2i(0,0): -1, Vector2i(1,0): -1, Vector2i(2,0): 2,  Vector2i(3,0): -1, Vector2i(4,0): -1, Vector2i(5,0): -1, Vector2i(6,0): -1,
+		Vector2i(0,1): -1, Vector2i(1,1): -1, Vector2i(2,1): -1, Vector2i(3,1): -1, Vector2i(4,1): 2,  Vector2i(5,1): -1, Vector2i(6,1): -1,
+		Vector2i(0,2): 2,  Vector2i(1,2): -1, Vector2i(2,2): 0,  Vector2i(3,2): -1, Vector2i(4,2): -1, Vector2i(5,2): -1,  Vector2i(6,2): -1,
+		Vector2i(0,3): -1, Vector2i(1,3): -1, Vector2i(2,3): -1, Vector2i(3,3): -1, Vector2i(4,3): -1, Vector2i(5,3): -2,  Vector2i(6,3): -1,
+		Vector2i(0,4): -1, Vector2i(1,4): -1, Vector2i(2,4): -1, Vector2i(3,4): -2,  Vector2i(4,4): -1, Vector2i(5,4): -1, Vector2i(6,4): -1,
+		Vector2i(0,5): 1,  Vector2i(1,5): -1, Vector2i(2,5): -1, Vector2i(3,5): -1, Vector2i(4,5): -1, Vector2i(5,5): 1,  Vector2i(6,5): 2,
+		Vector2i(0,6): -1, Vector2i(1,6): 2,  Vector2i(2,6): -1, Vector2i(3,6): 0,  Vector2i(4,6): -1, Vector2i(5,6): -1, Vector2i(6,6): -1,
+	}
+	
+	# LEVEL 2
+	var level_2 = {
+		Vector2i(0,0): -1, Vector2i(1,0): -1, Vector2i(2,0): -1, Vector2i(3,0): -1, Vector2i(4,0): 1,  Vector2i(5,0): -1, Vector2i(6,0): -1,
+		Vector2i(0,1): -1, Vector2i(1,1): -2, Vector2i(2,1): -1, Vector2i(3,1): 2,  Vector2i(4,1): -1, Vector2i(5,1): -1, Vector2i(6,1): -1,
+		Vector2i(0,2): 0,  Vector2i(1,2): -1, Vector2i(2,2): -1, Vector2i(3,2): -1, Vector2i(4,2): -1, Vector2i(5,2): 2,  Vector2i(6,2): -1,
+		Vector2i(0,3): -1, Vector2i(1,3): -1, Vector2i(2,3): 1,  Vector2i(3,3): -1, Vector2i(4,3): 0,  Vector2i(5,3): -1, Vector2i(6,3): -1,
+		Vector2i(0,4): -1, Vector2i(1,4): 2,  Vector2i(2,4): -1, Vector2i(3,4): -1, Vector2i(4,4): -1, Vector2i(5,4): -1, Vector2i(6,4): 0,
+		Vector2i(0,5): -1, Vector2i(1,5): -1, Vector2i(2,5): -1, Vector2i(3,5): 0,  Vector2i(4,5): -1, Vector2i(5,5): -2, Vector2i(6,5): -1,
+		Vector2i(0,6): -1, Vector2i(1,6): -1, Vector2i(2,6): -1, Vector2i(3,6): -1, Vector2i(4,6): -1, Vector2i(5,6): -1, Vector2i(6,6): 1,
+	}
+	
+	levels = [level_1, level_2]
+
 func _on_restart_pressed():
+	if not is_game_active:
+		if current_level_index < levels.size() - 1:
+			current_level_index += 1
+		else:
+			current_level_index = 0 
 	generate_board()
 
 func _on_reset_pressed():
 	generate_board()
 
-func setup_timer_ui():
+func _on_main_menu_pressed():
+	get_tree().change_scene_to_file("res://main_menu.tscn")
+
+func _on_auto_win_pressed():
+	if not is_game_active:
+		return
+	trigger_victory()
+
+func setup_ui_elements():
 	if timer_label:
 		timer_label.add_theme_font_size_override("font_size", 32)
 		timer_label.modulate = Color(0.9, 0.9, 0.9)
@@ -72,6 +111,29 @@ func setup_timer_ui():
 		reset_button.add_theme_font_size_override("font_size", 28)
 		reset_button.position = Vector2(120, 40)
 		reset_button.size = Vector2(180, 60)
+		
+	if level_label:
+		level_label.add_theme_font_size_override("font_size", 36)
+		level_label.modulate = Color(1.0, 1.0, 1.0)
+		level_label.position = Vector2(120, 120)
+		level_label.size = Vector2(400, 50)
+		
+	if restart_button:
+		restart_button.add_theme_font_size_override("font_size", 28) # Matched sizing override
+
+	if main_menu_button:
+		main_menu_button.text = "Main Menu"
+		main_menu_button.add_theme_font_size_override("font_size", 28) # Scaled up to match 28 uniform size
+
+	if win_label:
+		win_label.add_theme_font_size_override("font_size", 36)
+		win_label.modulate = Color(1.0, 0.84, 0.0)
+
+	if auto_win_button:
+		auto_win_button.text = "DEBUG: Auto-Win"
+		auto_win_button.add_theme_font_size_override("font_size", 20)
+		auto_win_button.position = Vector2(650, 120)
+		auto_win_button.size = Vector2(200, 50)
 
 func _on_timer_timeout():
 	if is_game_active:
@@ -98,6 +160,9 @@ func generate_board():
 	
 	grid_container.position = Vector2(120, 180) 
 	
+	if level_label:
+		level_label.text = "Level %d" % [current_level_index + 1]
+	
 	if status_label:
 		status_label.text = "Fill the board following the rules!"
 		status_label.modulate = Color(1.0, 1.0, 1.0)
@@ -110,8 +175,10 @@ func generate_board():
 		child.queue_free()
 	board_cells.clear()
 
-	for coord in level_7x7_data:
-		var starting_state = level_7x7_data[coord]
+	var active_level_data = levels[current_level_index]
+
+	for coord in active_level_data:
+		var starting_state = active_level_data[coord]
 		
 		var cell = cell_scene.instantiate()
 		cell.coord = coord
@@ -153,21 +220,31 @@ func _on_cell_changed(_coord: Vector2i):
 		status_label.text = "Looks good so far! Keep going."
 		
 	if check_win_condition(all_lines_valid):
-		is_game_active = false
-		if timer_node:
-			timer_node.stop()
-			
-		status_label.modulate = Color(1.0, 0.84, 0.0)
-		status_label.text = "Puzzle Solved!"
+		trigger_victory()
+
+func trigger_victory():
+	is_game_active = false
+	if timer_node:
+		timer_node.stop()
 		
-		if time_result_label:
-			time_result_label.add_theme_font_size_override("font_size", 28)
-			time_result_label.text = "Completion Time: %s" % get_formatted_time()
-			
-		victory_panel.custom_minimum_size = Vector2(600, 400)
-		victory_panel.size = Vector2(600, 400)
-		victory_panel.position = Vector2(60, 400)
-		victory_panel.visible = true
+	status_label.modulate = Color(1.0, 0.84, 0.0)
+	status_label.text = "Puzzle Solved!"
+	
+	if current_level_index < levels.size() - 1:
+		if win_label: win_label.text = "Level Completed!"
+		restart_button.text = "Next Level"
+	else:
+		if win_label: win_label.text = "All Puzzles Solved! You Win!"
+		restart_button.text = "Play Again"
+		
+	if time_result_label:
+		time_result_label.add_theme_font_size_override("font_size", 28)
+		time_result_label.text = "Completion Time: %s" % get_formatted_time()
+		
+	victory_panel.custom_minimum_size = Vector2(600, 400)
+	victory_panel.size = Vector2(600, 400)
+	victory_panel.position = Vector2(60, 400)
+	victory_panel.visible = true
 
 func check_win_condition(all_lines_valid: bool) -> bool:
 	var board_full = true
@@ -183,7 +260,6 @@ func validate_lines() -> bool:
 	var cols = {}
 	var syntax_pass = true
 	
-	# Keep all cells (including walls) so physical structure is preserved
 	for coord in board_cells:
 		if coord.y not in rows:
 			rows[coord.y] = []
@@ -208,7 +284,6 @@ func check_line_validity(coords: Array, is_horizontal: bool, index: int) -> bool
 	var line_is_valid = true
 	var line_name = "Row " + str(index + 1) if is_horizontal else "Column " + str(index + 1)
 	
-	# Rule A: Check 3 consecutive identical symbols (Chameleon Wildcards)
 	var found_consecutive = false
 	var virtual_test_states = [0, 1]
 	
@@ -218,7 +293,6 @@ func check_line_validity(coords: Array, is_horizontal: bool, index: int) -> bool
 			var s2 = board_cells[coords[i+1]].state
 			var s3 = board_cells[coords[i+2]].state
 			
-			# CRITICAL: If any cell in this triplet is a wall (-2), it cannot form a consecutive 3-in-a-row string!
 			if s1 == -2 or s2 == -2 or s3 == -2:
 				continue
 				
@@ -239,7 +313,6 @@ func check_line_validity(coords: Array, is_horizontal: bool, index: int) -> bool
 	if found_consecutive:
 		error_messages.append(line_name + " has 3 identical symbols in a row!")
 
-	# Rule B: Check balanced proportions (ignoring wildcards AND walls completely)
 	var zeros = 0
 	var ones = 0
 	var empty_count = 0
@@ -249,12 +322,10 @@ func check_line_validity(coords: Array, is_horizontal: bool, index: int) -> bool
 			-1: empty_count += 1
 			0: zeros += 1
 			1: ones += 1
-			# -2 (walls) and 2 (wildcards) are ignored for proportion totals
 			
 	if empty_count == 0:
 		if zeros != ones:
 			for coord in coords:
-				# Highlight errors only on playable tiles
 				if board_cells[coord].is_playable:
 					board_cells[coord].highlight_error()
 			line_is_valid = false
