@@ -133,7 +133,6 @@ func generate_board():
 		board_cells[coord] = cell
 		cell.update_visuals()
 		
-	# Requests engine to execute custom line canvas processing
 	queue_redraw()
 
 func _on_cell_changed(_coord: Vector2i):
@@ -184,11 +183,8 @@ func validate_lines() -> bool:
 	var cols = {}
 	var syntax_pass = true
 	
+	# Keep all cells (including walls) so physical structure is preserved
 	for coord in board_cells:
-		# Exclude walls completely from tracking layout lines
-		if not board_cells[coord].is_playable:
-			continue
-			
 		if coord.y not in rows:
 			rows[coord.y] = []
 		if coord.x not in cols:
@@ -222,6 +218,10 @@ func check_line_validity(coords: Array, is_horizontal: bool, index: int) -> bool
 			var s2 = board_cells[coords[i+1]].state
 			var s3 = board_cells[coords[i+2]].state
 			
+			# CRITICAL: If any cell in this triplet is a wall (-2), it cannot form a consecutive 3-in-a-row string!
+			if s1 == -2 or s2 == -2 or s3 == -2:
+				continue
+				
 			if s1 == 2: s1 = test_val
 			if s2 == 2: s2 = test_val
 			if s3 == 2: s3 = test_val
@@ -239,7 +239,7 @@ func check_line_validity(coords: Array, is_horizontal: bool, index: int) -> bool
 	if found_consecutive:
 		error_messages.append(line_name + " has 3 identical symbols in a row!")
 
-	# Rule B: Check balanced proportions (ignoring wildcards completely)
+	# Rule B: Check balanced proportions (ignoring wildcards AND walls completely)
 	var zeros = 0
 	var ones = 0
 	var empty_count = 0
@@ -249,11 +249,14 @@ func check_line_validity(coords: Array, is_horizontal: bool, index: int) -> bool
 			-1: empty_count += 1
 			0: zeros += 1
 			1: ones += 1
+			# -2 (walls) and 2 (wildcards) are ignored for proportion totals
 			
 	if empty_count == 0:
 		if zeros != ones:
 			for coord in coords:
-				board_cells[coord].highlight_error()
+				# Highlight errors only on playable tiles
+				if board_cells[coord].is_playable:
+					board_cells[coord].highlight_error()
 			line_is_valid = false
 			error_messages.append(line_name + " does not have an equal amount of 0s and 1s!")
 		
