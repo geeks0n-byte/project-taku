@@ -63,16 +63,39 @@ func _set_brush(state_id: int, brush_name: String):
 func setup_editor_ui():
 	_set_brush(-1, "Empty (Clear)")
 	
-	status_label.custom_minimum_size = Vector2(360, 100)
-	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD
-	status_label.add_theme_font_size_override("font_size", 24)
-	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	
+	# Dynamically calculate position beneath the 7x7 grid footprint
 	var board_bottom_y = 180 + (GRID_HEIGHT * CELL_SIZE) 
 	var ui_margin_y = 30
 	
+	# 1. Expand the main panel to match the full 840px width of your game board
+	var panel_width = GRID_WIDTH * CELL_SIZE # 7 * 120 = 840
 	$EditorUI/ControlPanel.position = Vector2(120, board_bottom_y + ui_margin_y)
-	$EditorUI/ControlPanel.set_deferred("size", Vector2(400, 500))
+	$EditorUI/ControlPanel.set_deferred("size", Vector2(panel_width, 280))
+	
+	# 2. Stretch the Brush Container and force buttons to distribute evenly
+	brush_container.position = Vector2(20, 30)
+	brush_container.set_deferred("size", Vector2(panel_width - 40, 50))
+	for btn in brush_container.get_children():
+		if btn is Button:
+			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			btn.add_theme_font_size_override("font_size", 20)
+			
+	# 3. Stretch the Config Container and force elements to distribute cleanly
+	var config_container = $EditorUI/ControlPanel/ConfigContainer
+	config_container.position = Vector2(20, 100)
+	config_container.set_deferred("size", Vector2(panel_width - 40, 50))
+	for child in config_container.get_children():
+		if child is Control:
+			child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			if child is Button or child is Label:
+				child.add_theme_font_size_override("font_size", 18)
+				
+	# 4. Position the Status feedback box at the bottom of the panel
+	status_label.position = Vector2(20, 170)
+	status_label.set_deferred("size", Vector2(panel_width - 40, 90))
+	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	status_label.add_theme_font_size_override("font_size", 22)
+	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	
 	# Setup Victory Overlay Panels Hidden on Startup
 	playtest_victory_panel.visible = false
@@ -117,6 +140,7 @@ func generate_blank_canvas():
 			board_cells[coord] = cell
 			cell.update_visuals()
 			
+			# Input interceptor overlay to bypass structural lock conflicts
 			var input_interceptor = Control.new()
 			input_interceptor.size = Vector2(CELL_SIZE, CELL_SIZE)
 			input_interceptor.position = cell.position
@@ -134,9 +158,8 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 	var cell = board_cells[coord]
 	
 	if is_playtesting:
-		if cell.is_locked: return # Do not allow clicking fixed level hints
+		if cell.is_locked: return 
 		
-		# Cycle active layout state contextually like a real match player loop
 		if cell.state == -1: cell.state = 0
 		elif cell.state == 0: cell.state = 1
 		else: cell.state = -1
@@ -144,7 +167,6 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 		cell.update_visuals()
 		_run_playtest_validation_pass()
 	else:
-		# Standard layout paint routine configuration
 		cell.state = current_brush_state
 		if current_brush_state == -2:
 			cell.is_playable = false
@@ -161,11 +183,9 @@ func _on_test_mode_entered():
 	is_playtesting = true
 	playtest_snapshot.clear()
 	
-	# Freeze layout design metrics into an immutable state snap
 	for coord in board_cells:
 		playtest_snapshot[coord] = board_cells[coord].state
 		
-		# Contextually transform cell states to active logical hints rules
 		var s = board_cells[coord].state
 		if s == -2:
 			board_cells[coord].is_playable = false
@@ -178,7 +198,6 @@ func _on_test_mode_entered():
 			board_cells[coord].is_locked = false
 		board_cells[coord].update_visuals()
 		
-	# Toggle component visibilities
 	brush_container.visible = false
 	save_button.visible = false
 	test_button.visible = false
@@ -192,7 +211,6 @@ func _on_test_mode_exited():
 	is_playtesting = false
 	playtest_victory_panel.visible = false
 	
-	# Restore the map safely back to the layout designer sandbox settings
 	for coord in board_cells:
 		board_cells[coord].clear_highlight()
 		var restored_state = playtest_snapshot[coord]
@@ -209,7 +227,6 @@ func _on_test_mode_exited():
 			board_cells[coord].is_locked = false
 		board_cells[coord].update_visuals()
 		
-	# Reset designer UI component frames
 	brush_container.visible = true
 	save_button.visible = true
 	test_button.visible = true
@@ -231,7 +248,6 @@ func _run_playtest_validation_pass():
 	else:
 		_update_status("Puzzle looks perfectly valid so far!", Color(0.4, 1.0, 0.4))
 		
-	# If validation rules clear and the grid contains zero blank boxes, execute victory
 	if pass_syntax and check_win_condition(pass_syntax):
 		_trigger_playtest_victory()
 
@@ -260,7 +276,6 @@ func _compile_dictionary_to_plaintext() -> String:
 	out += "}"
 	return out
 
-# --- REUSED MATHEMATICAL LOGIC VALIDATION CORE PASSED FROM MAIN.GD ---
 func check_win_condition(all_lines_valid: bool) -> bool:
 	var board_full = true
 	for coord in board_cells:

@@ -76,12 +76,14 @@ offset_right = 380.0
 offset_bottom = 480.0
 autowrap_mode = 2
 
-[node name="PlaytestVictoryPanel" type="CanvasLayer" parent="EditorUI" unique_id=1293236093]
+[node name="PlaytestVictoryPanel" type="Panel" parent="EditorUI" unique_id=419984448]
 
 [node name="LayoutTextEdit" type="TextEdit" parent="EditorUI/PlaytestVictoryPanel" unique_id=2072301035]
+layout_mode = 0
 offset_right = 8.0
 offset_bottom = 8.0
 
 [node name="ReturnButton" type="Button" parent="EditorUI/PlaytestVictoryPanel" unique_id=2045544752]
+layout_mode = 0
 offset_right = 8.0
 offset_bottom = 8.0
