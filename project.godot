@@ -13,7 +13,7 @@ config_version=5
 config/name="project-taku"
 run/main_scene="uid://c20pd0eqihnlp"
 config/features=PackedStringArray("4.7", "GL Compatibility")
-config/icon="res://Icons/Placeholder icons/icon.svg"
+config/icon="res://icons/placeholder_icons/icon.svg"
 
 [autoload]
 
@@ -33,6 +33,10 @@ project/assembly_name="project-taku"
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/AI_Gemini_GD/plugin.cfg")
+
+[gemini_gd]
+
+gemini_configuration/api_key=""
 
 [physics]
 

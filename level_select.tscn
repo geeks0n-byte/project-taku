@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://cqf1g7xouf15q"]
 
 [ext_resource type="Script" uid="uid://bluo2lx5d6r50" path="res://level_select.gd" id="1_il3u1"]
-[ext_resource type="Texture2D" uid="uid://rukxq14a43wc" path="res://Icons/Buttons/Big@2x.png" id="2_vomi7"]
+[ext_resource type="Texture2D" uid="uid://ds4khbnemdfjp" path="res://Icons/Buttons/Big@2x.png" id="2_vomi7"]
 
 [node name="LevelSelect" type="Control" unique_id=12330982]
 layout_mode = 3
