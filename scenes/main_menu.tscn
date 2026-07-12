@@ -3,8 +3,10 @@
 [ext_resource type="Script" uid="uid://cvffp4gq8wfdc" path="res://scripts/main_menu.gd" id="1_8ln24"]
 [ext_resource type="PackedScene" uid="uid://cuf448q3tm0yy" path="res://scenes/main.tscn" id="2_rtw2f"]
 [ext_resource type="Texture2D" uid="uid://cbvbny6down6a" path="res://icons/buttons/Default@2x.png" id="3_oa1go"]
+[ext_resource type="Texture2D" uid="uid://bk1u02hddcj8g" path="res://node/coding/icon-copy.svg" id="4_oa1go"]
 [ext_resource type="Texture2D" uid="uid://80s15t0mo78p" path="res://icons/buttons/settingsV2_icon_128px.png" id="4_tbmy8"]
 [ext_resource type="Texture2D" uid="uid://2spy15xdte1g" path="res://icons/buttons/close_icon_128px.png" id="5_jk1qb"]
+[ext_resource type="Texture2D" uid="uid://cdwnv134rbxmk" path="res://node/coding/icon-cut.svg" id="6_tbmy8"]
 
 [node name="MainMenu" type="Control" unique_id=195312888]
 layout_mode = 3
@@ -30,34 +32,55 @@ alignment = 1
 
 [node name="ButtonList" type="VBoxContainer" parent="MarginContainer/MainLayout" unique_id=507574345]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 40
 alignment = 1
+
+[node name="GameTitle" type="Label" parent="MarginContainer/MainLayout/ButtonList" unique_id=2084676387]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 64
+text = "project-taku"
 
 [node name="StartButton" type="Button" parent="MarginContainer/MainLayout/ButtonList" unique_id=1570726934]
 layout_mode = 2
-text = "Start Game"
+size_flags_horizontal = 4
 icon = ExtResource("3_oa1go")
+flat = true
+icon_alignment = 1
 
-[node name="LevelSelectButton" type="Button" parent="MarginContainer/MainLayout/ButtonList" unique_id=794689925]
+[node name="ButtonsGrid" type="GridContainer" parent="MarginContainer/MainLayout/ButtonList" unique_id=791576183]
 layout_mode = 2
-text = "Select Level"
+size_flags_horizontal = 4
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+columns = 2
 
-[node name="OptionsButton" type="Button" parent="MarginContainer/MainLayout/ButtonList" unique_id=905426570]
+[node name="LevelSelectButton" type="Button" parent="MarginContainer/MainLayout/ButtonList/ButtonsGrid" unique_id=794689925]
 layout_mode = 2
-text = "Options"
+icon = ExtResource("4_oa1go")
+flat = true
+icon_alignment = 1
+
+[node name="OptionsButton" type="Button" parent="MarginContainer/MainLayout/ButtonList/ButtonsGrid" unique_id=905426570]
+layout_mode = 2
 icon = ExtResource("4_tbmy8")
+flat = true
+icon_alignment = 1
 
-[node name="LevelEditorButton" type="Button" parent="MarginContainer/MainLayout/ButtonList" unique_id=1971963387]
+[node name="LevelEditorButton" type="Button" parent="MarginContainer/MainLayout/ButtonList/ButtonsGrid" unique_id=1971963387]
 layout_mode = 2
-text = "Level Editor"
+icon = ExtResource("6_tbmy8")
+flat = true
+icon_alignment = 1
 
-[node name="ExitButton" type="Button" parent="MarginContainer/MainLayout/ButtonList" unique_id=289645077]
+[node name="ExitButton" type="Button" parent="MarginContainer/MainLayout/ButtonList/ButtonsGrid" unique_id=289645077]
 layout_mode = 2
-text = "Exit"
 icon = ExtResource("5_jk1qb")
+flat = true
+icon_alignment = 1
 
 [connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/StartButton" to="." method="_on_start_button_pressed"]
-[connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/LevelSelectButton" to="." method="_on_level_select_pressed"]
-[connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/OptionsButton" to="." method="_on_options_pressed"]
-[connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/LevelEditorButton" to="." method="_on_level_editor_pressed"]
-[connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/ExitButton" to="." method="_on_exit_pressed"]
+[connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/ButtonsGrid/LevelSelectButton" to="." method="_on_level_select_pressed"]
+[connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/ButtonsGrid/OptionsButton" to="." method="_on_options_pressed"]
+[connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/ButtonsGrid/LevelEditorButton" to="." method="_on_level_editor_pressed"]
+[connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/ButtonsGrid/ExitButton" to="." method="_on_exit_pressed"]
