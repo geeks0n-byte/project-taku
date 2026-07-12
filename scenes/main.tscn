@@ -1,25 +1,25 @@
 [gd_scene format=3 uid="uid://cuf448q3tm0yy"]
 
-[ext_resource type="Script" uid="uid://cu6cq88gr24e3" path="res://main.gd" id="1_ig7tw"]
-[ext_resource type="Script" uid="uid://cmilped3wai4n" path="res://board_manager.gd" id="2_h2yge"]
-[ext_resource type="Script" uid="uid://d2bajo514w3iq" path="res://level_data.gd" id="2_ycdy4"]
-[ext_resource type="Script" uid="uid://dcrkhyr8vhs3g" path="res://ui_manager.gd" id="3_1bvp3"]
-[ext_resource type="Resource" uid="uid://cvgihyp3qm80j" path="res://levels/level_1.tres" id="3_w48qg"]
-[ext_resource type="Resource" uid="uid://d1t72qrbd2nac" path="res://levels/level_2.tres" id="4_vivmo"]
-[ext_resource type="Resource" uid="uid://c1dku31cogli" path="res://levels/level_3.tres" id="5_2cqfq"]
-[ext_resource type="Resource" path="res://levels/level_4.tres" id="6_yaehf"]
-[ext_resource type="Resource" path="res://levels/level_5.tres" id="7_074og"]
-[ext_resource type="Resource" path="res://levels/level_6.tres" id="8_cegan"]
-[ext_resource type="Resource" path="res://levels/level_7.tres" id="9_82xsv"]
-[ext_resource type="Resource" path="res://levels/level_8.tres" id="10_getpj"]
-[ext_resource type="Resource" path="res://levels/level_9.tres" id="11_ryguw"]
+[ext_resource type="Script" uid="uid://cu6cq88gr24e3" path="res://scripts/main.gd" id="1_trceg"]
+[ext_resource type="Script" uid="uid://d2bajo514w3iq" path="res://scripts/level_data.gd" id="2_a8y0u"]
+[ext_resource type="Resource" uid="uid://cvgihyp3qm80j" path="res://levels/level_1.tres" id="3_jkv2x"]
+[ext_resource type="Resource" uid="uid://d1t72qrbd2nac" path="res://levels/level_2.tres" id="4_jbj1t"]
+[ext_resource type="Resource" uid="uid://c1dku31cogli" path="res://levels/level_3.tres" id="5_muem4"]
+[ext_resource type="Resource" path="res://levels/level_4.tres" id="6_dp3eg"]
+[ext_resource type="Resource" path="res://levels/level_5.tres" id="7_0ld40"]
+[ext_resource type="Resource" path="res://levels/level_6.tres" id="8_gqmmt"]
+[ext_resource type="Resource" path="res://levels/level_7.tres" id="9_yc10j"]
+[ext_resource type="Resource" path="res://levels/level_8.tres" id="10_jscy8"]
+[ext_resource type="Resource" path="res://levels/level_9.tres" id="11_pm3ni"]
+[ext_resource type="Script" uid="uid://cmilped3wai4n" path="res://scripts/board_manager.gd" id="12_y6deb"]
+[ext_resource type="Script" uid="uid://dcrkhyr8vhs3g" path="res://scripts/ui_manager.gd" id="13_og1vs"]
 
 [node name="Main" type="Node2D" unique_id=1789331107]
-script = ExtResource("1_ig7tw")
-levels = Array[ExtResource("2_ycdy4")]([ExtResource("3_w48qg"), ExtResource("4_vivmo"), ExtResource("5_2cqfq"), ExtResource("6_yaehf"), ExtResource("7_074og"), ExtResource("8_cegan"), ExtResource("9_82xsv"), ExtResource("10_getpj"), ExtResource("11_ryguw")])
+script = ExtResource("1_trceg")
+levels = Array[ExtResource("2_a8y0u")]([ExtResource("3_jkv2x"), ExtResource("4_jbj1t"), ExtResource("5_muem4"), ExtResource("6_dp3eg"), ExtResource("7_0ld40"), ExtResource("8_gqmmt"), ExtResource("9_yc10j"), ExtResource("10_jscy8"), ExtResource("11_pm3ni")])
 
 [node name="BoardManager" type="Node2D" parent="." unique_id=1328920833]
-script = ExtResource("2_h2yge")
+script = ExtResource("12_y6deb")
 
 [node name="StatusLabel" type="Label" parent="." unique_id=685700372]
 offset_right = 40.0
@@ -130,4 +130,4 @@ layout_mode = 3
 anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
-script = ExtResource("3_1bvp3")
+script = ExtResource("13_og1vs")

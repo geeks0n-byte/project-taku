@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://j4t3jm7v17ag"]
+
+[ext_resource type="Script" uid="uid://d25rxch5oti18" path="res://scripts/cell.gd" id="1_k6tqi"]
+[ext_resource type="Texture2D" uid="uid://ci71ltxqka6f8" path="res://icons/tiles/tile_empty.svg" id="2_4kve2"]
+[ext_resource type="Texture2D" uid="uid://bb56740eknng0" path="res://icons/tiles/tile_red.svg" id="3_k4tsc"]
+[ext_resource type="Texture2D" uid="uid://dmawhj6vw1p1r" path="res://icons/tiles/tile_blue.svg" id="4_ely81"]
+[ext_resource type="Texture2D" uid="uid://bnmamps4et8l4" path="res://icons/tiles/tile_green.svg" id="5_brkcj"]
+[ext_resource type="Texture2D" uid="uid://cr3gyfkb3xwqs" path="res://icons/tiles/tile_wall.svg" id="6_v4toj"]
+
+[node name="Cell" type="TextureButton" unique_id=258424194]
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_k6tqi")
+texture_empty = ExtResource("2_4kve2")
+texture_zero = ExtResource("3_k4tsc")
+texture_one = ExtResource("4_ely81")
+texture_wildcard = ExtResource("5_brkcj")
+texture_wall = ExtResource("6_v4toj")

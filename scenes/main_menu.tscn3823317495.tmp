@@ -1,0 +1,63 @@
+[gd_scene format=3 uid="uid://c20pd0eqihnlp"]
+
+[ext_resource type="Script" uid="uid://cvffp4gq8wfdc" path="res://scripts/main_menu.gd" id="1_8ln24"]
+[ext_resource type="PackedScene" uid="uid://cuf448q3tm0yy" path="res://scenes/main.tscn" id="2_rtw2f"]
+[ext_resource type="Texture2D" uid="uid://cbvbny6down6a" path="res://icons/buttons/Default@2x.png" id="3_oa1go"]
+[ext_resource type="Texture2D" uid="uid://80s15t0mo78p" path="res://icons/buttons/settingsV2_icon_128px.png" id="4_tbmy8"]
+[ext_resource type="Texture2D" uid="uid://2spy15xdte1g" path="res://icons/buttons/close_icon_128px.png" id="5_jk1qb"]
+
+[node name="MainMenu" type="Control" unique_id=195312888]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_8ln24")
+gameplay_scene = ExtResource("2_rtw2f")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1103410840]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MainLayout" type="VBoxContainer" parent="MarginContainer" unique_id=1117181574]
+layout_mode = 2
+alignment = 1
+
+[node name="ButtonList" type="VBoxContainer" parent="MarginContainer/MainLayout" unique_id=507574345]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="StartButton" type="Button" parent="MarginContainer/MainLayout/ButtonList" unique_id=1570726934]
+layout_mode = 2
+text = "Start Game"
+icon = ExtResource("3_oa1go")
+
+[node name="LevelSelectButton" type="Button" parent="MarginContainer/MainLayout/ButtonList" unique_id=794689925]
+layout_mode = 2
+text = "Select Level"
+
+[node name="OptionsButton" type="Button" parent="MarginContainer/MainLayout/ButtonList" unique_id=905426570]
+layout_mode = 2
+text = "Options"
+icon = ExtResource("4_tbmy8")
+
+[node name="LevelEditorButton" type="Button" parent="MarginContainer/MainLayout/ButtonList" unique_id=1971963387]
+layout_mode = 2
+text = "Level Editor"
+
+[node name="ExitButton" type="Button" parent="MarginContainer/MainLayout/ButtonList" unique_id=289645077]
+layout_mode = 2
+text = "Exit"
+icon = ExtResource("5_jk1qb")
+
+[connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/StartButton" to="." method="_on_start_button_pressed"]
+[connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/LevelSelectButton" to="." method="_on_level_select_pressed"]
+[connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/OptionsButton" to="." method="_on_options_pressed"]
+[connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/LevelEditorButton" to="." method="_on_level_editor_pressed"]
+[connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/ExitButton" to="." method="_on_exit_pressed"]

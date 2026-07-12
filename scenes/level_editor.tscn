@@ -1,15 +1,15 @@
 [gd_scene format=3 uid="uid://bea1srhxq5xh2"]
 
-[ext_resource type="Script" uid="uid://vq06fy81b0wh" path="res://level_editor.gd" id="1_qnyfc"]
-[ext_resource type="Script" uid="uid://h58ihw84sbgu" path="res://editor_canvas_manager.gd" id="2_uljig"]
-[ext_resource type="Script" uid="uid://dp2q4jgxwyjal" path="res://editor_ui_manager.gd" id="3_miuv6"]
+[ext_resource type="Script" uid="uid://vq06fy81b0wh" path="res://scripts/level_editor.gd" id="1_5u7ie"]
+[ext_resource type="Script" uid="uid://h58ihw84sbgu" path="res://scripts/editor_canvas_manager.gd" id="2_nh68x"]
+[ext_resource type="Script" uid="uid://dp2q4jgxwyjal" path="res://scripts/editor_ui_manager.gd" id="3_eovuc"]
 
 [node name="LevelEditor" type="Node2D" unique_id=1779207314]
-script = ExtResource("1_qnyfc")
+script = ExtResource("1_5u7ie")
 
 [node name="EditorCanvasManager" type="Node2D" parent="." unique_id=2117784922]
 position = Vector2(120, 180)
-script = ExtResource("2_uljig")
+script = ExtResource("2_nh68x")
 
 [node name="EditorUI" type="CanvasLayer" parent="." unique_id=1752170726]
 
@@ -93,4 +93,4 @@ offset_bottom = 8.0
 text = "RETURN"
 
 [node name="EditorUIManager" type="Node2D" parent="." unique_id=2108976632]
-script = ExtResource("3_miuv6")
+script = ExtResource("3_eovuc")
