@@ -2,6 +2,9 @@
 
 [ext_resource type="Script" uid="uid://cvffp4gq8wfdc" path="res://main_menu.gd" id="1_script"]
 [ext_resource type="PackedScene" uid="uid://cuf448q3tm0yy" path="res://main.tscn" id="2_7vrkn"]
+[ext_resource type="Texture2D" uid="uid://80s15t0mo78p" path="res://icons/buttons/settingsV2_icon_128px.png" id="4_glbon"]
+[ext_resource type="Texture2D" uid="uid://cbvbny6down6a" path="res://icons/buttons/Default@2x.png" id="4_qe12f"]
+[ext_resource type="Texture2D" uid="uid://2spy15xdte1g" path="res://icons/buttons/close_icon_128px.png" id="6_dy7ct"]
 
 [node name="MainMenu" type="Control" unique_id=195312888]
 layout_mode = 3
@@ -33,6 +36,7 @@ alignment = 1
 [node name="StartButton" type="Button" parent="MarginContainer/MainLayout/ButtonList" unique_id=1570726934]
 layout_mode = 2
 text = "Start Game"
+icon = ExtResource("4_qe12f")
 
 [node name="LevelSelectButton" type="Button" parent="MarginContainer/MainLayout/ButtonList" unique_id=794689925]
 layout_mode = 2
@@ -41,6 +45,7 @@ text = "Select Level"
 [node name="OptionsButton" type="Button" parent="MarginContainer/MainLayout/ButtonList" unique_id=905426570]
 layout_mode = 2
 text = "Options"
+icon = ExtResource("4_glbon")
 
 [node name="LevelEditorButton" type="Button" parent="MarginContainer/MainLayout/ButtonList" unique_id=1971963387]
 layout_mode = 2
@@ -49,6 +54,7 @@ text = "Level Editor"
 [node name="ExitButton" type="Button" parent="MarginContainer/MainLayout/ButtonList" unique_id=289645077]
 layout_mode = 2
 text = "Exit"
+icon = ExtResource("6_dy7ct")
 
 [connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/StartButton" to="." method="_on_start_button_pressed"]
 [connection signal="pressed" from="MarginContainer/MainLayout/ButtonList/LevelSelectButton" to="." method="_on_level_select_pressed"]
