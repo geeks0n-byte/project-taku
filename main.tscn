@@ -1,14 +1,9 @@
 [gd_scene format=3 uid="uid://cuf448q3tm0yy"]
 
 [ext_resource type="Script" uid="uid://cu6cq88gr24e3" path="res://main.gd" id="1_ig7tw"]
-[ext_resource type="Script" uid="uid://d2bajo514w3iq" path="res://level_data.gd" id="2_1bvp3"]
-[ext_resource type="Resource" uid="uid://cvgihyp3qm80j" path="res://levels/level_1.tres" id="3_1bvp3"]
-[ext_resource type="Resource" uid="uid://d1t72qrbd2nac" path="res://levels/level_2.tres" id="4_1bvp3"]
-[ext_resource type="Resource" path="res://levels/level_3.tres" id="5_lquwl"]
 
 [node name="Main" type="Node2D" unique_id=1789331107]
 script = ExtResource("1_ig7tw")
-levels = Array[ExtResource("2_1bvp3")]([ExtResource("3_1bvp3"), ExtResource("4_1bvp3"), ExtResource("5_lquwl")])
 
 [node name="GridContainer2D" type="Node2D" parent="." unique_id=206224717]
 

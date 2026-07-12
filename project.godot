@@ -24,7 +24,11 @@ window/handheld/orientation=6
 
 [dotnet]
 
-project/assembly_name="TakuzuVariant"
+project/assembly_name="project-taku"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/AI_Gemini_GD/plugin.cfg")
 
 [physics]
 

@@ -356,22 +356,22 @@ func _on_save_pressed():
 	
 	for coord in board_cells:
 		output_layout[coord] = board_cells[coord].state
-		
+	
 	var new_level_resource = LevelData.new()
-	new_level_resource.set_script(load("res://level_data.gd"))
 	new_level_resource.level_number = level_num
 	new_level_resource.layout = output_layout
 	
-	if not DirAccess.dir_exists_absolute("res://levels"):
-		DirAccess.make_dir_absolute("res://levels")
+	var dir = DirAccess.open("res://")
+	if not dir.dir_exists("levels"):
+		dir.make_dir("levels")
 		
 	var target_save_path = "res://levels/level_%d.tres" % level_num
 	var save_result = ResourceSaver.save(new_level_resource, target_save_path)
 	
 	if save_result == OK:
-		_update_status("SUCCESS: Saved level file cleanly to: " + target_save_path, Color(0.4, 1.0, 0.4))
+		_update_status("SUCCESS: Saved level file to: " + target_save_path, Color(0.4, 1.0, 0.4))
 	else:
-		_update_status("ERROR: Resource preservation routine failed with code: " + str(save_result), Color(1.0, 0.3, 0.3))
+		_update_status("ERROR: Resource save failed: " + error_string(save_result), Color(1.0, 0.3, 0.3))
 
 func _on_main_menu_pressed():
 	get_tree().change_scene_to_file("res://main_menu.tscn")
@@ -379,6 +379,7 @@ func _on_main_menu_pressed():
 func _update_status(msg: String, text_color: Color):
 	status_label.text = msg
 	status_label.modulate = text_color
+	status_label.add_theme_font_size_override("font_size", 22)
 
 func _draw():
 	var offset = grid_container.position

@@ -1,0 +1,48 @@
+[gd_scene format=3 uid="uid://cqf1g7xouf15q"]
+
+[ext_resource type="Script" uid="uid://bluo2lx5d6r50" path="res://level_select.gd" id="1_il3u1"]
+
+[node name="LevelSelect" type="Control" unique_id=12330982]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_il3u1")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=466132168]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1886838420]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=620755569]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1056276356]
+layout_mode = 2
+text = "SELECT A LEVEL"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer" unique_id=24250700]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="LevelGrid" type="GridContainer" parent="MarginContainer/VBoxContainer/ScrollContainer" unique_id=1318859600]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="BackButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=2131962680]
+layout_mode = 2
+size_flags_vertical = 8
