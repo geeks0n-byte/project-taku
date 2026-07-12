@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://cqf1g7xouf15q"]
 
 [ext_resource type="Script" uid="uid://bluo2lx5d6r50" path="res://level_select.gd" id="1_il3u1"]
+[ext_resource type="Texture2D" uid="uid://rukxq14a43wc" path="res://Icons/Buttons/Big@2x.png" id="2_vomi7"]
 
 [node name="LevelSelect" type="Control" unique_id=12330982]
 layout_mode = 3
@@ -11,13 +12,14 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_il3u1")
 
-[node name="ColorRect" type="ColorRect" parent="." unique_id=466132168]
+[node name="ColorRect" type="TextureRect" parent="." unique_id=1302250542]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+texture = ExtResource("2_vomi7")
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=1886838420]
 layout_mode = 1

@@ -13,7 +13,7 @@ config_version=5
 config/name="project-taku"
 run/main_scene="uid://c20pd0eqihnlp"
 config/features=PackedStringArray("4.7", "GL Compatibility")
-config/icon="res://icon.svg"
+config/icon="res://Icons/Placeholder icons/icon.svg"
 
 [autoload]
 
