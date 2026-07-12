@@ -6,7 +6,7 @@ extends Node2D
 # Editor Debug Configuration
 @export var show_debug_tools: bool = true 
 
-# Level Progression Array (Drag & drop your .tres level resources here in the Inspector!)
+# Level Progression Array (Now automatically syncs with your folder data!)
 @export var levels: Array[LevelData] = []
 
 # Main Screen UI References
@@ -49,7 +49,10 @@ var board_cells = {}
 var error_messages = []
 
 func _ready():
-	# 1. Check if a level resource was passed globally from the Level Select grid menu
+	# 1. Dynamically sync the campaign array with folder assets (handles PC and mobile remapping)
+	_load_all_levels_from_storage()
+
+	# 2. Check if a level resource was passed globally from the Level Select grid menu
 	if GlobalGameManager.selected_level_resource != null:
 		var custom_level = GlobalGameManager.selected_level_resource
 		print("Gameplay Engine: Intercepted level selection resource for Level ", custom_level.level_number)
@@ -57,7 +60,7 @@ func _ready():
 		# Immediately clear the global courier reference to maintain clean transitions
 		GlobalGameManager.selected_level_resource = null
 		
-		# Synchronize the selection with your campaign array index if it exists there
+		# Synchronize the selection with your campaign array index
 		var found_index = -1
 		for i in range(levels.size()):
 			if levels[i].level_number == custom_level.level_number:
@@ -67,13 +70,16 @@ func _ready():
 		if found_index != -1:
 			current_level_index = found_index
 		else:
-			# If a completely loose custom file was loaded, append it so things don't crash
 			levels.append(custom_level)
 			current_level_index = levels.size() - 1
+	else:
+		# Direct "Start Game" fallback: Always defaults cleanly to index 0 (which is sorted Level 1)
+		print("Gameplay Engine: Direct start detected. Loading first chronological level index.")
+		current_level_index = 0
 
 	# Verification step to ensure maps are assigned safely before game loops start
 	if levels.size() == 0:
-		push_error("No level resources assigned to the Level manager array inside the Main Inspector panel!")
+		push_error("No level resources found in res://levels/ or assigned via inspector!")
 		return
 		
 	restart_button.pressed.connect(_on_restart_pressed)
@@ -95,6 +101,40 @@ func _ready():
 		
 	setup_ui_elements()
 	generate_board()
+
+func _load_all_levels_from_storage() -> void:
+	levels.clear()
+	var levels_dir = "res://levels/"
+	
+	if not DirAccess.dir_exists_absolute(levels_dir):
+		return
+		
+	var dir = DirAccess.open(levels_dir)
+	if dir:
+		var raw_paths = []
+		dir.list_dir_begin()
+		var file_name = dir.get_next()
+		while file_name != "":
+			if not dir.current_is_dir():
+				if file_name.ends_with(".tres"):
+					raw_paths.append(levels_dir + file_name)
+				elif file_name.ends_with(".tres.remap"):
+					raw_paths.append(levels_dir + file_name.replace(".remap", ""))
+			file_name = dir.get_next()
+		dir.list_dir_end()
+		
+		# Sort paths numerically so Level 10 doesn't sort before Level 2
+		raw_paths.sort_custom(func(a, b):
+			var num_a = int(a.get_file().get_basename().replace("level_", ""))
+			var num_b = int(b.get_file().get_basename().replace("level_", ""))
+			return num_a < num_b
+		)
+		
+		# Instance resources directly into our campaign track array
+		for path in raw_paths:
+			var res = load(path)
+			if res and res is LevelData:
+				levels.append(res)
 
 func _on_pause_pressed():
 	if not is_game_active or is_paused: return
