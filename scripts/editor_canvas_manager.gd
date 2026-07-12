@@ -3,7 +3,7 @@ extends Node2D
 
 signal canvas_cell_clicked(coord: Vector2i)
 
-@export var cell_scene: PackedScene = preload("res://cell.tscn")
+@export var cell_scene: PackedScene = preload("res://scenes/cell.tscn")
 
 const CELL_SIZE = 120
 const GRID_WIDTH = 7
