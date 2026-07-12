@@ -44,23 +44,12 @@ theme_override_constants/margin_bottom = 100
 layout_mode = 2
 alignment = 1
 
-[node name="ButtonList" type="VBoxContainer" parent="MarginContainer/MainLayout" unique_id=277401448]
-custom_minimum_size = Vector2(-0.62, 0)
-layout_mode = 2
-offset_transform_enabled = true
-theme_override_constants/separation = 20
-alignment = 1
-
-[node name="LevelSelectButton" type="Button" parent="MarginContainer/MainLayout" unique_id=1098028679]
-layout_mode = 2
-text = "Level Select"
-
 [node name="StartButton" type="TextureButton" parent="." unique_id=373262252]
 layout_mode = 0
-offset_left = 250.0
-offset_top = 698.0
-offset_right = 861.0
-offset_bottom = 975.0
+offset_left = 252.0
+offset_top = 634.0
+offset_right = 863.0
+offset_bottom = 911.0
 offset_transform_enabled = true
 texture_normal = ExtResource("4_glbon")
 stretch_mode = 0
@@ -90,10 +79,10 @@ stretch_mode = 4
 texture_filter = 2
 custom_minimum_size = Vector2(250, 100)
 layout_mode = 0
-offset_left = 344.0
-offset_top = 1057.0
-offset_right = 747.0
-offset_bottom = 1282.0
+offset_left = 556.0
+offset_top = 1049.0
+offset_right = 948.0
+offset_bottom = 1278.0
 text = "Level Editor"
 
 [node name="GameTitle" type="Label" parent="." unique_id=487995318]
@@ -107,8 +96,16 @@ text = "Project-Taku"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[connection signal="pressed" from="MarginContainer/MainLayout/LevelSelectButton" to="." method="_on_level_select_pressed"]
+[node name="LevelSelectButton" type="Button" parent="." unique_id=1098028679]
+layout_mode = 0
+offset_left = 126.0
+offset_top = 1049.0
+offset_right = 499.0
+offset_bottom = 1279.0
+text = "Level Select"
+
 [connection signal="pressed" from="StartButton" to="." method="_on_start_button_pressed"]
 [connection signal="pressed" from="Options" to="." method="_on_options_pressed"]
 [connection signal="pressed" from="Exit" to="." method="_on_exit_pressed"]
 [connection signal="pressed" from="LevelEditor" to="." method="_on_level_editor_pressed"]
+[connection signal="pressed" from="LevelSelectButton" to="." method="_on_level_select_pressed"]
