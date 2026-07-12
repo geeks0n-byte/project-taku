@@ -34,9 +34,12 @@ layout_mode = 2
 
 [node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1056276356]
 layout_mode = 2
+theme_override_font_sizes/font_size = 32
 text = "SELECT A LEVEL"
+horizontal_alignment = 1
 
 [node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer" unique_id=24250700]
+custom_maximum_size = Vector2(-1, 400)
 layout_mode = 2
 size_flags_vertical = 3
 
@@ -44,7 +47,9 @@ size_flags_vertical = 3
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+columns = 3
 
 [node name="BackButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=2131962680]
+custom_minimum_size = Vector2(200, 60)
 layout_mode = 2
-size_flags_vertical = 8
+theme_override_font_sizes/font_size = 32

@@ -12,7 +12,6 @@ func _ready() -> void:
 	back_button.text = "Back"
 	
 	# Configure GridContainer alignment configurations
-	level_grid.columns = 4
 	level_grid.add_theme_constant_override("h_separation", 20)
 	level_grid.add_theme_constant_override("v_separation", 20)
 	
@@ -45,6 +44,9 @@ func populate_level_menu() -> void:
 			btn.text = "Level " + str(resource.level_number)
 			btn.custom_minimum_size = Vector2(150, 100)
 			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			
+			# Set the text size to 32 for the dynamically created buttons
+			btn.add_theme_font_size_override("font_size", 32)
 			
 			# Map click behaviors contextually to our level loading pipeline sequence
 			btn.pressed.connect(func(): _on_level_selected(resource))
