@@ -7,12 +7,13 @@ var coord: Vector2i = Vector2i.ZERO
 var state: int = -1 
 var is_locked: bool = false 
 var is_playable: bool = true
+var is_error: bool = false # Track whether to draw the error border
 
 @export var texture_empty: Texture2D
 @export var texture_zero: Texture2D
 @export var texture_one: Texture2D
 @export var texture_wildcard: Texture2D
-@export var texture_wall: Texture2D # New texture slot for the wall
+@export var texture_wall: Texture2D 
 
 func _ready():
 	pressed.connect(_on_pressed)
@@ -49,9 +50,23 @@ func _apply_modulation():
 	else:
 		modulate = Color(1.0, 1.0, 1.0)
 
+# Custom drawing handles the border canvas item overlay
+func _draw() -> void:
+	if is_error:
+		var rect = Rect2(Vector2.ZERO, size)
+		var border_color = Color(1.0, 0.2, 0.2) # Clean red color
+		var border_width = 4.0 # Adjust this value to make the border thicker or thinner
+		
+		# Setting 'filled' (3rd param) to false makes it an outline
+		draw_rect(rect, border_color, false, border_width)
+
 func highlight_error():
-	if is_playable:
-		modulate = Color(1.0, 0.4, 0.4)
+	if is_playable and not is_error:
+		is_error = true
+		queue_redraw() # Triggers Godot to run the _draw() function
 
 func clear_highlight():
+	if is_error:
+		is_error = false
+		queue_redraw() # Redraws the cell to clear the drawn border
 	_apply_modulation()

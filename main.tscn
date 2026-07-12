@@ -6,7 +6,7 @@
 [ext_resource type="Script" uid="uid://dcrkhyr8vhs3g" path="res://ui_manager.gd" id="3_1bvp3"]
 [ext_resource type="Resource" uid="uid://cvgihyp3qm80j" path="res://levels/level_1.tres" id="3_w48qg"]
 [ext_resource type="Resource" uid="uid://d1t72qrbd2nac" path="res://levels/level_2.tres" id="4_vivmo"]
-[ext_resource type="Resource" uid="uid://5vggql2cn2ix" path="res://levels/level_3.tres" id="5_2cqfq"]
+[ext_resource type="Resource" uid="uid://c1dku31cogli" path="res://levels/level_3.tres" id="5_2cqfq"]
 [ext_resource type="Resource" path="res://levels/level_4.tres" id="6_yaehf"]
 [ext_resource type="Resource" path="res://levels/level_5.tres" id="7_074og"]
 [ext_resource type="Resource" path="res://levels/level_6.tres" id="8_cegan"]

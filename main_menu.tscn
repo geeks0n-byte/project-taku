@@ -2,10 +2,10 @@
 
 [ext_resource type="Script" uid="uid://cvffp4gq8wfdc" path="res://main_menu.gd" id="1_06t4h"]
 [ext_resource type="PackedScene" uid="uid://cuf448q3tm0yy" path="res://main.tscn" id="2_7vrkn"]
-[ext_resource type="Texture2D" uid="uid://rukxq14a43wc" path="res://Icons/Buttons/Big@2x.png" id="3_jix8l"]
-[ext_resource type="Texture2D" uid="uid://dj37ntwfsi1k4" path="res://Icons/Buttons/Default@2x.png" id="4_glbon"]
-[ext_resource type="Texture2D" uid="uid://dh43ejy3t671l" path="res://Icons/Buttons/options_icon_128px.png" id="5_nlkkf"]
-[ext_resource type="Texture2D" uid="uid://bifyc28jiudj" path="res://Icons/Buttons/close_icon_128px.png" id="6_qe12f"]
+[ext_resource type="Texture2D" uid="uid://ds4khbnemdfjp" path="res://icons/buttons/Big@2x.png" id="3_nlkkf"]
+[ext_resource type="Texture2D" uid="uid://cbvbny6down6a" path="res://icons/buttons/Default@2x.png" id="4_qe12f"]
+[ext_resource type="Texture2D" uid="uid://dmel6oy4bqbkg" path="res://icons/buttons/options_icon_128px.png" id="5_8qtwp"]
+[ext_resource type="Texture2D" uid="uid://2spy15xdte1g" path="res://icons/buttons/close_icon_128px.png" id="6_dy7ct"]
 
 [node name="MainMenu" type="Control" unique_id=102094177]
 layout_mode = 3
@@ -26,7 +26,7 @@ offset_left = -420.0
 offset_right = 420.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("3_jix8l")
+texture = ExtResource("3_nlkkf")
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=1191041958]
 layout_mode = 1
@@ -62,7 +62,7 @@ offset_top = 698.0
 offset_right = 861.0
 offset_bottom = 975.0
 offset_transform_enabled = true
-texture_normal = ExtResource("4_glbon")
+texture_normal = ExtResource("4_qe12f")
 stretch_mode = 0
 
 [node name="Options" type="TextureButton" parent="." unique_id=1424304495]
@@ -72,7 +72,7 @@ offset_left = 289.0
 offset_top = 1445.0
 offset_right = 502.0
 offset_bottom = 1678.0
-texture_normal = ExtResource("5_nlkkf")
+texture_normal = ExtResource("5_8qtwp")
 stretch_mode = 0
 
 [node name="Exit" type="TextureButton" parent="." unique_id=1959141858]
@@ -83,7 +83,7 @@ offset_top = 1444.0
 offset_right = 851.0
 offset_bottom = 1679.0
 button_mask = 0
-texture_normal = ExtResource("6_qe12f")
+texture_normal = ExtResource("6_dy7ct")
 stretch_mode = 4
 
 [node name="LevelEditor" type="Button" parent="." unique_id=130638756]
