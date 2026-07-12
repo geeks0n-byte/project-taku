@@ -182,7 +182,7 @@ func _connect_signals(show_debug_tools: bool):
 	pause_auto_win_button.visible = show_debug_tools
 
 func _on_main_menu_pressed():
-	get_tree().change_scene_to_file("res://main_menu.tscn")
+	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
 func update_timer(formatted_time: String):
 	if timer_label: timer_label.text = "Time: " + formatted_time

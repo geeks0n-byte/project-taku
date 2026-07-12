@@ -87,8 +87,8 @@ func _on_level_selected(level_resource: LevelData) -> void:
 	GlobalGameManager.selected_level_resource = level_resource
 	
 	# Redirect directly to your updated main loop layout loader
-	var gameplay_scene_path = "res://main.tscn" 
+	var gameplay_scene_path = "res://scenes/main.tscn" 
 	get_tree().change_scene_to_file(gameplay_scene_path)
 
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file("res://main_menu.tscn")
+	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
