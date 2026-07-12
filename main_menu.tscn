@@ -2,10 +2,10 @@
 
 [ext_resource type="Script" uid="uid://cvffp4gq8wfdc" path="res://main_menu.gd" id="1_06t4h"]
 [ext_resource type="PackedScene" uid="uid://cuf448q3tm0yy" path="res://main.tscn" id="2_7vrkn"]
-[ext_resource type="Texture2D" uid="uid://rukxq14a43wc" path="res://Buttons/Big@2x.png" id="3_jix8l"]
-[ext_resource type="Texture2D" uid="uid://dj37ntwfsi1k4" path="res://Buttons/Default@2x.png" id="4_glbon"]
-[ext_resource type="Texture2D" uid="uid://dh43ejy3t671l" path="res://Buttons/options_icon_128px.png" id="5_nlkkf"]
-[ext_resource type="Texture2D" uid="uid://bifyc28jiudj" path="res://Buttons/close_icon_128px.png" id="6_qe12f"]
+[ext_resource type="Texture2D" uid="uid://rukxq14a43wc" path="res://Icons/Buttons/Big@2x.png" id="3_jix8l"]
+[ext_resource type="Texture2D" uid="uid://dj37ntwfsi1k4" path="res://Icons/Buttons/Default@2x.png" id="4_glbon"]
+[ext_resource type="Texture2D" uid="uid://dh43ejy3t671l" path="res://Icons/Buttons/options_icon_128px.png" id="5_nlkkf"]
+[ext_resource type="Texture2D" uid="uid://bifyc28jiudj" path="res://Icons/Buttons/close_icon_128px.png" id="6_qe12f"]
 
 [node name="MainMenu" type="Control" unique_id=102094177]
 layout_mode = 3

@@ -1,18 +1,18 @@
 [gd_scene format=3 uid="uid://j4t3jm7v17ag"]
 
 [ext_resource type="Script" uid="uid://d25rxch5oti18" path="res://cell.gd" id="1_yh0nt"]
-[ext_resource type="Texture2D" uid="uid://cxifparv3cyhn" path="res://ui/office/icon-zz-ui.svg" id="2_24dme"]
-[ext_resource type="Texture2D" uid="uid://cplqf1ttmyn28" path="res://3d/coding/icon-crop-3d.svg" id="3_24dme"]
-[ext_resource type="Texture2D" uid="uid://bk1u02hddcj8g" path="res://node/coding/icon-copy.svg" id="5_24dme"]
-[ext_resource type="Texture2D" uid="uid://cn72fskdeh50h" path="res://node/coding/icon-crop.svg" id="5_d5rym"]
-[ext_resource type="Texture2D" uid="uid://djsf0cfbff8ye" path="res://2d/coding/icon-crop-2d.svg" id="5_gk7jc"]
+[ext_resource type="Texture2D" uid="uid://d2pdiafjgqv4q" path="res://Icons/Tiles/tile_empty.svg" id="2_d5rym"]
+[ext_resource type="Texture2D" uid="uid://wdy15vowaocw" path="res://Icons/Tiles/tile_red.svg" id="3_2nn5k"]
+[ext_resource type="Texture2D" uid="uid://cqpy7sp4qc03k" path="res://Icons/Tiles/Tile_Blue.svg.svg" id="4_gk7jc"]
+[ext_resource type="Texture2D" uid="uid://c222oauoros5i" path="res://Icons/Tiles/tile_green.svg" id="5_w4olj"]
+[ext_resource type="Texture2D" uid="uid://b0jl3ilonicds" path="res://Icons/Tiles/tile_wall.svg" id="6_utqf3"]
 
 [node name="Cell" type="TextureButton" unique_id=258424194]
 offset_right = 40.0
 offset_bottom = 40.0
 script = ExtResource("1_yh0nt")
-texture_empty = ExtResource("2_24dme")
-texture_zero = ExtResource("3_24dme")
-texture_one = ExtResource("5_gk7jc")
-texture_wildcard = ExtResource("5_d5rym")
-texture_wall = ExtResource("5_24dme")
+texture_empty = ExtResource("2_d5rym")
+texture_zero = ExtResource("3_2nn5k")
+texture_one = ExtResource("4_gk7jc")
+texture_wildcard = ExtResource("5_w4olj")
+texture_wall = ExtResource("6_utqf3")
