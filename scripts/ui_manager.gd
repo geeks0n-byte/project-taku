@@ -145,8 +145,6 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 
 # ==========================================
 # HUD STATE CONTROLLER
-# Sets the disabled property of the background buttons so they 
-# cannot be clicked while a menu is open over them.
 # ==========================================
 func set_hud_buttons_disabled(is_disabled: bool):
 	if pause_button:
@@ -185,7 +183,6 @@ func _on_tutorial_back_pressed():
 	if how_to_play_container:
 		how_to_play_container.visible = false
 		
-	# Unblock the HUD buttons as we are closing the menu
 	set_hud_buttons_disabled(false)
 	resume_from_tutorial_requested.emit()
 
@@ -222,20 +219,16 @@ func set_overlays_hidden():
 	if victory_panel: victory_panel.visible = false
 	if how_to_play_container: how_to_play_container.visible = false 
 	
-	# Ensures the buttons are clickable when a new level starts normally
 	set_hud_buttons_disabled(false)
 
 func show_how_to_play():
 	if how_to_play_container:
 		how_to_play_container.visible = true
 		
-	# Block the HUD buttons while the tutorial is open
 	set_hud_buttons_disabled(true)
 
 func show_victory(display_num: int, is_last_level: bool, formatted_time: String):
 	_is_last_level_completed = is_last_level
-	
-	# Block the HUD buttons while the victory screen is open
 	set_hud_buttons_disabled(true)
 	
 	if status_label:

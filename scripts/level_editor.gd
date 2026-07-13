@@ -1,14 +1,29 @@
 extends Node2D
 
+# ==========================================
+# CONSTANTS & PATHS
+# ==========================================
+# Saves mobile design drafts to the writeable sandboxed user directory.
+const DEV_LEVELS_DIR = "user://levels/"
+
+# ==========================================
+# NODE REFERENCES
+# ==========================================
 @onready var ui_manager: EditorUIManager = $EditorUIManager
 @onready var canvas_manager: EditorCanvasManager = $EditorCanvasManager
 
+# ==========================================
+# STATE VARIABLES
+# ==========================================
 var current_brush_state: int = -1 
 var is_playtesting: bool = false
 var playtest_snapshot: Dictionary = {}
 
 var overwrite_dialog: ConfirmationDialog
 
+# ==========================================
+# INITIALIZATION
+# ==========================================
 func _ready():
 	_bind_signals()
 	
@@ -21,6 +36,9 @@ func _ready():
 	ui_manager.setup_ui(canvas_manager.grid_width, canvas_manager.grid_height, canvas_manager.CELL_SIZE)
 	canvas_manager.generate_blank_canvas(canvas_manager.grid_width, canvas_manager.grid_height)
 
+# ==========================================
+# SIGNAL BINDINGS
+# ==========================================
 func _bind_signals():
 	ui_manager.brush_changed.connect(_on_brush_changed)
 	ui_manager.save_requested.connect(_on_save_level)
@@ -32,6 +50,9 @@ func _bind_signals():
 	ui_manager.grid_size_changed.connect(_on_grid_size_changed) 
 	canvas_manager.canvas_cell_clicked.connect(_on_canvas_cell_clicked)
 
+# ==========================================
+# GRID & BRUSH CONTROLS
+# ==========================================
 func _on_grid_size_changed(new_width: int, new_height: int):
 	if is_playtesting: return
 	canvas_manager.generate_blank_canvas(new_width, new_height)
@@ -42,6 +63,9 @@ func _on_brush_changed(state_id: int, brush_name: String):
 	current_brush_state = state_id
 	ui_manager.update_status("Selected Tool: " + brush_name, Color.WHITE)
 
+# ==========================================
+# BOARD INTERACTION (DRAW / PLAYTEST)
+# ==========================================
 func _on_canvas_cell_clicked(coord: Vector2i):
 	var cell = canvas_manager.board_cells[coord]
 	
@@ -67,6 +91,9 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 			cell.is_locked = false
 		cell.update_visuals()
 
+# ==========================================
+# PLAYTEST SYSTEMS
+# ==========================================
 func _on_test_mode_entered():
 	is_playtesting = true
 	playtest_snapshot.clear()
@@ -126,31 +153,16 @@ func _run_playtest_validation_pass():
 	if results["valid"] and canvas_manager.is_board_full():
 		_trigger_playtest_victory()
 
+# ==========================================
+# VICTORY OVERLAY LOADER
+# ==========================================
 func _trigger_playtest_victory():
 	ui_manager.update_status("PLAYTEST COMPLETE: Level successfully solved!", Color.GOLD)
-	var compiled_text = _compile_dictionary_to_plaintext()
-	ui_manager.display_victory_overlay(compiled_text)
+	ui_manager.display_victory_overlay("GOOD JOB!\nLEVEL IS SOLVABLE")
 
-func _compile_dictionary_to_plaintext() -> String:
-	var out = "{\n"
-	var keys = playtest_snapshot.keys()
-	keys.sort_custom(func(a, b): return a.x < b.x if a.y == b.y else a.y < b.y)
-	
-	var row_buffer = []
-	var current_row = keys[0].y
-	
-	for key in keys:
-		if key.y != current_row:
-			out += "\t" + ", ".join(row_buffer) + ",\n"
-			row_buffer.clear()
-			current_row = key.y
-		row_buffer.append("Vector2i(%d,%d): %d" % [key.x, key.y, playtest_snapshot[key]])
-		
-	if row_buffer.size() > 0:
-		out += "\t" + ", ".join(row_buffer) + "\n"
-	out += "}"
-	return out
-
+# ==========================================
+# UTILITY ACTIONS
+# ==========================================
 func _on_clear_board():
 	if is_playtesting: return
 	
@@ -163,13 +175,24 @@ func _on_clear_board():
 		
 	ui_manager.update_status("Board cleared!", Color.WHITE)
 
+# ==========================================
+# LEVEL SAVING PROCESSOR
+# ==========================================
 func _on_save_level():
 	if is_playtesting: return
 	var level_num = ui_manager.get_level_number()
-	var target_save_path = "res://levels/level_%d.tres" % level_num
 	
-	if ResourceLoader.exists(target_save_path):
-		var existing_level = load(target_save_path) as LevelData
+	var dev_path = DEV_LEVELS_DIR + "level_%d.tres" % level_num
+	var official_path = "res://levels/level_%d.tres" % level_num
+	
+	var target_load_path = ""
+	if ResourceLoader.exists(dev_path):
+		target_load_path = dev_path
+	elif ResourceLoader.exists(official_path):
+		target_load_path = official_path
+
+	if target_load_path != "":
+		var existing_level = load(target_load_path) as LevelData
 		if existing_level and not _is_layout_empty(existing_level.layout):
 			overwrite_dialog.popup_centered()
 			return
@@ -195,11 +218,10 @@ func _execute_save():
 	new_level_resource.height = canvas_manager.grid_height
 	new_level_resource.layout = output_layout
 	
-	var dir = DirAccess.open("res://")
-	if not dir.dir_exists("levels"):
-		dir.make_dir("levels")
+	if not DirAccess.dir_exists_absolute(DEV_LEVELS_DIR):
+		DirAccess.make_dir_absolute(DEV_LEVELS_DIR)
 		
-	var target_save_path = "res://levels/level_%d.tres" % level_num
+	var target_save_path = DEV_LEVELS_DIR + "level_%d.tres" % level_num
 	var save_result = ResourceSaver.save(new_level_resource, target_save_path)
 	
 	if save_result == OK:
@@ -207,12 +229,23 @@ func _execute_save():
 	else:
 		ui_manager.update_status("ERROR: Resource save failed: " + error_string(save_result), Color(1.0, 0.3, 0.3))
 
+# ==========================================
+# LEVEL LOADING PROCESSOR
+# ==========================================
 func _on_load_level():
 	if is_playtesting: return
 	var level_num = ui_manager.get_level_number()
-	var target_load_path = "res://levels/level_%d.tres" % level_num
 	
-	if ResourceLoader.exists(target_load_path):
+	var dev_path = DEV_LEVELS_DIR + "level_%d.tres" % level_num
+	var official_path = "res://levels/level_%d.tres" % level_num
+	
+	var target_load_path = ""
+	if ResourceLoader.exists(dev_path):
+		target_load_path = dev_path
+	elif ResourceLoader.exists(official_path):
+		target_load_path = official_path
+
+	if target_load_path != "":
 		var loaded_level = load(target_load_path) as LevelData
 		if loaded_level:
 			canvas_manager.load_layout(loaded_level.width, loaded_level.height, loaded_level.layout)

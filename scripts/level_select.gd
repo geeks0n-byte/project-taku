@@ -1,29 +1,35 @@
 extends Control
 
-# Path where your level resources are stored
-const LEVELS_DIR = "res://levels/"
+# ==========================================
+# CONSTANTS & PATHS
+# ==========================================
+const CAMPAIGN_DIR = "res://levels/"
+const DEV_DIR = "user://levels/"
 
+# ==========================================
+# NODE REFERENCES
+# ==========================================
 @onready var level_grid = $MarginContainer/VBoxContainer/ScrollContainer/LevelGrid
 @onready var back_button = $MarginContainer/VBoxContainer/BackButton
 
+# ==========================================
+# INITIALIZATION
+# ==========================================
 func _ready() -> void:
-	# Connect back button behavior
 	back_button.pressed.connect(_on_back_pressed)
 	back_button.text = "Back"
 	
-	# Configure GridContainer alignment configurations
 	level_grid.add_theme_constant_override("h_separation", 20)
 	level_grid.add_theme_constant_override("v_separation", 20)
-	
-	# Force the Grid layout footprint to expand within the ScrollContainer space boundaries
 	level_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	level_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	
-	# Triggers the node tree generator generation immediately on load
 	populate_level_menu()
 
+# ==========================================
+# CONTAINER BUILDERS
+# ==========================================
 func populate_level_menu() -> void:
-	# Purge any old container child remnants or editor placeholders safely
 	for child in level_grid.get_children():
 		child.queue_free()
 		
@@ -36,45 +42,43 @@ func populate_level_menu() -> void:
 		level_grid.add_child(empty_label)
 		return
 
-	# Iterate, instantiate, and align selection buttons
+	var processed_levels = {}
+
 	for file_path in level_files:
 		var resource = load(file_path)
 		if resource and resource is LevelData:
+			if processed_levels.has(resource.level_number):
+				continue # Priority is given to your newer dev folders to overwrite old templates
+				
+			processed_levels[resource.level_number] = true
+			
 			var btn = Button.new()
-			btn.text = "Level " + str(resource.level_number)
 			btn.custom_minimum_size = Vector2(150, 100)
 			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			
-			# Set the text size to 32 for the dynamically created buttons
 			btn.add_theme_font_size_override("font_size", 32)
 			
-			# Map click behaviors contextually to our level loading pipeline sequence
+			var is_unlocked = SaveManager.is_level_unlocked(resource.level_number)
+			
+			if is_unlocked:
+				btn.text = "Level " + str(resource.level_number)
+				btn.disabled = false
+			else:
+				btn.text = "Level " + str(resource.level_number) + "\n(Locked)"
+				btn.disabled = true
+			
 			btn.pressed.connect(func(): _on_level_selected(resource))
 			level_grid.add_child(btn)
 
+# ==========================================
+# SCANNING UTILITIES
+# ==========================================
 func get_sorted_level_files() -> Array:
 	var files = []
-	if not DirAccess.dir_exists_absolute(LEVELS_DIR):
-		return files
-		
-	var dir = DirAccess.open(LEVELS_DIR)
-	if dir:
-		dir.list_dir_begin()
-		var file_name = dir.get_next()
-		while file_name != "":
-			if not dir.current_is_dir():
-				# Check for standard PC text resource files
-				if file_name.ends_with(".tres"):
-					files.append(LEVELS_DIR + file_name)
-				# Check for compiled mobile files (.remap extensions)
-				elif file_name.ends_with(".tres.remap"):
-					var clean_name = file_name.replace(".remap", "")
-					files.append(LEVELS_DIR + clean_name)
-					
-			file_name = dir.get_next()
-		dir.list_dir_end()
-		
-	# Sort files numerically so level_10 doesn't sit between level_1 and level_2
+	
+	# Scans user folder drafts first so they merge cleanly on top of PC project builds
+	files.append_array(_scan_directory(DEV_DIR))
+	files.append_array(_scan_directory(CAMPAIGN_DIR))
+	
 	files.sort_custom(func(a, b):
 		var num_a = int(a.get_file().get_basename().replace("level_", ""))
 		var num_b = int(b.get_file().get_basename().replace("level_", ""))
@@ -82,13 +86,34 @@ func get_sorted_level_files() -> Array:
 	)
 	return files
 
+func _scan_directory(path_to_scan: String) -> Array:
+	var found_files = []
+	if not DirAccess.dir_exists_absolute(path_to_scan):
+		return found_files
+		
+	var dir = DirAccess.open(path_to_scan)
+	if dir:
+		dir.list_dir_begin()
+		var file_name = dir.get_next()
+		while file_name != "":
+			if not dir.current_is_dir():
+				if file_name.ends_with(".tres"):
+					found_files.append(path_to_scan + file_name)
+				elif file_name.ends_with(".tres.remap"):
+					var clean_name = file_name.replace(".remap", "")
+					found_files.append(path_to_scan + clean_name)
+					
+			file_name = dir.get_next()
+		dir.list_dir_end()
+		
+	return found_files
+
+# ==========================================
+# VIEW NAVIGATION
+# ==========================================
 func _on_level_selected(level_resource: LevelData) -> void:
 	print("Passing to Global Courier: Level ", level_resource.level_number)
-	
-	# FIX: Save the clicked resource globally before transitioning scenes
 	GlobalGameManager.selected_level_resource = level_resource
-	
-	# Redirect directly to your updated main loop layout loader
 	var gameplay_scene_path = "res://scenes/main.tscn" 
 	get_tree().change_scene_to_file(gameplay_scene_path)
 

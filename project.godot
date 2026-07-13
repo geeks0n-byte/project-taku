@@ -18,12 +18,14 @@ config/icon="res://icons/placeholder_icons/icon.svg"
 [autoload]
 
 GlobalGameManager="*uid://bn8d4xks38olr"
+SaveManager="*uid://blp08aux0so6"
 
 [display]
 
 window/size/viewport_width=1080
 window/size/viewport_height=1920
 window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 window/handheld/orientation=6
 
 [dotnet]

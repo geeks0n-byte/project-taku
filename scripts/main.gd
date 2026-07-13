@@ -161,6 +161,11 @@ func trigger_victory():
 	
 	var is_last = current_level_index >= levels.size() - 1
 	var display_num = levels[current_level_index].level_number
+	
+	# Unlock progression
+	var next_level_to_unlock = display_num + 1
+	SaveManager.unlock_level(next_level_to_unlock)
+	
 	ui_manager.show_victory(display_num, is_last, _get_formatted_time())
 
 # ==========================================

@@ -108,6 +108,26 @@ texture_normal = SubResource("AtlasTexture_6f8o3")
 texture_pressed = SubResource("AtlasTexture_1esiv")
 stretch_mode = 0
 
+[node name="OptionsPanel" type="Panel" parent="." unique_id=1059985660]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="ClearSaveButton" type="Button" parent="OptionsPanel" unique_id=680843631]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="CloseOptionsButton" type="Button" parent="OptionsPanel" unique_id=1571661562]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="StatusLabel" type="Label" parent="OptionsPanel" unique_id=1615861695]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+
 [node name="ExitButton" type="TextureButton" parent="." unique_id=1060431704]
 layout_mode = 0
 offset_left = 627.0
