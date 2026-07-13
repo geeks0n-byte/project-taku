@@ -6,6 +6,7 @@ extends Node2D
 @onready var ui_manager: UIManager = $UIManager
 @onready var board_manager: BoardManager = $BoardManager
 @onready var timer_node = $Timer
+@onready var pause_menu: PauseMenu = $PauseMenu  
 
 var elapsed_seconds: int = 0
 var is_game_active: bool = true
@@ -26,18 +27,28 @@ func _ready():
 	ui_manager.setup_ui(show_debug_tools, board_manager.CELL_SIZE)
 	_bind_submanager_signals()
 	
+	# ADD THIS LINE:
+	# This ensures the button is completely hidden unless show_debug_tools is checked!
+	pause_menu.auto_win_button.visible = show_debug_tools
+	
 	if timer_node:
 		timer_node.timeout.connect(_on_timer_timeout)
 		
 	generate_board()
 
 func _bind_submanager_signals():
+	# UI Manager connections
 	ui_manager.pause_requested.connect(_on_pause)
-	ui_manager.resume_requested.connect(_on_resume)
 	ui_manager.reset_requested.connect(_on_reset)
-	ui_manager.restart_requested.connect(_on_restart)
-	ui_manager.auto_win_requested.connect(_on_auto_win)
 	board_manager.cell_changed.connect(_on_cell_changed)
+	
+	# Pause Menu connections
+	pause_menu.resume_pressed.connect(_on_resume)
+	pause_menu.restart_pressed.connect(_on_restart)
+	
+	# ADD THIS LINE:
+	pause_menu.auto_win_pressed.connect(_on_auto_win)
+	
 
 func _load_all_levels_from_storage() -> void:
 	levels.clear()
@@ -133,13 +144,13 @@ func _on_pause():
 	if not is_game_active or is_paused: return
 	is_paused = true
 	if timer_node: timer_node.stop()
-	ui_manager.show_pause_menu(true)
+	pause_menu.show() # Show the standalone pause menu
 
 func _on_resume():
 	if not is_paused: return
 	is_paused = false
 	if timer_node: timer_node.start()
-	ui_manager.show_pause_menu(false)
+	pause_menu.hide() # Hide the standalone pause menu
 
 func _on_reset():
 	is_paused = false
@@ -155,7 +166,7 @@ func _on_restart():
 func _on_auto_win():
 	if not is_game_active: return
 	is_paused = false
-	ui_manager.show_pause_menu(false)
+	pause_menu.hide() # Ensure the menu is closed if using cheats/auto-win
 	trigger_victory()
 
 func _on_timer_timeout():
