@@ -8,10 +8,10 @@ signal quit_pressed
 signal auto_win_pressed # <--- ADD THIS
 
 # 2. Get a reference to the button using its unique name
-@onready var resume_button: Button = $%ResumeButton
-@onready var restart_button: Button = $%RestartButton
-@onready var quit_button: Button = $%QuitButton
-@onready var auto_win_button: Button = $%AutoWinButton # <--- ADD THIS
+@onready var resume_button: TextureButton = $%ResumeButton
+@onready var restart_button: TextureButton = $%RestartButton
+@onready var quit_button: TextureButton = $%QuitButton
+@onready var auto_win_button: TextureButton = $%AutoWinButton # <--- ADD THIS
 
 func _ready() -> void:
 	hide()

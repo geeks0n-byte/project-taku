@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://b63k7kkhmvpc7" path="res://scripts/pause_menu.gd" id="1_n87rw"]
 [ext_resource type="Texture2D" uid="uid://rukxq14a43wc" path="res://icons/buttons/Big@2x.png" id="2_myx47"]
+[ext_resource type="Texture2D" uid="uid://ddlfk5v2e3ldg" path="res://icons/buttons/button_black.png" id="3_kukqi"]
 
 [node name="PauseMenu" type="Control" unique_id=1796595449]
 layout_mode = 3
@@ -12,12 +13,27 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_n87rw")
 
+[node name="Label5" type="Label" parent="." unique_id=1809398859]
+top_level = true
+layout_mode = 1
+anchors_preset = -1
+anchor_top = -0.31300002
+anchor_bottom = -0.31300002
+offset_left = 425.0
+offset_top = 760.96
+offset_right = 622.0
+offset_bottom = 817.96
+theme_override_font_sizes/font_size = 41
+text = "Paused"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="TextureRect" type="TextureRect" parent="." unique_id=202879118]
 layout_mode = 0
-offset_left = 299.0
-offset_top = 156.0
-offset_right = 708.0
-offset_bottom = 840.0
+offset_left = 219.0
+offset_top = 80.0
+offset_right = 825.0
+offset_bottom = 1128.0
 texture = ExtResource("2_myx47")
 expand_mode = 1
 
@@ -28,58 +44,99 @@ offset_top = -4.0
 offset_right = 39.0
 offset_bottom = 36.0
 
-[node name="Label" type="Label" parent="." unique_id=1253357902]
+[node name="ResumeButton" type="TextureButton" parent="." unique_id=971723208]
+unique_name_in_owner = true
 layout_mode = 0
-offset_left = 402.0
-offset_top = 179.0
-offset_right = 599.0
-offset_bottom = 236.0
-theme_override_font_sizes/font_size = 41
-text = "Paused"
+offset_left = 390.0
+offset_top = 348.0
+offset_right = 829.0
+offset_bottom = 567.0
+scale = Vector2(0.6, 0.6)
+texture_normal = ExtResource("3_kukqi")
+
+[node name="Label" type="Label" parent="ResumeButton" unique_id=1253357902]
+layout_mode = 0
+offset_left = 89.999985
+offset_top = 54.999977
+offset_right = 365.0
+offset_bottom = 151.99997
+theme_override_font_sizes/font_size = 71
+text = "Resume"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="ResumeButton" type="Button" parent="." unique_id=1633747326]
+[node name="RestartButton" type="TextureButton" parent="." unique_id=1018793528]
 unique_name_in_owner = true
 layout_mode = 0
-offset_left = 444.0
-offset_top = 299.0
-offset_right = 583.0
-offset_bottom = 399.0
-text = "Resume"
+offset_left = 393.0
+offset_top = 502.0
+offset_right = 832.0
+offset_bottom = 721.0
+scale = Vector2(0.6, 0.6)
+texture_normal = ExtResource("3_kukqi")
+stretch_mode = 4
 
-[node name="RestartButton" type="Button" parent="." unique_id=1294996196]
-unique_name_in_owner = true
+[node name="Label2" type="Label" parent="RestartButton" unique_id=626586763]
+top_level = true
 layout_mode = 0
-offset_left = 444.0
-offset_top = 405.0
-offset_right = 582.0
-offset_bottom = 488.0
+offset_left = 429.0
+offset_top = 535.0
+offset_right = 626.0
+offset_bottom = 592.0
+theme_override_font_sizes/font_size = 41
 text = "Restart"
+horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="QuitButton" type="Button" parent="." unique_id=1731686457]
+[node name="QuitButton" type="TextureButton" parent="." unique_id=1450915775]
 unique_name_in_owner = true
 layout_mode = 0
-offset_left = 444.0
-offset_top = 495.0
-offset_right = 581.0
-offset_bottom = 589.0
+offset_left = 395.00003
+offset_top = 801.0
+offset_right = 834.0
+offset_bottom = 1020.0
+scale = Vector2(0.6, 0.6)
+texture_normal = ExtResource("3_kukqi")
+
+[node name="Label3" type="Label" parent="QuitButton" unique_id=1999363146]
+top_level = true
+layout_mode = 0
+offset_left = 427.0
+offset_top = 831.0
+offset_right = 624.0
+offset_bottom = 888.0
+theme_override_font_sizes/font_size = 41
 text = "Quit"
+horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="AutoWinButton" type="Button" parent="." unique_id=145246255]
+[node name="AutoWinButton" type="TextureButton" parent="." unique_id=926541327]
 unique_name_in_owner = true
 layout_mode = 0
-offset_left = 444.0
-offset_top = 601.0
-offset_right = 580.0
-offset_bottom = 711.0
+offset_left = 394.0
+offset_top = 647.0
+offset_right = 833.0
+offset_bottom = 866.0
+scale = Vector2(0.6, 0.6)
+texture_normal = ExtResource("3_kukqi")
+
+[node name="Label4" type="Label" parent="AutoWinButton" unique_id=407596096]
+top_level = true
+layout_mode = 0
+offset_left = 429.0
+offset_top = 677.0
+offset_right = 626.0
+offset_bottom = 734.0
+theme_override_font_sizes/font_size = 41
 text = "AutoWin"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="HowToPlayButton" type="Button" parent="." unique_id=1889609946]
 unique_name_in_owner = true
 layout_mode = 0
-offset_left = 459.0
-offset_top = 753.0
-offset_right = 562.0
-offset_bottom = 784.0
+offset_left = 380.0
+offset_top = 995.0
+offset_right = 660.0
+offset_bottom = 1084.0
 text = "How To Play"
