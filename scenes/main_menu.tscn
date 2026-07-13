@@ -113,15 +113,17 @@ layout_mode = 0
 offset_right = 40.0
 offset_bottom = 40.0
 
-[node name="ClearSaveButton" type="Button" parent="OptionsPanel" unique_id=680843631]
+[node name="DeleteSaveButton" type="Button" parent="OptionsPanel" unique_id=680843631]
 layout_mode = 0
 offset_right = 8.0
 offset_bottom = 8.0
+text = "DELETE SAVE FILE"
 
 [node name="CloseOptionsButton" type="Button" parent="OptionsPanel" unique_id=1571661562]
 layout_mode = 0
 offset_right = 8.0
 offset_bottom = 8.0
+text = "CLOSE"
 
 [node name="StatusLabel" type="Label" parent="OptionsPanel" unique_id=1615861695]
 layout_mode = 0

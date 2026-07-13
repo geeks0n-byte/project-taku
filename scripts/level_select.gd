@@ -48,7 +48,7 @@ func populate_level_menu() -> void:
 		var resource = load(file_path)
 		if resource and resource is LevelData:
 			if processed_levels.has(resource.level_number):
-				continue # Priority is given to your newer dev folders to overwrite old templates
+				continue 
 				
 			processed_levels[resource.level_number] = true
 			
@@ -75,13 +75,15 @@ func populate_level_menu() -> void:
 func get_sorted_level_files() -> Array:
 	var files = []
 	
-	# Scans user folder drafts first so they merge cleanly on top of PC project builds
 	files.append_array(_scan_directory(DEV_DIR))
 	files.append_array(_scan_directory(CAMPAIGN_DIR))
 	
+	# Priority Sort: Orders numerically, but ensures user:// drafts always beat res:// 
 	files.sort_custom(func(a, b):
 		var num_a = int(a.get_file().get_basename().replace("level_", ""))
 		var num_b = int(b.get_file().get_basename().replace("level_", ""))
+		if num_a == num_b:
+			return a.begins_with("user://")
 		return num_a < num_b
 	)
 	return files
@@ -100,8 +102,7 @@ func _scan_directory(path_to_scan: String) -> Array:
 				if file_name.ends_with(".tres"):
 					found_files.append(path_to_scan + file_name)
 				elif file_name.ends_with(".tres.remap"):
-					var clean_name = file_name.replace(".remap", "")
-					found_files.append(path_to_scan + clean_name)
+					found_files.append(path_to_scan + file_name.replace(".remap", ""))
 					
 			file_name = dir.get_next()
 		dir.list_dir_end()
