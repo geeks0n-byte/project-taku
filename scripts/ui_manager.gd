@@ -3,7 +3,6 @@ extends Node
 
 # ==========================================
 # SIGNALS
-# These are the specific messages this manager shouts up to main.gd
 # ==========================================
 signal pause_requested
 signal reset_requested
@@ -36,13 +35,10 @@ signal play_again_requested
 @onready var rules_label = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/RulesLabel"
 @onready var tutorial_back_button = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/BackButton"
 
-# State memory for the victory screen button
 var _is_last_level_completed: bool = false
 
 # ==========================================
 # UI INITIALIZATION & LAYOUT MATH
-# Forces all UI elements to align properly via code, ensuring it
-# looks correct regardless of how it was dragged around in the editor.
 # ==========================================
 func setup_ui(_show_debug_tools: bool, cell_size: float):
 	
@@ -125,8 +121,6 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		main_menu_button.size = menu_button_size
 
 	# 3. Tutorial Panel Layout
-	# The tutorial panel is now expanded to 700x800 to accommodate larger text 
-	# and remove the need for scrolling.
 	var tutorial_size = Vector2(700, 800)
 	
 	if how_to_play_panel:
@@ -134,31 +128,36 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		how_to_play_panel.size = tutorial_size
 		
 	if rules_label:
-		# We start the text 30px inward from the top-left for a nice visual margin
 		rules_label.position = Vector2(30, 30)
-		
-		# Total Panel Width (700) - Left Margin (30) - Right Margin (30) = 640
-		# Total Panel Height (800) - Top Margin (30) - Bottom Area for Button (90) = 680
 		rules_label.size = Vector2(640, 680) 
 		
 	if tutorial_back_button:
 		var btn_size = Vector2(140, 50)
 		tutorial_back_button.size = btn_size
 		
-		# Center the button horizontally: (Panel Width - Button Width) / 2
-		# Place it near the bottom: Panel Height - Button Height - Bottom Margin (30)
 		var btn_x = (tutorial_size.x - btn_size.x) / 2
 		var btn_y = tutorial_size.y - btn_size.y - 30
 		
 		tutorial_back_button.position = Vector2(btn_x, btn_y)
 		tutorial_back_button.show()
 
-	# Run the connection function to wire physical buttons to logic
 	_connect_signals()
 
 # ==========================================
+# HUD STATE CONTROLLER
+# Sets the disabled property of the background buttons so they 
+# cannot be clicked while a menu is open over them.
+# ==========================================
+func set_hud_buttons_disabled(is_disabled: bool):
+	if pause_button:
+		pause_button.disabled = is_disabled
+	if reset_button:
+		reset_button.disabled = is_disabled
+	if how_to_play_button:
+		how_to_play_button.disabled = is_disabled
+
+# ==========================================
 # BUTTON WIRING
-# Physical UI buttons -> Code functions / Signal Emits
 # ==========================================
 func _connect_signals():
 	# Main HUD Buttons
@@ -183,14 +182,14 @@ func _connect_signals():
 # ACTION CALLBACKS
 # ==========================================
 func _on_tutorial_back_pressed():
-	# Hides the entire CenterContainer and alerts main.gd to unpause the timer
 	if how_to_play_container:
 		how_to_play_container.visible = false
+		
+	# Unblock the HUD buttons as we are closing the menu
+	set_hud_buttons_disabled(false)
 	resume_from_tutorial_requested.emit()
 
 func _on_victory_button_pressed():
-	# A smart button: If the player just beat the final level, it emits 'Play Again'.
-	# If they are in the middle of a campaign, it emits 'Next Level'.
 	if _is_last_level_completed:
 		play_again_requested.emit()
 	else:
@@ -202,7 +201,6 @@ func _on_main_menu_pressed():
 
 # ==========================================
 # DISPLAY UPDATERS
-# Functions called by main.gd to change on-screen text/visuals
 # ==========================================
 func update_timer(formatted_time: String):
 	if timer_label: timer_label.text = "Time: " + formatted_time
@@ -221,17 +219,24 @@ func show_status_errors(errors: Array):
 		status_label.text = "\n".join(errors)
 
 func set_overlays_hidden():
-	# A clean-up function called whenever a new board generates
 	if victory_panel: victory_panel.visible = false
 	if how_to_play_container: how_to_play_container.visible = false 
+	
+	# Ensures the buttons are clickable when a new level starts normally
+	set_hud_buttons_disabled(false)
 
 func show_how_to_play():
 	if how_to_play_container:
 		how_to_play_container.visible = true
+		
+	# Block the HUD buttons while the tutorial is open
+	set_hud_buttons_disabled(true)
 
 func show_victory(display_num: int, is_last_level: bool, formatted_time: String):
-	# Stores the state locally so our victory button knows what to do
 	_is_last_level_completed = is_last_level
+	
+	# Block the HUD buttons while the victory screen is open
+	set_hud_buttons_disabled(true)
 	
 	if status_label:
 		status_label.modulate = Color(1.0, 0.84, 0.0)

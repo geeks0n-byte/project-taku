@@ -116,6 +116,8 @@ func _intercept_global_selection():
 # ==========================================
 func generate_board():
 	if current_level_index >= levels.size(): return
+	
+	# Hiding the overlays will also automatically re-enable the HUD buttons!
 	ui_manager.set_overlays_hidden()
 	
 	elapsed_seconds = 0
@@ -154,7 +156,7 @@ func trigger_victory():
 	is_game_active = false
 	if timer_node: timer_node.stop()
 	
-	# Fully disables the board so no more tiles can be clicked while the victory screen is up
+	# Fully disables the board so no more tiles can be clicked
 	board_manager.process_mode = Node.PROCESS_MODE_DISABLED
 	
 	var is_last = current_level_index >= levels.size() - 1
@@ -169,8 +171,10 @@ func _on_pause():
 	is_paused = true
 	if timer_node: timer_node.stop()
 	
-	# Completely freezes the board inputs while the pause menu is open
+	# Freeze the board inputs AND block the background HUD buttons
 	board_manager.process_mode = Node.PROCESS_MODE_DISABLED
+	ui_manager.set_hud_buttons_disabled(true)
+	
 	pause_menu.show() 
 
 func _on_how_to_play():
@@ -178,7 +182,6 @@ func _on_how_to_play():
 	is_paused = true
 	if timer_node: timer_node.stop()
 	
-	# Completely freezes the board inputs while reading the rules
 	board_manager.process_mode = Node.PROCESS_MODE_DISABLED
 	
 	if ui_manager.has_method("show_how_to_play"):
@@ -189,8 +192,9 @@ func _on_resume():
 	is_paused = false
 	if timer_node: timer_node.start()
 	
-	# Unfreezes the board so the player can continue playing
+	# Unfreeze the board and re-enable the HUD buttons
 	board_manager.process_mode = Node.PROCESS_MODE_INHERIT
+	ui_manager.set_hud_buttons_disabled(false)
 	
 	pause_menu.hide() 
 
