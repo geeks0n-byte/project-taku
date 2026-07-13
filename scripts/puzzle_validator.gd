@@ -1,30 +1,19 @@
 class_name PuzzleValidator
 extends RefCounted
 
-static func validate_board(board_cells: Dictionary) -> Dictionary:
-	var rows = {}
-	var cols = {}
+static func validate_board(board_cells: Dictionary, cached_lines: Array) -> Dictionary:
 	var syntax_pass = true
 	var error_messages: Array[String] = []
 	
-	for coord in board_cells:
-		if coord.y not in rows: rows[coord.y] = []
-		if coord.x not in cols: cols[coord.x] = []
-		rows[coord.y].append(coord)
-		cols[coord.x].append(coord)
-
-	for r in rows:
-		if not check_line_validity(board_cells, rows[r], true, r, error_messages): 
+	# Iterating over the pre-sorted and pre-grouped cache
+	for line in cached_lines:
+		if not check_line_validity(board_cells, line["coords"], line["is_horizontal"], line["index"], error_messages): 
 			syntax_pass = false
 			
-	for c in cols:
-		if not check_line_validity(board_cells, cols[c], false, c, error_messages): 
-			syntax_pass = false
-		
 	return {"valid": syntax_pass, "errors": error_messages}
 
 static func check_line_validity(board_cells: Dictionary, coords: Array, is_horizontal: bool, index: int, error_messages: Array[String]) -> bool:
-	coords.sort_custom(func(a, b): return a.x < b.x if is_horizontal else a.y < b.y)
+	# Sorting removed! The cache handles this perfectly now.
 	var line_is_valid = true
 	var line_name = "Row " + str(index + 1) if is_horizontal else "Column " + str(index + 1)
 	

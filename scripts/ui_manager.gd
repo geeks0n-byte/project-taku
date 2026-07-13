@@ -10,11 +10,12 @@ signal auto_win_requested
 @onready var level_label = $"../LevelLabel"
 @onready var status_label = $"../StatusLabel"
 @onready var pause_button = $"../PauseButton"
+@onready var reset_button = $"../ResetButton" # CHANGED: Now in the main HUD
 @onready var timer_label = $"../TimerLabel"
 
 @onready var pause_panel = $"../PauseLayer/PausePanel"
 @onready var pause_resume_button = $"../PauseLayer/PausePanel/ResumeButton"
-@onready var pause_reset_button = $"../PauseLayer/PausePanel/ResetButton"
+# Removed pause_reset_button from here
 @onready var pause_main_menu_button = $"../PauseLayer/PausePanel/MainMenuButton"
 @onready var pause_auto_win_button = $"../PauseLayer/PausePanel/AutoWinButton"
 @onready var pause_how_to_play_button = $"../PauseLayer/PausePanel/HowToPlayButton"
@@ -40,7 +41,14 @@ func setup_ui(show_debug_tools: bool, cell_size: float):
 		pause_button.text = "Pause"
 		pause_button.add_theme_font_size_override("font_size", 28)
 		pause_button.global_position = Vector2(120, 40) 
-		pause_button.size = Vector2(180, 60)
+		pause_button.size = Vector2(140, 60) # Made slightly thinner to fit nicely
+
+	# NEW: Set up the HUD Reset Button right next to the Pause Button
+	if reset_button:
+		reset_button.text = "Reset"
+		reset_button.add_theme_font_size_override("font_size", 28)
+		reset_button.global_position = Vector2(280, 40) # Positioned 20px to the right of Pause
+		reset_button.size = Vector2(140, 60)
 		
 	if level_label:
 		level_label.add_theme_font_size_override("font_size", 32)
@@ -68,7 +76,7 @@ func setup_ui(show_debug_tools: bool, cell_size: float):
 		pause_panel.global_position = panel_pos
 		pause_panel.size = panel_size
 
-	var p_start_y = 35
+	var p_start_y = 50 # Pushed the first button down slightly to center the list better
 
 	if pause_resume_button:
 		pause_resume_button.text = "Resume"
@@ -77,12 +85,7 @@ func setup_ui(show_debug_tools: bool, cell_size: float):
 		pause_resume_button.size = menu_button_size
 	p_start_y += spacing_y
 
-	if pause_reset_button:
-		pause_reset_button.text = "Reset"
-		pause_reset_button.add_theme_font_size_override("font_size", 28)
-		pause_reset_button.position = Vector2(button_center_x, p_start_y)
-		pause_reset_button.size = menu_button_size
-	p_start_y += spacing_y
+	# Removed Reset Button setup from here!
 
 	if pause_how_to_play_button:
 		pause_how_to_play_button.text = "How to Play"
@@ -162,8 +165,12 @@ func setup_ui(show_debug_tools: bool, cell_size: float):
 
 func _connect_signals(show_debug_tools: bool):
 	pause_button.pressed.connect(func(): pause_requested.emit())
+	
+	# CHANGED: Listen to the new HUD reset button
+	if reset_button:
+		reset_button.pressed.connect(func(): reset_requested.emit())
+		
 	pause_resume_button.pressed.connect(func(): resume_requested.emit())
-	pause_reset_button.pressed.connect(func(): reset_requested.emit())
 	restart_button.pressed.connect(func(): restart_requested.emit())
 	pause_auto_win_button.pressed.connect(func(): auto_win_requested.emit())
 	

@@ -40,11 +40,24 @@ func _run():
 		new_level.level_number = data["number"]
 		new_level.layout = data["layout"]
 		
+		# --- NEW: Dynamically calculate width and height based on the layout keys ---
+		var max_x = 0
+		var max_y = 0
+		
+		for coord in data["layout"].keys():
+			if coord.x > max_x: max_x = coord.x
+			if coord.y > max_y: max_y = coord.y
+			
+		# Add 1 because coordinates start at 0 (e.g., max_x of 6 means width is 7)
+		new_level.width = max_x + 1
+		new_level.height = max_y + 1
+		# ----------------------------------------------------------------------------
+		
 		var save_path = "res://levels/level_%d.tres" % data["number"]
 		var result = ResourceSaver.save(new_level, save_path)
 		
 		if result == OK:
-			print("Successfully created resource: ", save_path)
+			print("Successfully created resource: ", save_path, " (Size: %dx%d)" % [new_level.width, new_level.height])
 		else:
 			print("Generation Error on path: ", save_path, " Code: ", result)
 			

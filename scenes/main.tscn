@@ -2,12 +2,12 @@
 
 [ext_resource type="Script" uid="uid://cu6cq88gr24e3" path="res://scripts/main.gd" id="1_trceg"]
 [ext_resource type="Script" uid="uid://d2bajo514w3iq" path="res://scripts/level_data.gd" id="2_a8y0u"]
-[ext_resource type="Resource" uid="uid://cvgihyp3qm80j" path="res://levels/level_1.tres" id="3_jkv2x"]
+[ext_resource type="Resource" uid="uid://bik6q1jifyt25" path="res://levels/level_1.tres" id="3_jkv2x"]
 [ext_resource type="Resource" uid="uid://d1t72qrbd2nac" path="res://levels/level_2.tres" id="4_jbj1t"]
-[ext_resource type="Resource" uid="uid://c1dku31cogli" path="res://levels/level_3.tres" id="5_muem4"]
+[ext_resource type="Resource" uid="uid://c3lyxf1tmrw05" path="res://levels/level_3.tres" id="5_muem4"]
 [ext_resource type="Resource" path="res://levels/level_4.tres" id="6_dp3eg"]
 [ext_resource type="Resource" path="res://levels/level_5.tres" id="7_0ld40"]
-[ext_resource type="Resource" path="res://levels/level_6.tres" id="8_gqmmt"]
+[ext_resource type="Resource" uid="uid://bkaani0ra7cn3" path="res://levels/level_6.tres" id="8_gqmmt"]
 [ext_resource type="Resource" path="res://levels/level_7.tres" id="9_yc10j"]
 [ext_resource type="Resource" path="res://levels/level_8.tres" id="10_jscy8"]
 [ext_resource type="Resource" path="res://levels/level_9.tres" id="11_pm3ni"]
@@ -30,6 +30,10 @@ offset_right = 8.0
 offset_bottom = 8.0
 text = "Reset"
 
+[node name="ResetButton" type="Button" parent="." unique_id=96924098]
+offset_right = 8.0
+offset_bottom = 8.0
+
 [node name="LevelLabel" type="Label" parent="." unique_id=771772162]
 offset_right = 40.0
 offset_bottom = 23.0
@@ -48,11 +52,6 @@ offset_right = 40.0
 offset_bottom = 40.0
 
 [node name="ResumeButton" type="Button" parent="PauseLayer/PausePanel" unique_id=1029560142]
-layout_mode = 0
-offset_right = 8.0
-offset_bottom = 8.0
-
-[node name="ResetButton" type="Button" parent="PauseLayer/PausePanel" unique_id=96924098]
 layout_mode = 0
 offset_right = 8.0
 offset_bottom = 8.0

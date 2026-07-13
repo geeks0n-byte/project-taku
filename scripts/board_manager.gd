@@ -7,21 +7,41 @@ signal cell_changed(coord: Vector2i)
 const CELL_SIZE = 120 
 
 var board_cells = {}
+var cell_pool: Array = []
+var cached_lines: Array = []
 
 func _ready():
-	position = Vector2(120, 180)
+	# We remove the hardcoded position here, as it's now handled in build_grid
+	pass
 
 func build_grid(layout_data: Dictionary):
-	for child in get_children():
-		child.queue_free()
 	board_cells.clear()
+	var pool_index = 0
+	
+	# NEW: Calculate the board width to center it dynamically
+	var max_x = 0
+	for coord in layout_data:
+		if coord.x > max_x: max_x = coord.x
+		
+	var board_pixel_width = (max_x + 1) * CELL_SIZE
+	var screen_width = get_viewport_rect().size.x
+	position = Vector2((screen_width - board_pixel_width) / 2.0, 180)
 
 	for coord in layout_data:
 		var starting_state = layout_data[coord]
-		var cell = cell_scene.instantiate()
+		
+		var cell
+		if pool_index < cell_pool.size():
+			cell = cell_pool[pool_index]
+			cell.visible = true
+		else:
+			cell = cell_scene.instantiate()
+			cell.cell_clicked.connect(func(c): cell_changed.emit(c))
+			add_child(cell)
+			cell_pool.append(cell)
+			
 		cell.coord = coord
 		cell.position = Vector2(float(coord.x * CELL_SIZE), float(coord.y * CELL_SIZE))
-		cell.cell_clicked.connect(func(c): cell_changed.emit(c))
 		
 		cell.state = starting_state
 		if starting_state == -2:
@@ -34,11 +54,37 @@ func build_grid(layout_data: Dictionary):
 			cell.is_playable = true
 			cell.is_locked = false
 			
-		add_child(cell)
 		board_cells[coord] = cell
 		cell.update_visuals()
+		pool_index += 1
 		
+	for i in range(pool_index, cell_pool.size()):
+		cell_pool[i].visible = false
+		cell_pool[i].is_playable = false
+		
+	_cache_board_lines()
 	queue_redraw()
+
+func _cache_board_lines():
+	cached_lines.clear()
+	var rows = {}
+	var cols = {}
+	
+	for coord in board_cells:
+		if not rows.has(coord.y): rows[coord.y] = []
+		if not cols.has(coord.x): cols[coord.x] = []
+		rows[coord.y].append(coord)
+		cols[coord.x].append(coord)
+		
+	for r in rows:
+		var row = rows[r]
+		row.sort_custom(func(a, b): return a.x < b.x)
+		cached_lines.append({"coords": row, "is_horizontal": true, "index": r})
+		
+	for c in cols:
+		var col = cols[c]
+		col.sort_custom(func(a, b): return a.y < b.y)
+		cached_lines.append({"coords": col, "is_horizontal": false, "index": c})
 
 func clear_highlights():
 	for coord in board_cells:

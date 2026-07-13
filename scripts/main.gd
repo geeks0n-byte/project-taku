@@ -12,6 +12,9 @@ var is_game_active: bool = true
 var is_paused: bool = false 
 var current_level_index: int = 0
 
+# OPTIMIZATION 3: O(1) Dictionary Lookup for levels
+var levels_dict: Dictionary = {}
+
 func _ready():
 	_load_all_levels_from_storage()
 	_intercept_global_selection()
@@ -38,6 +41,7 @@ func _bind_submanager_signals():
 
 func _load_all_levels_from_storage() -> void:
 	levels.clear()
+	levels_dict.clear()
 	var levels_dir = "res://levels/"
 	if not DirAccess.dir_exists_absolute(levels_dir): return
 	var dir = DirAccess.open(levels_dir)
@@ -61,23 +65,21 @@ func _load_all_levels_from_storage() -> void:
 		)
 		for path in raw_paths:
 			var res = load(path)
-			if res and res is LevelData: levels.append(res)
+			if res and res is LevelData: 
+				levels.append(res)
+				levels_dict[res.level_number] = levels.size() - 1
 
 func _intercept_global_selection():
 	if GlobalGameManager.selected_level_resource != null:
 		var custom_level = GlobalGameManager.selected_level_resource
 		GlobalGameManager.selected_level_resource = null
 		
-		var found_index = -1
-		for i in range(levels.size()):
-			if levels[i].level_number == custom_level.level_number:
-				found_index = i
-				break
-		if found_index != -1:
-			current_level_index = found_index
+		if levels_dict.has(custom_level.level_number):
+			current_level_index = levels_dict[custom_level.level_number]
 		else:
 			levels.append(custom_level)
 			current_level_index = levels.size() - 1
+			levels_dict[custom_level.level_number] = current_level_index
 	else:
 		current_level_index = 0
 
@@ -94,12 +96,22 @@ func generate_board():
 	var current_level_resource = levels[current_level_index]
 	ui_manager.display_level(current_level_resource.level_number)
 	board_manager.build_grid(current_level_resource.layout)
+	
+	# NEW: Run validation instantly on load/reset to clear highlights 
+	# and set the UI status text back to a clean state!
+	_run_validation_pass()
 
 func _on_cell_changed(_coord: Vector2i):
 	if not is_game_active or is_paused: return
-		
+	
+	# CHANGED: Delegated the validation logic to our new helper function
+	_run_validation_pass()
+
+# NEW HELPER FUNCTION: Centralizes highlight clearing and win checking
+func _run_validation_pass():
 	board_manager.clear_highlights()
-	var results = PuzzleValidator.validate_board(board_manager.board_cells)
+	
+	var results = PuzzleValidator.validate_board(board_manager.board_cells, board_manager.cached_lines)
 	
 	if not results["valid"]:
 		ui_manager.show_status_errors(results["errors"])
@@ -131,6 +143,8 @@ func _on_resume():
 
 func _on_reset():
 	is_paused = false
+	# Because generate_board() now calls _run_validation_pass(), 
+	# this will automatically rebuild the board AND wipe the highlights!
 	generate_board()
 
 func _on_restart():

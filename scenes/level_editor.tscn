@@ -3,6 +3,11 @@
 [ext_resource type="Script" uid="uid://vq06fy81b0wh" path="res://scripts/level_editor.gd" id="1_5u7ie"]
 [ext_resource type="Script" uid="uid://h58ihw84sbgu" path="res://scripts/editor_canvas_manager.gd" id="2_nh68x"]
 [ext_resource type="Script" uid="uid://dp2q4jgxwyjal" path="res://scripts/editor_ui_manager.gd" id="3_eovuc"]
+[ext_resource type="Texture2D" uid="uid://ci71ltxqka6f8" path="res://icons/tiles/tile_empty.svg" id="3_l4hv8"]
+[ext_resource type="Texture2D" uid="uid://cr3gyfkb3xwqs" path="res://icons/tiles/tile_wall.svg" id="4_2rodj"]
+[ext_resource type="Texture2D" uid="uid://bb56740eknng0" path="res://icons/tiles/tile_red.svg" id="5_4ohjn"]
+[ext_resource type="Texture2D" uid="uid://dmawhj6vw1p1r" path="res://icons/tiles/tile_blue.svg" id="6_3fkon"]
+[ext_resource type="Texture2D" uid="uid://bnmamps4et8l4" path="res://icons/tiles/tile_green.svg" id="7_wkaig"]
 
 [node name="LevelEditor" type="Node2D" unique_id=1779207314]
 script = ExtResource("1_5u7ie")
@@ -17,58 +22,109 @@ script = ExtResource("2_nh68x")
 offset_right = 400.0
 offset_bottom = 500.0
 
-[node name="BrushContainer" type="HBoxContainer" parent="EditorUI/ControlPanel" unique_id=571217567]
+[node name="GridSizeContainer" type="HBoxContainer" parent="EditorUI/ControlPanel" unique_id=1441716289]
 layout_mode = 0
 offset_left = 50.0
 offset_top = 40.0
 offset_right = 350.0
 offset_bottom = 90.0
 
-[node name="EmptyButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=1544681101]
+[node name="WidthMinus" type="Button" parent="EditorUI/ControlPanel/GridSizeContainer" unique_id=152893172]
 layout_mode = 2
+text = "-"
 
-[node name="WallButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=116676465]
+[node name="WidthLabel" type="Label" parent="EditorUI/ControlPanel/GridSizeContainer" unique_id=2105646132]
 layout_mode = 2
+text = "W"
 
-[node name="ZeroButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=792857116]
+[node name="WidthPlus" type="Button" parent="EditorUI/ControlPanel/GridSizeContainer" unique_id=993945278]
 layout_mode = 2
+text = "+"
 
-[node name="OneButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=1072855627]
+[node name="HeightMinus" type="Button" parent="EditorUI/ControlPanel/GridSizeContainer" unique_id=1756959927]
 layout_mode = 2
+text = "-"
 
-[node name="JokerButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=1699329155]
+[node name="HeightLabel" type="Label" parent="EditorUI/ControlPanel/GridSizeContainer" unique_id=1945468494]
 layout_mode = 2
+text = "H"
 
-[node name="ConfigContainer" type="HBoxContainer" parent="EditorUI/ControlPanel" unique_id=1949488569]
+[node name="HeightPlus" type="Button" parent="EditorUI/ControlPanel/GridSizeContainer" unique_id=2144947172]
+layout_mode = 2
+text = "+"
+
+[node name="SetSizeButton" type="Button" parent="EditorUI/ControlPanel/GridSizeContainer" unique_id=778361384]
+layout_mode = 2
+text = "SET"
+
+[node name="BrushContainer" type="HBoxContainer" parent="EditorUI/ControlPanel" unique_id=571217567]
 layout_mode = 0
 offset_left = 50.0
 offset_top = 120.0
 offset_right = 350.0
 offset_bottom = 170.0
 
-[node name="LevelLabel" type="Label" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=1791290835]
-layout_mode = 2
-text = "Level:"
-
-[node name="LevelSpinBox" type="SpinBox" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=735982348]
-layout_mode = 2
-min_value = 1.0
-max_value = 999.0
-value = 1.0
-
-[node name="SaveButton" type="Button" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=367242416]
+[node name="ClearButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=955709886]
 layout_mode = 2
 
-[node name="MainMenuButton" type="Button" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=729333557]
+[node name="EmptyButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=1544681101]
 layout_mode = 2
+icon = ExtResource("3_l4hv8")
+
+[node name="WallButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=116676465]
+layout_mode = 2
+icon = ExtResource("4_2rodj")
+
+[node name="ZeroButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=792857116]
+layout_mode = 2
+icon = ExtResource("5_4ohjn")
+
+[node name="OneButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=1072855627]
+layout_mode = 2
+icon = ExtResource("6_3fkon")
+
+[node name="JokerButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=1699329155]
+layout_mode = 2
+icon = ExtResource("7_wkaig")
+
+[node name="ConfigContainer" type="HBoxContainer" parent="EditorUI/ControlPanel" unique_id=1949488569]
+layout_mode = 0
+offset_left = 50.0
+offset_top = 200.0
+offset_right = 350.0
+offset_bottom = 250.0
 
 [node name="TestButton" type="Button" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=1856170781]
 layout_mode = 2
 text = "TEST LEVEL"
 
+[node name="SaveButton" type="Button" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=367242416]
+layout_mode = 2
+text = "SAVE"
+
+[node name="LoadButton" type="Button" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=1174730576]
+layout_mode = 2
+text = "LOAD"
+
+[node name="LevelMinus" type="Button" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=1471065966]
+layout_mode = 2
+text = "-"
+
+[node name="LevelLabel" type="Label" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=1673141011]
+layout_mode = 2
+text = "LEVEL:"
+
+[node name="LevelPlus" type="Button" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=403661034]
+layout_mode = 2
+text = "+"
+
 [node name="ExitTestButton" type="Button" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=589975085]
 layout_mode = 2
 text = "EXIT TEST"
+
+[node name="MainMenuButton" type="Button" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=729333557]
+layout_mode = 2
+text = "MAIN MENU"
 
 [node name="StatusLabel" type="Label" parent="EditorUI/ControlPanel" unique_id=1868498315]
 custom_minimum_size = Vector2(360, 100)

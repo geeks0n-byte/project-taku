@@ -7,18 +7,35 @@ var current_brush_state: int = -1
 var is_playtesting: bool = false
 var playtest_snapshot: Dictionary = {}
 
+var overwrite_dialog: ConfirmationDialog
+
 func _ready():
 	_bind_signals()
-	ui_manager.setup_ui(canvas_manager.GRID_WIDTH, canvas_manager.GRID_HEIGHT, canvas_manager.CELL_SIZE)
-	canvas_manager.generate_blank_canvas()
+	
+	overwrite_dialog = ConfirmationDialog.new()
+	overwrite_dialog.title = "Overwrite Level?"
+	overwrite_dialog.dialog_text = "This level already contains data. Do you want to overwrite it?"
+	overwrite_dialog.confirmed.connect(_execute_save)
+	add_child(overwrite_dialog)
+	
+	ui_manager.setup_ui(canvas_manager.grid_width, canvas_manager.grid_height, canvas_manager.CELL_SIZE)
+	canvas_manager.generate_blank_canvas(canvas_manager.grid_width, canvas_manager.grid_height)
 
 func _bind_signals():
 	ui_manager.brush_changed.connect(_on_brush_changed)
 	ui_manager.save_requested.connect(_on_save_level)
+	ui_manager.load_requested.connect(_on_load_level) 
+	ui_manager.clear_requested.connect(_on_clear_board) 
 	ui_manager.main_menu_requested.connect(_on_main_menu)
 	ui_manager.test_mode_entered.connect(_on_test_mode_entered)
 	ui_manager.test_mode_exited.connect(_on_test_mode_exited)
+	ui_manager.grid_size_changed.connect(_on_grid_size_changed) 
 	canvas_manager.canvas_cell_clicked.connect(_on_canvas_cell_clicked)
+
+func _on_grid_size_changed(new_width: int, new_height: int):
+	if is_playtesting: return
+	canvas_manager.generate_blank_canvas(new_width, new_height)
+	ui_manager.update_status("Grid resized to %d x %d" % [new_width, new_height], Color.WHITE)
 
 func _on_brush_changed(state_id: int, brush_name: String):
 	if is_playtesting: return
@@ -99,7 +116,7 @@ func _on_test_mode_exited():
 func _run_playtest_validation_pass():
 	canvas_manager.clear_highlights()
 	
-	var results = PuzzleValidator.validate_board(canvas_manager.board_cells)
+	var results = PuzzleValidator.validate_board(canvas_manager.board_cells, canvas_manager.cached_lines)
 	
 	if not results["valid"]:
 		ui_manager.update_status("\n".join(results["errors"]), Color(1.0, 0.3, 0.3))
@@ -134,8 +151,38 @@ func _compile_dictionary_to_plaintext() -> String:
 	out += "}"
 	return out
 
+func _on_clear_board():
+	if is_playtesting: return
+	
+	for coord in canvas_manager.board_cells:
+		var cell = canvas_manager.board_cells[coord]
+		cell.state = -1
+		cell.is_playable = true
+		cell.is_locked = false
+		cell.update_visuals()
+		
+	ui_manager.update_status("Board cleared!", Color.WHITE)
+
 func _on_save_level():
 	if is_playtesting: return
+	var level_num = ui_manager.get_level_number()
+	var target_save_path = "res://levels/level_%d.tres" % level_num
+	
+	if ResourceLoader.exists(target_save_path):
+		var existing_level = load(target_save_path) as LevelData
+		if existing_level and not _is_layout_empty(existing_level.layout):
+			overwrite_dialog.popup_centered()
+			return
+			
+	_execute_save()
+
+func _is_layout_empty(layout: Dictionary) -> bool:
+	for coord in layout:
+		if layout[coord] != -1:
+			return false
+	return true
+
+func _execute_save():
 	var level_num = ui_manager.get_level_number()
 	var output_layout = {}
 	
@@ -144,6 +191,8 @@ func _on_save_level():
 	
 	var new_level_resource = LevelData.new()
 	new_level_resource.level_number = level_num
+	new_level_resource.width = canvas_manager.grid_width
+	new_level_resource.height = canvas_manager.grid_height
 	new_level_resource.layout = output_layout
 	
 	var dir = DirAccess.open("res://")
@@ -157,6 +206,22 @@ func _on_save_level():
 		ui_manager.update_status("SUCCESS: Saved level file to: " + target_save_path, Color(0.4, 1.0, 0.4))
 	else:
 		ui_manager.update_status("ERROR: Resource save failed: " + error_string(save_result), Color(1.0, 0.3, 0.3))
+
+func _on_load_level():
+	if is_playtesting: return
+	var level_num = ui_manager.get_level_number()
+	var target_load_path = "res://levels/level_%d.tres" % level_num
+	
+	if ResourceLoader.exists(target_load_path):
+		var loaded_level = load(target_load_path) as LevelData
+		if loaded_level:
+			canvas_manager.load_layout(loaded_level.width, loaded_level.height, loaded_level.layout)
+			ui_manager.sync_size_displays(loaded_level.width, loaded_level.height)
+			ui_manager.update_status("SUCCESS: Loaded level " + str(level_num), Color(0.4, 1.0, 0.4))
+		else:
+			ui_manager.update_status("ERROR: Failed to parse LevelData resource.", Color(1.0, 0.3, 0.3))
+	else:
+		ui_manager.update_status("ERROR: No saved data found for Level " + str(level_num), Color(1.0, 0.6, 0.2))
 
 func _on_main_menu():
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")

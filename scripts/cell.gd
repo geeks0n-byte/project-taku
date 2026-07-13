@@ -7,7 +7,7 @@ var coord: Vector2i = Vector2i.ZERO
 var state: int = -1 
 var is_locked: bool = false 
 var is_playable: bool = true
-var is_error: bool = false # Track whether to draw the error border
+var is_error: bool = false 
 
 @export var texture_empty: Texture2D
 @export var texture_zero: Texture2D
@@ -15,16 +15,21 @@ var is_error: bool = false # Track whether to draw the error border
 @export var texture_wildcard: Texture2D
 @export var texture_wall: Texture2D 
 
+@onready var error_highlight = $ErrorHighlight 
+@onready var lock_icon = $LockIcon # NEW: Reference to the lock image
+
 func _ready():
 	pressed.connect(_on_pressed)
+	
+	if error_highlight:
+		error_highlight.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		
 	update_visuals()
 
 func _on_pressed():
-	# Block clicks if it's a wall or a locked pre-placed clue
 	if not is_playable or is_locked: 
 		return 
 		
-	# Strict Player Cycle: Empty (-1) -> 0 -> 1 -> resets to Empty (-1)
 	state += 1
 	if state > 1:
 		state = -1
@@ -40,33 +45,27 @@ func update_visuals():
 		1: texture_normal = texture_one
 		2: texture_normal = texture_wildcard
 		
-	_apply_modulation()
+	_update_overlays()
 
-func _apply_modulation():
-	if not is_playable:
-		modulate = Color(0.4, 0.4, 0.4)
-	elif is_locked:
-		modulate = Color(0.6, 0.6, 0.6)
-	else:
-		modulate = Color(1.0, 1.0, 1.0)
-
-# Custom drawing handles the border canvas item overlay
-func _draw() -> void:
-	if is_error:
-		var rect = Rect2(Vector2.ZERO, size)
-		var border_color = Color(1.0, 0.2, 0.2) # Clean red color
-		var border_width = 4.0 # Adjust this value to make the border thicker or thinner
-		
-		# Setting 'filled' (3rd param) to false makes it an outline
-		draw_rect(rect, border_color, false, border_width)
+# CHANGED: Handles the lock icon visibility and ensures the tile stays bright
+func _update_overlays():
+	self_modulate = Color(1.0, 1.0, 1.0)
+	
+	if lock_icon:
+		if is_locked and (state == 0 or state == 1):
+			lock_icon.visible = true
+		else:
+			lock_icon.visible = false
 
 func highlight_error():
 	if is_playable and not is_error:
 		is_error = true
-		queue_redraw() # Triggers Godot to run the _draw() function
+		if error_highlight:
+			error_highlight.visible = true
 
 func clear_highlight():
 	if is_error:
 		is_error = false
-		queue_redraw() # Redraws the cell to clear the drawn border
-	_apply_modulation()
+		if error_highlight:
+			error_highlight.visible = false
+	_update_overlays()

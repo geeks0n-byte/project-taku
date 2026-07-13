@@ -2,11 +2,11 @@
 
 [ext_resource type="Script" uid="uid://cvffp4gq8wfdc" path="res://scripts/main_menu.gd" id="1_8ln24"]
 [ext_resource type="PackedScene" uid="uid://cuf448q3tm0yy" path="res://scenes/main.tscn" id="2_rtw2f"]
-[ext_resource type="Texture2D" uid="uid://rukxq14a43wc" path="res://icons/buttons/Big@2x.png" id="3_8ln24"]
+[ext_resource type="Texture2D" uid="uid://ds4khbnemdfjp" path="res://icons/buttons/Big@2x.png" id="3_8ln24"]
 [ext_resource type="Texture2D" uid="uid://bvh1r3erat0y1" path="res://icons/buttons/settings_icon.png" id="4_rtw2f"]
 [ext_resource type="Texture2D" uid="uid://53010pkgt77w" path="res://icons/buttons/list_icon.png" id="4_tbmy8"]
-[ext_resource type="Texture2D" uid="uid://b1ql517asumnr" path="res://icons/buttons/close_icon_128px.png" id="5_jk1qb"]
-[ext_resource type="Texture2D" uid="uid://c4xaq4d0ao8fc" path="res://node/coding/icon-cut.svg" id="6_tbmy8"]
+[ext_resource type="Texture2D" uid="uid://2spy15xdte1g" path="res://icons/buttons/close_icon_128px.png" id="5_jk1qb"]
+[ext_resource type="Texture2D" uid="uid://de331neeryons" path="res://icons/placeholder_icons/brush.png" id="6_tbmy8"]
 [ext_resource type="Texture2D" uid="uid://bjgm8237l7xly" path="res://icons/buttons/pla.png" id="8_tbmy8"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_5dd4i"]
@@ -90,11 +90,12 @@ stretch_mode = 0
 layout_mode = 0
 offset_left = 293.0
 offset_top = 1114.0
-offset_right = 768.0
-offset_bottom = 1370.0
+offset_right = 3685.5925
+offset_bottom = 2146.0
+scale = Vector2(0.135, 0.135)
+theme_override_font_sizes/font_size = 170
+text = "[DEBUG] LEVEL EDITOR"
 icon = ExtResource("6_tbmy8")
-flat = true
-icon_alignment = 1
 
 [node name="ExitButton" type="TextureButton" parent="." unique_id=1060431704]
 layout_mode = 0
