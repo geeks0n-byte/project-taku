@@ -9,6 +9,14 @@
 [ext_resource type="Texture2D" uid="uid://de331neeryons" path="res://icons/placeholder_icons/brush.png" id="6_tbmy8"]
 [ext_resource type="Texture2D" uid="uid://bjgm8237l7xly" path="res://icons/buttons/pla.png" id="8_tbmy8"]
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_flqon"]
+atlas = ExtResource("8_tbmy8")
+region = Rect2(19.12439, 13.660278, 327.79602, 167.5906)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1ajci"]
+atlas = ExtResource("8_tbmy8")
+region = Rect2(11.880234, 1.3889999, 348.60663, 195.36581)
+
 [sub_resource type="AtlasTexture" id="AtlasTexture_5dd4i"]
 atlas = ExtResource("4_tbmy8")
 region = Rect2(-5.1315765, -3.2655487, 140, 140)
@@ -31,14 +39,6 @@ region = Rect2(-0.85879517, -0.5502205, 127.23633, 131.22809)
 [sub_resource type="AtlasTexture" id="AtlasTexture_jk1qb"]
 atlas = ExtResource("5_jk1qb")
 region = Rect2(-13.108139, -14.546465, 147.57704, 159.4998)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_flqon"]
-atlas = ExtResource("8_tbmy8")
-region = Rect2(19.12439, 13.660278, 327.79602, 167.5906)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_1ajci"]
-atlas = ExtResource("8_tbmy8")
-region = Rect2(11.880234, 1.3889999, 348.60663, 195.36581)
 
 [node name="MainMenu" type="Control" unique_id=195312888]
 layout_mode = 3
@@ -66,6 +66,28 @@ alignment = 1
 layout_mode = 2
 texture = ExtResource("3_8ln24")
 
+[node name="StartButton" type="TextureButton" parent="." unique_id=2056078565]
+layout_mode = 0
+offset_left = 311.0
+offset_top = 699.0
+offset_right = 789.0
+offset_bottom = 947.0
+size_flags_horizontal = 4
+texture_normal = SubResource("AtlasTexture_flqon")
+texture_pressed = SubResource("AtlasTexture_1ajci")
+stretch_mode = 0
+
+[node name="LevelEditorButton" type="Button" parent="." unique_id=1971963387]
+layout_mode = 0
+offset_left = 293.0
+offset_top = 1114.0
+offset_right = 3685.5925
+offset_bottom = 2146.0
+scale = Vector2(0.135, 0.135)
+theme_override_font_sizes/font_size = 170
+text = "[DEBUG] LEVEL EDITOR"
+icon = ExtResource("6_tbmy8")
+
 [node name="LevelSelectButton" type="TextureButton" parent="." unique_id=1159234865]
 layout_mode = 0
 offset_left = 265.0
@@ -86,17 +108,6 @@ texture_normal = SubResource("AtlasTexture_6f8o3")
 texture_pressed = SubResource("AtlasTexture_1esiv")
 stretch_mode = 0
 
-[node name="LevelEditorButton" type="Button" parent="." unique_id=1971963387]
-layout_mode = 0
-offset_left = 293.0
-offset_top = 1114.0
-offset_right = 3685.5925
-offset_bottom = 2146.0
-scale = Vector2(0.135, 0.135)
-theme_override_font_sizes/font_size = 170
-text = "[DEBUG] LEVEL EDITOR"
-icon = ExtResource("6_tbmy8")
-
 [node name="ExitButton" type="TextureButton" parent="." unique_id=1060431704]
 layout_mode = 0
 offset_left = 627.0
@@ -105,17 +116,6 @@ offset_right = 776.0
 offset_bottom = 1612.0
 texture_normal = SubResource("AtlasTexture_tbmy8")
 texture_pressed = SubResource("AtlasTexture_jk1qb")
-stretch_mode = 0
-
-[node name="StartButton" type="TextureButton" parent="." unique_id=2056078565]
-layout_mode = 0
-offset_left = 311.0
-offset_top = 699.0
-offset_right = 789.0
-offset_bottom = 947.0
-size_flags_horizontal = 4
-texture_normal = SubResource("AtlasTexture_flqon")
-texture_pressed = SubResource("AtlasTexture_1ajci")
 stretch_mode = 0
 
 [node name="GameTitle" type="Label" parent="." unique_id=2084676387]
@@ -128,8 +128,8 @@ size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 64
 text = "project-taku"
 
+[connection signal="pressed" from="StartButton" to="." method="_on_start_button_pressed"]
+[connection signal="pressed" from="LevelEditorButton" to="." method="_on_level_editor_pressed"]
 [connection signal="pressed" from="LevelSelectButton" to="." method="_on_level_select_pressed"]
 [connection signal="pressed" from="OptionsButton" to="." method="_on_options_pressed"]
-[connection signal="pressed" from="LevelEditorButton" to="." method="_on_level_editor_pressed"]
 [connection signal="pressed" from="ExitButton" to="." method="_on_exit_pressed"]
-[connection signal="pressed" from="StartButton" to="." method="_on_start_button_pressed"]

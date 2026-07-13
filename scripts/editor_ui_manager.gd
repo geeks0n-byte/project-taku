@@ -250,9 +250,9 @@ func _connect_ui_signals():
 func _adjust_value(target: String, amount: int):
 	match target:
 		"width":
-			editor_width = clamp(editor_width + amount, 3, 20) 
+			editor_width = clamp(editor_width + amount, 3, 9) 
 		"height":
-			editor_height = clamp(editor_height + amount, 3, 20)
+			editor_height = clamp(editor_height + amount, 3, 11)
 		"level":
 			editor_level = max(1, editor_level + amount) 
 			

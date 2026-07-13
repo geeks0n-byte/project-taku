@@ -3,19 +3,26 @@ extends Node2D
 @export var show_debug_tools: bool = true 
 @export var levels: Array[LevelData] = []
 
+# ==========================================
+# NODE REFERENCES
+# ==========================================
 @onready var ui_manager: UIManager = $UIManager
 @onready var board_manager: BoardManager = $BoardManager
 @onready var timer_node = $Timer
 @onready var pause_menu: PauseMenu = $PauseMenu  
 
+# ==========================================
+# GAME STATE VARIABLES
+# ==========================================
 var elapsed_seconds: int = 0
 var is_game_active: bool = true
 var is_paused: bool = false 
 var current_level_index: int = 0
-
-# OPTIMIZATION 3: O(1) Dictionary Lookup for levels
 var levels_dict: Dictionary = {}
 
+# ==========================================
+# INITIALIZATION
+# ==========================================
 func _ready():
 	_load_all_levels_from_storage()
 	_intercept_global_selection()
@@ -27,8 +34,6 @@ func _ready():
 	ui_manager.setup_ui(show_debug_tools, board_manager.CELL_SIZE)
 	_bind_submanager_signals()
 	
-	# ADD THIS LINE:
-	# This ensures the button is completely hidden unless show_debug_tools is checked!
 	pause_menu.auto_win_button.visible = show_debug_tools
 	
 	if timer_node:
@@ -36,20 +41,32 @@ func _ready():
 		
 	generate_board()
 
+# ==========================================
+# SIGNAL ROUTING (THE SWITCHBOARD)
+# ==========================================
 func _bind_submanager_signals():
-	# UI Manager connections
+	# 1. Listeners for the Main Gameplay HUD
 	ui_manager.pause_requested.connect(_on_pause)
 	ui_manager.reset_requested.connect(_on_reset)
+	ui_manager.how_to_play_requested.connect(_on_how_to_play)
+	ui_manager.resume_from_tutorial_requested.connect(_on_resume)
+	
+	# 2. Listeners for the Game Board
 	board_manager.cell_changed.connect(_on_cell_changed)
 	
-	# Pause Menu connections
+	# 3. Listeners for the Standalone Pause Menu Overlay
 	pause_menu.resume_pressed.connect(_on_resume)
-	pause_menu.restart_pressed.connect(_on_restart)
-	
-	# ADD THIS LINE:
+	pause_menu.restart_pressed.connect(_on_restart_level)
 	pause_menu.auto_win_pressed.connect(_on_auto_win)
+	pause_menu.quit_pressed.connect(_on_quit_to_menu)
 	
+	# 4. Listeners for the Victory Screen
+	ui_manager.next_level_requested.connect(_on_next_level)
+	ui_manager.play_again_requested.connect(_on_play_again)
 
+# ==========================================
+# LEVEL LOADING & DATA MANAGEMENT
+# ==========================================
 func _load_all_levels_from_storage() -> void:
 	levels.clear()
 	levels_dict.clear()
@@ -94,6 +111,9 @@ func _intercept_global_selection():
 	else:
 		current_level_index = 0
 
+# ==========================================
+# GAMEPLAY LOOP & VALIDATION
+# ==========================================
 func generate_board():
 	if current_level_index >= levels.size(): return
 	ui_manager.set_overlays_hidden()
@@ -104,21 +124,19 @@ func generate_board():
 	_update_timer_display()
 	if timer_node: timer_node.start()
 	
+	# Wakes the board manager up so the player can interact with the new level
+	board_manager.process_mode = Node.PROCESS_MODE_INHERIT
+	
 	var current_level_resource = levels[current_level_index]
 	ui_manager.display_level(current_level_resource.level_number)
 	board_manager.build_grid(current_level_resource.layout)
 	
-	# NEW: Run validation instantly on load/reset to clear highlights 
-	# and set the UI status text back to a clean state!
 	_run_validation_pass()
 
 func _on_cell_changed(_coord: Vector2i):
 	if not is_game_active or is_paused: return
-	
-	# CHANGED: Delegated the validation logic to our new helper function
 	_run_validation_pass()
 
-# NEW HELPER FUNCTION: Centralizes highlight clearing and win checking
 func _run_validation_pass():
 	board_manager.clear_highlights()
 	
@@ -136,39 +154,79 @@ func trigger_victory():
 	is_game_active = false
 	if timer_node: timer_node.stop()
 	
+	# Fully disables the board so no more tiles can be clicked while the victory screen is up
+	board_manager.process_mode = Node.PROCESS_MODE_DISABLED
+	
 	var is_last = current_level_index >= levels.size() - 1
 	var display_num = levels[current_level_index].level_number
 	ui_manager.show_victory(display_num, is_last, _get_formatted_time())
 
+# ==========================================
+# OVERLAY CONTROLLERS (Pause & Tutorial)
+# ==========================================
 func _on_pause():
 	if not is_game_active or is_paused: return
 	is_paused = true
 	if timer_node: timer_node.stop()
-	pause_menu.show() # Show the standalone pause menu
+	
+	# Completely freezes the board inputs while the pause menu is open
+	board_manager.process_mode = Node.PROCESS_MODE_DISABLED
+	pause_menu.show() 
+
+func _on_how_to_play():
+	if not is_game_active or is_paused: return
+	is_paused = true
+	if timer_node: timer_node.stop()
+	
+	# Completely freezes the board inputs while reading the rules
+	board_manager.process_mode = Node.PROCESS_MODE_DISABLED
+	
+	if ui_manager.has_method("show_how_to_play"):
+		ui_manager.show_how_to_play()
 
 func _on_resume():
 	if not is_paused: return
 	is_paused = false
 	if timer_node: timer_node.start()
-	pause_menu.hide() # Hide the standalone pause menu
+	
+	# Unfreezes the board so the player can continue playing
+	board_manager.process_mode = Node.PROCESS_MODE_INHERIT
+	
+	pause_menu.hide() 
 
+# ==========================================
+# LEVEL MANAGEMENT CALLBACKS
+# ==========================================
 func _on_reset():
 	is_paused = false
-	# Because generate_board() now calls _run_validation_pass(), 
-	# this will automatically rebuild the board AND wipe the highlights!
 	generate_board()
 
-func _on_restart():
-	if not is_game_active:
-		current_level_index = current_level_index + 1 if current_level_index < levels.size() - 1 else 0
+func _on_restart_level():
+	is_paused = false
+	generate_board()
+
+func _on_next_level():
+	if current_level_index < levels.size() - 1:
+		current_level_index += 1
+	generate_board()
+
+func _on_play_again():
+	current_level_index = 0
 	generate_board()
 
 func _on_auto_win():
 	if not is_game_active: return
 	is_paused = false
-	pause_menu.hide() # Ensure the menu is closed if using cheats/auto-win
+	pause_menu.hide() 
 	trigger_victory()
 
+func _on_quit_to_menu():
+	get_tree().paused = false 
+	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+
+# ==========================================
+# TIMER HELPERS
+# ==========================================
 func _on_timer_timeout():
 	if is_game_active and not is_paused:
 		elapsed_seconds += 1

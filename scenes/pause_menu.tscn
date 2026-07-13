@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://qah3m84a46oi"]
 
 [ext_resource type="Script" uid="uid://b63k7kkhmvpc7" path="res://scripts/pause_menu.gd" id="1_n87rw"]
-[ext_resource type="Texture2D" uid="uid://rukxq14a43wc" path="res://icons/buttons/Big@2x.png" id="2_myx47"]
-[ext_resource type="Texture2D" uid="uid://ddlfk5v2e3ldg" path="res://icons/buttons/button_black.png" id="3_kukqi"]
+[ext_resource type="Texture2D" uid="uid://ds4khbnemdfjp" path="res://icons/buttons/Big@2x.png" id="2_myx47"]
+[ext_resource type="Texture2D" uid="uid://bwtkif7iq7ypx" path="res://icons/buttons/button_black.png" id="3_kukqi"]
 
 [node name="PauseMenu" type="Control" unique_id=1796595449]
 layout_mode = 3
@@ -131,12 +131,3 @@ theme_override_font_sizes/font_size = 41
 text = "AutoWin"
 horizontal_alignment = 1
 vertical_alignment = 1
-
-[node name="HowToPlayButton" type="Button" parent="." unique_id=1889609946]
-unique_name_in_owner = true
-layout_mode = 0
-offset_left = 380.0
-offset_top = 995.0
-offset_right = 660.0
-offset_bottom = 1084.0
-text = "How To Play"

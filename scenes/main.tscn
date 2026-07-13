@@ -17,7 +17,6 @@
 
 [node name="Main" type="Node2D" unique_id=1789331107]
 script = ExtResource("1_trceg")
-show_debug_tools = null
 levels = Array[ExtResource("2_a8y0u")]([ExtResource("3_jkv2x"), ExtResource("4_jbj1t"), ExtResource("5_muem4"), ExtResource("6_dp3eg"), ExtResource("7_0ld40"), ExtResource("8_gqmmt"), ExtResource("9_yc10j"), ExtResource("10_jscy8"), ExtResource("11_pm3ni")])
 
 [node name="BoardManager" type="Node2D" parent="." unique_id=1328920833]
@@ -30,11 +29,17 @@ offset_bottom = 23.0
 [node name="PauseButton" type="Button" parent="." unique_id=1111989897]
 offset_right = 8.0
 offset_bottom = 8.0
-text = "Reset"
+text = "Pause"
 
 [node name="ResetButton" type="Button" parent="." unique_id=96924098]
 offset_right = 8.0
 offset_bottom = 8.0
+text = "Reset"
+
+[node name="HowToPlayButton" type="Button" parent="." unique_id=914807657]
+offset_right = 40.0
+offset_bottom = 40.0
+text = "?"
 
 [node name="LevelLabel" type="Label" parent="." unique_id=771772162]
 offset_right = 40.0
@@ -46,32 +51,6 @@ autostart = true
 [node name="TimerLabel" type="Label" parent="." unique_id=1930471526]
 offset_right = 40.0
 offset_bottom = 23.0
-
-[node name="PauseLayer" type="CanvasLayer" parent="." unique_id=573366286]
-
-[node name="PausePanel" type="Panel" parent="PauseLayer" unique_id=313700373]
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="ResumeButton" type="Button" parent="PauseLayer/PausePanel" unique_id=1029560142]
-layout_mode = 0
-offset_right = 8.0
-offset_bottom = 8.0
-
-[node name="HowToPlayButton" type="Button" parent="PauseLayer/PausePanel" unique_id=463168253]
-layout_mode = 0
-offset_right = 8.0
-offset_bottom = 8.0
-
-[node name="MainMenuButton" type="Button" parent="PauseLayer/PausePanel" unique_id=734597848]
-layout_mode = 0
-offset_right = 8.0
-offset_bottom = 8.0
-
-[node name="AutoWinButton" type="Button" parent="PauseLayer/PausePanel" unique_id=680986204]
-layout_mode = 0
-offset_right = 8.0
-offset_bottom = 8.0
 
 [node name="VictoryLayer" type="CanvasLayer" parent="." unique_id=123771825]
 
@@ -112,19 +91,54 @@ offset_bottom = 23.0
 
 [node name="HowToPlayLayer" type="CanvasLayer" parent="." unique_id=749392160]
 
-[node name="HowToPlayPanel" type="Panel" parent="HowToPlayLayer" unique_id=9196945]
-offset_right = 40.0
-offset_bottom = 40.0
+[node name="CenterContainer" type="CenterContainer" parent="HowToPlayLayer" unique_id=987175494]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="HowToPlayLabel" type="RichTextLabel" parent="HowToPlayLayer/HowToPlayPanel" unique_id=1327694329]
+[node name="HowToPlayPanel" type="Panel" parent="HowToPlayLayer/CenterContainer" unique_id=9196945]
+custom_minimum_size = Vector2(600, 500)
+layout_mode = 2
+
+[node name="RulesLabel" type="RichTextLabel" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=1327694329]
 layout_mode = 0
 offset_right = 40.0
 offset_bottom = 40.0
+bbcode_enabled = true
+text = "[center][font_size=46][color=gold]HOW TO PLAY[/color][/font_size][/center]
 
-[node name="BackButton" type="Button" parent="HowToPlayLayer/HowToPlayPanel" unique_id=548935048]
+[font_size=28]Fill the grid by following these core rules:[/font_size]
+
+[font_size=26]
+[img width=48 height=48]res://icons/tiles/tile_red.svg[/img] [img width=48 height=48]res://icons/tiles/tile_blue.svg[/img] [b]Balance:[/b] Every row and column must contain an equal amount of Red and Blue blocks.
+
+[img width=48 height=48]res://icons/tiles/tile_green.svg[/img] [b]Wildcard:[/b] Green blocks act as both Red and Blue at the exact same time.
+
+[img width=48 height=48]res://icons/placeholder_icons/lock.png[/img] [b]Locked:[/b] Blocks with a lock icon are fixed and cannot be changed.
+
+[img width=48 height=48]res://icons/tiles/tile_wall.svg[/img] [b]Wall:[/b] Wall blocks are obstacles and are not playable.
+[/font_size]
+
+[font_size=26][color=tomato][b]No Three-in-a-Row Rule:[/b][/color]
+You cannot place three blocks of the same color in an unbroken line. Because Green acts as both colors, it will trigger a violation if mixed with two of the same color![/font_size]
+
+[font_size=26]
+[color=red][b]X FORBIDDEN:[/b][/color]
+[img width=36 height=36]res://icons/tiles/tile_red.svg[/img][img width=36 height=36]res://icons/tiles/tile_red.svg[/img][img width=36 height=36]res://icons/tiles/tile_red.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_blue.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_red.svg[/img][img width=36 height=36]res://icons/tiles/tile_red.svg[/img][img width=36 height=36]res://icons/tiles/tile_green.svg[/img] (acts as 3rd Red!)
+
+[color=green][b]✓ ALLOWED:[/b][/color]
+[img width=36 height=36]res://icons/tiles/tile_red.svg[/img][img width=36 height=36]res://icons/tiles/tile_red.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_red.svg[/img][img width=36 height=36]res://icons/tiles/tile_green.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img] (Green splits them safely)
+[/font_size]"
+
+[node name="BackButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=1004694894]
 layout_mode = 0
-offset_right = 8.0
-offset_bottom = 8.0
+offset_left = 296.0
+offset_top = 246.0
+offset_right = 304.0
+offset_bottom = 254.0
+text = "CLOSE"
 
 [node name="UIManager" type="Control" parent="." unique_id=1396855515]
 layout_mode = 3
