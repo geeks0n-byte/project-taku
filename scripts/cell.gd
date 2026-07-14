@@ -16,7 +16,7 @@ var is_error: bool = false
 @export var texture_wall: Texture2D 
 
 @onready var error_highlight = $ErrorHighlight 
-@onready var lock_icon = $LockIcon # NEW: Reference to the lock image
+@onready var lock_icon = $LockIcon # Reference to the lock image
 
 func _ready():
 	pressed.connect(_on_pressed)
@@ -47,12 +47,13 @@ func update_visuals():
 		
 	_update_overlays()
 
-# CHANGED: Handles the lock icon visibility and ensures the tile stays bright
+# UPDATED: Now handles lock icon visibility across all playable block values (including Green/2)
 func _update_overlays():
 	self_modulate = Color(1.0, 1.0, 1.0)
 	
 	if lock_icon:
-		if is_locked and (state == 0 or state == 1):
+		# Displays lock over Zero (0), One (1), and Wildcard/Green (2)
+		if is_locked and (state == 0 or state == 1 or state == 2):
 			lock_icon.visible = true
 		else:
 			lock_icon.visible = false

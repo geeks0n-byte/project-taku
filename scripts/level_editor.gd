@@ -3,7 +3,7 @@ extends Node2D
 # ==========================================
 # CONSTANTS & PATHS
 # ==========================================
-# Saves mobile design drafts to the writeable sandboxed user directory.
+const CAMPAIGN_DIR = "res://levels/"
 const DEV_LEVELS_DIR = "user://levels/"
 
 # ==========================================
@@ -11,6 +11,7 @@ const DEV_LEVELS_DIR = "user://levels/"
 # ==========================================
 @onready var ui_manager: EditorUIManager = $EditorUIManager
 @onready var canvas_manager: EditorCanvasManager = $EditorCanvasManager
+@onready var core_levels_container = find_child("CoreLevelsContainer", true, false)
 
 # ==========================================
 # STATE VARIABLES
@@ -34,7 +35,78 @@ func _ready():
 	add_child(overwrite_dialog)
 	
 	ui_manager.setup_ui(canvas_manager.grid_width, canvas_manager.grid_height, canvas_manager.CELL_SIZE)
-	canvas_manager.generate_blank_canvas(canvas_manager.grid_width, canvas_manager.grid_height)
+	
+	_recenter_editor_layout(canvas_manager.grid_width, canvas_manager.grid_height)
+	_populate_core_levels_container()
+
+# ==========================================
+# CALCULATE DYNAMIC EDITOR CENTERING
+# ==========================================
+func _recenter_editor_layout(width: int, height: int) -> void:
+	canvas_manager.generate_blank_canvas(width, height)
+	var board_pixel_height = height * canvas_manager.CELL_SIZE
+	var screen_height = get_viewport_rect().size.y
+	
+	# --- FIXED: 1/3 Y-ALIGNMENT ---
+	var centered_board_y = (screen_height - board_pixel_height) / 3.0
+	canvas_manager.global_position.y = centered_board_y
+	# ------------------------------
+	
+	if ui_manager.has_method("update_dynamic_editor_layout"):
+		ui_manager.update_dynamic_editor_layout(centered_board_y, board_pixel_height)
+	else:
+		if ui_manager.has_node("StatusLabel"):
+			ui_manager.get_node("StatusLabel").global_position.y = centered_board_y + board_pixel_height + 30
+
+# ==========================================
+# DYNAMIC CORE LEVELS UI BUILDER
+# ==========================================
+func _populate_core_levels_container():
+	if not core_levels_container:
+		push_warning("CoreLevelsContainer not found in scene tree. Skipping Core Levels bar generation.")
+		return
+		
+	for child in core_levels_container.get_children():
+		child.queue_free()
+		
+	var title_lbl = Label.new()
+	title_lbl.text = "CORE LEVELS:"
+	title_lbl.add_theme_font_size_override("font_size", 22)
+	title_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title_lbl.modulate = Color(0.4, 1.0, 0.4)
+	core_levels_container.add_child(title_lbl)
+	
+	var raw_paths = _scan_directory(CAMPAIGN_DIR)
+	raw_paths.sort_custom(func(a, b):
+		var num_a = int(a.get_file().get_basename().replace("level_", ""))
+		var num_b = int(b.get_file().get_basename().replace("level_", ""))
+		return num_a < num_b
+	)
+	
+	var valid_count = 0
+	for path in raw_paths:
+		var res = load(path) as LevelData
+		if res and not _is_layout_empty(res.layout):
+			valid_count += 1
+			var btn = Button.new()
+			btn.text = str(res.level_number)
+			btn.custom_minimum_size = Vector2(70, 70)
+			btn.add_theme_font_size_override("font_size", 28)
+			btn.pressed.connect(func(): _load_core_level(res))
+			core_levels_container.add_child(btn)
+			
+	if valid_count == 0:
+		var empty_lbl = Label.new()
+		empty_lbl.text = "No playable core levels found."
+		core_levels_container.add_child(empty_lbl)
+
+func _load_core_level(res: LevelData):
+	if is_playtesting: return
+	canvas_manager.load_layout(res.width, res.height, res.layout)
+	_recenter_editor_layout(res.width, res.height)
+	
+	ui_manager.sync_size_displays(res.width, res.height)
+	ui_manager.update_status("SUCCESS: Loaded CORE Level " + str(res.level_number) + " as a template.", Color(0.4, 1.0, 0.4))
 
 # ==========================================
 # SIGNAL BINDINGS
@@ -55,7 +127,7 @@ func _bind_signals():
 # ==========================================
 func _on_grid_size_changed(new_width: int, new_height: int):
 	if is_playtesting: return
-	canvas_manager.generate_blank_canvas(new_width, new_height)
+	_recenter_editor_layout(new_width, new_height)
 	ui_manager.update_status("Grid resized to %d x %d" % [new_width, new_height], Color.WHITE)
 
 func _on_brush_changed(state_id: int, brush_name: String):
@@ -98,6 +170,9 @@ func _on_test_mode_entered():
 	is_playtesting = true
 	playtest_snapshot.clear()
 	
+	if core_levels_container:
+		core_levels_container.visible = false 
+	
 	for coord in canvas_manager.board_cells:
 		var cell = canvas_manager.board_cells[coord]
 		playtest_snapshot[coord] = cell.state
@@ -119,6 +194,9 @@ func _on_test_mode_entered():
 func _on_test_mode_exited():
 	is_playtesting = false
 	ui_manager.hide_victory_overlay()
+	
+	if core_levels_container:
+		core_levels_container.visible = true 
 	
 	for coord in canvas_manager.board_cells:
 		var cell = canvas_manager.board_cells[coord]
@@ -175,35 +253,44 @@ func _on_clear_board():
 		
 	ui_manager.update_status("Board cleared!", Color.WHITE)
 
-# ==========================================
-# STRICT LEVEL SAVING PROCESSOR
-# ==========================================
-func _on_save_level():
-	if is_playtesting: return
-	var level_num = ui_manager.get_level_number()
-	
-	var dev_path = DEV_LEVELS_DIR + "level_%d.tres" % level_num
-	var official_path = "res://levels/level_%d.tres" % level_num
-	
-	# PROTECTION: Check if an official level already exists and is NOT a blank canvas
-	if ResourceLoader.exists(official_path):
-		var official_level = load(official_path) as LevelData
-		if official_level and not _is_layout_empty(official_level.layout):
-			ui_manager.update_status("ERROR: Cannot override a completed official level! Clear the board first.", Color(1.0, 0.3, 0.3))
-			return
-			
-	# If it's a blank template, or no official level exists, check if a custom draft exists
-	if ResourceLoader.exists(dev_path):
-		overwrite_dialog.popup_centered()
-		return
-			
-	_execute_save()
-
 func _is_layout_empty(layout: Dictionary) -> bool:
 	for coord in layout:
 		if layout[coord] != -1:
 			return false
 	return true
+
+func _scan_directory(path_to_scan: String) -> Array:
+	var found_files = []
+	if not DirAccess.dir_exists_absolute(path_to_scan):
+		return found_files
+		
+	var dir = DirAccess.open(path_to_scan)
+	if dir:
+		dir.list_dir_begin()
+		var file_name = dir.get_next()
+		while file_name != "":
+			if not dir.current_is_dir():
+				if file_name.ends_with(".tres"):
+					found_files.append(path_to_scan + file_name)
+				elif file_name.ends_with(".tres.remap"):
+					found_files.append(path_to_scan + file_name.replace(".remap", ""))
+			file_name = dir.get_next()
+		dir.list_dir_end()
+	return found_files
+
+# ==========================================
+# LEVEL SAVING PROCESSOR (CUSTOM ONLY)
+# ==========================================
+func _on_save_level():
+	if is_playtesting: return
+	var level_num = ui_manager.get_level_number()
+	var dev_path = DEV_LEVELS_DIR + "level_%d.tres" % level_num
+	
+	if ResourceLoader.exists(dev_path):
+		overwrite_dialog.popup_centered()
+		return
+			
+	_execute_save()
 
 func _execute_save():
 	var level_num = ui_manager.get_level_number()
@@ -230,31 +317,25 @@ func _execute_save():
 		ui_manager.update_status("ERROR: Resource save failed: " + error_string(save_result), Color(1.0, 0.3, 0.3))
 
 # ==========================================
-# LEVEL LOADING PROCESSOR
+# LEVEL LOADING PROCESSOR (CUSTOM ONLY)
 # ==========================================
 func _on_load_level():
 	if is_playtesting: return
 	var level_num = ui_manager.get_level_number()
-	
-	var dev_path = DEV_LEVELS_DIR + "level_%d.tres" % level_num
-	var official_path = "res://levels/level_%d.tres" % level_num
-	
-	var target_load_path = ""
-	if ResourceLoader.exists(dev_path):
-		target_load_path = dev_path
-	elif ResourceLoader.exists(official_path):
-		target_load_path = official_path
+	var target_load_path = DEV_LEVELS_DIR + "level_%d.tres" % level_num
 
-	if target_load_path != "":
+	if ResourceLoader.exists(target_load_path):
 		var loaded_level = load(target_load_path) as LevelData
 		if loaded_level:
 			canvas_manager.load_layout(loaded_level.width, loaded_level.height, loaded_level.layout)
+			_recenter_editor_layout(loaded_level.width, loaded_level.height)
+			
 			ui_manager.sync_size_displays(loaded_level.width, loaded_level.height)
-			ui_manager.update_status("SUCCESS: Loaded level " + str(level_num), Color(0.4, 1.0, 0.4))
+			ui_manager.update_status("SUCCESS: Loaded Custom Level " + str(level_num), Color(0.4, 1.0, 0.4))
 		else:
 			ui_manager.update_status("ERROR: Failed to parse LevelData resource.", Color(1.0, 0.3, 0.3))
 	else:
-		ui_manager.update_status("ERROR: No saved data found for Level " + str(level_num), Color(1.0, 0.6, 0.2))
+		ui_manager.update_status("ERROR: No custom data found for Level " + str(level_num), Color(1.0, 0.6, 0.2))
 
 func _on_main_menu():
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")

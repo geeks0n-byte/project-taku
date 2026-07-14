@@ -54,12 +54,14 @@ signal grid_size_changed(new_width: int, new_height: int)
 @onready var return_button = $"../EditorUI/PlaytestVictoryPanel/ReturnButton"
 
 var _cell_size: float = 120.0
-
 var editor_width: int = 3
 var editor_height: int = 3
 var editor_level: int = 1
 
 var brush_button_group: ButtonGroup = ButtonGroup.new()
+
+var _last_board_y: float = 180.0
+var _last_board_height: float = 0.0
 
 func setup_ui(grid_width: int, grid_height: int, cell_size: float):
 	_cell_size = cell_size
@@ -95,6 +97,11 @@ func setup_ui(grid_width: int, grid_height: int, cell_size: float):
 	_set_button_labels()
 	_connect_ui_signals()
 
+func update_dynamic_editor_layout(board_y: float, board_height: float) -> void:
+	_last_board_y = board_y
+	_last_board_height = board_height
+	_update_panel_layout(editor_width, editor_height)
+
 func _setup_brush_toggles():
 	var brushes = [empty_button, wall_button, zero_button, one_button, joker_button]
 	for btn in brushes:
@@ -116,21 +123,32 @@ func _update_number_labels():
 	if height_label: height_label.text = "H: " + str(editor_height)
 	if level_label: level_label.text = "Lvl: " + str(editor_level)
 
-func _update_panel_layout(grid_width: int, grid_height: int):
-	var board_bottom_y = 180 + (grid_height * _cell_size) 
+func _update_panel_layout(_grid_width: int, _grid_height: int):
+	var board_bottom_y = _last_board_y + _last_board_height 
 	var ui_margin_y = 30
-	var panel_width = max(grid_width * _cell_size, 600) 
+	var screen_width = get_viewport().get_visible_rect().size.x
+	
+	# FIXED: Remove variable cap sizing and stretch the UI panel perfectly to match the viewport width
+	var panel_width = screen_width
+	var panel_x = 0.0
 	
 	var control_panel = $"../EditorUI/ControlPanel"
 	if control_panel:
-		var screen_width = get_viewport().get_visible_rect().size.x
-		var panel_x = (screen_width - panel_width) / 2.0
 		control_panel.global_position = Vector2(panel_x, board_bottom_y + ui_margin_y)
-		control_panel.set_deferred("size", Vector2(panel_width, 400)) 
+		control_panel.set_deferred("size", Vector2(panel_width, 460)) 
+		
+	var core_container = get_tree().current_scene.find_child("CoreLevelsContainer", true, false)
+	if core_container:
+		core_container.global_position = Vector2(panel_x + 40, board_bottom_y + ui_margin_y + 260)
+		core_container.size = Vector2(panel_width - 80, 70)
+		
+		if core_container is BoxContainer:
+			core_container.alignment = BoxContainer.ALIGNMENT_BEGIN
+			core_container.add_theme_constant_override("separation", 15)
 	
 	if grid_size_container:
-		grid_size_container.position = Vector2(20, 20)
-		grid_size_container.set_deferred("size", Vector2(panel_width - 40, 60))
+		grid_size_container.position = Vector2(40, 20)
+		grid_size_container.set_deferred("size", Vector2(panel_width - 80, 60))
 		for child in grid_size_container.get_children():
 			if child is Control:
 				child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -144,17 +162,14 @@ func _update_panel_layout(grid_width: int, grid_height: int):
 					child.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	
 	if brush_container:
-		brush_container.position = Vector2(20, 100)
-		brush_container.set_deferred("size", Vector2(panel_width - 40, 60))
+		brush_container.position = Vector2(40, 100)
+		brush_container.set_deferred("size", Vector2(panel_width - 80, 60))
 		for btn in brush_container.get_children():
 			if btn is Button:
 				btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				btn.custom_minimum_size = Vector2(0, 60) 
-				
 				btn.expand_icon = true
 				btn.add_theme_constant_override("icon_max_width", 48)
-				
-				# NEW: Force the icon perfectly into the center of the button!
 				btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 				
 				if not btn.has_theme_font_size_override("font_size"):
@@ -162,8 +177,8 @@ func _update_panel_layout(grid_width: int, grid_height: int):
 				
 	var config_container = $"../EditorUI/ControlPanel/ConfigContainer"
 	if config_container:
-		config_container.position = Vector2(20, 180)
-		config_container.set_deferred("size", Vector2(panel_width - 40, 60))
+		config_container.position = Vector2(40, 180)
+		config_container.set_deferred("size", Vector2(panel_width - 80, 60))
 		for child in config_container.get_children():
 			if child is Control:
 				child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -177,8 +192,8 @@ func _update_panel_layout(grid_width: int, grid_height: int):
 					child.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 					
 	if status_label:
-		status_label.position = Vector2(20, 260)
-		status_label.set_deferred("size", Vector2(panel_width - 40, 90))
+		status_label.position = Vector2(40, 350)
+		status_label.set_deferred("size", Vector2(panel_width - 80, 90))
 		status_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 		if not status_label.has_theme_font_size_override("font_size"):
 			status_label.add_theme_font_size_override("font_size", 22)

@@ -126,6 +126,11 @@ text = "EXIT TEST"
 layout_mode = 2
 text = "MAIN MENU"
 
+[node name="CoreLevelsContainer" type="HBoxContainer" parent="EditorUI/ControlPanel" unique_id=725060860]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
 [node name="StatusLabel" type="Label" parent="EditorUI/ControlPanel" unique_id=1868498315]
 custom_minimum_size = Vector2(360, 100)
 layout_mode = 0

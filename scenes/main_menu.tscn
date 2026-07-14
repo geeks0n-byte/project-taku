@@ -108,6 +108,16 @@ texture_normal = SubResource("AtlasTexture_6f8o3")
 texture_pressed = SubResource("AtlasTexture_1esiv")
 stretch_mode = 0
 
+[node name="ExitButton" type="TextureButton" parent="." unique_id=1060431704]
+layout_mode = 0
+offset_left = 627.0
+offset_top = 1465.0
+offset_right = 776.0
+offset_bottom = 1612.0
+texture_normal = SubResource("AtlasTexture_tbmy8")
+texture_pressed = SubResource("AtlasTexture_jk1qb")
+stretch_mode = 0
+
 [node name="OptionsPanel" type="Panel" parent="." unique_id=1059985660]
 layout_mode = 0
 offset_right = 40.0
@@ -119,6 +129,11 @@ offset_right = 8.0
 offset_bottom = 8.0
 text = "DELETE SAVE FILE"
 
+[node name="DeleteCustomButton" type="Button" parent="OptionsPanel" unique_id=1225232922]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0
+
 [node name="CloseOptionsButton" type="Button" parent="OptionsPanel" unique_id=1571661562]
 layout_mode = 0
 offset_right = 8.0
@@ -129,16 +144,6 @@ text = "CLOSE"
 layout_mode = 0
 offset_right = 40.0
 offset_bottom = 23.0
-
-[node name="ExitButton" type="TextureButton" parent="." unique_id=1060431704]
-layout_mode = 0
-offset_left = 627.0
-offset_top = 1465.0
-offset_right = 776.0
-offset_bottom = 1612.0
-texture_normal = SubResource("AtlasTexture_tbmy8")
-texture_pressed = SubResource("AtlasTexture_jk1qb")
-stretch_mode = 0
 
 [node name="GameTitle" type="Label" parent="." unique_id=2084676387]
 layout_mode = 0
