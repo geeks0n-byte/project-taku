@@ -43,6 +43,7 @@ func _ready():
 # CALCULATE DYNAMIC EDITOR CENTERING
 # ==========================================
 func _recenter_editor_layout(width: int, height: int) -> void:
+	# This function wipes the board and resizes it.
 	canvas_manager.generate_blank_canvas(width, height)
 	var board_pixel_height = height * canvas_manager.CELL_SIZE
 	var screen_height = get_viewport_rect().size.y
@@ -100,10 +101,11 @@ func _populate_core_levels_container():
 
 func _load_core_level(res: LevelData):
 	if is_playtesting: return
-	canvas_manager.load_layout(res.width, res.height, res.layout)
-	_recenter_editor_layout(res.width, res.height)
 	
-	# NEW: Read available tiles and set checkboxes
+	# FIXED: Wipe and recenter FIRST, then load the tiles onto the fresh layout!
+	_recenter_editor_layout(res.width, res.height)
+	canvas_manager.load_layout(res.width, res.height, res.layout)
+	
 	var tiles_list: Array[int] = [0, 1]
 	if "available_tiles" in res and res.available_tiles.size() > 0:
 		tiles_list = res.available_tiles
@@ -148,17 +150,16 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 	if is_playtesting:
 		if cell.is_locked: return 
 		
-		# FIXED: Playtest clicks now respect your checkbox configuration!
 		var allowed = ui_manager.get_allowed_tiles()
 		
 		if cell.state == -1:
-			cell.state = allowed[0] # Jump to first allowed tile
+			cell.state = allowed[0] 
 		else:
 			var current_idx = allowed.find(cell.state)
 			if current_idx == -1 or current_idx == allowed.size() - 1:
-				cell.state = -1 # Go back to empty if at the end of the allowed list
+				cell.state = -1 
 			else:
-				cell.state = allowed[current_idx + 1] # Cycle to next allowed tile
+				cell.state = allowed[current_idx + 1] 
 		
 		cell.update_visuals()
 		_run_playtest_validation_pass()
@@ -317,7 +318,6 @@ func _execute_save():
 	new_level_resource.height = canvas_manager.grid_height
 	new_level_resource.layout = output_layout
 	
-	# NEW: Save the active checkboxes down into the Resource file!
 	new_level_resource.available_tiles = ui_manager.get_allowed_tiles()
 	
 	if not DirAccess.dir_exists_absolute(DEV_LEVELS_DIR):
@@ -342,10 +342,10 @@ func _on_load_level():
 	if ResourceLoader.exists(target_load_path):
 		var loaded_level = load(target_load_path) as LevelData
 		if loaded_level:
-			canvas_manager.load_layout(loaded_level.width, loaded_level.height, loaded_level.layout)
+			# FIXED: Wipe and recenter FIRST here too!
 			_recenter_editor_layout(loaded_level.width, loaded_level.height)
+			canvas_manager.load_layout(loaded_level.width, loaded_level.height, loaded_level.layout)
 			
-			# NEW: Read available tiles and set checkboxes
 			var tiles_list: Array[int] = [0, 1]
 			if "available_tiles" in loaded_level and loaded_level.available_tiles.size() > 0:
 				tiles_list = loaded_level.available_tiles
