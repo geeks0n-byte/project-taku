@@ -1,12 +1,12 @@
 [gd_scene format=3 uid="uid://j4t3jm7v17ag"]
 
 [ext_resource type="Script" uid="uid://d25rxch5oti18" path="res://scripts/cell.gd" id="1_k6tqi"]
-[ext_resource type="Texture2D" uid="uid://ci71ltxqka6f8" path="res://icons/tiles/tile_empty.svg" id="2_4kve2"]
-[ext_resource type="Texture2D" uid="uid://cx4fih6oiajca" path="res://icons/tiles/tile_yellow.svg" id="3_4kve2"]
-[ext_resource type="Texture2D" uid="uid://dmawhj6vw1p1r" path="res://icons/tiles/tile_blue.svg" id="4_ely81"]
-[ext_resource type="Texture2D" uid="uid://bnmamps4et8l4" path="res://icons/tiles/tile_green.svg" id="5_brkcj"]
-[ext_resource type="Texture2D" uid="uid://cr3gyfkb3xwqs" path="res://icons/tiles/tile_wall.svg" id="6_v4toj"]
-[ext_resource type="Texture2D" uid="uid://dd618veklx7ig" path="res://icons/placeholder_icons/lock.png" id="7_4kve2"]
+[ext_resource type="Texture2D" uid="uid://d2pdiafjgqv4q" path="res://icons/tiles/tile_empty.svg" id="2_4kve2"]
+[ext_resource type="Texture2D" uid="uid://cbtesvuqn7r7c" path="res://icons/tiles/Frame 1.png" id="3_4kve2"]
+[ext_resource type="Texture2D" uid="uid://eyaj1ha5qghx" path="res://icons/tiles/Frame 4.png" id="4_k4tsc"]
+[ext_resource type="Texture2D" uid="uid://bntgvt2jiwngk" path="res://icons/tiles/Frame 3.png" id="5_ely81"]
+[ext_resource type="Texture2D" uid="uid://c2hxui6qinf67" path="res://icons/tiles/Frame 5.png" id="6_brkcj"]
+[ext_resource type="Texture2D" uid="uid://dvdxu2sbifteb" path="res://icons/placeholder_icons/lock.png" id="7_4kve2"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_q20q2"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
@@ -25,9 +25,9 @@ stretch_mode = 0
 script = ExtResource("1_k6tqi")
 texture_empty = ExtResource("2_4kve2")
 texture_zero = ExtResource("3_4kve2")
-texture_one = ExtResource("4_ely81")
-texture_wildcard = ExtResource("5_brkcj")
-texture_wall = ExtResource("6_v4toj")
+texture_one = ExtResource("4_k4tsc")
+texture_wildcard = ExtResource("5_ely81")
+texture_wall = ExtResource("6_brkcj")
 
 [node name="ErrorHighlight" type="Panel" parent="." unique_id=109034642]
 visible = false
