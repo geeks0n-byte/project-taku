@@ -15,11 +15,19 @@ signal play_again_requested
 @onready var how_to_play_button = $"../HowToPlayButton" 
 @onready var timer_label = $"../TimerLabel"
 
+# --- NEW: Move Counter Reference ---
+@onready var move_counter_label = get_node_or_null("../MoveCounterLabel")
+
 @onready var victory_panel = $"../VictoryLayer/VictoryPanel"
 @onready var restart_button = $"../VictoryLayer/VictoryPanel/RestartButton"
 @onready var main_menu_button = $"../VictoryLayer/VictoryPanel/MainMenuButton"
 @onready var time_result_label = $"../VictoryLayer/VictoryPanel/TimeResultLabel"
 @onready var win_label = $"../VictoryLayer/VictoryPanel/WinLabel"
+
+# --- NEW: Defeat Panel References ---
+@onready var defeat_panel = get_node_or_null("../VictoryLayer/DefeatPanel")
+var defeat_restart_button: Button
+var defeat_main_menu_button: Button
 
 @onready var how_to_play_container = $"../HowToPlayLayer/CenterContainer"
 @onready var how_to_play_panel = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel" 
@@ -35,6 +43,13 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		timer_label.global_position = Vector2(650, 40)
 		timer_label.size = Vector2(300, 50)
 		
+	# --- NEW: Configure Move Counter ---
+	if move_counter_label:
+		move_counter_label.add_theme_font_size_override("font_size", 28)
+		move_counter_label.modulate = Color(1.0, 0.6, 0.2) # Orange tint
+		move_counter_label.global_position = Vector2(650, 90) # Right below the timer
+		move_counter_label.size = Vector2(300, 50)
+		
 	if pause_button:
 		pause_button.text = "Pause"
 		pause_button.add_theme_font_size_override("font_size", 28)
@@ -48,10 +63,9 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		reset_button.size = Vector2(140, 60)
 		
 	if how_to_play_button:
-		how_to_play_button.text = "Rules" # Optional: add text if it was an icon before
+		how_to_play_button.text = "Rules" 
 		how_to_play_button.add_theme_font_size_override("font_size", 28)
 		how_to_play_button.global_position = Vector2(440, 40)
-		# Widened so the bigger font fits perfectly next to the timer
 		how_to_play_button.size = Vector2(180, 60) 
 		
 	if level_label:
@@ -78,6 +92,20 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		victory_panel.custom_minimum_size = square_panel_size
 		victory_panel.global_position = panel_pos 
 		victory_panel.size = square_panel_size
+		
+	# --- NEW: Configure Defeat Panel Geometry ---
+	if defeat_panel:
+		defeat_panel.custom_minimum_size = square_panel_size
+		defeat_panel.global_position = panel_pos
+		defeat_panel.size = square_panel_size
+		
+		# Find the buttons safely inside the duplicated panel
+		defeat_restart_button = defeat_panel.find_child("RestartButton", true, false)
+		if not defeat_restart_button:
+			defeat_restart_button = defeat_panel.find_child("TryAgainButton", true, false)
+		defeat_main_menu_button = defeat_panel.find_child("MainMenuButton", true, false)
+		
+		if defeat_restart_button: defeat_restart_button.text = "Try Again"
 
 	if win_label:
 		win_label.add_theme_font_size_override("font_size", 32) 
@@ -95,7 +123,6 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		time_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER 
 
 	var v_start_y = 210 
-
 	if restart_button:
 		restart_button.add_theme_font_size_override("font_size", 28)
 		restart_button.position = Vector2(button_center_x, v_start_y)
@@ -112,12 +139,9 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 	if how_to_play_panel:
 		how_to_play_panel.custom_minimum_size = tutorial_size
 		how_to_play_panel.size = tutorial_size
-		
-		# --- NEW: Solid Background For Tutorial ---
 		var solid_style = StyleBoxFlat.new()
-		solid_style.bg_color = Color(0.12, 0.12, 0.12, 1.0) # Solid dark gray
+		solid_style.bg_color = Color(0.12, 0.12, 0.12, 1.0) 
 		how_to_play_panel.add_theme_stylebox_override("panel", solid_style)
-		# ----------------------------------------
 		
 	if rules_label:
 		rules_label.position = Vector2(30, 30)
@@ -132,9 +156,6 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 
 	_connect_signals()
 
-# ==========================================
-# DYNAMIC HUD PLACEMENT
-# ==========================================
 func update_dynamic_layout(board_y: float, board_height: float):
 	if status_label:
 		status_label.global_position.y = board_y + board_height + 40
@@ -151,6 +172,10 @@ func _connect_signals():
 	if restart_button: restart_button.pressed.connect(_on_victory_button_pressed)
 	if main_menu_button: main_menu_button.pressed.connect(_on_main_menu_pressed)
 	if tutorial_back_button: tutorial_back_button.pressed.connect(_on_tutorial_back_pressed)
+	
+	# --- NEW: Defeat Panel Buttons ---
+	if defeat_restart_button: defeat_restart_button.pressed.connect(func(): reset_requested.emit())
+	if defeat_main_menu_button: defeat_main_menu_button.pressed.connect(_on_main_menu_pressed)
 
 func _on_tutorial_back_pressed():
 	if how_to_play_container: how_to_play_container.visible = false
@@ -168,6 +193,9 @@ func _on_main_menu_pressed():
 func update_timer(formatted_time: String):
 	if timer_label: timer_label.text = "Time: " + formatted_time
 
+func update_move_counter(moves: int):
+	if move_counter_label: move_counter_label.text = "Red Moves: %d" % moves
+
 func display_level(num: int, is_custom: bool = false):
 	if level_label: 
 		level_label.text = ("Custom Level %d" if is_custom else "Level %d") % num
@@ -184,6 +212,7 @@ func show_status_errors(errors: Array):
 
 func set_overlays_hidden():
 	if victory_panel: victory_panel.visible = false
+	if defeat_panel: defeat_panel.visible = false
 	if how_to_play_container: how_to_play_container.visible = false 
 	set_hud_buttons_disabled(false)
 
@@ -201,11 +230,16 @@ func show_victory(display_num: int, is_last_level: bool, formatted_time: String,
 		status_label.text = "Puzzle Solved!"
 	
 	if win_label:
-		if is_last_level:
-			win_label.text = "All Levels Completed!\nYou Win!" 
-		else:
-			win_label.text = ("Custom Level %d Completed!" if is_custom else "Level %d Completed!") % display_num
+		if is_last_level: win_label.text = "All Levels Completed!\nYou Win!" 
+		else: win_label.text = ("Custom Level %d Completed!" if is_custom else "Level %d Completed!") % display_num
 		
 	if restart_button: restart_button.text = "Play Again" if is_last_level else "Next Level"
 	if time_result_label: time_result_label.text = "Completion Time: %s" % formatted_time
 	if victory_panel: victory_panel.visible = true
+
+func show_defeat():
+	set_hud_buttons_disabled(true)
+	if status_label:
+		status_label.modulate = Color(1.0, 0.3, 0.3)
+		status_label.text = "Time's up! The puzzle remains unsolved."
+	if defeat_panel: defeat_panel.visible = true

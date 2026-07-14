@@ -5,7 +5,6 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array) -> Dict
 	var syntax_pass = true
 	var error_messages: Array[String] = []
 	
-	# Iterating over the pre-sorted and pre-grouped cache
 	for line in cached_lines:
 		if not check_line_validity(board_cells, line["coords"], line["is_horizontal"], line["index"], error_messages): 
 			syntax_pass = false
@@ -13,10 +12,25 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array) -> Dict
 	return {"valid": syntax_pass, "errors": error_messages}
 
 static func check_line_validity(board_cells: Dictionary, coords: Array, is_horizontal: bool, index: int, error_messages: Array[String]) -> bool:
-	# Sorting removed! The cache handles this perfectly now.
 	var line_is_valid = true
 	var line_name = "Row " + str(index + 1) if is_horizontal else "Column " + str(index + 1)
 	
+	# ==========================================
+	# NEW RULE: ONLY ONE GREEN TILE ALLOWED
+	# ==========================================
+	var green_count = 0
+	for coord in coords:
+		if board_cells[coord].state == 2:
+			green_count += 1
+			
+	if green_count > 1:
+		for coord in coords:
+			if board_cells[coord].state == 2:
+				board_cells[coord].highlight_error()
+		line_is_valid = false
+		error_messages.append(line_name + " contains more than ONE Green wildcard!")
+	# ==========================================
+
 	var found_consecutive = false
 	var virtual_test_states = [0, 1]
 	
@@ -49,6 +63,7 @@ static func check_line_validity(board_cells: Dictionary, coords: Array, is_horiz
 	var empty_count = 0
 	
 	for coord in coords:
+		# Exclude red tiles (state 3) from the Balance count logic
 		match board_cells[coord].state:
 			-1: empty_count += 1
 			0: zeros += 1
@@ -56,9 +71,10 @@ static func check_line_validity(board_cells: Dictionary, coords: Array, is_horiz
 			
 	if empty_count == 0 and zeros != ones:
 		for coord in coords:
-			if board_cells[coord].is_playable:
+			# Do not highlight the red tiles as balance errors
+			if board_cells[coord].is_playable and board_cells[coord].state != 3:
 				board_cells[coord].highlight_error()
 		line_is_valid = false
-		error_messages.append(line_name + " does not have an equal amount of 0s and 1s!")
+		error_messages.append(line_name + " does not have an equal amount of Yellows and Blues!")
 		
 	return line_is_valid

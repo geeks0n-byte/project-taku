@@ -41,12 +41,16 @@ autostart = true
 offset_right = 40.0
 offset_bottom = 23.0
 
-[node name="VictoryLayer" type="CanvasLayer" parent="." unique_id=123771825]
+[node name="MoveCounterLabel" type="Label" parent="." unique_id=1809504095]
+offset_right = 40.0
+offset_bottom = 23.0
 
-[node name="VictoryPanel" type="ColorRect" parent="VictoryLayer" unique_id=1482484342]
+[node name="EndLayer" type="CanvasLayer" parent="." unique_id=123771825]
+
+[node name="VictoryPanel" type="ColorRect" parent="EndLayer" unique_id=1482484342]
 color = Color(0, 0, 0, 0.7058824)
 
-[node name="WinLabel" type="Label" parent="VictoryLayer/VictoryPanel" unique_id=440959304]
+[node name="WinLabel" type="Label" parent="EndLayer/VictoryPanel" unique_id=440959304]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -61,22 +65,52 @@ grow_horizontal = 2
 grow_vertical = 2
 text = "PUZZLE SOLVED!"
 
-[node name="RestartButton" type="Button" parent="VictoryLayer/VictoryPanel" unique_id=1980193957]
+[node name="RestartButton" type="Button" parent="EndLayer/VictoryPanel" unique_id=1980193957]
 layout_mode = 1
 offset_right = 88.0
 offset_bottom = 31.0
 text = "Play Again"
 
-[node name="MainMenuButton" type="Button" parent="VictoryLayer/VictoryPanel" unique_id=2032472209]
+[node name="MainMenuButton" type="Button" parent="EndLayer/VictoryPanel" unique_id=2032472209]
 layout_mode = 1
 offset_right = 96.0
 offset_bottom = 31.0
 text = "Main Menu"
 
-[node name="TimeResultLabel" type="Label" parent="VictoryLayer/VictoryPanel" unique_id=763166549]
+[node name="TimeResultLabel" type="Label" parent="EndLayer/VictoryPanel" unique_id=763166549]
 layout_mode = 0
 offset_right = 40.0
 offset_bottom = 23.0
+
+[node name="DefeatPanel" type="ColorRect" parent="EndLayer" unique_id=1919653874]
+color = Color(0, 0, 0, 0.7058824)
+
+[node name="DefeatLabel" type="Label" parent="EndLayer/DefeatPanel" unique_id=317203938]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -11.5
+offset_right = 64.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+text = "TIME'S UP!"
+
+[node name="RestartButton" type="Button" parent="EndLayer/DefeatPanel" unique_id=2078729675]
+layout_mode = 1
+offset_right = 88.0
+offset_bottom = 31.0
+text = "Try Again"
+
+[node name="MainMenuButton" type="Button" parent="EndLayer/DefeatPanel" unique_id=1715181863]
+layout_mode = 1
+offset_right = 96.0
+offset_bottom = 31.0
+text = "Main Menu"
 
 [node name="HowToPlayLayer" type="CanvasLayer" parent="." unique_id=749392160]
 
@@ -101,9 +135,9 @@ text = "[center][font_size=46][color=gold]HOW TO PLAY[/color][/font_size][/cente
 [font_size=28]Fill the grid by following these core rules:[/font_size]
 
 [font_size=26]
-[img width=48 height=48]res://icons/tiles/tile_red.svg[/img] [img width=48 height=48]res://icons/tiles/tile_blue.svg[/img] [b]Balance:[/b] Every row and column must contain an equal amount of Red and Blue blocks.
+[img width=48 height=48]res://icons/tiles/tile_yellow.svg[/img] [img width=48 height=48]res://icons/tiles/tile_blue.svg[/img] [b]Balance:[/b] Every row and column must contain an equal amount of Yellow and Blue blocks.
 
-[img width=48 height=48]res://icons/tiles/tile_green.svg[/img] [b]Wildcard:[/b] Green blocks act as both Red and Blue at the exact same time.
+[img width=48 height=48]res://icons/tiles/tile_green.svg[/img] [b]Wildcard:[/b] Green blocks act as both Yellow and Blue at the exact same time.
 
 [img width=48 height=48]res://icons/placeholder_icons/lock.png[/img] [b]Locked:[/b] Blocks with a lock icon are fixed and cannot be changed.
 
@@ -115,10 +149,10 @@ You cannot place three blocks of the same color in an unbroken line. Because Gre
 
 [font_size=26]
 [color=red][b]X FORBIDDEN:[/b][/color]
-[img width=36 height=36]res://icons/tiles/tile_red.svg[/img][img width=36 height=36]res://icons/tiles/tile_red.svg[/img][img width=36 height=36]res://icons/tiles/tile_red.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_blue.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_red.svg[/img][img width=36 height=36]res://icons/tiles/tile_red.svg[/img][img width=36 height=36]res://icons/tiles/tile_green.svg[/img] (acts as 3rd Red!)
+[img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_blue.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_green.svg[/img] (acts as 3rd Yellow!)
 
 [color=green][b]✓ ALLOWED:[/b][/color]
-[img width=36 height=36]res://icons/tiles/tile_red.svg[/img][img width=36 height=36]res://icons/tiles/tile_red.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_red.svg[/img][img width=36 height=36]res://icons/tiles/tile_green.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img] (Green splits them safely)
+[img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_green.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img] (Green splits them safely)
 [/font_size]"
 
 [node name="BackButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=1004694894]

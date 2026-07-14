@@ -2,10 +2,9 @@ extends Node2D
 
 @export var show_debug_tools: bool = true 
 
-# We now maintain two separate background tracks to prevent Next Level crossover
 var core_levels: Array[LevelData] = []
 var custom_levels: Array[LevelData] = []
-var levels: Array[LevelData] = [] # The active playlist for the current session
+var levels: Array[LevelData] = [] 
 
 # ==========================================
 # CONSTANTS & PATHS
@@ -21,7 +20,9 @@ const DEV_DIR = "user://levels/"
 @onready var timer_node = $Timer
 @onready var pause_menu: PauseMenu = $PauseMenu  
 
-var elapsed_seconds: int = 0
+# --- NEW: Gameplay Variables ---
+var time_remaining: int = 120
+var red_move_count: int = 0
 var is_game_active: bool = true
 var is_paused: bool = false 
 var current_level_index: int = 0
@@ -51,7 +52,11 @@ func _bind_submanager_signals():
 	ui_manager.reset_requested.connect(_on_reset)
 	ui_manager.how_to_play_requested.connect(_on_how_to_play)
 	ui_manager.resume_from_tutorial_requested.connect(_on_resume)
+	
 	board_manager.cell_changed.connect(_on_cell_changed)
+	# --- NEW: Bind the red move signal ---
+	board_manager.red_move_made.connect(_on_red_move_made)
+	
 	pause_menu.resume_pressed.connect(_on_resume)
 	pause_menu.restart_pressed.connect(_on_restart_level)
 	pause_menu.auto_win_pressed.connect(_on_auto_win)
@@ -60,7 +65,7 @@ func _bind_submanager_signals():
 	ui_manager.play_again_requested.connect(_on_play_again)
 
 # ==========================================
-# RECONFIGURED LOADER (DUAL-TRACK & SANITIZED)
+# RECONFIGURED LOADER
 # ==========================================
 func _load_all_levels_from_storage() -> void:
 	core_levels.clear()
@@ -161,28 +166,36 @@ func generate_board():
 	if current_level_index >= levels.size(): return
 	ui_manager.set_overlays_hidden()
 	
-	elapsed_seconds = 0
 	is_game_active = true
 	is_paused = false
+	
+	var current_level_resource = levels[current_level_index]
+	var is_custom = current_level_resource.resource_path.begins_with("user://")
+	
+	# --- NEW: Reset Time and Moves from Level Data ---
+	# Safety check in case older levels don't have the time_limit variable yet
+	time_remaining = current_level_resource.get("time_limit") if "time_limit" in current_level_resource else 120
+	red_move_count = 0
+	
+	ui_manager.update_move_counter(red_move_count)
 	_update_timer_display()
 	if timer_node: timer_node.start()
 	
 	board_manager.process_mode = Node.PROCESS_MODE_INHERIT
 	
-	var current_level_resource = levels[current_level_index]
-	var is_custom = current_level_resource.resource_path.begins_with("user://")
-	
-	# NEW: Extract the list of allowed tiles, falling back to [0, 1] if empty
 	var tiles_list: Array[int] = [0, 1]
 	if "available_tiles" in current_level_resource and current_level_resource.available_tiles.size() > 0:
 		tiles_list = current_level_resource.available_tiles
+		
+	var r_pairs: Array = []
+	if "red_pairs" in current_level_resource:
+		r_pairs = current_level_resource.red_pairs
 	
 	ui_manager.display_level(current_level_resource.level_number, is_custom)
 	
-	# UPDATED: Pass tiles_list into BoardManager
-	board_manager.build_grid(current_level_resource.layout, tiles_list)
+	# Pass the red pairs into the grid builder!
+	board_manager.build_grid(current_level_resource.layout, tiles_list, r_pairs)
 	
-	# --- FIXED: 1/3 Y-ALIGNMENT ---
 	var board_pixel_height = current_level_resource.height * board_manager.CELL_SIZE
 	var screen_height = get_viewport_rect().size.y
 	
@@ -190,12 +203,18 @@ func generate_board():
 	board_manager.global_position.y = new_board_y
 	
 	ui_manager.update_dynamic_layout(new_board_y, board_pixel_height)
-	# ------------------------------
 	
 	_run_validation_pass()
+
 func _on_cell_changed(_coord: Vector2i):
 	if not is_game_active or is_paused: return
 	_run_validation_pass()
+
+# --- NEW: Track Red Moves ---
+func _on_red_move_made():
+	if not is_game_active or is_paused: return
+	red_move_count += 1
+	ui_manager.update_move_counter(red_move_count)
 
 func _run_validation_pass():
 	board_manager.clear_highlights()
@@ -223,6 +242,13 @@ func trigger_victory():
 		SaveManager.unlock_level(next_level_to_unlock)
 	
 	ui_manager.show_victory(display_num, is_last, _get_formatted_time(), is_custom)
+
+# --- NEW: Defeat Sequence ---
+func trigger_defeat():
+	is_game_active = false
+	if timer_node: timer_node.stop()
+	board_manager.process_mode = Node.PROCESS_MODE_DISABLED
+	ui_manager.show_defeat()
 
 # ==========================================
 # OVERLAYS & CALLBACKS
@@ -278,13 +304,22 @@ func _on_quit_to_menu():
 	get_tree().paused = false 
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
+# --- UPDATED: Countdown Timer ---
 func _on_timer_timeout():
 	if is_game_active and not is_paused:
-		elapsed_seconds += 1
+		time_remaining -= 1
 		_update_timer_display()
+		
+		if time_remaining <= 0:
+			trigger_defeat()
 
 func _update_timer_display():
 	ui_manager.update_timer(_get_formatted_time())
 
 func _get_formatted_time() -> String:
-	return "%02d:%02d" % [int(elapsed_seconds / 60.0), elapsed_seconds % 60]
+	var minutes = int(time_remaining / 60.0)
+	var seconds = time_remaining % 60
+	# Prevent negative displays if logic skips a beat
+	if minutes < 0: minutes = 0
+	if seconds < 0: seconds = 0
+	return "%02d:%02d" % [minutes, seconds]

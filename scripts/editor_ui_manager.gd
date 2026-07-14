@@ -104,13 +104,14 @@ func setup_ui(grid_width: int, grid_height: int, cell_size: float):
 	_connect_ui_signals()
 
 # ==========================================
-# DYNAMIC CHECKBOX BUILDER WITH EXPLICIT SVGS & TEXT
+# UPDATED: REPLACED RED WITH YELLOW
 # ==========================================
 func _build_allowed_tiles_ui():
 	var control_panel = $"../EditorUI/ControlPanel"
 	if not control_panel: return
 	
-	var tex_red = load("res://icons/tiles/tile_red.svg")
+	# FIXED: Point to the new yellow SVG
+	var tex_yellow = load("res://icons/tiles/tile_yellow.svg")
 	var tex_blue = load("res://icons/tiles/tile_blue.svg")
 	var tex_green = load("res://icons/tiles/tile_green.svg") 
 	
@@ -126,8 +127,8 @@ func _build_allowed_tiles_ui():
 	allowed_tiles_container.add_child(lbl)
 	
 	allow_zero_chk = CheckBox.new()
-	allow_zero_chk.text = " RED"
-	if tex_red: allow_zero_chk.icon = tex_red
+	allow_zero_chk.text = " YELLOW" # FIXED: Label updated
+	if tex_yellow: allow_zero_chk.icon = tex_yellow
 	elif icon_zero: allow_zero_chk.icon = icon_zero
 	allow_zero_chk.expand_icon = true
 	allow_zero_chk.add_theme_constant_override("icon_max_width", 32)
@@ -157,6 +158,7 @@ func _build_allowed_tiles_ui():
 	allow_joker_chk.add_theme_font_size_override("font_size", 22)
 	allow_joker_chk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	allowed_tiles_container.add_child(allow_joker_chk)
+# ==========================================
 
 func get_allowed_tiles() -> Array[int]:
 	var tiles: Array[int] = []
