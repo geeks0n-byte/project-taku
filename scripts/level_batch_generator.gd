@@ -5,6 +5,8 @@ extends EditorScript
 var master_level_database: Array = [
 	{
 		"number": 1,
+		# NEW: Define your allowed tiles here! [0 = Red, 1 = Blue, 2 = Green Wildcard]
+		"available_tiles": [0, 1, 2], 
 		"layout": {
 			Vector2i(0,0): -1, Vector2i(1,0): -1, Vector2i(2,0): 2,  Vector2i(3,0): -1, Vector2i(4,0): -1, Vector2i(5,0): -1, Vector2i(6,0): -1,
 			Vector2i(0,1): -1, Vector2i(1,1): -1, Vector2i(2,1): -1, Vector2i(3,1): -1, Vector2i(4,1): 2,  Vector2i(5,1): -1, Vector2i(6,1): -1,
@@ -17,6 +19,8 @@ var master_level_database: Array = [
 	},
 	{
 		"number": 2,
+		# If you completely omit "available_tiles" here, the script will automatically
+		# default to [0, 1] when building the file, saving you typing time!
 		"layout": {
 			Vector2i(0,0): -1, Vector2i(1,0): -1, Vector2i(2,0): -1, Vector2i(3,0): -1, Vector2i(4,0): 1,  Vector2i(5,0): -1, Vector2i(6,0): -1,
 			Vector2i(0,1): -1, Vector2i(1,1): -2, Vector2i(2,1): -1, Vector2i(3,1): 2,  Vector2i(4,1): -1, Vector2i(5,1): -1, Vector2i(6,1): -1,
@@ -40,7 +44,14 @@ func _run():
 		new_level.level_number = data["number"]
 		new_level.layout = data["layout"]
 		
-		# --- NEW: Dynamically calculate width and height based on the layout keys ---
+		# --- NEW: Safely read and assign available tiles ---
+		var allowed: Array[int] = [0, 1] # Fallback
+		if data.has("available_tiles"):
+			# .assign() safely forces the dictionary array into Godot's strictly typed Array[int]
+			allowed.assign(data["available_tiles"])
+		new_level.available_tiles = allowed
+		# ---------------------------------------------------
+		
 		var max_x = 0
 		var max_y = 0
 		
@@ -48,16 +59,14 @@ func _run():
 			if coord.x > max_x: max_x = coord.x
 			if coord.y > max_y: max_y = coord.y
 			
-		# Add 1 because coordinates start at 0 (e.g., max_x of 6 means width is 7)
 		new_level.width = max_x + 1
 		new_level.height = max_y + 1
-		# ----------------------------------------------------------------------------
 		
 		var save_path = "res://levels/level_%d.tres" % data["number"]
 		var result = ResourceSaver.save(new_level, save_path)
 		
 		if result == OK:
-			print("Successfully created resource: ", save_path, " (Size: %dx%d)" % [new_level.width, new_level.height])
+			print("Successfully created resource: ", save_path, " (Size: %dx%d, Tiles: %s)" % [new_level.width, new_level.height, str(allowed)])
 		else:
 			print("Generation Error on path: ", save_path, " Code: ", result)
 			

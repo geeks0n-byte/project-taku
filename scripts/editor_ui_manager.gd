@@ -63,12 +63,20 @@ var brush_button_group: ButtonGroup = ButtonGroup.new()
 var _last_board_y: float = 180.0
 var _last_board_height: float = 0.0
 
+# --- NEW: Dynamic Tile Configuration Variables ---
+var allowed_tiles_container: HBoxContainer
+var allow_zero_chk: CheckBox
+var allow_one_chk: CheckBox
+var allow_joker_chk: CheckBox
+# -------------------------------------------------
+
 func setup_ui(grid_width: int, grid_height: int, cell_size: float):
 	_cell_size = cell_size
 	editor_width = grid_width
 	editor_height = grid_height
 	
 	_setup_brush_toggles()
+	_build_allowed_tiles_ui() # Instantiates the new checkboxes dynamically
 	emit_signal("brush_changed", -1, "Empty (Clear)")
 	
 	_update_number_labels()
@@ -96,6 +104,61 @@ func setup_ui(grid_width: int, grid_height: int, cell_size: float):
 	
 	_set_button_labels()
 	_connect_ui_signals()
+
+# ==========================================
+# NEW: DYNAMIC CHECKBOX BUILDER & GETTERS
+# ==========================================
+func _build_allowed_tiles_ui():
+	var control_panel = $"../EditorUI/ControlPanel"
+	if not control_panel: return
+	
+	allowed_tiles_container = HBoxContainer.new()
+	allowed_tiles_container.name = "AllowedTilesContainer"
+	control_panel.add_child(allowed_tiles_container)
+	
+	var lbl = Label.new()
+	lbl.text = "Allowed Tiles:"
+	lbl.add_theme_font_size_override("font_size", 22)
+	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	allowed_tiles_container.add_child(lbl)
+	
+	allow_zero_chk = CheckBox.new()
+	allow_zero_chk.text = "0 (Red)"
+	allow_zero_chk.button_pressed = true
+	allow_zero_chk.add_theme_font_size_override("font_size", 22)
+	allow_zero_chk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	allowed_tiles_container.add_child(allow_zero_chk)
+	
+	allow_one_chk = CheckBox.new()
+	allow_one_chk.text = "1 (Blue)"
+	allow_one_chk.button_pressed = true
+	allow_one_chk.add_theme_font_size_override("font_size", 22)
+	allow_one_chk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	allowed_tiles_container.add_child(allow_one_chk)
+	
+	allow_joker_chk = CheckBox.new()
+	allow_joker_chk.text = "2 (Green)"
+	allow_joker_chk.button_pressed = false
+	allow_joker_chk.add_theme_font_size_override("font_size", 22)
+	allow_joker_chk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	allowed_tiles_container.add_child(allow_joker_chk)
+
+func get_allowed_tiles() -> Array[int]:
+	var tiles: Array[int] = []
+	if allow_zero_chk and allow_zero_chk.button_pressed: tiles.append(0)
+	if allow_one_chk and allow_one_chk.button_pressed: tiles.append(1)
+	if allow_joker_chk and allow_joker_chk.button_pressed: tiles.append(2)
+	
+	# Fallback security: If the user unchecks everything, default to standard rules
+	if tiles.size() == 0: tiles = [0, 1] 
+	return tiles
+
+func set_allowed_tiles(tiles: Array[int]):
+	if allow_zero_chk: allow_zero_chk.button_pressed = (0 in tiles)
+	if allow_one_chk: allow_one_chk.button_pressed = (1 in tiles)
+	if allow_joker_chk: allow_joker_chk.button_pressed = (2 in tiles)
+# ==========================================
 
 func update_dynamic_editor_layout(board_y: float, board_height: float) -> void:
 	_last_board_y = board_y
@@ -128,18 +191,25 @@ func _update_panel_layout(_grid_width: int, _grid_height: int):
 	var ui_margin_y = 30
 	var screen_width = get_viewport().get_visible_rect().size.x
 	
-	# FIXED: Remove variable cap sizing and stretch the UI panel perfectly to match the viewport width
 	var panel_width = screen_width
 	var panel_x = 0.0
 	
 	var control_panel = $"../EditorUI/ControlPanel"
 	if control_panel:
 		control_panel.global_position = Vector2(panel_x, board_bottom_y + ui_margin_y)
-		control_panel.set_deferred("size", Vector2(panel_width, 460)) 
+		# Increased Panel Height to 540 to make room for the checkboxes!
+		control_panel.set_deferred("size", Vector2(panel_width, 540)) 
 		
+	# --- NEW: Position the Generated Checkbox Row ---
+	if allowed_tiles_container:
+		allowed_tiles_container.position = Vector2(40, 260)
+		allowed_tiles_container.set_deferred("size", Vector2(panel_width - 80, 60))
+	# ------------------------------------------------
+
 	var core_container = get_tree().current_scene.find_child("CoreLevelsContainer", true, false)
 	if core_container:
-		core_container.global_position = Vector2(panel_x + 40, board_bottom_y + ui_margin_y + 260)
+		# Pushed down from 260 to 340
+		core_container.global_position = Vector2(panel_x + 40, board_bottom_y + ui_margin_y + 340)
 		core_container.size = Vector2(panel_width - 80, 70)
 		
 		if core_container is BoxContainer:
@@ -192,7 +262,8 @@ func _update_panel_layout(_grid_width: int, _grid_height: int):
 					child.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 					
 	if status_label:
-		status_label.position = Vector2(40, 350)
+		# Pushed down from 350 to 430
+		status_label.position = Vector2(40, 430)
 		status_label.set_deferred("size", Vector2(panel_width - 80, 90))
 		status_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 		if not status_label.has_theme_font_size_override("font_size"):
@@ -293,8 +364,11 @@ func toggle_playtest_visibility(is_playtesting: bool):
 	if level_minus: level_minus.visible = not is_playtesting
 	if level_label: level_label.visible = not is_playtesting
 	if level_plus: level_plus.visible = not is_playtesting
-	
 	if grid_size_container: grid_size_container.visible = not is_playtesting 
+	
+	# Hide checkboxes while playtesting
+	if allowed_tiles_container: allowed_tiles_container.visible = not is_playtesting
+	
 	exit_test_button.visible = is_playtesting
 
 func display_victory_overlay(compiled_text: String):

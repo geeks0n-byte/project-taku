@@ -172,14 +172,20 @@ func generate_board():
 	var current_level_resource = levels[current_level_index]
 	var is_custom = current_level_resource.resource_path.begins_with("user://")
 	
+	# NEW: Extract the list of allowed tiles, falling back to [0, 1] if empty
+	var tiles_list: Array[int] = [0, 1]
+	if "available_tiles" in current_level_resource and current_level_resource.available_tiles.size() > 0:
+		tiles_list = current_level_resource.available_tiles
+	
 	ui_manager.display_level(current_level_resource.level_number, is_custom)
-	board_manager.build_grid(current_level_resource.layout)
+	
+	# UPDATED: Pass tiles_list into BoardManager
+	board_manager.build_grid(current_level_resource.layout, tiles_list)
 	
 	# --- FIXED: 1/3 Y-ALIGNMENT ---
 	var board_pixel_height = current_level_resource.height * board_manager.CELL_SIZE
 	var screen_height = get_viewport_rect().size.y
 	
-	# Snaps to upper 1/3 of available screen space instead of the direct middle
 	var new_board_y = (screen_height - board_pixel_height) / 3.0
 	board_manager.global_position.y = new_board_y
 	
@@ -187,7 +193,6 @@ func generate_board():
 	# ------------------------------
 	
 	_run_validation_pass()
-
 func _on_cell_changed(_coord: Vector2i):
 	if not is_game_active or is_paused: return
 	_run_validation_pass()

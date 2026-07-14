@@ -11,14 +11,16 @@ var cell_pool: Array = []
 var cached_lines: Array = []
 
 func _ready():
-	# We remove the hardcoded position here, as it's now handled in build_grid
 	pass
 
-func build_grid(layout_data: Dictionary):
+# UPDATED: Now accepts available_tiles array from level resource
+func build_grid(layout_data: Dictionary, available_tiles: Array[int] = [0, 1]):
 	board_cells.clear()
 	var pool_index = 0
 	
-	# NEW: Calculate the board width to center it dynamically
+	# Fallback if an empty array was somehow passed in
+	var allowed_tiles = available_tiles if available_tiles.size() > 0 else [0, 1]
+	
 	var max_x = 0
 	for coord in layout_data:
 		if coord.x > max_x: max_x = coord.x
@@ -42,6 +44,9 @@ func build_grid(layout_data: Dictionary):
 			
 		cell.coord = coord
 		cell.position = Vector2(float(coord.x * CELL_SIZE), float(coord.y * CELL_SIZE))
+		
+		# NEW: Pass allowed cycle states down to the cell
+		cell.allowed_cycle_tiles = allowed_tiles
 		
 		cell.state = starting_state
 		if starting_state == -2:
