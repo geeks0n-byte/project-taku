@@ -42,29 +42,29 @@ func populate_level_menu() -> void:
 		level_grid.add_child(empty_label)
 		return
 
-	var processed_levels = {}
-
 	for file_path in level_files:
 		var resource = load(file_path)
 		if resource and resource is LevelData:
-			if processed_levels.has(resource.level_number):
-				continue 
-				
-			processed_levels[resource.level_number] = true
-			
 			var btn = Button.new()
 			btn.custom_minimum_size = Vector2(150, 100)
 			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			btn.add_theme_font_size_override("font_size", 32)
 			
-			var is_unlocked = SaveManager.is_level_unlocked(resource.level_number)
+			var is_custom = file_path.begins_with(DEV_DIR)
 			
-			if is_unlocked:
-				btn.text = "Level " + str(resource.level_number)
+			if is_custom:
+				# Custom levels are unlocked by default and clearly labeled
+				btn.text = "Custom Level " + str(resource.level_number)
 				btn.disabled = false
 			else:
-				btn.text = "Level " + str(resource.level_number) + "\n(Locked)"
-				btn.disabled = true
+				# Official levels use the progression system
+				var is_unlocked = SaveManager.is_level_unlocked(resource.level_number)
+				if is_unlocked:
+					btn.text = "Level " + str(resource.level_number)
+					btn.disabled = false
+				else:
+					btn.text = "Level " + str(resource.level_number) + "\n(Locked)"
+					btn.disabled = true
 			
 			btn.pressed.connect(func(): _on_level_selected(resource))
 			level_grid.add_child(btn)
@@ -75,15 +75,16 @@ func populate_level_menu() -> void:
 func get_sorted_level_files() -> Array:
 	var files = []
 	
-	files.append_array(_scan_directory(DEV_DIR))
+	# Combine both lists
 	files.append_array(_scan_directory(CAMPAIGN_DIR))
+	files.append_array(_scan_directory(DEV_DIR))
 	
-	# Priority Sort: Orders numerically, but ensures user:// drafts always beat res:// 
+	# Sort numerically. If numbers match, put Official first, Custom second.
 	files.sort_custom(func(a, b):
 		var num_a = int(a.get_file().get_basename().replace("level_", ""))
 		var num_b = int(b.get_file().get_basename().replace("level_", ""))
 		if num_a == num_b:
-			return a.begins_with("user://")
+			return not a.begins_with("user://")
 		return num_a < num_b
 	)
 	return files

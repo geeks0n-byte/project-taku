@@ -32,7 +32,7 @@ signal play_again_requested
 # 3. Tutorial Screen Overlay
 @onready var how_to_play_container = $"../HowToPlayLayer/CenterContainer"
 @onready var how_to_play_panel = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel" 
-@onready var rules_label = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/RulesLabel"
+@onready var rules_label = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/RichTextLabel"
 @onready var tutorial_back_button = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/BackButton"
 
 var _is_last_level_completed: bool = false
@@ -42,7 +42,6 @@ var _is_last_level_completed: bool = false
 # ==========================================
 func setup_ui(_show_debug_tools: bool, cell_size: float):
 	
-	# 1. Main Gameplay HUD Setup
 	if timer_label:
 		timer_label.add_theme_font_size_override("font_size", 32)
 		timer_label.modulate = Color(0.9, 0.9, 0.9)
@@ -79,7 +78,6 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		status_label.size = Vector2(7 * cell_size, 160)
 		status_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 
-	# 2. Victory Panel Layout
 	var square_panel_size = Vector2(400, 450)
 	var panel_pos = Vector2(340, 300)
 	var menu_button_size = Vector2(300, 60)
@@ -120,7 +118,6 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		main_menu_button.position = Vector2(button_center_x, v_start_y)
 		main_menu_button.size = menu_button_size
 
-	# 3. Tutorial Panel Layout
 	var tutorial_size = Vector2(700, 800)
 	
 	if how_to_play_panel:
@@ -134,10 +131,8 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 	if tutorial_back_button:
 		var btn_size = Vector2(140, 50)
 		tutorial_back_button.size = btn_size
-		
 		var btn_x = (tutorial_size.x - btn_size.x) / 2
 		var btn_y = tutorial_size.y - btn_size.y - 30
-		
 		tutorial_back_button.position = Vector2(btn_x, btn_y)
 		tutorial_back_button.show()
 
@@ -158,7 +153,6 @@ func set_hud_buttons_disabled(is_disabled: bool):
 # BUTTON WIRING
 # ==========================================
 func _connect_signals():
-	# Main HUD Buttons
 	if pause_button:
 		pause_button.pressed.connect(func(): pause_requested.emit())
 	if reset_button:
@@ -166,13 +160,11 @@ func _connect_signals():
 	if how_to_play_button:
 		how_to_play_button.pressed.connect(func(): how_to_play_requested.emit())
 		
-	# Victory Screen Buttons
 	if restart_button:
 		restart_button.pressed.connect(_on_victory_button_pressed)
 	if main_menu_button:
 		main_menu_button.pressed.connect(_on_main_menu_pressed)
 
-	# Tutorial Screen Buttons
 	if tutorial_back_button:
 		tutorial_back_button.pressed.connect(_on_tutorial_back_pressed)
 
@@ -182,7 +174,6 @@ func _connect_signals():
 func _on_tutorial_back_pressed():
 	if how_to_play_container:
 		how_to_play_container.visible = false
-		
 	set_hud_buttons_disabled(false)
 	resume_from_tutorial_requested.emit()
 
@@ -197,13 +188,17 @@ func _on_main_menu_pressed():
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
 # ==========================================
-# DISPLAY UPDATERS
+# DISPLAY UPDATERS (NEW: CUSTOM LABELS)
 # ==========================================
 func update_timer(formatted_time: String):
 	if timer_label: timer_label.text = "Time: " + formatted_time
 
-func display_level(num: int):
-	if level_label: level_label.text = "Level %d" % num
+func display_level(num: int, is_custom: bool = false):
+	if level_label: 
+		if is_custom:
+			level_label.text = "Custom Level %d" % num
+		else:
+			level_label.text = "Level %d" % num
 
 func show_status_valid():
 	if status_label:
@@ -218,16 +213,14 @@ func show_status_errors(errors: Array):
 func set_overlays_hidden():
 	if victory_panel: victory_panel.visible = false
 	if how_to_play_container: how_to_play_container.visible = false 
-	
 	set_hud_buttons_disabled(false)
 
 func show_how_to_play():
 	if how_to_play_container:
 		how_to_play_container.visible = true
-		
 	set_hud_buttons_disabled(true)
 
-func show_victory(display_num: int, is_last_level: bool, formatted_time: String):
+func show_victory(display_num: int, is_last_level: bool, formatted_time: String, is_custom: bool = false):
 	_is_last_level_completed = is_last_level
 	set_hud_buttons_disabled(true)
 	
@@ -236,8 +229,13 @@ func show_victory(display_num: int, is_last_level: bool, formatted_time: String)
 		status_label.text = "Puzzle Solved!"
 	
 	if win_label:
-		win_label.text = ("All Levels Completed!\nYou Win!" if is_last_level 
-		else "Level %d Completed!" % display_num)
+		if is_last_level:
+			win_label.text = "All Levels Completed!\nYou Win!" 
+		else:
+			if is_custom:
+				win_label.text = "Custom Level %d Completed!" % display_num
+			else:
+				win_label.text = "Level %d Completed!" % display_num
 		
 	if restart_button:
 		restart_button.text = "Play Again" if is_last_level else "Next Level"

@@ -24,7 +24,6 @@ var elapsed_seconds: int = 0
 var is_game_active: bool = true
 var is_paused: bool = false 
 var current_level_index: int = 0
-var levels_dict: Dictionary = {}
 
 # ==========================================
 # INITIALIZATION
@@ -34,7 +33,7 @@ func _ready():
 	_intercept_global_selection()
 	
 	if levels.size() == 0:
-		push_error("No level resources found in res://levels/ or assigned via inspector!")
+		push_error("No level resources found in storage or assigned via inspector!")
 		return
 
 	ui_manager.setup_ui(show_debug_tools, board_manager.CELL_SIZE)
@@ -71,33 +70,23 @@ func _bind_submanager_signals():
 # ==========================================
 func _load_all_levels_from_storage() -> void:
 	levels.clear()
-	levels_dict.clear()
 	
 	var raw_paths = []
-	raw_paths.append_array(_scan_directory(DEV_DIR))
 	raw_paths.append_array(_scan_directory(CAMPAIGN_DIR))
+	raw_paths.append_array(_scan_directory(DEV_DIR))
 	
-	# Priority Sort: Orders numerically, but ensures user:// drafts always beat res:// 
 	raw_paths.sort_custom(func(a, b):
 		var num_a = int(a.get_file().get_basename().replace("level_", ""))
 		var num_b = int(b.get_file().get_basename().replace("level_", ""))
 		if num_a == num_b:
-			return a.begins_with("user://") 
+			return not a.begins_with("user://")
 		return num_a < num_b
 	)
-	
-	var processed_numbers = {}
 	
 	for path in raw_paths:
 		var res = load(path)
 		if res and res is LevelData: 
-			# Skips duplicates if the user:// draft was already loaded
-			if processed_numbers.has(res.level_number):
-				continue
-			processed_numbers[res.level_number] = true
-			
 			levels.append(res)
-			levels_dict[res.level_number] = levels.size() - 1
 
 func _scan_directory(path_to_scan: String) -> Array:
 	var found_files = []
@@ -124,20 +113,27 @@ func _intercept_global_selection():
 		var custom_level = GlobalGameManager.selected_level_resource
 		GlobalGameManager.selected_level_resource = null
 		
-		if levels_dict.has(custom_level.level_number):
-			current_level_index = levels_dict[custom_level.level_number]
+		var found_idx = levels.find(custom_level)
+		if found_idx != -1:
+			current_level_index = found_idx
 		else:
 			levels.append(custom_level)
 			current_level_index = levels.size() - 1
-			levels_dict[custom_level.level_number] = current_level_index
 	else:
+		# If launched directly, fallback to the highest unlocked OFFICIAL level
 		var target_level = SaveManager.max_unlocked_level
-		if levels_dict.has(target_level):
-			current_level_index = levels_dict[target_level]
+		var found_idx = -1
+		
+		for i in range(levels.size()):
+			if levels[i].level_number == target_level and not levels[i].resource_path.begins_with("user://"):
+				found_idx = i
+				break
+				
+		if found_idx != -1:
+			current_level_index = found_idx
 		else:
 			current_level_index = levels.size() - 1
-			if current_level_index < 0:
-				current_level_index = 0
+			if current_level_index < 0: current_level_index = 0
 
 # ==========================================
 # GAMEPLAY LOOP & VALIDATION
@@ -156,7 +152,9 @@ func generate_board():
 	board_manager.process_mode = Node.PROCESS_MODE_INHERIT
 	
 	var current_level_resource = levels[current_level_index]
-	ui_manager.display_level(current_level_resource.level_number)
+	var is_custom = current_level_resource.resource_path.begins_with("user://")
+	
+	ui_manager.display_level(current_level_resource.level_number, is_custom)
 	board_manager.build_grid(current_level_resource.layout)
 	
 	_run_validation_pass()
@@ -184,16 +182,19 @@ func trigger_victory():
 	
 	board_manager.process_mode = Node.PROCESS_MODE_DISABLED
 	
+	var is_custom = levels[current_level_index].resource_path.begins_with("user://")
 	var is_last = current_level_index >= levels.size() - 1
 	var display_num = levels[current_level_index].level_number
 	
-	var next_level_to_unlock = display_num + 1
-	SaveManager.unlock_level(next_level_to_unlock)
+	# Only Official levels push the unlocked progression boundary
+	if not is_custom:
+		var next_level_to_unlock = display_num + 1
+		SaveManager.unlock_level(next_level_to_unlock)
 	
-	ui_manager.show_victory(display_num, is_last, _get_formatted_time())
+	ui_manager.show_victory(display_num, is_last, _get_formatted_time(), is_custom)
 
 # ==========================================
-# OVERLAY CONTROLLERS (Pause & Tutorial)
+# OVERLAY CONTROLLERS
 # ==========================================
 func _on_pause():
 	if not is_game_active or is_paused: return
@@ -202,7 +203,6 @@ func _on_pause():
 	
 	board_manager.process_mode = Node.PROCESS_MODE_DISABLED
 	ui_manager.set_hud_buttons_disabled(true)
-	
 	pause_menu.show() 
 
 func _on_how_to_play():
@@ -211,7 +211,6 @@ func _on_how_to_play():
 	if timer_node: timer_node.stop()
 	
 	board_manager.process_mode = Node.PROCESS_MODE_DISABLED
-	
 	if ui_manager.has_method("show_how_to_play"):
 		ui_manager.show_how_to_play()
 
@@ -222,7 +221,6 @@ func _on_resume():
 	
 	board_manager.process_mode = Node.PROCESS_MODE_INHERIT
 	ui_manager.set_hud_buttons_disabled(false)
-	
 	pause_menu.hide() 
 
 # ==========================================
@@ -255,9 +253,6 @@ func _on_quit_to_menu():
 	get_tree().paused = false 
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
-# ==========================================
-# TIMER HELPERS
-# ==========================================
 func _on_timer_timeout():
 	if is_game_active and not is_paused:
 		elapsed_seconds += 1

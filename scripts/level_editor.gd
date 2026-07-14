@@ -29,7 +29,7 @@ func _ready():
 	
 	overwrite_dialog = ConfirmationDialog.new()
 	overwrite_dialog.title = "Overwrite Level?"
-	overwrite_dialog.dialog_text = "This level already contains data. Do you want to overwrite it?"
+	overwrite_dialog.dialog_text = "You already have a custom draft for this level. Overwrite it?"
 	overwrite_dialog.confirmed.connect(_execute_save)
 	add_child(overwrite_dialog)
 	
@@ -176,7 +176,7 @@ func _on_clear_board():
 	ui_manager.update_status("Board cleared!", Color.WHITE)
 
 # ==========================================
-# LEVEL SAVING PROCESSOR
+# STRICT LEVEL SAVING PROCESSOR
 # ==========================================
 func _on_save_level():
 	if is_playtesting: return
@@ -185,17 +185,17 @@ func _on_save_level():
 	var dev_path = DEV_LEVELS_DIR + "level_%d.tres" % level_num
 	var official_path = "res://levels/level_%d.tres" % level_num
 	
-	var target_load_path = ""
-	if ResourceLoader.exists(dev_path):
-		target_load_path = dev_path
-	elif ResourceLoader.exists(official_path):
-		target_load_path = official_path
-
-	if target_load_path != "":
-		var existing_level = load(target_load_path) as LevelData
-		if existing_level and not _is_layout_empty(existing_level.layout):
-			overwrite_dialog.popup_centered()
+	# PROTECTION: Check if an official level already exists and is NOT a blank canvas
+	if ResourceLoader.exists(official_path):
+		var official_level = load(official_path) as LevelData
+		if official_level and not _is_layout_empty(official_level.layout):
+			ui_manager.update_status("ERROR: Cannot override a completed official level! Clear the board first.", Color(1.0, 0.3, 0.3))
 			return
+			
+	# If it's a blank template, or no official level exists, check if a custom draft exists
+	if ResourceLoader.exists(dev_path):
+		overwrite_dialog.popup_centered()
+		return
 			
 	_execute_save()
 
@@ -225,7 +225,7 @@ func _execute_save():
 	var save_result = ResourceSaver.save(new_level_resource, target_save_path)
 	
 	if save_result == OK:
-		ui_manager.update_status("SUCCESS: Saved level file to: " + target_save_path, Color(0.4, 1.0, 0.4))
+		ui_manager.update_status("SUCCESS: Saved custom level to: " + target_save_path, Color(0.4, 1.0, 0.4))
 	else:
 		ui_manager.update_status("ERROR: Resource save failed: " + error_string(save_result), Color(1.0, 0.3, 0.3))
 
