@@ -161,8 +161,8 @@ You cannot place three blocks of the same value in an unbroken line. Jokers will
 layout_mode = 0
 offset_left = 296.0
 offset_top = 246.0
-offset_right = 304.0
-offset_bottom = 254.0
+offset_right = 354.0
+offset_bottom = 277.0
 text = "CLOSE"
 
 [node name="UIManager" type="Control" parent="." unique_id=1396855515]
@@ -172,4 +172,8 @@ offset_right = 40.0
 offset_bottom = 40.0
 script = ExtResource("13_og1vs")
 
-[node name="PauseMenu" parent="." unique_id=1796595449 instance=ExtResource("14_a8y0u")]
+[node name="PauseMenuLayer" type="CanvasLayer" parent="." unique_id=6552304]
+layer = 10
+
+[node name="PauseMenu" parent="PauseMenuLayer" unique_id=1796595449 instance=ExtResource("14_a8y0u")]
+unique_name_in_owner = true

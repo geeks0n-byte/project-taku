@@ -132,10 +132,10 @@ func populate_level_menu() -> void:
 	var valid_level_count = 0
 
 	for file_path in level_files:
-		var resource = load(file_path)
+		var resource = ResourceLoader.load(file_path, "", ResourceLoader.CACHE_MODE_REPLACE)
 		if resource and resource is LevelData:
-			# STRICT SANITATION PASS: Throw away configurations that have entirely blank cells
-			if _is_layout_empty(resource.layout):
+			# STRICT SANITATION PASS: Check if the entire level (tiles AND constraints/shifters) is blank
+			if _is_level_empty(resource):
 				continue
 				
 			valid_level_count += 1
@@ -159,7 +159,6 @@ func populate_level_menu() -> void:
 			btn.pressed.connect(func(): _on_level_selected(resource))
 			level_grid.add_child(btn)
 			
-	# FIXED: Stretches the empty message across the whole grid width and centers the label perfectly
 	if valid_level_count == 0:
 		if level_grid is GridContainer:
 			level_grid.columns = 1
@@ -173,9 +172,13 @@ func populate_level_menu() -> void:
 		empty_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		level_grid.add_child(empty_label)
 
-func _is_layout_empty(layout: Dictionary) -> bool:
-	for coord in layout:
-		if layout[coord] != -1:
+func _is_level_empty(res: LevelData) -> bool:
+	if "shifter_pairs" in res and res.shifter_pairs.size() > 0: return false
+	elif "red_pairs" in res and res.red_pairs.size() > 0: return false 
+	if "constraint_pairs" in res and res.constraint_pairs.size() > 0: return false
+	
+	for coord in res.layout:
+		if res.layout[coord] != -1:
 			return false
 	return true
 

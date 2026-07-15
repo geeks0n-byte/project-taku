@@ -3,96 +3,113 @@ extends TextureButton
 signal cell_clicked(coord: Vector2i)
 signal shifter_toggled(coord: Vector2i)
 
-var coord: Vector2i = Vector2i.ZERO
-# States: -2=Wall, -1=Empty, 0=Zero, 1=One, 2=Joker, 3=Shifter
-var state: int = -1 
-var is_locked: bool = false 
+var coord: Vector2i
+var state: int = -1
 var is_playable: bool = true
-var is_error: bool = false 
-
+var is_locked: bool = false
+var is_linked_pair: bool = false
+var link_partner: Vector2i
 var allowed_cycle_tiles: Array[int] = [0, 1]
 
-# --- SHIFTER LINK SYSTEM DATA ---
-var is_linked_pair: bool = false
-var link_partner: Vector2i = Vector2i.ZERO
+@export var tex_empty: Texture2D
+@export var tex_wall: Texture2D
+@export var tex_zero: Texture2D = preload("res://icons/tiles/tile_yellow.svg")
+@export var tex_one: Texture2D = preload("res://icons/tiles/tile_blue.svg")
+@export var tex_joker: Texture2D = preload("res://icons/tiles/tile_green.svg")
+@export var tex_shifter: Texture2D = preload("res://icons/tiles/tile_purple.svg")
 
-# --- REORDERED EXPORTS ---
-@export var texture_wall: Texture2D 
-@export var texture_empty: Texture2D
-@export var texture_zero: Texture2D
-@export var texture_one: Texture2D
-@export var texture_wildcard: Texture2D
-@export var texture_shifter: Texture2D 
-
-@onready var error_highlight = $ErrorHighlight 
-@onready var lock_icon = $LockIcon 
-@onready var link_highlight = $LinkHighlight 
+@onready var error_highlight = $ErrorHighlight
+@onready var link_highlight = $LinkHighlight
+@onready var lock_icon = $LockIcon
+@onready var tile_icon = $TileIcon
 
 func _ready():
-	pressed.connect(_on_pressed)
+	custom_minimum_size = Vector2(120, 120)
 	
-	if error_highlight:
-		error_highlight.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	if link_highlight:
-		link_highlight.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_stretch_node_to_parent(error_highlight, 0.0) 
+	_stretch_node_to_parent(link_highlight, 0.0)
+	_stretch_node_to_parent(tile_icon, 0.0)
+	if lock_icon:
+		_stretch_node_to_parent(lock_icon, 0.0)
 		
-	update_visuals()
+	if error_highlight: 
+		error_highlight.z_index = 100
+		if "color" in error_highlight:
+			error_highlight.color = Color(0, 0, 0, 0)
+		error_highlight.draw.connect(_draw_error_border)
+		
+	if tile_icon: tile_icon.z_index = 3
+		
+	pressed.connect(_on_pressed)
+
+func _draw_error_border():
+	if error_highlight:
+		error_highlight.draw_rect(Rect2(Vector2.ZERO, error_highlight.size), Color.RED, false, 10.0)
+
+func _stretch_node_to_parent(node: Control, margin: float = 0.0):
+	if node:
+		node.set_anchors_preset(Control.PRESET_FULL_RECT)
+		node.anchor_left = 0.0
+		node.anchor_top = 0.0
+		node.anchor_right = 1.0
+		node.anchor_bottom = 1.0
+		node.offset_left = -margin
+		node.offset_top = -margin
+		node.offset_right = margin
+		node.offset_bottom = margin
 
 func _on_pressed():
-	if not is_playable or is_locked: 
-		return 
+	if not is_playable or is_locked:
+		return
 		
 	if state == 3:
 		shifter_toggled.emit(coord)
-		return
-		
-	if allowed_cycle_tiles.size() == 0:
-		allowed_cycle_tiles = [0, 1]
-		
-	if state == -1:
-		state = allowed_cycle_tiles[0]
 	else:
-		var current_index = allowed_cycle_tiles.find(state)
-		if current_index == -1 or current_index == allowed_cycle_tiles.size() - 1:
-			state = -1
+		if state == -1:
+			state = allowed_cycle_tiles[0]
 		else:
-			state = allowed_cycle_tiles[current_index + 1]
-		
-	update_visuals()
-	cell_clicked.emit(coord)
+			var current_idx = allowed_cycle_tiles.find(state)
+			if current_idx == -1 or current_idx == allowed_cycle_tiles.size() - 1:
+				state = -1
+			else:
+				state = allowed_cycle_tiles[current_idx + 1]
+				
+		update_visuals()
+		cell_clicked.emit(coord)
 
 func update_visuals():
-	match state:
-		-2: texture_normal = texture_wall
-		-1: texture_normal = texture_empty
-		0: texture_normal = texture_zero
-		1: texture_normal = texture_one
-		2: texture_normal = texture_wildcard
-		3: texture_normal = texture_shifter
-		
-	_update_overlays()
-
-func _update_overlays():
-	self_modulate = Color(1.0, 1.0, 1.0)
-	
 	if lock_icon:
-		if is_locked and (state >= 0 and state <= 2):
-			lock_icon.visible = true
-		else:
-			lock_icon.visible = false
-			
+		lock_icon.visible = is_locked and state != -2
+		
 	if link_highlight:
-		link_highlight.visible = is_linked_pair
+		if is_linked_pair:
+			link_highlight.color = Color(0.6, 0.36, 0.9, 0.4)
+			link_highlight.visible = true
+		else:
+			link_highlight.visible = false
+		
+	if not tile_icon:
+		return
+		
+	match state:
+		-2: tile_icon.texture = tex_wall
+		-1: tile_icon.texture = tex_empty
+		0: tile_icon.texture = tex_zero
+		1: tile_icon.texture = tex_one
+		2: tile_icon.texture = tex_joker
+		3: tile_icon.texture = tex_shifter
+		_: tile_icon.texture = null
 
-func highlight_error():
-	if is_playable and not is_error:
-		is_error = true
-		if error_highlight:
-			error_highlight.visible = true
+func set_error_highlight():
+	if error_highlight:
+		error_highlight.visible = true
+		error_highlight.queue_redraw()
+
+func set_mask_color(mask_color: Color):
+	if link_highlight:
+		link_highlight.color = mask_color
+		link_highlight.visible = true
 
 func clear_highlight():
-	if is_error:
-		is_error = false
-		if error_highlight:
-			error_highlight.visible = false
-	_update_overlays()
+	if error_highlight:
+		error_highlight.visible = false

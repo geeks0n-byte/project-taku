@@ -14,7 +14,6 @@ signal play_again_requested
 @onready var reset_button = $"../ResetButton"
 @onready var how_to_play_button = $"../HowToPlayButton" 
 @onready var timer_label = $"../TimerLabel"
-
 @onready var move_counter_label = get_node_or_null("../MoveCounterLabel")
 
 @onready var victory_panel = $"../EndLayer/VictoryPanel"
@@ -118,10 +117,17 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		time_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER 
 
 	var v_start_y = 210 
+	
+	# --- FIXED: Explicit positioning for BOTH Victory and Defeat Buttons ---
 	if restart_button:
 		restart_button.add_theme_font_size_override("font_size", 28)
 		restart_button.position = Vector2(button_center_x, v_start_y)
 		restart_button.size = menu_button_size
+	if defeat_restart_button:
+		defeat_restart_button.add_theme_font_size_override("font_size", 28)
+		defeat_restart_button.position = Vector2(button_center_x, v_start_y)
+		defeat_restart_button.size = menu_button_size
+		
 	v_start_y += spacing_y
 
 	if main_menu_button:
@@ -129,6 +135,12 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		main_menu_button.add_theme_font_size_override("font_size", 28)
 		main_menu_button.position = Vector2(button_center_x, v_start_y)
 		main_menu_button.size = menu_button_size
+	if defeat_main_menu_button:
+		defeat_main_menu_button.text = "Main Menu"
+		defeat_main_menu_button.add_theme_font_size_override("font_size", 28)
+		defeat_main_menu_button.position = Vector2(button_center_x, v_start_y)
+		defeat_main_menu_button.size = menu_button_size
+	# -----------------------------------------------------------------------
 
 	var tutorial_size = Vector2(700, 800)
 	if how_to_play_panel:

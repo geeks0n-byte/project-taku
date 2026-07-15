@@ -19,6 +19,13 @@ script = ExtResource("2_nh68x")
 
 [node name="EditorUI" type="CanvasLayer" parent="." unique_id=1752170726]
 
+[node name="MainMenuButton" type="Button" parent="EditorUI" unique_id=729333557]
+offset_left = 434.0
+offset_top = 200.0
+offset_right = 538.0
+offset_bottom = 250.0
+text = "MAIN MENU"
+
 [node name="ControlPanel" type="Panel" parent="EditorUI" unique_id=936384116]
 offset_right = 400.0
 offset_bottom = 500.0
@@ -36,7 +43,6 @@ text = "-"
 
 [node name="WidthLabel" type="Label" parent="EditorUI/ControlPanel/GridSizeContainer" unique_id=2105646132]
 layout_mode = 2
-text = "W"
 
 [node name="WidthPlus" type="Button" parent="EditorUI/ControlPanel/GridSizeContainer" unique_id=993945278]
 layout_mode = 2
@@ -48,7 +54,6 @@ text = "-"
 
 [node name="HeightLabel" type="Label" parent="EditorUI/ControlPanel/GridSizeContainer" unique_id=1945468494]
 layout_mode = 2
-text = "H"
 
 [node name="HeightPlus" type="Button" parent="EditorUI/ControlPanel/GridSizeContainer" unique_id=2144947172]
 layout_mode = 2
@@ -58,21 +63,12 @@ text = "+"
 layout_mode = 2
 text = "SET"
 
-[node name="TimeLimitSpinBox" type="SpinBox" parent="EditorUI/ControlPanel/GridSizeContainer" unique_id=561348382]
-layout_mode = 2
-min_value = 30.0
-max_value = 999.0
-value = 30.0
-
 [node name="BrushContainer" type="HBoxContainer" parent="EditorUI/ControlPanel" unique_id=571217567]
 layout_mode = 0
 offset_left = 50.0
 offset_top = 120.0
 offset_right = 350.0
 offset_bottom = 170.0
-
-[node name="ClearButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=955709886]
-layout_mode = 2
 
 [node name="WallButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=116676465]
 layout_mode = 2
@@ -104,12 +100,55 @@ layout_mode = 2
 [node name="NotEqualsButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=1583975520]
 layout_mode = 2
 
+[node name="LevelSettingsContainer" type="HBoxContainer" parent="EditorUI/ControlPanel" unique_id=325505692]
+layout_mode = 0
+offset_right = 513.0
+offset_bottom = 163.0
+
+[node name="TimeMinus" type="Button" parent="EditorUI/ControlPanel/LevelSettingsContainer" unique_id=658012135]
+layout_mode = 2
+
+[node name="TimeLabel" type="Label" parent="EditorUI/ControlPanel/LevelSettingsContainer" unique_id=1596932089]
+layout_mode = 2
+
+[node name="TimePlus" type="Button" parent="EditorUI/ControlPanel/LevelSettingsContainer" unique_id=1758248316]
+layout_mode = 2
+
+[node name="AllowedLabel" type="Label" parent="EditorUI/ControlPanel/LevelSettingsContainer" unique_id=1466318461]
+layout_mode = 2
+text = "ALLOWED:"
+
+[node name="AllowZero" type="Button" parent="EditorUI/ControlPanel/LevelSettingsContainer" unique_id=385262685]
+layout_mode = 2
+toggle_mode = true
+button_pressed = true
+keep_pressed_outside = true
+icon = ExtResource("5_l4hv8")
+icon_alignment = 1
+
+[node name="AllowOne" type="Button" parent="EditorUI/ControlPanel/LevelSettingsContainer" unique_id=1137985363]
+layout_mode = 2
+toggle_mode = true
+button_pressed = true
+keep_pressed_outside = true
+icon = ExtResource("6_3fkon")
+icon_alignment = 1
+
+[node name="AllowJoker" type="Button" parent="EditorUI/ControlPanel/LevelSettingsContainer" unique_id=1421944375]
+layout_mode = 2
+toggle_mode = true
+icon = ExtResource("7_wkaig")
+icon_alignment = 1
+
 [node name="ConfigContainer" type="HBoxContainer" parent="EditorUI/ControlPanel" unique_id=1949488569]
 layout_mode = 0
 offset_left = 50.0
 offset_top = 200.0
 offset_right = 350.0
 offset_bottom = 250.0
+
+[node name="ClearButton" type="Button" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=955709886]
+layout_mode = 2
 
 [node name="TestButton" type="Button" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=1856170781]
 layout_mode = 2
@@ -139,10 +178,6 @@ text = "+"
 layout_mode = 2
 text = "EXIT TEST"
 
-[node name="MainMenuButton" type="Button" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=729333557]
-layout_mode = 2
-text = "MAIN MENU"
-
 [node name="CoreLevelsContainer" type="HBoxContainer" parent="EditorUI/ControlPanel" unique_id=725060860]
 layout_mode = 0
 offset_right = 40.0
@@ -169,6 +204,30 @@ layout_mode = 0
 offset_right = 8.0
 offset_bottom = 8.0
 text = "RETURN"
+
+[node name="OverwritePanel" type="Panel" parent="EditorUI" unique_id=828809767]
+visible = false
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="WarningLabel" type="Label" parent="EditorUI/OverwritePanel" unique_id=1807192398]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+text = "Level already exists. Overwrite?"
+
+[node name="ButtonRow" type="HBoxContainer" parent="EditorUI/OverwritePanel" unique_id=1827926772]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="ConfirmButton" type="Button" parent="EditorUI/OverwritePanel/ButtonRow" unique_id=802257757]
+layout_mode = 2
+text = "YES"
+
+[node name="CancelButton" type="Button" parent="EditorUI/OverwritePanel/ButtonRow" unique_id=1595137308]
+layout_mode = 2
+text = "NO"
 
 [node name="EditorUIManager" type="Node2D" parent="." unique_id=2108976632]
 script = ExtResource("3_eovuc")

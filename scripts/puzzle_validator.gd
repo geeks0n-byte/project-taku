@@ -1,104 +1,86 @@
 class_name PuzzleValidator
-extends RefCounted
 
-# UPDATED: Now accepts constraint_pairs
-static func validate_board(board_cells: Dictionary, cached_lines: Array, constraint_pairs: Array = []) -> Dictionary:
-	var syntax_pass = true
-	var error_messages: Array[String] = []
-	
-	for line in cached_lines:
-		if not check_line_validity(board_cells, line["coords"], line["is_horizontal"], line["index"], error_messages): 
-			syntax_pass = false
-			
-	# --- NEW: Evaluate Relationship Constraints (= and x) ---
+static func validate_board(board_cells: Dictionary, cached_lines: Array, constraint_pairs: Array) -> Dictionary:
+	var errors = []
+	var is_valid = true
+
 	for pair in constraint_pairs:
-		var a = pair["a"]
-		var b = pair["b"]
-		
-		var state_a = board_cells[a].state
-		var state_b = board_cells[b].state
-		
-		# Ignore empty cells or walls during constraint validation
-		if state_a < 0 or state_b < 0 or state_a == 3 or state_b == 3:
-			continue
+		if board_cells.has(pair["a"]) and board_cells.has(pair["b"]):
+			var cell_a = board_cells[pair["a"]]
+			var cell_b = board_cells[pair["b"]]
 			
-		var is_match = (state_a == state_b) or (state_a == 2) or (state_b == 2)
-		
-		if pair["type"] == "equals" and not is_match:
-			syntax_pass = false
-			board_cells[a].highlight_error()
-			board_cells[b].highlight_error()
-			if not "Equals (=) constraint violated!" in error_messages:
-				error_messages.append("Equals (=) constraint violated!")
-				
-		if pair["type"] == "not_equals" and is_match:
-			syntax_pass = false
-			board_cells[a].highlight_error()
-			board_cells[b].highlight_error()
-			if not "Not-Equals (×) constraint violated!" in error_messages:
-				error_messages.append("Not-Equals (×) constraint violated!")
-	# --------------------------------------------------------
-			
-	return {"valid": syntax_pass, "errors": error_messages}
+			var state_a = cell_a.state
+			var state_b = cell_b.state
 
-static func check_line_validity(board_cells: Dictionary, coords: Array, is_horizontal: bool, index: int, error_messages: Array[String]) -> bool:
-	var line_is_valid = true
-	var line_name = "Row " + str(index + 1) if is_horizontal else "Column " + str(index + 1)
-	
-	var joker_count = 0
-	for coord in coords:
-		if board_cells[coord].state == 2:
-			joker_count += 1
-			
-	if joker_count > 1:
-		for coord in coords:
-			if board_cells[coord].state == 2:
-				board_cells[coord].highlight_error()
-		line_is_valid = false
-		error_messages.append(line_name + " contains more than ONE Joker wildcard!")
+			if state_a < 0 or state_b < 0:
+				continue
 
-	var found_consecutive = false
-	var virtual_test_states = [0, 1]
-	
-	for test_val in virtual_test_states:
-		for i in range(coords.size() - 2):
-			var s1 = board_cells[coords[i]].state
-			var s2 = board_cells[coords[i+1]].state
-			var s3 = board_cells[coords[i+2]].state
+			var is_joker_involved = (state_a == 2 or state_b == 2)
 			
-			if s1 == -2 or s2 == -2 or s3 == -2: continue
+			if not is_joker_involved:
+				if pair["type"] == "equals" and state_a != state_b:
+					is_valid = false
+					errors.append("Equal constraint violated.")
+					if cell_a.has_method("set_error_highlight"): cell_a.set_error_highlight()
+					if cell_b.has_method("set_error_highlight"): cell_b.set_error_highlight()
+				elif pair["type"] == "not_equals" and state_a == state_b:
+					is_valid = false
+					errors.append("Not Equal constraint violated.")
+					if cell_a.has_method("set_error_highlight"): cell_a.set_error_highlight()
+					if cell_b.has_method("set_error_highlight"): cell_b.set_error_highlight()
+
+	for line_data in cached_lines:
+		var coords = line_data["coords"]
+		var count_0 = 0
+		var count_1 = 0
+		var line_vals = []
+		
+		for c in coords:
+			var cell = board_cells[c]
+			var st = cell.state
 				
-			if s1 == 2: s1 = test_val
-			if s2 == 2: s2 = test_val
-			if s3 == 2: s3 = test_val
+			line_vals.append(st)
 			
-			if s1 == -1 or s2 == -1 or s3 == -1: continue
+			if st == 0: count_0 += 1
+			elif st == 1: count_1 += 1
+
+		for i in range(line_vals.size() - 2):
+			var v1 = line_vals[i]
+			var v2 = line_vals[i+1]
+			var v3 = line_vals[i+2]
+			
+			var is_filled = v1 >= 0 and v1 <= 2 and v2 >= 0 and v2 <= 2 and v3 >= 0 and v3 <= 2
+			
+			if is_filled:
+				var all_zeros = (v1 == 0 or v1 == 2) and (v2 == 0 or v2 == 2) and (v3 == 0 or v3 == 2)
+				var all_ones = (v1 == 1 or v1 == 2) and (v2 == 1 or v2 == 2) and (v3 == 1 or v3 == 2)
 				
-			if s1 == s2 and s2 == s3:
-				board_cells[coords[i]].highlight_error()
-				board_cells[coords[i+1]].highlight_error()
-				board_cells[coords[i+2]].highlight_error()
-				line_is_valid = false
-				found_consecutive = true
+				if all_zeros or all_ones:
+					is_valid = false
+					errors.append("Three identical numbers (or Jokers) in a row.")
+					for j in range(3):
+						var cell = board_cells[coords[i+j]]
+						if cell.has_method("set_error_highlight"):
+							cell.set_error_highlight()
+
+		var playable_count = 0
+		var filled_count = 0
+		for v in line_vals:
+			if v != -2: 
+				playable_count += 1
+				if v >= 0: 
+					filled_count += 1
 					
-	if found_consecutive:
-		error_messages.append(line_name + " has 3 identical symbols in a row!")
+		if playable_count > 0 and playable_count % 2 == 0 and filled_count == playable_count:
+			var half = int(playable_count / 2.0)
+			if count_0 > half or count_1 > half:
+				is_valid = false
+				errors.append("Unequal 0s and 1s in a completed line.")
+				for c in coords:
+					var cell = board_cells[c]
+					var local_st = cell.state
+						
+					if local_st >= 0 and local_st <= 1 and cell.has_method("set_error_highlight"):
+						cell.set_error_highlight()
 
-	var zeros = 0
-	var ones = 0
-	var empty_count = 0
-	
-	for coord in coords:
-		match board_cells[coord].state:
-			-1: empty_count += 1
-			0: zeros += 1
-			1: ones += 1
-			
-	if empty_count == 0 and zeros != ones:
-		for coord in coords:
-			if board_cells[coord].is_playable and board_cells[coord].state != 3:
-				board_cells[coord].highlight_error()
-		line_is_valid = false
-		error_messages.append(line_name + " does not have an equal amount of Zero and One blocks!")
-		
-	return line_is_valid
+	return {"valid": is_valid, "errors": errors}

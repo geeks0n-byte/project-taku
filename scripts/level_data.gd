@@ -5,14 +5,17 @@ class_name LevelData
 @export var width: int = 3 
 @export var height: int = 3 
 @export var layout: Dictionary = {} 
-@export var available_tiles: Array[int] = [0, 1]
+@export var available_tiles: Array = []
 
 @export var time_limit: int = 120 
-@export var red_pairs: Array[Dictionary] = [] 
+@export var shifter_pairs: Array = [] 
+@export var constraint_pairs: Array = [] 
 
-# --- NEW: Stores =, x relationships ---
-# Format: {"a": Vector2i, "b": Vector2i, "type": "equals" | "not_equals"}
-@export var constraint_pairs: Array[Dictionary] = []
+func _init():
+	layout = {}
+	available_tiles = [0, 1]
+	shifter_pairs = []
+	constraint_pairs = []
 
 func validate_layout() -> bool:
 	for coord in layout.keys():

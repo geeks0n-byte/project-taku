@@ -12,8 +12,9 @@ const DEV_DIR = "user://levels/"
 @onready var ui_manager: UIManager = $UIManager
 @onready var board_manager: BoardManager = $BoardManager
 @onready var timer_node = $Timer
-@onready var pause_menu: PauseMenu = $PauseMenu  
+@onready var pause_menu: PauseMenu = $%PauseMenu  
 
+var starting_time_limit: int = 120 
 var time_remaining: int = 120
 var shifter_move_count: int = 0
 var is_game_active: bool = true
@@ -152,7 +153,8 @@ func generate_board():
 	var current_level_resource = levels[current_level_index]
 	var is_custom = current_level_resource.resource_path.begins_with("user://")
 	
-	time_remaining = current_level_resource.get("time_limit") if "time_limit" in current_level_resource else 120
+	starting_time_limit = current_level_resource.get("time_limit") if "time_limit" in current_level_resource else 120
+	time_remaining = starting_time_limit
 	shifter_move_count = 0
 	
 	ui_manager.update_move_counter(shifter_move_count)
@@ -161,7 +163,7 @@ func generate_board():
 	
 	board_manager.process_mode = Node.PROCESS_MODE_INHERIT
 	
-	var tiles_list: Array[int] = [0, 1]
+	var tiles_list: Array = [0, 1]
 	if "available_tiles" in current_level_resource and current_level_resource.available_tiles.size() > 0:
 		tiles_list = current_level_resource.available_tiles
 		
@@ -179,11 +181,10 @@ func generate_board():
 	var board_pixel_height = current_level_resource.height * board_manager.CELL_SIZE
 	var screen_height = get_viewport_rect().size.y
 	
-	var new_board_y = (screen_height - board_pixel_height) / 3.0
-	board_manager.global_position.y = new_board_y
+	var new_board_y = (screen_height / 3.0) - (board_pixel_height / 2.0)
+	board_manager.position.y = new_board_y 
 	
 	ui_manager.update_dynamic_layout(new_board_y, board_pixel_height)
-	
 	_run_validation_pass()
 
 func _on_cell_changed(_coord: Vector2i):
@@ -197,7 +198,6 @@ func _on_shifter_move_made():
 
 func _run_validation_pass():
 	board_manager.clear_highlights()
-	# UPDATED: Feeds constraints to the static validator block
 	var results = PuzzleValidator.validate_board(board_manager.board_cells, board_manager.cached_lines, board_manager.active_constraint_pairs)
 	
 	if not results["valid"]:
@@ -221,7 +221,12 @@ func trigger_victory():
 		var next_level_to_unlock = display_num + 1
 		SaveManager.unlock_level(next_level_to_unlock)
 	
-	ui_manager.show_victory(display_num, is_last, _get_formatted_time(), is_custom)
+	var elapsed = starting_time_limit - time_remaining
+	var minutes = int(elapsed / 60.0)
+	var seconds = elapsed % 60
+	var formatted_elapsed = "%02d:%02d" % [minutes, seconds]
+	
+	ui_manager.show_victory(display_num, is_last, formatted_elapsed, is_custom)
 
 func trigger_defeat():
 	is_game_active = false
@@ -289,11 +294,9 @@ func _on_timer_timeout():
 			trigger_defeat()
 
 func _update_timer_display():
-	ui_manager.update_timer(_get_formatted_time())
-
-func _get_formatted_time() -> String:
 	var minutes = int(time_remaining / 60.0)
 	var seconds = time_remaining % 60
 	if minutes < 0: minutes = 0
 	if seconds < 0: seconds = 0
-	return "%02d:%02d" % [minutes, seconds]
+	var f_time = "%02d:%02d" % [minutes, seconds]
+	ui_manager.update_timer(f_time)
