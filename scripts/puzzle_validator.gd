@@ -20,12 +20,14 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 			if not is_joker_involved:
 				if pair["type"] == "equals" and state_a != state_b:
 					is_valid = false
-					errors.append("Equal constraint violated.")
+					if not errors.has("Equal constraint violated."):
+						errors.append("Equal constraint violated.")
 					if cell_a.has_method("set_error_highlight"): cell_a.set_error_highlight()
 					if cell_b.has_method("set_error_highlight"): cell_b.set_error_highlight()
 				elif pair["type"] == "not_equals" and state_a == state_b:
 					is_valid = false
-					errors.append("Not Equal constraint violated.")
+					if not errors.has("Not Equal constraint violated."):
+						errors.append("Not Equal constraint violated.")
 					if cell_a.has_method("set_error_highlight"): cell_a.set_error_highlight()
 					if cell_b.has_method("set_error_highlight"): cell_b.set_error_highlight()
 
@@ -33,6 +35,7 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 		var coords = line_data["coords"]
 		var count_0 = 0
 		var count_1 = 0
+		var count_jokers = 0
 		var line_vals = []
 		
 		for c in coords:
@@ -43,6 +46,17 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 			
 			if st == 0: count_0 += 1
 			elif st == 1: count_1 += 1
+			elif st == 2: count_jokers += 1
+
+		# NEW RULE: Max 1 Joker per row/column
+		if count_jokers > 1:
+			is_valid = false
+			if not errors.has("Max 1 Joker allowed per row and column."):
+				errors.append("Max 1 Joker allowed per row and column.")
+			for c in coords:
+				var cell = board_cells[c]
+				if cell.state == 2 and cell.has_method("set_error_highlight"):
+					cell.set_error_highlight()
 
 		for i in range(line_vals.size() - 2):
 			var v1 = line_vals[i]
@@ -57,7 +71,8 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 				
 				if all_zeros or all_ones:
 					is_valid = false
-					errors.append("Three identical numbers (or Jokers) in a row.")
+					if not errors.has("Three identical numbers (or Jokers) in a row."):
+						errors.append("Three identical numbers (or Jokers) in a row.")
 					for j in range(3):
 						var cell = board_cells[coords[i+j]]
 						if cell.has_method("set_error_highlight"):
@@ -65,17 +80,23 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 
 		var playable_count = 0
 		var filled_count = 0
+		var colorable_tiles = 0
+		
 		for v in line_vals:
 			if v != -2: 
 				playable_count += 1
 				if v >= 0: 
 					filled_count += 1
+				# NEW RULE: Green tiles are excluded from this color parity math
+				if v == 0 or v == 1:
+					colorable_tiles += 1
 					
-		if playable_count > 0 and playable_count % 2 == 0 and filled_count == playable_count:
-			var half = int(playable_count / 2.0)
-			if count_0 > half or count_1 > half:
+		if playable_count > 0 and filled_count == playable_count:
+			var max_allowed = int(ceil(colorable_tiles / 2.0))
+			if count_0 > max_allowed or count_1 > max_allowed:
 				is_valid = false
-				errors.append("Unequal 0s and 1s in a completed line.")
+				if not errors.has("Unequal 0s and 1s in a completed line."):
+					errors.append("Unequal 0s and 1s in a completed line.")
 				for c in coords:
 					var cell = board_cells[c]
 					var local_st = cell.state
