@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://cx4fih6oiajca" path="res://icons/tiles/tile_yellow.svg" id="5_l4hv8"]
 [ext_resource type="Texture2D" uid="uid://dmawhj6vw1p1r" path="res://icons/tiles/tile_blue.svg" id="6_3fkon"]
 [ext_resource type="Texture2D" uid="uid://bnmamps4et8l4" path="res://icons/tiles/tile_green.svg" id="7_wkaig"]
+[ext_resource type="Texture2D" uid="uid://2oyf1pe6n184" path="res://icons/tiles/tile_purple.svg" id="8_2rodj"]
 
 [node name="LevelEditor" type="Node2D" unique_id=1779207314]
 script = ExtResource("1_5u7ie")
@@ -73,13 +74,13 @@ offset_bottom = 170.0
 [node name="ClearButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=955709886]
 layout_mode = 2
 
-[node name="EmptyButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=1544681101]
-layout_mode = 2
-icon = ExtResource("3_l4hv8")
-
 [node name="WallButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=116676465]
 layout_mode = 2
 icon = ExtResource("4_2rodj")
+
+[node name="EmptyButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=1544681101]
+layout_mode = 2
+icon = ExtResource("3_l4hv8")
 
 [node name="ZeroButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=792857116]
 layout_mode = 2
@@ -92,6 +93,16 @@ icon = ExtResource("6_3fkon")
 [node name="JokerButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=1699329155]
 layout_mode = 2
 icon = ExtResource("7_wkaig")
+
+[node name="ShifterButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=1795135988]
+layout_mode = 2
+icon = ExtResource("8_2rodj")
+
+[node name="EqualsButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=1321527401]
+layout_mode = 2
+
+[node name="NotEqualsButton" type="Button" parent="EditorUI/ControlPanel/BrushContainer" unique_id=1583975520]
+layout_mode = 2
 
 [node name="ConfigContainer" type="HBoxContainer" parent="EditorUI/ControlPanel" unique_id=1949488569]
 layout_mode = 0
@@ -148,10 +159,10 @@ autowrap_mode = 2
 
 [node name="PlaytestVictoryPanel" type="Panel" parent="EditorUI" unique_id=419984448]
 
-[node name="LayoutTextEdit" type="TextEdit" parent="EditorUI/PlaytestVictoryPanel" unique_id=2072301035]
+[node name="VictoryMessageLabel" type="Label" parent="EditorUI/PlaytestVictoryPanel" unique_id=1679839104]
 layout_mode = 0
-offset_right = 8.0
-offset_bottom = 8.0
+offset_right = 40.0
+offset_bottom = 23.0
 
 [node name="ReturnButton" type="Button" parent="EditorUI/PlaytestVictoryPanel" unique_id=2045544752]
 layout_mode = 0

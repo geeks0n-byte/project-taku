@@ -2,10 +2,8 @@ class_name EditorCanvasManager
 extends Node2D
 
 signal canvas_cell_clicked(coord: Vector2i)
-signal pair_created(coord_a: Vector2i, coord_b: Vector2i)
 
 @export var cell_scene: PackedScene = preload("res://scenes/cell.tscn")
-
 const CELL_SIZE = 120
 
 var grid_width: int = 3
@@ -15,21 +13,18 @@ var board_cells = {}
 var cell_pool: Array = []
 var cached_lines: Array = []
 
-# --- NEW: Drag-to-Link Drag State Data ---
-var active_drag_start_coord = null
-var current_drag_mouse_position: Vector2 = Vector2.ZERO
-var loaded_red_pairs: Array = []
+var loaded_shifter_pairs: Array = []
+var loaded_constraint_pairs: Array = [] 
 
 func _ready():
 	position = Vector2(120, 180)
-	set_process_unhandled_input(true)
 
 func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 	grid_width = new_width
 	grid_height = new_height
 	board_cells.clear()
-	loaded_red_pairs.clear()
-	active_drag_start_coord = null
+	loaded_shifter_pairs.clear()
+	loaded_constraint_pairs.clear()
 	
 	var board_pixel_width = grid_width * CELL_SIZE
 	var screen_width = get_viewport_rect().size.x
@@ -64,7 +59,7 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 			cell.state = -1
 			cell.is_playable = true
 			cell.is_locked = false
-			cell.is_part_of_pair = false
+			cell.is_linked_pair = false 
 			cell.update_visuals()
 			
 			interceptor.size = Vector2(CELL_SIZE, CELL_SIZE)
@@ -73,7 +68,10 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 			for conn in interceptor.gui_input.get_connections():
 				interceptor.gui_input.disconnect(conn.callable)
 				
-			interceptor.gui_input.connect(func(event): _on_cell_gui_input(event, coord))
+			interceptor.gui_input.connect(func(event):
+				if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+					canvas_cell_clicked.emit(coord)
+			)
 			
 			board_cells[coord] = cell
 			pool_index += 1
@@ -83,66 +81,11 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 		cell_pool[i]["interceptor"].visible = false
 		
 	_cache_board_lines()
-	queue_redraw()
 
-# --- NEW: Drag-and-Drop Input Processor ---
-func _on_cell_gui_input(event: InputEvent, coord: Vector2i):
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed:
-			active_drag_start_coord = coord
-			current_drag_mouse_position = get_local_mouse_position()
-			queue_redraw()
-		elif not event.pressed and active_drag_start_coord != null:
-			_evaluate_drag_drop_release(get_local_mouse_position())
-
-func _unhandled_input(event: InputEvent):
-	if event is InputEventMouseMotion and active_drag_start_coord != null:
-		current_drag_mouse_position = get_local_mouse_position()
-		queue_redraw()
-	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
-		if active_drag_start_coord != null:
-			_evaluate_drag_drop_release(get_local_mouse_position())
-
-func _evaluate_drag_drop_release(local_mouse_pos: Vector2):
-	var target_grid_x = int(local_mouse_pos.x / CELL_SIZE)
-	var target_grid_y = int(local_mouse_pos.y / CELL_SIZE)
-	
-	if local_mouse_pos.x < 0: target_grid_x = -1
-	if local_mouse_pos.y < 0: target_grid_y = -1
-	
-	var target_coord = Vector2i(target_grid_x, target_grid_y)
-	var source_coord = active_drag_start_coord
-	active_drag_start_coord = null
-	queue_redraw()
-	
-	if target_coord == source_coord:
-		canvas_cell_clicked.emit(source_coord)
-		return
-		
-	if board_cells.has(target_coord):
-		var diff = (target_coord - source_coord).abs()
-		if (diff.x == 1 and diff.y == 0) or (diff.x == 0 and diff.y == 1):
-			pair_created.emit(source_coord, target_coord)
-
-func _draw():
-	for coord in board_cells:
-		var cell_pos = Vector2(coord.x * CELL_SIZE, coord.y * CELL_SIZE)
-		draw_rect(Rect2(cell_pos, Vector2(CELL_SIZE, CELL_SIZE)), Color.BLACK, false, 2.0)
-		
-	# Draw active connection lines during level compilation editing passes
-	for pair in loaded_red_pairs:
-		var pos_a = Vector2(pair["a"].x * CELL_SIZE + CELL_SIZE/2, pair["a"].y * CELL_SIZE + CELL_SIZE/2)
-		var pos_b = Vector2(pair["b"].x * CELL_SIZE + CELL_SIZE/2, pair["b"].y * CELL_SIZE + CELL_SIZE/2)
-		draw_line(pos_a, pos_b, Color.YELLOW, 6.0)
-		
-	if active_drag_start_coord != null:
-		var start_pos = Vector2(active_drag_start_coord.x * CELL_SIZE + CELL_SIZE/2, active_drag_start_coord.y * CELL_SIZE + CELL_SIZE/2)
-		draw_line(start_pos, current_drag_mouse_position, Color.GOLD, 4.0)
-# -------------------------------------------
-
-func load_layout(new_width: int, new_height: int, layout_data: Dictionary, red_pairs: Array = []):
+func load_layout(new_width: int, new_height: int, layout_data: Dictionary, shifter_pairs: Array = [], constraint_pairs: Array = []):
 	generate_blank_canvas(new_width, new_height)
-	loaded_red_pairs = red_pairs.duplicate()
+	loaded_shifter_pairs = shifter_pairs.duplicate()
+	loaded_constraint_pairs = constraint_pairs.duplicate()
 	
 	for coord in layout_data:
 		if board_cells.has(coord):
@@ -160,14 +103,15 @@ func load_layout(new_width: int, new_height: int, layout_data: Dictionary, red_p
 				cell.is_locked = false
 			cell.update_visuals()
 			
-	for pair in loaded_red_pairs:
-		if board_cells.has(pair["a"]): board_cells[pair["a"]].is_part_of_pair = true
-		if board_cells.has(pair["b"]): board_cells[pair["b"]].is_part_of_pair = true
+	for pair in loaded_shifter_pairs:
+		if board_cells.has(pair["a"]): board_cells[pair["a"]].is_linked_pair = true
+		if board_cells.has(pair["b"]): board_cells[pair["b"]].is_linked_pair = true
 		if board_cells.has(pair["active"]):
 			board_cells[pair["active"]].state = 3
 			
 	for coord in board_cells:
 		board_cells[coord].update_visuals()
+
 	queue_redraw()
 
 func _cache_board_lines():
@@ -197,3 +141,62 @@ func is_board_full() -> bool:
 		if board_cells[coord].is_playable and board_cells[coord].state == -1:
 			return false
 	return true
+
+func _draw():
+	for coord in board_cells:
+		var cell_pos = Vector2(coord.x * CELL_SIZE, coord.y * CELL_SIZE)
+		draw_rect(Rect2(cell_pos, Vector2(CELL_SIZE, CELL_SIZE)), Color.BLACK, false, 2.0)
+		
+	# --- DRAW CONSTRAINTS (= and x) ---
+	var equals_color = Color(1.0, 1.0, 1.0, 0.9)
+	var diff_color = Color(1.0, 1.0, 1.0, 0.9) # FIXED: Pure White
+	
+	for pair in loaded_constraint_pairs:
+		var coord_a = pair["a"]
+		var coord_b = pair["b"]
+		if not (board_cells.has(coord_a) and board_cells.has(coord_b)): continue
+			
+		var pos_a = Vector2(coord_a.x * CELL_SIZE + CELL_SIZE/2.0, coord_a.y * CELL_SIZE + CELL_SIZE/2.0)
+		var pos_b = Vector2(coord_b.x * CELL_SIZE + CELL_SIZE/2.0, coord_b.y * CELL_SIZE + CELL_SIZE/2.0)
+		
+		var midpoint = (pos_a + pos_b) / 2.0
+		var dir = (pos_b - pos_a).normalized()
+		var perp = dir.orthogonal()
+		
+		if pair["type"] == "equals":
+			var l1_s = midpoint + perp * 8.0 - dir * 10.0
+			var l1_e = midpoint + perp * 8.0 + dir * 10.0
+			var l2_s = midpoint - perp * 8.0 - dir * 10.0
+			var l2_e = midpoint - perp * 8.0 + dir * 10.0
+			draw_line(l1_s, l1_e, equals_color, 4.0)
+			draw_line(l2_s, l2_e, equals_color, 4.0)
+		elif pair["type"] == "not_equals":
+			var l1_s = midpoint - dir * 12.0 - perp * 12.0
+			var l1_e = midpoint + dir * 12.0 + perp * 12.0
+			var l2_s = midpoint - dir * 12.0 + perp * 12.0
+			var l2_e = midpoint + dir * 12.0 - perp * 12.0
+			draw_line(l1_s, l1_e, diff_color, 4.0)
+			draw_line(l2_s, l2_e, diff_color, 4.0)
+			
+	# --- DRAW SHIFTERS ---
+	var arrow_color = Color(0.7, 0.3, 1.0, 0.9) 
+	
+	for pair in loaded_shifter_pairs:
+		var coord_a = pair["a"]
+		var coord_b = pair["b"]
+		if not (board_cells.has(coord_a) and board_cells.has(coord_b)): continue
+			
+		var pos_a = Vector2(coord_a.x * CELL_SIZE + CELL_SIZE/2.0, coord_a.y * CELL_SIZE + CELL_SIZE/2.0)
+		var pos_b = Vector2(coord_b.x * CELL_SIZE + CELL_SIZE/2.0, coord_b.y * CELL_SIZE + CELL_SIZE/2.0)
+		
+		var midpoint = (pos_a + pos_b) / 2.0
+		var pointing_dir = Vector2.ZERO
+		if board_cells[coord_a].state == 3: pointing_dir = (pos_b - pos_a).normalized()
+		else: pointing_dir = (pos_a - pos_b).normalized()
+			
+		var size = 18.0 
+		var tip = midpoint + pointing_dir * (size / 2.0)
+		var wing1 = midpoint - pointing_dir * (size / 2.0) + pointing_dir.orthogonal() * size
+		var wing2 = midpoint - pointing_dir * (size / 2.0) - pointing_dir.orthogonal() * size
+		
+		draw_polyline(PackedVector2Array([wing1, tip, wing2]), arrow_color, 6.0)

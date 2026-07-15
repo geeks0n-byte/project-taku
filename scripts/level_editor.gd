@@ -12,8 +12,6 @@ const DEV_LEVELS_DIR = "user://levels/"
 @onready var ui_manager: EditorUIManager = $EditorUIManager
 @onready var canvas_manager: EditorCanvasManager = $EditorCanvasManager
 @onready var core_levels_container = find_child("CoreLevelsContainer", true, false)
-
-# --- NEW: SpinBox Reference ---
 @onready var time_limit_spin_box = find_child("TimeLimitSpinBox", true, false)
 
 # ==========================================
@@ -22,6 +20,12 @@ const DEV_LEVELS_DIR = "user://levels/"
 var current_brush_state: int = -1 
 var is_playtesting: bool = false
 var playtest_snapshot: Dictionary = {}
+
+var link_first_selection = null 
+
+var playtest_timer: Timer
+var playtest_time_remaining: int = 0
+var playtest_shifter_moves: int = 0
 
 var overwrite_dialog: ConfirmationDialog
 
@@ -37,14 +41,15 @@ func _ready():
 	overwrite_dialog.confirmed.connect(_execute_save)
 	add_child(overwrite_dialog)
 	
-	ui_manager.setup_ui(canvas_manager.grid_width, canvas_manager.grid_height, canvas_manager.CELL_SIZE)
+	playtest_timer = Timer.new()
+	playtest_timer.wait_time = 1.0
+	playtest_timer.timeout.connect(_on_playtest_timer_timeout)
+	add_child(playtest_timer)
 	
+	ui_manager.setup_ui(canvas_manager.grid_width, canvas_manager.grid_height, canvas_manager.CELL_SIZE)
 	_recenter_editor_layout(canvas_manager.grid_width, canvas_manager.grid_height)
 	_populate_core_levels_container()
 
-# ==========================================
-# CALCULATE DYNAMIC EDITOR CENTERING
-# ==========================================
 func _recenter_editor_layout(width: int, height: int) -> void:
 	canvas_manager.generate_blank_canvas(width, height)
 	var board_pixel_height = height * canvas_manager.CELL_SIZE
@@ -59,13 +64,8 @@ func _recenter_editor_layout(width: int, height: int) -> void:
 		if ui_manager.has_node("StatusLabel"):
 			ui_manager.get_node("StatusLabel").global_position.y = centered_board_y + board_pixel_height + 30
 
-# ==========================================
-# DYNAMIC CORE LEVELS UI BUILDER
-# ==========================================
 func _populate_core_levels_container():
-	if not core_levels_container:
-		push_warning("CoreLevelsContainer not found in scene tree. Skipping Core Levels bar generation.")
-		return
+	if not core_levels_container: return
 		
 	for child in core_levels_container.get_children():
 		child.queue_free()
@@ -105,9 +105,11 @@ func _load_core_level(res: LevelData):
 	if is_playtesting: return
 	
 	_recenter_editor_layout(res.width, res.height)
+	link_first_selection = null
 	
 	var r_pairs = res.red_pairs if "red_pairs" in res else []
-	canvas_manager.load_layout(res.width, res.height, res.layout, r_pairs)
+	var c_pairs = res.constraint_pairs if "constraint_pairs" in res else []
+	canvas_manager.load_layout(res.width, res.height, res.layout, r_pairs, c_pairs)
 	
 	if time_limit_spin_box and "time_limit" in res:
 		time_limit_spin_box.value = res.time_limit
@@ -120,9 +122,6 @@ func _load_core_level(res: LevelData):
 	ui_manager.sync_size_displays(res.width, res.height)
 	ui_manager.update_status("SUCCESS: Loaded CORE Level " + str(res.level_number) + " as a template.", Color(0.4, 1.0, 0.4))
 
-# ==========================================
-# SIGNAL BINDINGS
-# ==========================================
 func _bind_signals():
 	ui_manager.brush_changed.connect(_on_brush_changed)
 	ui_manager.save_requested.connect(_on_save_level)
@@ -133,74 +132,53 @@ func _bind_signals():
 	ui_manager.test_mode_exited.connect(_on_test_mode_exited)
 	ui_manager.grid_size_changed.connect(_on_grid_size_changed) 
 	canvas_manager.canvas_cell_clicked.connect(_on_canvas_cell_clicked)
-	
-	# --- NEW: Link pairs signature signal mapping ---
-	canvas_manager.pair_created.connect(_on_pair_link_created)
 
-# --- NEW: Process pair link request from editor canvas dragging ---
-func _on_pair_link_created(coord_a: Vector2i, coord_b: Vector2i):
-	if is_playtesting: return
-	
-	# Check if either cell is already part of a link to avoid overlapping loops
-	for i in range(canvas_manager.loaded_red_pairs.size() - 1, -1, -1):
-		var p = canvas_manager.loaded_red_pairs[i]
-		if p["a"] == coord_a or p["b"] == coord_a or p["a"] == coord_b or p["b"] == coord_b:
-			# Unlink the clean intersection nodes out right from memory bounds
-			canvas_manager.board_cells[p["a"]].is_part_of_pair = false
-			canvas_manager.board_cells[p["b"]].is_part_of_pair = false
-			if canvas_manager.board_cells[p["a"]].state == 3: canvas_manager.board_cells[p["a"]].state = -1
-			if canvas_manager.board_cells[p["b"]].state == 3: canvas_manager.board_cells[p["b"]].state = -1
-			canvas_manager.loaded_red_pairs.remove_at(i)
-			
-	var new_pair = {"a": coord_a, "b": coord_b, "active": coord_a}
-	canvas_manager.loaded_red_pairs.append(new_pair)
-	
-	canvas_manager.board_cells[coord_a].is_part_of_pair = true
-	canvas_manager.board_cells[coord_b].is_part_of_pair = true
-	canvas_manager.board_cells[coord_a].state = 3 # Init active node view state to cell A
-	
-	canvas_manager.board_cells[coord_a].update_visuals()
-	canvas_manager.board_cells[coord_b].update_visuals()
-	canvas_manager.queue_redraw()
-	ui_manager.update_status("Linked Shifter Pair created!", Color(1.0, 1.0, 0.4))
-
-# ==========================================
-# GRID & BRUSH CONTROLS
-# ==========================================
 func _on_grid_size_changed(new_width: int, new_height: int):
 	if is_playtesting: return
+	link_first_selection = null
 	_recenter_editor_layout(new_width, new_height)
 	ui_manager.update_status("Grid resized to %d x %d" % [new_width, new_height], Color.WHITE)
 
 func _on_brush_changed(state_id: int, brush_name: String):
 	if is_playtesting: return
+	if link_first_selection != null:
+		var cell = canvas_manager.board_cells[link_first_selection]
+		# FIXED: Restores existing masks instead of destroying them
+		cell.is_linked_pair = _is_shifter_linked(link_first_selection) 
+		cell.update_visuals()
+		
 	current_brush_state = state_id
+	link_first_selection = null
 	ui_manager.update_status("Selected Tool: " + brush_name, Color.WHITE)
 
-# ==========================================
-# BOARD INTERACTION (DRAW / PLAYTEST)
-# ==========================================
 func _on_canvas_cell_clicked(coord: Vector2i):
 	var cell = canvas_manager.board_cells[coord]
 	
 	if is_playtesting:
 		if cell.is_locked: return 
-		
-		# Active dynamic selection swapping rules for shifter nodes inside a playtest loop
 		var allowed = ui_manager.get_allowed_tiles()
 		
 		if cell.state == 3:
-			# Shift the pair manually during evaluation tracking routines
-			for p in canvas_manager.loaded_red_pairs:
+			for p in canvas_manager.loaded_shifter_pairs:
 				if p["a"] == coord and canvas_manager.board_cells.has(p["b"]):
 					cell.state = -1
 					canvas_manager.board_cells[p["b"]].state = 3
 					canvas_manager.board_cells[p["b"]].update_visuals()
+					
+					playtest_shifter_moves += 1
+					if ui_manager.has_method("update_playtest_hud"):
+						ui_manager.update_playtest_hud(playtest_time_remaining, playtest_shifter_moves)
+					canvas_manager.queue_redraw() 
 					break
 				elif p["b"] == coord and canvas_manager.board_cells.has(p["a"]):
 					cell.state = -1
 					canvas_manager.board_cells[p["a"]].state = 3
 					canvas_manager.board_cells[p["a"]].update_visuals()
+					
+					playtest_shifter_moves += 1
+					if ui_manager.has_method("update_playtest_hud"):
+						ui_manager.update_playtest_hud(playtest_time_remaining, playtest_shifter_moves)
+					canvas_manager.queue_redraw() 
 					break
 		else:
 			if cell.state == -1:
@@ -215,18 +193,43 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 		cell.update_visuals()
 		_run_playtest_validation_pass()
 	else:
-		# If drawing manually breaks a linked connection path, strip it from memory fields cleanly
-		if cell.is_part_of_pair:
-			for i in range(canvas_manager.loaded_red_pairs.size() - 1, -1, -1):
-				var p = canvas_manager.loaded_red_pairs[i]
-				if p["a"] == coord or p["b"] == coord:
-					canvas_manager.board_cells[p["a"]].is_part_of_pair = false
-					canvas_manager.board_cells[p["b"]].is_part_of_pair = false
-					canvas_manager.board_cells[p["a"]].state = -1
-					canvas_manager.board_cells[p["b"]].state = -1
-					canvas_manager.board_cells[p["a"]].update_visuals()
-					canvas_manager.board_cells[p["b"]].update_visuals()
-					canvas_manager.loaded_red_pairs.remove_at(i)
+		if current_brush_state >= 3 and current_brush_state <= 5:
+			if link_first_selection == null:
+				link_first_selection = coord
+				cell.is_linked_pair = true 
+				cell.update_visuals()
+				ui_manager.update_status("First cell selected! Click an adjacent neighbor to link.", Color.YELLOW)
+			else:
+				var first_coord = link_first_selection
+				link_first_selection = null
+				
+				if first_coord == coord:
+					# FIXED: Restores existing masks instead of destroying them
+					cell.is_linked_pair = _is_shifter_linked(coord) 
+					cell.update_visuals()
+					ui_manager.update_status("Cancelled: Clicked the same tile twice.", Color.WHITE)
+					return
+					
+				var diff = (coord - first_coord).abs()
+				if (diff.x == 1 and diff.y == 0) or (diff.x == 0 and diff.y == 1):
+					if current_brush_state == 3:
+						_execute_pair_link_creation(first_coord, coord)
+					elif current_brush_state == 4:
+						_execute_constraint_creation(first_coord, coord, "equals")
+					elif current_brush_state == 5:
+						_execute_constraint_creation(first_coord, coord, "not_equals")
+				else:
+					# FIXED: Restores existing masks instead of destroying them
+					canvas_manager.board_cells[first_coord].is_linked_pair = _is_shifter_linked(first_coord) 
+					canvas_manager.board_cells[first_coord].update_visuals()
+					ui_manager.update_status("ERROR: Selected cell must be immediately adjacent!", Color(1.0, 0.3, 0.3))
+			return
+
+		if current_brush_state == -1:
+			_remove_constraint_by_coord(coord)
+		
+		if cell.is_linked_pair: 
+			_remove_pair_by_coord(coord)
 					
 		cell.state = current_brush_state
 		if current_brush_state == -2:
@@ -239,94 +242,85 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 			cell.is_playable = true
 			cell.is_locked = false
 		cell.update_visuals()
-		canvas_manager.queue_redraw()
 
-# ==========================================
-# PLAYTEST SYSTEMS
-# ==========================================
-func _on_test_mode_entered():
-	is_playtesting = true
-	playtest_snapshot.clear()
+# Shifter Links
+func _execute_pair_link_creation(coord_a: Vector2i, coord_b: Vector2i):
+	_remove_pair_by_coord(coord_a)
+	_remove_pair_by_coord(coord_b)
 	
-	if core_levels_container:
-		core_levels_container.visible = false 
+	var new_pair = {"a": coord_a, "b": coord_b, "active": coord_a}
+	canvas_manager.loaded_shifter_pairs.append(new_pair)
 	
-	for coord in canvas_manager.board_cells:
-		var cell = canvas_manager.board_cells[coord]
-		playtest_snapshot[coord] = cell.state
-		
-		if cell.state == -2:
-			cell.is_playable = false
-			cell.is_locked = true
-		elif cell.state != -1 and cell.state != 3:
-			cell.is_playable = true
-			cell.is_locked = true
-		else:
-			cell.is_playable = true
-			cell.is_locked = false
-		cell.update_visuals()
-		
-	ui_manager.toggle_playtest_visibility(true)
-	ui_manager.update_status("PLAYTEST ACTIVE: Click empty tiles to cycle values!", Color.YELLOW)
+	canvas_manager.board_cells[coord_a].is_linked_pair = true
+	canvas_manager.board_cells[coord_b].is_linked_pair = true
+	canvas_manager.board_cells[coord_a].state = 3
+	canvas_manager.board_cells[coord_b].state = -1
+	
+	canvas_manager.board_cells[coord_a].update_visuals()
+	canvas_manager.board_cells[coord_b].update_visuals()
+	canvas_manager.queue_redraw()
+	ui_manager.update_status("Linked Shifter Pair successfully created!", Color(0.4, 1.0, 0.4))
 
-func _on_test_mode_exited():
-	is_playtesting = false
-	ui_manager.hide_victory_overlay()
-	
-	if core_levels_container:
-		core_levels_container.visible = true 
-	
-	for coord in canvas_manager.board_cells:
-		var cell = canvas_manager.board_cells[coord]
-		cell.clear_highlight()
-		var restored_state = playtest_snapshot[coord]
-		cell.state = restored_state
-		
-		if restored_state == -2:
-			cell.is_playable = false
-			cell.is_locked = true
-		elif restored_state != -1 and restored_state != 3:
-			cell.is_playable = true
-			cell.is_locked = true
-		else:
-			cell.is_playable = true
-			cell.is_locked = false
-		cell.update_visuals()
-		
-	ui_manager.toggle_playtest_visibility(false)
-	_on_brush_changed(current_brush_state, "Designer Mode Restored")
+func _remove_pair_by_coord(coord: Vector2i):
+	for i in range(canvas_manager.loaded_shifter_pairs.size() - 1, -1, -1):
+		var p = canvas_manager.loaded_shifter_pairs[i]
+		if p["a"] == coord or p["b"] == coord:
+			canvas_manager.board_cells[p["a"]].is_linked_pair = false
+			canvas_manager.board_cells[p["b"]].is_linked_pair = false
+			canvas_manager.board_cells[p["a"]].state = -1
+			canvas_manager.board_cells[p["b"]].state = -1
+			canvas_manager.board_cells[p["a"]].update_visuals()
+			canvas_manager.board_cells[p["b"]].update_visuals()
+			canvas_manager.loaded_shifter_pairs.remove_at(i)
+	canvas_manager.queue_redraw()
 
-func _run_playtest_validation_pass():
-	canvas_manager.clear_highlights()
-	var results = PuzzleValidator.validate_board(canvas_manager.board_cells, canvas_manager.cached_lines)
+# Math Constraints
+func _execute_constraint_creation(coord_a: Vector2i, coord_b: Vector2i, type: String):
+	# FIXED: Restores existing masks instead of destroying them
+	canvas_manager.board_cells[coord_a].is_linked_pair = _is_shifter_linked(coord_a) 
+	canvas_manager.board_cells[coord_a].update_visuals()
 	
-	if not results["valid"]:
-		ui_manager.update_status("\n".join(results["errors"]), Color(1.0, 0.3, 0.3))
-	else:
-		ui_manager.update_status("Puzzle looks perfectly valid so far!", Color(0.4, 1.0, 0.4))
-		
-	if results["valid"] and canvas_manager.is_board_full():
-		_trigger_playtest_victory()
+	for i in range(canvas_manager.loaded_constraint_pairs.size() - 1, -1, -1):
+		var p = canvas_manager.loaded_constraint_pairs[i]
+		if (p["a"] == coord_a and p["b"] == coord_b) or (p["a"] == coord_b and p["b"] == coord_a):
+			canvas_manager.loaded_constraint_pairs.remove_at(i)
+			
+	var new_constraint = {"a": coord_a, "b": coord_b, "type": type}
+	canvas_manager.loaded_constraint_pairs.append(new_constraint)
+	
+	canvas_manager.queue_redraw()
+	ui_manager.update_status("Constraint successfully linked!", Color(0.4, 1.0, 0.4))
 
-# ==========================================
-# VICTORY OVERLAY LOADER
-# ==========================================
-func _trigger_playtest_victory():
-	ui_manager.update_status("PLAYTEST COMPLETE: Level successfully solved!", Color.GOLD)
-	ui_manager.display_victory_overlay("GOOD JOB!\nLEVEL IS SOLVABLE")
+func _remove_constraint_by_coord(coord: Vector2i):
+	for i in range(canvas_manager.loaded_constraint_pairs.size() - 1, -1, -1):
+		var p = canvas_manager.loaded_constraint_pairs[i]
+		if p["a"] == coord or p["b"] == coord:
+			canvas_manager.loaded_constraint_pairs.remove_at(i)
+	canvas_manager.queue_redraw()
 
 # ==========================================
 # UTILITY ACTIONS
 # ==========================================
+
+# --- NEW HELPER: Checks memory for existing Shifter pairings ---
+func _is_shifter_linked(coord: Vector2i) -> bool:
+	for p in canvas_manager.loaded_shifter_pairs:
+		if p["a"] == coord or p["b"] == coord:
+			return true
+	return false
+# ---------------------------------------------------------------
+
 func _on_clear_board():
 	if is_playtesting: return
-	canvas_manager.loaded_red_pairs.clear()
+	canvas_manager.loaded_shifter_pairs.clear()
+	canvas_manager.loaded_constraint_pairs.clear() 
+	link_first_selection = null
 	
 	for coord in canvas_manager.board_cells:
 		var cell = canvas_manager.board_cells[coord]
 		cell.state = -1
 		cell.is_playable = true
-		cell.is_part_of_pair = false
+		cell.is_linked_pair = false 
 		cell.is_locked = false
 		cell.update_visuals()
 		
@@ -359,6 +353,107 @@ func _scan_directory(path_to_scan: String) -> Array:
 	return found_files
 
 # ==========================================
+# PLAYTEST SYSTEMS & TIMERS
+# ==========================================
+func _on_test_mode_entered():
+	is_playtesting = true
+	playtest_snapshot.clear()
+	link_first_selection = null
+	
+	if core_levels_container:
+		core_levels_container.visible = false 
+	
+	for coord in canvas_manager.board_cells:
+		var cell = canvas_manager.board_cells[coord]
+		playtest_snapshot[coord] = cell.state
+		
+		if cell.state == -2:
+			cell.is_playable = false
+			cell.is_locked = true
+		elif cell.state != -1 and cell.state != 3:
+			cell.is_playable = true
+			cell.is_locked = true
+		else:
+			cell.is_playable = true
+			cell.is_locked = false
+		cell.update_visuals()
+		
+	playtest_time_remaining = int(time_limit_spin_box.value) if time_limit_spin_box else 120
+	playtest_shifter_moves = 0
+	if ui_manager.has_method("update_playtest_hud"):
+		ui_manager.update_playtest_hud(playtest_time_remaining, playtest_shifter_moves)
+	playtest_timer.start()
+		
+	ui_manager.toggle_playtest_visibility(true)
+	ui_manager.update_status("PLAYTEST ACTIVE: Solve it before time runs out!", Color.YELLOW)
+
+func _on_playtest_timer_timeout():
+	if is_playtesting:
+		playtest_time_remaining -= 1
+		if ui_manager.has_method("update_playtest_hud"):
+			ui_manager.update_playtest_hud(playtest_time_remaining, playtest_shifter_moves)
+		
+		if playtest_time_remaining <= 0:
+			_trigger_playtest_defeat()
+
+func _on_test_mode_exited():
+	is_playtesting = false
+	playtest_timer.stop()
+	ui_manager.hide_victory_overlay()
+	link_first_selection = null
+	
+	if core_levels_container:
+		core_levels_container.visible = true 
+	
+	for coord in canvas_manager.board_cells:
+		var cell = canvas_manager.board_cells[coord]
+		cell.clear_highlight()
+		var restored_state = playtest_snapshot[coord]
+		cell.state = restored_state
+		
+		if restored_state == -2:
+			cell.is_playable = false
+			cell.is_locked = true
+		elif restored_state != -1 and restored_state != 3:
+			cell.is_playable = true
+			cell.is_locked = true
+		else:
+			cell.is_playable = true
+			cell.is_locked = false
+		cell.update_visuals()
+		
+	canvas_manager.queue_redraw()
+	ui_manager.toggle_playtest_visibility(false)
+	_on_brush_changed(current_brush_state, "Designer Mode Restored")
+
+func _run_playtest_validation_pass():
+	canvas_manager.clear_highlights()
+	var results = PuzzleValidator.validate_board(canvas_manager.board_cells, canvas_manager.cached_lines, canvas_manager.loaded_constraint_pairs)
+	
+	if not results["valid"]:
+		ui_manager.update_status("\n".join(results["errors"]), Color(1.0, 0.3, 0.3))
+	else:
+		ui_manager.update_status("Puzzle looks perfectly valid so far!", Color(0.4, 1.0, 0.4))
+		
+	if results["valid"] and canvas_manager.is_board_full():
+		_trigger_playtest_victory()
+
+# ==========================================
+# END-STATE OVERLAY LOADERS
+# ==========================================
+func _trigger_playtest_victory():
+	is_playtesting = false
+	playtest_timer.stop()
+	ui_manager.update_status("PLAYTEST COMPLETE: Level successfully solved!", Color.GOLD)
+	ui_manager.display_victory_overlay("GOOD JOB!\nLEVEL IS SOLVABLE")
+
+func _trigger_playtest_defeat():
+	is_playtesting = false
+	playtest_timer.stop()
+	ui_manager.update_status("PLAYTEST FAILED: Time's Up!", Color(1.0, 0.3, 0.3))
+	ui_manager.display_victory_overlay("DEFEAT!\nTIME RAN OUT")
+
+# ==========================================
 # LEVEL SAVING PROCESSOR (CUSTOM ONLY)
 # ==========================================
 func _on_save_level():
@@ -376,7 +471,6 @@ func _execute_save():
 	var level_num = ui_manager.get_level_number()
 	var output_layout = {}
 	
-	# Strip active Red Shifters from base level template layout configuration matrices
 	for coord in canvas_manager.board_cells:
 		var current_state = canvas_manager.board_cells[coord].state
 		if current_state == 3:
@@ -390,15 +484,15 @@ func _execute_save():
 	new_level_resource.height = canvas_manager.grid_height
 	new_level_resource.layout = output_layout
 	
-	# Pack red shifter mapping fields down to disk targets
 	var processed_pairs: Array[Dictionary] = []
-	for pair in canvas_manager.loaded_red_pairs:
-		# Track current position vector sets
+	for pair in canvas_manager.loaded_shifter_pairs:
 		var active_pos = pair["a"]
 		if canvas_manager.board_cells.has(pair["b"]) and canvas_manager.board_cells[pair["b"]].state == 3:
 			active_pos = pair["b"]
 		processed_pairs.append({"a": pair["a"], "b": pair["b"], "active": active_pos})
+	
 	new_level_resource.red_pairs = processed_pairs
+	new_level_resource.constraint_pairs = canvas_manager.loaded_constraint_pairs.duplicate() 
 	
 	if time_limit_spin_box:
 		new_level_resource.time_limit = int(time_limit_spin_box.value)
@@ -430,9 +524,11 @@ func _on_load_level():
 		var loaded_level = load(target_load_path) as LevelData
 		if loaded_level:
 			_recenter_editor_layout(loaded_level.width, loaded_level.height)
+			link_first_selection = null
 			
 			var r_pairs = loaded_level.red_pairs if "red_pairs" in loaded_level else []
-			canvas_manager.load_layout(loaded_level.width, loaded_level.height, loaded_level.layout, r_pairs)
+			var c_pairs = loaded_level.constraint_pairs if "constraint_pairs" in loaded_level else []
+			canvas_manager.load_layout(loaded_level.width, loaded_level.height, loaded_level.layout, r_pairs, c_pairs)
 			
 			if time_limit_spin_box and "time_limit" in loaded_level:
 				time_limit_spin_box.value = loaded_level.time_limit

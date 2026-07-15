@@ -6,30 +6,20 @@ var core_levels: Array[LevelData] = []
 var custom_levels: Array[LevelData] = []
 var levels: Array[LevelData] = [] 
 
-# ==========================================
-# CONSTANTS & PATHS
-# ==========================================
 const CAMPAIGN_DIR = "res://levels/"
 const DEV_DIR = "user://levels/"
 
-# ==========================================
-# NODE REFERENCES
-# ==========================================
 @onready var ui_manager: UIManager = $UIManager
 @onready var board_manager: BoardManager = $BoardManager
 @onready var timer_node = $Timer
 @onready var pause_menu: PauseMenu = $PauseMenu  
 
-# --- NEW: Gameplay Variables ---
 var time_remaining: int = 120
-var red_move_count: int = 0
+var shifter_move_count: int = 0
 var is_game_active: bool = true
 var is_paused: bool = false 
 var current_level_index: int = 0
 
-# ==========================================
-# INITIALIZATION
-# ==========================================
 func _ready():
 	_load_all_levels_from_storage()
 	_intercept_global_selection()
@@ -54,8 +44,7 @@ func _bind_submanager_signals():
 	ui_manager.resume_from_tutorial_requested.connect(_on_resume)
 	
 	board_manager.cell_changed.connect(_on_cell_changed)
-	# --- NEW: Bind the red move signal ---
-	board_manager.red_move_made.connect(_on_red_move_made)
+	board_manager.shifter_move_made.connect(_on_shifter_move_made)
 	
 	pause_menu.resume_pressed.connect(_on_resume)
 	pause_menu.restart_pressed.connect(_on_restart_level)
@@ -64,9 +53,6 @@ func _bind_submanager_signals():
 	ui_manager.next_level_requested.connect(_on_next_level)
 	ui_manager.play_again_requested.connect(_on_play_again)
 
-# ==========================================
-# RECONFIGURED LOADER
-# ==========================================
 func _load_all_levels_from_storage() -> void:
 	core_levels.clear()
 	custom_levels.clear()
@@ -118,9 +104,6 @@ func _scan_directory(path_to_scan: String) -> Array:
 		dir.list_dir_end()
 	return found_files
 
-# ==========================================
-# TRACK SELECTION LOGIC
-# ==========================================
 func _intercept_global_selection():
 	if GlobalGameManager.selected_level_resource != null:
 		var selected_resource = GlobalGameManager.selected_level_resource
@@ -159,9 +142,6 @@ func _intercept_global_selection():
 			current_level_index = levels.size() - 1
 			if current_level_index < 0: current_level_index = 0
 
-# ==========================================
-# GAMEPLAY LOOP
-# ==========================================
 func generate_board():
 	if current_level_index >= levels.size(): return
 	ui_manager.set_overlays_hidden()
@@ -172,12 +152,10 @@ func generate_board():
 	var current_level_resource = levels[current_level_index]
 	var is_custom = current_level_resource.resource_path.begins_with("user://")
 	
-	# --- NEW: Reset Time and Moves from Level Data ---
-	# Safety check in case older levels don't have the time_limit variable yet
 	time_remaining = current_level_resource.get("time_limit") if "time_limit" in current_level_resource else 120
-	red_move_count = 0
+	shifter_move_count = 0
 	
-	ui_manager.update_move_counter(red_move_count)
+	ui_manager.update_move_counter(shifter_move_count)
 	_update_timer_display()
 	if timer_node: timer_node.start()
 	
@@ -187,14 +165,16 @@ func generate_board():
 	if "available_tiles" in current_level_resource and current_level_resource.available_tiles.size() > 0:
 		tiles_list = current_level_resource.available_tiles
 		
-	var r_pairs: Array = []
+	var s_pairs: Array = []
 	if "red_pairs" in current_level_resource:
-		r_pairs = current_level_resource.red_pairs
+		s_pairs = current_level_resource.red_pairs
+		
+	var c_pairs: Array = []
+	if "constraint_pairs" in current_level_resource:
+		c_pairs = current_level_resource.constraint_pairs
 	
 	ui_manager.display_level(current_level_resource.level_number, is_custom)
-	
-	# Pass the red pairs into the grid builder!
-	board_manager.build_grid(current_level_resource.layout, tiles_list, r_pairs)
+	board_manager.build_grid(current_level_resource.layout, tiles_list, s_pairs, c_pairs)
 	
 	var board_pixel_height = current_level_resource.height * board_manager.CELL_SIZE
 	var screen_height = get_viewport_rect().size.y
@@ -210,15 +190,15 @@ func _on_cell_changed(_coord: Vector2i):
 	if not is_game_active or is_paused: return
 	_run_validation_pass()
 
-# --- NEW: Track Red Moves ---
-func _on_red_move_made():
+func _on_shifter_move_made():
 	if not is_game_active or is_paused: return
-	red_move_count += 1
-	ui_manager.update_move_counter(red_move_count)
+	shifter_move_count += 1
+	ui_manager.update_move_counter(shifter_move_count)
 
 func _run_validation_pass():
 	board_manager.clear_highlights()
-	var results = PuzzleValidator.validate_board(board_manager.board_cells, board_manager.cached_lines)
+	# UPDATED: Feeds constraints to the static validator block
+	var results = PuzzleValidator.validate_board(board_manager.board_cells, board_manager.cached_lines, board_manager.active_constraint_pairs)
 	
 	if not results["valid"]:
 		ui_manager.show_status_errors(results["errors"])
@@ -243,16 +223,12 @@ func trigger_victory():
 	
 	ui_manager.show_victory(display_num, is_last, _get_formatted_time(), is_custom)
 
-# --- NEW: Defeat Sequence ---
 func trigger_defeat():
 	is_game_active = false
 	if timer_node: timer_node.stop()
 	board_manager.process_mode = Node.PROCESS_MODE_DISABLED
 	ui_manager.show_defeat()
 
-# ==========================================
-# OVERLAYS & CALLBACKS
-# ==========================================
 func _on_pause():
 	if not is_game_active or is_paused: return
 	is_paused = true
@@ -304,7 +280,6 @@ func _on_quit_to_menu():
 	get_tree().paused = false 
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
-# --- UPDATED: Countdown Timer ---
 func _on_timer_timeout():
 	if is_game_active and not is_paused:
 		time_remaining -= 1
@@ -319,7 +294,6 @@ func _update_timer_display():
 func _get_formatted_time() -> String:
 	var minutes = int(time_remaining / 60.0)
 	var seconds = time_remaining % 60
-	# Prevent negative displays if logic skips a beat
 	if minutes < 0: minutes = 0
 	if seconds < 0: seconds = 0
 	return "%02d:%02d" % [minutes, seconds]

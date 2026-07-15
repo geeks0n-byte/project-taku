@@ -10,38 +10,38 @@ signal test_mode_entered
 signal test_mode_exited
 signal grid_size_changed(new_width: int, new_height: int) 
 
-@export var icon_empty: Texture2D
 @export var icon_wall: Texture2D
+@export var icon_empty: Texture2D
 @export var icon_zero: Texture2D
 @export var icon_one: Texture2D
 @export var icon_joker: Texture2D
 
 @onready var grid_size_container = $"../EditorUI/ControlPanel/GridSizeContainer"
-
 @onready var width_minus = $"../EditorUI/ControlPanel/GridSizeContainer/WidthMinus"
 @onready var width_label = $"../EditorUI/ControlPanel/GridSizeContainer/WidthLabel"
 @onready var width_plus = $"../EditorUI/ControlPanel/GridSizeContainer/WidthPlus"
-
 @onready var height_minus = $"../EditorUI/ControlPanel/GridSizeContainer/HeightMinus"
 @onready var height_label = $"../EditorUI/ControlPanel/GridSizeContainer/HeightLabel"
 @onready var height_plus = $"../EditorUI/ControlPanel/GridSizeContainer/HeightPlus"
-
 @onready var set_size_button = $"../EditorUI/ControlPanel/GridSizeContainer/SetSizeButton" 
-
 @onready var level_minus = $"../EditorUI/ControlPanel/ConfigContainer/LevelMinus"
 @onready var level_label = $"../EditorUI/ControlPanel/ConfigContainer/LevelLabel"
 @onready var level_plus = $"../EditorUI/ControlPanel/ConfigContainer/LevelPlus"
-
 @onready var status_label = $"../EditorUI/ControlPanel/StatusLabel"
 
 @onready var brush_container = $"../EditorUI/ControlPanel/BrushContainer"
 
 @onready var clear_button = $"../EditorUI/ControlPanel/BrushContainer/ClearButton" 
-@onready var empty_button = $"../EditorUI/ControlPanel/BrushContainer/EmptyButton"
 @onready var wall_button = $"../EditorUI/ControlPanel/BrushContainer/WallButton"
+@onready var empty_button = $"../EditorUI/ControlPanel/BrushContainer/EmptyButton"
 @onready var zero_button = $"../EditorUI/ControlPanel/BrushContainer/ZeroButton"
 @onready var one_button = $"../EditorUI/ControlPanel/BrushContainer/OneButton"
 @onready var joker_button = $"../EditorUI/ControlPanel/BrushContainer/JokerButton"
+@onready var shifter_button = $"../EditorUI/ControlPanel/BrushContainer/ShifterButton" 
+
+# --- NEW: Constraints Nodes ---
+@onready var equals_button = get_node_or_null("../EditorUI/ControlPanel/BrushContainer/EqualsButton")
+@onready var not_equals_button = get_node_or_null("../EditorUI/ControlPanel/BrushContainer/NotEqualsButton")
 
 @onready var save_button = $"../EditorUI/ControlPanel/ConfigContainer/SaveButton"
 @onready var load_button = $"../EditorUI/ControlPanel/ConfigContainer/LoadButton"
@@ -50,7 +50,7 @@ signal grid_size_changed(new_width: int, new_height: int)
 @onready var exit_test_button = $"../EditorUI/ControlPanel/ConfigContainer/ExitTestButton"
 
 @onready var playtest_victory_panel = $"../EditorUI/PlaytestVictoryPanel"
-@onready var layout_text_edit = $"../EditorUI/PlaytestVictoryPanel/LayoutTextEdit"
+@onready var victory_message_label = $"../EditorUI/PlaytestVictoryPanel/VictoryMessageLabel"
 @onready var return_button = $"../EditorUI/PlaytestVictoryPanel/ReturnButton"
 
 var _cell_size: float = 120.0
@@ -59,7 +59,6 @@ var editor_height: int = 3
 var editor_level: int = 1
 
 var brush_button_group: ButtonGroup = ButtonGroup.new()
-
 var _last_board_y: float = 180.0
 var _last_board_height: float = 0.0
 
@@ -68,6 +67,10 @@ var allow_zero_chk: CheckBox
 var allow_one_chk: CheckBox
 var allow_joker_chk: CheckBox
 
+var playtest_hud_container: HBoxContainer
+var pt_timer_label: Label
+var pt_moves_label: Label
+
 func setup_ui(grid_width: int, grid_height: int, cell_size: float):
 	_cell_size = cell_size
 	editor_width = grid_width
@@ -75,6 +78,7 @@ func setup_ui(grid_width: int, grid_height: int, cell_size: float):
 	
 	_setup_brush_toggles()
 	_build_allowed_tiles_ui()
+	_build_playtest_hud() 
 	emit_signal("brush_changed", -1, "Empty (Clear)")
 	
 	_update_number_labels()
@@ -87,10 +91,12 @@ func setup_ui(grid_width: int, grid_height: int, cell_size: float):
 		playtest_victory_panel.global_position = Vector2(victory_x, 250)
 		playtest_victory_panel.set_deferred("size", Vector2(500, 450))
 		
-	if layout_text_edit:
-		layout_text_edit.set_deferred("custom_minimum_size", Vector2(460, 300))
-		layout_text_edit.position = Vector2(20, 20)
-		layout_text_edit.editable = false
+	if victory_message_label:
+		victory_message_label.set_deferred("custom_minimum_size", Vector2(460, 300))
+		victory_message_label.position = Vector2(20, 20)
+		victory_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		victory_message_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		victory_message_label.add_theme_font_size_override("font_size", 36)
 		
 	if return_button:
 		return_button.position = Vector2(100, 360)
@@ -103,17 +109,47 @@ func setup_ui(grid_width: int, grid_height: int, cell_size: float):
 	_set_button_labels()
 	_connect_ui_signals()
 
-# ==========================================
-# UPDATED: REPLACED RED WITH YELLOW
-# ==========================================
+func _build_playtest_hud():
+	var editor_ui = $"../EditorUI"
+	if not editor_ui: return
+	
+	playtest_hud_container = HBoxContainer.new()
+	playtest_hud_container.name = "PlaytestHUD"
+	editor_ui.add_child(playtest_hud_container)
+	
+	var screen_width = get_viewport().get_visible_rect().size.x
+	playtest_hud_container.position = Vector2(0, 40)
+	playtest_hud_container.size = Vector2(screen_width, 60)
+	playtest_hud_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	playtest_hud_container.add_theme_constant_override("separation", 100)
+	playtest_hud_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	playtest_hud_container.visible = false
+	
+	pt_timer_label = Label.new()
+	pt_timer_label.add_theme_font_size_override("font_size", 32)
+	pt_timer_label.modulate = Color(0.9, 0.9, 0.9)
+	playtest_hud_container.add_child(pt_timer_label)
+	
+	pt_moves_label = Label.new()
+	pt_moves_label.add_theme_font_size_override("font_size", 32)
+	pt_moves_label.modulate = Color(1.0, 0.6, 0.2)
+	playtest_hud_container.add_child(pt_moves_label)
+
+func update_playtest_hud(time_remaining: int, moves: int):
+	if pt_timer_label:
+		var minutes = max(0, int(time_remaining / 60.0))
+		var seconds = max(0, time_remaining % 60)
+		pt_timer_label.text = "Time: %02d:%02d" % [minutes, seconds]
+	if pt_moves_label:
+		pt_moves_label.text = "Shifter Moves: %d" % moves
+
 func _build_allowed_tiles_ui():
 	var control_panel = $"../EditorUI/ControlPanel"
 	if not control_panel: return
 	
-	# FIXED: Point to the new yellow SVG
-	var tex_yellow = load("res://icons/tiles/tile_yellow.svg")
-	var tex_blue = load("res://icons/tiles/tile_blue.svg")
-	var tex_green = load("res://icons/tiles/tile_green.svg") 
+	var tex_zero_file = load("res://icons/tiles/tile_yellow.svg")
+	var tex_one_file = load("res://icons/tiles/tile_blue.svg")
+	var tex_joker_file = load("res://icons/tiles/tile_green.svg") 
 	
 	allowed_tiles_container = HBoxContainer.new()
 	allowed_tiles_container.name = "AllowedTilesContainer"
@@ -127,8 +163,8 @@ func _build_allowed_tiles_ui():
 	allowed_tiles_container.add_child(lbl)
 	
 	allow_zero_chk = CheckBox.new()
-	allow_zero_chk.text = " YELLOW" # FIXED: Label updated
-	if tex_yellow: allow_zero_chk.icon = tex_yellow
+	allow_zero_chk.text = " ZERO"
+	if tex_zero_file: allow_zero_chk.icon = tex_zero_file
 	elif icon_zero: allow_zero_chk.icon = icon_zero
 	allow_zero_chk.expand_icon = true
 	allow_zero_chk.add_theme_constant_override("icon_max_width", 32)
@@ -138,8 +174,8 @@ func _build_allowed_tiles_ui():
 	allowed_tiles_container.add_child(allow_zero_chk)
 	
 	allow_one_chk = CheckBox.new()
-	allow_one_chk.text = " BLUE"
-	if tex_blue: allow_one_chk.icon = tex_blue
+	allow_one_chk.text = " ONE"
+	if tex_one_file: allow_one_chk.icon = tex_one_file
 	elif icon_one: allow_one_chk.icon = icon_one
 	allow_one_chk.expand_icon = true
 	allow_one_chk.add_theme_constant_override("icon_max_width", 32)
@@ -149,8 +185,8 @@ func _build_allowed_tiles_ui():
 	allowed_tiles_container.add_child(allow_one_chk)
 	
 	allow_joker_chk = CheckBox.new()
-	allow_joker_chk.text = " GREEN"
-	if tex_green: allow_joker_chk.icon = tex_green
+	allow_joker_chk.text = " JOKER"
+	if tex_joker_file: allow_joker_chk.icon = tex_joker_file
 	elif icon_joker: allow_joker_chk.icon = icon_joker
 	allow_joker_chk.expand_icon = true
 	allow_joker_chk.add_theme_constant_override("icon_max_width", 32)
@@ -158,14 +194,12 @@ func _build_allowed_tiles_ui():
 	allow_joker_chk.add_theme_font_size_override("font_size", 22)
 	allow_joker_chk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	allowed_tiles_container.add_child(allow_joker_chk)
-# ==========================================
 
 func get_allowed_tiles() -> Array[int]:
 	var tiles: Array[int] = []
 	if allow_zero_chk and allow_zero_chk.button_pressed: tiles.append(0)
 	if allow_one_chk and allow_one_chk.button_pressed: tiles.append(1)
 	if allow_joker_chk and allow_joker_chk.button_pressed: tiles.append(2)
-	
 	if tiles.size() == 0: tiles = [0, 1] 
 	return tiles
 
@@ -180,12 +214,11 @@ func update_dynamic_editor_layout(board_y: float, board_height: float) -> void:
 	_update_panel_layout(editor_width, editor_height)
 
 func _setup_brush_toggles():
-	var brushes = [empty_button, wall_button, zero_button, one_button, joker_button]
+	var brushes = [wall_button, empty_button, zero_button, one_button, joker_button, shifter_button, equals_button, not_equals_button]
 	for btn in brushes:
 		if btn:
 			btn.toggle_mode = true
 			btn.button_group = brush_button_group
-			
 	if empty_button:
 		empty_button.button_pressed = true
 
@@ -280,27 +313,33 @@ func _update_panel_layout(_grid_width: int, _grid_height: int):
 		status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 func _set_button_labels():
-	if empty_button: 
-		empty_button.text = ""
-		if icon_empty: empty_button.icon = icon_empty
-			
+	if clear_button: clear_button.text = "🗑️ CLEAR"
 	if wall_button: 
 		wall_button.text = ""
 		if icon_wall: wall_button.icon = icon_wall
-			
+	if empty_button: 
+		empty_button.text = ""
+		if icon_empty: empty_button.icon = icon_empty
 	if zero_button: 
 		zero_button.text = ""
 		if icon_zero: zero_button.icon = icon_zero
-			
 	if one_button: 
 		one_button.text = ""
 		if icon_one: one_button.icon = icon_one
-			
 	if joker_button: 
 		joker_button.text = ""
 		if icon_joker: joker_button.icon = icon_joker
-	
-	if clear_button: clear_button.text = "🗑️ CLEAR"
+	if shifter_button:
+		shifter_button.text = ""
+		var tex_shifter_icon = load("res://icons/tiles/tile_purple.svg")
+		if tex_shifter_icon: shifter_button.icon = tex_shifter_icon
+		
+	if equals_button:
+		equals_button.text = "="
+		equals_button.add_theme_font_size_override("font_size", 38)
+	if not_equals_button:
+		not_equals_button.text = "×"
+		not_equals_button.add_theme_font_size_override("font_size", 38)
 	
 	if save_button: save_button.text = "💾 SAVE" 
 	if load_button: load_button.text = "📂 LOAD"
@@ -314,16 +353,20 @@ func _set_button_labels():
 	if height_minus: height_minus.text = "-"
 	if height_plus: height_plus.text = "+"
 	if level_minus: level_minus.text = "-"
-	if level_plus: level_plus.text = "+"
+	if level_plus: level_plus.text = "-"
 
 func _connect_ui_signals():
-	empty_button.pressed.connect(func(): brush_changed.emit(-1, "Empty (Clear)"))
-	wall_button.pressed.connect(func(): brush_changed.emit(-2, "Wall"))
-	zero_button.pressed.connect(func(): brush_changed.emit(0, "Prefilled 0"))
-	one_button.pressed.connect(func(): brush_changed.emit(1, "Prefilled 1"))
-	joker_button.pressed.connect(func(): brush_changed.emit(2, "Joker"))
-	
 	if clear_button: clear_button.pressed.connect(func(): clear_requested.emit()) 
+	
+	wall_button.pressed.connect(func(): brush_changed.emit(-2, "Wall"))
+	empty_button.pressed.connect(func(): brush_changed.emit(-1, "Empty (Clear)"))
+	zero_button.pressed.connect(func(): brush_changed.emit(0, "Prefilled Zero"))
+	one_button.pressed.connect(func(): brush_changed.emit(1, "Prefilled One"))
+	joker_button.pressed.connect(func(): brush_changed.emit(2, "Joker"))
+	if shifter_button: shifter_button.pressed.connect(func(): brush_changed.emit(3, "Shifter Pair Link Tool"))
+	
+	if equals_button: equals_button.pressed.connect(func(): brush_changed.emit(4, "Equals (=) Link Tool"))
+	if not_equals_button: not_equals_button.pressed.connect(func(): brush_changed.emit(5, "Not Equals (×) Link Tool"))
 	
 	save_button.pressed.connect(func(): save_requested.emit())
 	if load_button: load_button.pressed.connect(func(): load_requested.emit()) 
@@ -332,9 +375,7 @@ func _connect_ui_signals():
 	exit_test_button.pressed.connect(func(): test_mode_exited.emit())
 	return_button.pressed.connect(func(): test_mode_exited.emit())
 	
-	if set_size_button:
-		set_size_button.pressed.connect(_on_set_size_pressed)
-		
+	if set_size_button: set_size_button.pressed.connect(_on_set_size_pressed)
 	if width_minus: width_minus.pressed.connect(func(): _adjust_value("width", -1))
 	if width_plus: width_plus.pressed.connect(func(): _adjust_value("width", 1))
 	if height_minus: height_minus.pressed.connect(func(): _adjust_value("height", -1))
@@ -344,13 +385,9 @@ func _connect_ui_signals():
 
 func _adjust_value(target: String, amount: int):
 	match target:
-		"width":
-			editor_width = clamp(editor_width + amount, 3, 9) 
-		"height":
-			editor_height = clamp(editor_height + amount, 3, 11)
-		"level":
-			editor_level = max(1, editor_level + amount) 
-			
+		"width": editor_width = clamp(editor_width + amount, 3, 9) 
+		"height": editor_height = clamp(editor_height + amount, 3, 11)
+		"level": editor_level = max(1, editor_level + amount) 
 	_update_number_labels()
 
 func _on_set_size_pressed():
@@ -376,12 +413,20 @@ func toggle_playtest_visibility(is_playtesting: bool):
 	if grid_size_container: grid_size_container.visible = not is_playtesting 
 	
 	if allowed_tiles_container: allowed_tiles_container.visible = not is_playtesting
+	if playtest_hud_container: playtest_hud_container.visible = is_playtesting
 	
 	exit_test_button.visible = is_playtesting
 
 func display_victory_overlay(compiled_text: String):
-	if layout_text_edit: layout_text_edit.text = compiled_text
-	if playtest_victory_panel: playtest_victory_panel.visible = true
+	if victory_message_label:
+		victory_message_label.text = compiled_text
+		if "DEFEAT" in compiled_text:
+			victory_message_label.modulate = Color(1.0, 0.3, 0.3) 
+		else:
+			victory_message_label.modulate = Color(0.4, 1.0, 0.4) 
+			
+	if playtest_victory_panel:
+		playtest_victory_panel.visible = true
 
 func hide_victory_overlay():
 	if playtest_victory_panel: playtest_victory_panel.visible = false

@@ -15,17 +15,15 @@ signal play_again_requested
 @onready var how_to_play_button = $"../HowToPlayButton" 
 @onready var timer_label = $"../TimerLabel"
 
-# --- NEW: Move Counter Reference ---
 @onready var move_counter_label = get_node_or_null("../MoveCounterLabel")
 
-@onready var victory_panel = $"../VictoryLayer/VictoryPanel"
-@onready var restart_button = $"../VictoryLayer/VictoryPanel/RestartButton"
-@onready var main_menu_button = $"../VictoryLayer/VictoryPanel/MainMenuButton"
-@onready var time_result_label = $"../VictoryLayer/VictoryPanel/TimeResultLabel"
-@onready var win_label = $"../VictoryLayer/VictoryPanel/WinLabel"
+@onready var victory_panel = $"../EndLayer/VictoryPanel"
+@onready var restart_button = $"../EndLayer/VictoryPanel/RestartButton"
+@onready var main_menu_button = $"../EndLayer/VictoryPanel/MainMenuButton"
+@onready var time_result_label = $"../EndLayer/VictoryPanel/TimeResultLabel"
+@onready var win_label = $"../EndLayer/VictoryPanel/WinLabel"
 
-# --- NEW: Defeat Panel References ---
-@onready var defeat_panel = get_node_or_null("../VictoryLayer/DefeatPanel")
+@onready var defeat_panel = get_node_or_null("../EndLayer/DefeatPanel")
 var defeat_restart_button: Button
 var defeat_main_menu_button: Button
 
@@ -43,11 +41,10 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		timer_label.global_position = Vector2(650, 40)
 		timer_label.size = Vector2(300, 50)
 		
-	# --- NEW: Configure Move Counter ---
 	if move_counter_label:
 		move_counter_label.add_theme_font_size_override("font_size", 28)
-		move_counter_label.modulate = Color(1.0, 0.6, 0.2) # Orange tint
-		move_counter_label.global_position = Vector2(650, 90) # Right below the timer
+		move_counter_label.modulate = Color(1.0, 0.6, 0.2)
+		move_counter_label.global_position = Vector2(650, 90)
 		move_counter_label.size = Vector2(300, 50)
 		
 	if pause_button:
@@ -93,13 +90,11 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		victory_panel.global_position = panel_pos 
 		victory_panel.size = square_panel_size
 		
-	# --- NEW: Configure Defeat Panel Geometry ---
 	if defeat_panel:
 		defeat_panel.custom_minimum_size = square_panel_size
 		defeat_panel.global_position = panel_pos
 		defeat_panel.size = square_panel_size
 		
-		# Find the buttons safely inside the duplicated panel
 		defeat_restart_button = defeat_panel.find_child("RestartButton", true, false)
 		if not defeat_restart_button:
 			defeat_restart_button = defeat_panel.find_child("TryAgainButton", true, false)
@@ -173,7 +168,6 @@ func _connect_signals():
 	if main_menu_button: main_menu_button.pressed.connect(_on_main_menu_pressed)
 	if tutorial_back_button: tutorial_back_button.pressed.connect(_on_tutorial_back_pressed)
 	
-	# --- NEW: Defeat Panel Buttons ---
 	if defeat_restart_button: defeat_restart_button.pressed.connect(func(): reset_requested.emit())
 	if defeat_main_menu_button: defeat_main_menu_button.pressed.connect(_on_main_menu_pressed)
 
@@ -194,7 +188,7 @@ func update_timer(formatted_time: String):
 	if timer_label: timer_label.text = "Time: " + formatted_time
 
 func update_move_counter(moves: int):
-	if move_counter_label: move_counter_label.text = "Red Moves: %d" % moves
+	if move_counter_label: move_counter_label.text = "Shifter Moves: %d" % moves
 
 func display_level(num: int, is_custom: bool = false):
 	if level_label: 

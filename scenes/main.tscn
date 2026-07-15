@@ -132,27 +132,29 @@ offset_bottom = 40.0
 bbcode_enabled = true
 text = "[center][font_size=46][color=gold]HOW TO PLAY[/color][/font_size][/center]
 
-[font_size=28]Fill the grid by following these core rules:[/font_size]
+[font_size=28]Fill the grid before the timer runs out![/font_size]
 
 [font_size=26]
-[img width=48 height=48]res://icons/tiles/tile_yellow.svg[/img] [img width=48 height=48]res://icons/tiles/tile_blue.svg[/img] [b]Balance:[/b] Every row and column must contain an equal amount of Yellow and Blue blocks.
+[img width=48 height=48]res://icons/tiles/tile_yellow.svg[/img] [img width=48 height=48]res://icons/tiles/tile_blue.svg[/img] [b]Balance:[/b] Every row and column must contain an equal amount of Zero and One blocks.
 
-[img width=48 height=48]res://icons/tiles/tile_green.svg[/img] [b]Wildcard:[/b] Green blocks act as both Yellow and Blue at the exact same time.
+[img width=48 height=48]res://icons/tiles/tile_green.svg[/img] [b]Wildcard:[/b] Joker blocks act as both Zero and One at the exact same time. [color=green][b]MAX 1 PER LINE![/b][/color]
 
-[img width=48 height=48]res://icons/placeholder_icons/lock.png[/img] [b]Locked:[/b] Blocks with a lock icon are fixed and cannot be changed.
+[img width=48 height=48]res://icons/placeholder_icons/lock.png[/img] [b]Locked:[/b] Blocks with a lock icon are fixed.
 
-[img width=48 height=48]res://icons/tiles/tile_wall.svg[/img] [b]Wall:[/b] Wall blocks are obstacles and are not playable.
+[img width=48 height=48]res://icons/tiles/tile_purple.svg[/img] [b]The Shifter:[/b] Shifter blocks swap dynamically between two cells linked by a purple arrow.
+
+[b]Relationships:[/b] Cells linked by [b]=[/b] MUST contain the exact same block. Cells linked by [b]×[/b] MUST contain different blocks.
 [/font_size]
 
 [font_size=26][color=tomato][b]No Three-in-a-Row Rule:[/b][/color]
-You cannot place three blocks of the same color in an unbroken line. Because Green acts as both colors, it will trigger a violation if mixed with two of the same color![/font_size]
+You cannot place three blocks of the same value in an unbroken line. Jokers will trigger a violation if mixed with two identical blocks![/font_size]
 
 [font_size=26]
 [color=red][b]X FORBIDDEN:[/b][/color]
-[img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_blue.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_green.svg[/img] (acts as 3rd Yellow!)
+[img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_blue.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_green.svg[/img]
 
 [color=green][b]✓ ALLOWED:[/b][/color]
-[img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_green.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img] (Green splits them safely)
+[img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_green.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img]
 [/font_size]"
 
 [node name="BackButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=1004694894]
