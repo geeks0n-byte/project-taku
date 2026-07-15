@@ -168,7 +168,9 @@ func generate_board():
 		tiles_list = current_level_resource.available_tiles
 		
 	var s_pairs: Array = []
-	if "red_pairs" in current_level_resource:
+	if "shifter_pairs" in current_level_resource:
+		s_pairs = current_level_resource.shifter_pairs
+	elif "red_pairs" in current_level_resource:
 		s_pairs = current_level_resource.red_pairs
 		
 	var c_pairs: Array = []
