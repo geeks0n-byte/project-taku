@@ -19,7 +19,7 @@ var overlay_drawer: Node2D
 
 func _ready():
 	overlay_drawer = Node2D.new()
-	overlay_drawer.z_index = 1
+	overlay_drawer.z_index = 10 # FIXED: Render above the cell textures
 	overlay_drawer.draw.connect(_draw_overlays)
 	add_child(overlay_drawer)
 
@@ -153,9 +153,37 @@ func _draw_overlays():
 	var line_width = 4.0 
 	
 	for coord in board_cells:
-		if board_cells[coord].is_playable:
-			var cell_pos = Vector2(coord.x * CELL_SIZE, coord.y * CELL_SIZE)
-			overlay_drawer.draw_rect(Rect2(cell_pos, Vector2(CELL_SIZE, CELL_SIZE)), line_color, false, line_width)
+		var cell = board_cells[coord]
+		var is_playable = cell.state != -2
+		
+		var pos_tl = Vector2(coord.x * CELL_SIZE, coord.y * CELL_SIZE)
+		var pos_tr = Vector2((coord.x + 1) * CELL_SIZE, coord.y * CELL_SIZE)
+		var pos_bl = Vector2(coord.x * CELL_SIZE, (coord.y + 1) * CELL_SIZE)
+		var pos_br = Vector2((coord.x + 1) * CELL_SIZE, (coord.y + 1) * CELL_SIZE)
+		
+		# Right Edge
+		var right_playable = false
+		if board_cells.has(coord + Vector2i(1, 0)): 
+			right_playable = board_cells[coord + Vector2i(1, 0)].state != -2
+		if is_playable or right_playable:
+			overlay_drawer.draw_line(pos_tr, pos_br, line_color, line_width)
+			
+		# Bottom Edge
+		var bot_playable = false
+		if board_cells.has(coord + Vector2i(0, 1)): 
+			bot_playable = board_cells[coord + Vector2i(0, 1)].state != -2
+		if is_playable or bot_playable:
+			overlay_drawer.draw_line(pos_bl, pos_br, line_color, line_width)
+
+		# Top Edge (Only draw if neighbor is out-of-bounds)
+		if not board_cells.has(coord + Vector2i(0, -1)):
+			if is_playable:
+				overlay_drawer.draw_line(pos_tl, pos_tr, line_color, line_width)
+				
+		# Left Edge (Only draw if neighbor is out-of-bounds)
+		if not board_cells.has(coord + Vector2i(-1, 0)):
+			if is_playable:
+				overlay_drawer.draw_line(pos_tl, pos_bl, line_color, line_width)
 
 	var arrow_color = Color(0.7, 0.3, 1.0, 0.9) 
 	for pair in loaded_shifter_pairs:
