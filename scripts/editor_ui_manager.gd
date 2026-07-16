@@ -70,7 +70,7 @@ signal overwrite_confirmed
 var editor_width: int = 3
 var editor_height: int = 3
 var editor_level: int = 1
-var editor_time_limit: int = 60 # Default is set to 60s
+var editor_time_limit: int = 0
 
 var brush_button_group: ButtonGroup = ButtonGroup.new()
 
