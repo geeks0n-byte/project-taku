@@ -113,7 +113,8 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 					errors.append("Unequal 0s and 1s in a completed line.")
 				for c in coords:
 					var cell = board_cells[c]
-					if cell.has_method("set_error_highlight"):
+					# FIX: Walls (-2) are explicitly skipped from being highlighted
+					if cell.state != -2 and cell.has_method("set_error_highlight"):
 						cell.set_error_highlight()
 
 	return {"valid": is_valid, "errors": errors}
