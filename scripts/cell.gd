@@ -9,7 +9,8 @@ var is_playable: bool = true
 var is_locked: bool = false
 var is_linked_pair: bool = false
 var link_partner: Vector2i
-var allowed_cycle_tiles: Array[int] = [0, 1]
+var shifter_direction: Vector2i = Vector2i.ZERO
+var allowed_cycle_tiles: Array[int] = [0, 1, 2] # Default fallback updated
 
 @export var tex_empty: Texture2D
 @export var tex_wall: Texture2D
@@ -18,10 +19,16 @@ var allowed_cycle_tiles: Array[int] = [0, 1]
 @export var tex_joker: Texture2D = preload("res://icons/tiles/tile_green.svg")
 @export var tex_shifter: Texture2D = preload("res://icons/tiles/tile_purple.svg")
 
+@export var tex_chevron_up: Texture2D
+@export var tex_chevron_down: Texture2D
+@export var tex_chevron_left: Texture2D
+@export var tex_chevron_right: Texture2D
+
 @onready var error_highlight = $ErrorHighlight
 @onready var link_highlight = $LinkHighlight
 @onready var lock_icon = $LockIcon
 @onready var tile_icon = $TileIcon
+@onready var chevron_icon = get_node_or_null("ChevronIcon")
 
 func _ready():
 	custom_minimum_size = Vector2(120, 120)
@@ -29,8 +36,13 @@ func _ready():
 	_stretch_node_to_parent(error_highlight, 0.0) 
 	_stretch_node_to_parent(link_highlight, 0.0)
 	_stretch_node_to_parent(tile_icon, 0.0)
+	
 	if lock_icon:
 		_stretch_node_to_parent(lock_icon, 0.0)
+		
+	if chevron_icon:
+		_stretch_node_to_parent(chevron_icon, 0.0)
+		chevron_icon.z_index = 4 
 		
 	if error_highlight: 
 		error_highlight.z_index = 100
@@ -87,6 +99,28 @@ func update_visuals():
 			link_highlight.visible = true
 		else:
 			link_highlight.visible = false
+			
+	if chevron_icon:
+		chevron_icon.offset_left = 0
+		chevron_icon.offset_right = 0
+		chevron_icon.offset_top = 0
+		chevron_icon.offset_bottom = 0
+		
+		if state == 3 and shifter_direction != Vector2i.ZERO:
+			chevron_icon.visible = true
+			if shifter_direction == Vector2i(0, -1): 
+				chevron_icon.texture = tex_chevron_up
+			elif shifter_direction == Vector2i(0, 1): 
+				chevron_icon.texture = tex_chevron_down
+			elif shifter_direction == Vector2i(-1, 0): 
+				chevron_icon.texture = tex_chevron_left
+				var shift_amount = -3 
+				chevron_icon.offset_left = shift_amount
+				chevron_icon.offset_right = shift_amount
+			elif shifter_direction == Vector2i(1, 0): 
+				chevron_icon.texture = tex_chevron_right
+		else:
+			chevron_icon.visible = false
 		
 	if not tile_icon:
 		return

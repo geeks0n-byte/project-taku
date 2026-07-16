@@ -12,7 +12,6 @@ signal test_mode_exited
 signal grid_size_changed(new_width: int, new_height: int) 
 signal overwrite_confirmed
 
-# --- NEW: Centralized Grid Constraints ---
 const MIN_GRID_WIDTH: int = 3
 const MAX_GRID_WIDTH: int = 9
 const MIN_GRID_HEIGHT: int = 3
@@ -225,6 +224,7 @@ func _setup_tree_checkbox_icons():
 	
 	if allow_zero:
 		allow_zero.toggle_mode = true
+		allow_zero.button_pressed = true # Check by default
 		if tex_zero_file: allow_zero.icon = tex_zero_file
 		elif icon_zero: allow_zero.icon = icon_zero
 		allow_zero.expand_icon = true
@@ -232,6 +232,7 @@ func _setup_tree_checkbox_icons():
 		
 	if allow_one:
 		allow_one.toggle_mode = true
+		allow_one.button_pressed = true # Check by default
 		if tex_one_file: allow_one.icon = tex_one_file
 		elif icon_one: allow_one.icon = icon_one
 		allow_one.expand_icon = true
@@ -239,6 +240,7 @@ func _setup_tree_checkbox_icons():
 		
 	if allow_joker:
 		allow_joker.toggle_mode = true
+		allow_joker.button_pressed = true # Check by default
 		if tex_joker_file: allow_joker.icon = tex_joker_file
 		elif icon_joker: allow_joker.icon = icon_joker
 		allow_joker.expand_icon = true
@@ -249,7 +251,9 @@ func get_allowed_tiles() -> Array:
 	if allow_zero and allow_zero.button_pressed: tiles.append(0)
 	if allow_one and allow_one.button_pressed: tiles.append(1)
 	if allow_joker and allow_joker.button_pressed: tiles.append(2)
-	if tiles.size() == 0: tiles = [0, 1] 
+	
+	# Updated fallback to include Joker (2)
+	if tiles.size() == 0: tiles = [0, 1, 2] 
 	return tiles
 
 func set_allowed_tiles(tiles: Array):

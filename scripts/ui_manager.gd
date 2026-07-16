@@ -7,6 +7,7 @@ signal how_to_play_requested
 signal resume_from_tutorial_requested 
 signal next_level_requested  
 signal play_again_requested  
+signal hint_requested # NEW
 
 @onready var level_label = $"../LevelLabel"
 @onready var status_label = $"../StatusLabel"
@@ -25,16 +26,32 @@ signal play_again_requested
 @onready var defeat_panel = get_node_or_null("../EndLayer/DefeatPanel")
 var defeat_restart_button: Button
 var defeat_main_menu_button: Button
-var defeat_label: Label # Added reference for your defeat text
+var defeat_label: Label 
 
 @onready var how_to_play_container = $"../HowToPlayLayer/CenterContainer"
 @onready var how_to_play_panel = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel" 
 @onready var rules_label = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/RulesLabel"
 @onready var tutorial_back_button = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/BackButton"
 
+var hint_button: Button # NEW
+var current_hint_count: int = 0
+
 var _is_last_level_completed: bool = false
 
 func setup_ui(_show_debug_tools: bool, cell_size: float):
+	
+	# NEW: Dynamically create and place the Hint button so it works instantly
+	var root_parent = get_parent()
+	hint_button = root_parent.get_node_or_null("HintButton")
+	if not hint_button:
+		hint_button = Button.new()
+		hint_button.name = "HintButton"
+		root_parent.add_child(hint_button)
+		
+	hint_button.add_theme_font_size_override("font_size", 28)
+	hint_button.global_position = Vector2(550, 115)
+	hint_button.size = Vector2(160, 50)
+	
 	if timer_label:
 		timer_label.add_theme_font_size_override("font_size", 32)
 		timer_label.modulate = Color(0.9, 0.9, 0.9)
@@ -100,7 +117,6 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 			defeat_restart_button = defeat_panel.find_child("TryAgainButton", true, false)
 		defeat_main_menu_button = defeat_panel.find_child("MainMenuButton", true, false)
 		
-		# Find the defeat label so we can position it
 		defeat_label = defeat_panel.find_child("DefeatLabel", true, false)
 		if not defeat_label:
 			defeat_label = defeat_panel.find_child("Label", true, false)
@@ -115,15 +131,13 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER 
 		win_label.autowrap_mode = TextServer.AUTOWRAP_WORD 
 		
-	# --- FIXED: Explicitly size and center the Defeat Label ---
 	if defeat_label:
 		defeat_label.add_theme_font_size_override("font_size", 32)
-		defeat_label.modulate = Color(1.0, 0.3, 0.3) # Red for defeat
+		defeat_label.modulate = Color(1.0, 0.3, 0.3) 
 		defeat_label.size = Vector2(square_panel_size.x, 70)
 		defeat_label.position = Vector2(0, 20)
 		defeat_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		defeat_label.autowrap_mode = TextServer.AUTOWRAP_WORD
-	# ----------------------------------------------------------
 		
 	if time_result_label:
 		time_result_label.add_theme_font_size_override("font_size", 24)
@@ -177,6 +191,13 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 
 	_connect_signals()
 
+# --- NEW: Dynamically updates the Hint counter UI ---
+func update_hint_count(count: int):
+	current_hint_count = count
+	if hint_button:
+		hint_button.text = "💡 Hint (" + str(count) + ")"
+		hint_button.disabled = (count <= 0)
+
 func update_dynamic_layout(board_y: float, board_height: float):
 	if status_label:
 		status_label.global_position.y = board_y + board_height + 40
@@ -185,17 +206,26 @@ func set_hud_buttons_disabled(is_disabled: bool):
 	if pause_button: pause_button.disabled = is_disabled
 	if reset_button: reset_button.disabled = is_disabled
 	if how_to_play_button: how_to_play_button.disabled = is_disabled
+	if hint_button: 
+		# Prevents re-enabling an empty hint button when unpausing
+		hint_button.disabled = is_disabled or (current_hint_count <= 0) 
 
 func _connect_signals():
 	if pause_button: pause_button.pressed.connect(func(): pause_requested.emit())
 	if reset_button: reset_button.pressed.connect(func(): reset_requested.emit())
 	if how_to_play_button: how_to_play_button.pressed.connect(func(): how_to_play_requested.emit())
+	if hint_button and not hint_button.pressed.is_connected(_on_hint_pressed):
+		hint_button.pressed.connect(_on_hint_pressed)
+		
 	if restart_button: restart_button.pressed.connect(_on_victory_button_pressed)
 	if main_menu_button: main_menu_button.pressed.connect(_on_main_menu_pressed)
 	if tutorial_back_button: tutorial_back_button.pressed.connect(_on_tutorial_back_pressed)
 	
 	if defeat_restart_button: defeat_restart_button.pressed.connect(func(): reset_requested.emit())
 	if defeat_main_menu_button: defeat_main_menu_button.pressed.connect(_on_main_menu_pressed)
+
+func _on_hint_pressed():
+	hint_requested.emit()
 
 func _on_tutorial_back_pressed():
 	if how_to_play_container: how_to_play_container.visible = false

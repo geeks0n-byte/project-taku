@@ -21,6 +21,9 @@ var is_game_active: bool = true
 var is_paused: bool = false 
 var current_level_index: int = 0
 
+var pending_hints: Array = [] 
+var solved_solution_reference: Dictionary = {}
+
 func _ready():
 	_load_all_levels_from_storage()
 	_intercept_global_selection()
@@ -43,6 +46,7 @@ func _bind_submanager_signals():
 	ui_manager.reset_requested.connect(_on_reset)
 	ui_manager.how_to_play_requested.connect(_on_how_to_play)
 	ui_manager.resume_from_tutorial_requested.connect(_on_resume)
+	ui_manager.hint_requested.connect(_on_hint_requested) 
 	
 	board_manager.cell_changed.connect(_on_cell_changed)
 	board_manager.shifter_move_made.connect(_on_shifter_move_made)
@@ -163,7 +167,8 @@ func generate_board():
 	
 	board_manager.process_mode = Node.PROCESS_MODE_INHERIT
 	
-	var tiles_list: Array = [0, 1]
+	# Updated fallback array to include Joker (2)
+	var tiles_list: Array = [0, 1, 2] 
 	if "available_tiles" in current_level_resource and current_level_resource.available_tiles.size() > 0:
 		tiles_list = current_level_resource.available_tiles
 		
@@ -175,10 +180,17 @@ func generate_board():
 		
 	var c_pairs: Array = []
 	if "constraint_pairs" in current_level_resource:
-		c_pairs = current_level_resource.constraint_pairs
+		c_pairs = current_level_resource.constraint_pairs.duplicate()
+		
+	solved_solution_reference = current_level_resource.layout.duplicate()
+	
+	pending_hints = c_pairs.duplicate()
+	pending_hints.shuffle()
 	
 	ui_manager.display_level(current_level_resource.level_number, is_custom)
-	board_manager.build_grid(current_level_resource.layout, tiles_list, s_pairs, c_pairs)
+	board_manager.build_grid(current_level_resource.layout, tiles_list, s_pairs, [])
+	
+	ui_manager.update_hint_count(pending_hints.size())
 	
 	var board_pixel_height = current_level_resource.height * board_manager.CELL_SIZE
 	var screen_height = get_viewport_rect().size.y
@@ -188,6 +200,36 @@ func generate_board():
 	
 	ui_manager.update_dynamic_layout(new_board_y, board_pixel_height)
 	_run_validation_pass()
+
+func _on_hint_requested():
+	if not is_game_active or is_paused: return
+	
+	var selected_hint = null
+	
+	while pending_hints.size() > 0:
+		var candidate = pending_hints.pop_back()
+		var coord_a = candidate["a"]
+		var coord_b = candidate["b"]
+		
+		var current_a = board_manager.board_cells[coord_a].state if board_manager.board_cells.has(coord_a) else -1
+		var current_b = board_manager.board_cells[coord_b].state if board_manager.board_cells.has(coord_b) else -1
+		
+		var solution_a = solved_solution_reference.get(coord_a, -1)
+		var solution_b = solved_solution_reference.get(coord_b, -1)
+		
+		if current_a == solution_a and current_b == solution_b:
+			continue
+			
+		selected_hint = candidate
+		break
+		
+	if selected_hint != null:
+		board_manager.active_constraint_pairs.append(selected_hint)
+		board_manager.trigger_redraw()
+		ui_manager.update_hint_count(pending_hints.size())
+		_run_validation_pass()
+	else:
+		ui_manager.update_hint_count(0)
 
 func _on_cell_changed(_coord: Vector2i):
 	if not is_game_active or is_paused: return
@@ -225,7 +267,7 @@ func trigger_victory():
 	
 	var elapsed = starting_time_limit - time_remaining
 	if starting_time_limit == 0:
-		elapsed = 0 # No time has technically elapsed in countdown terms if there was no countdown
+		elapsed = 0 
 	var minutes = int(elapsed / 60.0)
 	var seconds = elapsed % 60
 	var formatted_elapsed = "%02d:%02d" % [minutes, seconds]
@@ -293,7 +335,6 @@ func _on_quit_to_menu():
 
 func _on_timer_timeout():
 	if is_game_active and not is_paused:
-		# If starting limit is 0, time limit is infinite; do not tick down or fail
 		if starting_time_limit == 0:
 			return
 			

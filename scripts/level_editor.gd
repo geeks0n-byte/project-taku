@@ -100,7 +100,8 @@ func _load_core_level(res: LevelData):
 	if "time_limit" in res:
 		ui_manager.set_time_limit(res.time_limit)
 	
-	var raw_tiles = res.available_tiles if "available_tiles" in res and res.available_tiles.size() > 0 else [0, 1]
+	# Updated fallback to include Joker (2)
+	var raw_tiles = res.available_tiles if "available_tiles" in res and res.available_tiles.size() > 0 else [0, 1, 2]
 	var sanitized_tiles: Array = []
 	for tile in raw_tiles:
 		sanitized_tiles.append(int(tile))
@@ -135,7 +136,6 @@ func _on_random_board_requested():
 	
 	canvas_manager.load_layout(rand_w, rand_h, generated["layout"], generated["shifters"], generated["constraints"])
 	
-	# FIXED: Added the recenter call so the board physically moves to match its new dimensions!
 	_recenter_editor_layout(rand_w, rand_h)
 	
 	ui_manager.update_status("Generated %dx%d random puzzle!" % [rand_w, rand_h], Color(0.4, 1.0, 0.4))
@@ -169,8 +169,11 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 			for p in canvas_manager.loaded_shifter_pairs:
 				if p["a"] == coord and canvas_manager.board_cells.has(p["b"]):
 					cell.state = -1
-					canvas_manager.board_cells[p["b"]].state = 3
-					canvas_manager.board_cells[p["b"]].update_visuals()
+					cell.shifter_direction = Vector2i.ZERO 
+					var partner = canvas_manager.board_cells[p["b"]]
+					partner.state = 3
+					partner.shifter_direction = coord - p["b"] 
+					partner.update_visuals()
 					
 					playtest_shifter_moves += 1
 					if ui_manager.has_method("update_playtest_hud"):
@@ -179,8 +182,11 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 					break
 				elif p["b"] == coord and canvas_manager.board_cells.has(p["a"]):
 					cell.state = -1
-					canvas_manager.board_cells[p["a"]].state = 3
-					canvas_manager.board_cells[p["a"]].update_visuals()
+					cell.shifter_direction = Vector2i.ZERO 
+					var partner = canvas_manager.board_cells[p["a"]]
+					partner.state = 3
+					partner.shifter_direction = coord - p["a"] 
+					partner.update_visuals()
 					
 					playtest_shifter_moves += 1
 					if ui_manager.has_method("update_playtest_hud"):
@@ -262,7 +268,9 @@ func _execute_pair_link_creation(coord_a: Vector2i, coord_b: Vector2i):
 	canvas_manager.board_cells[coord_a].is_linked_pair = true
 	canvas_manager.board_cells[coord_b].is_linked_pair = true
 	canvas_manager.board_cells[coord_a].state = 3
+	canvas_manager.board_cells[coord_a].shifter_direction = coord_b - coord_a 
 	canvas_manager.board_cells[coord_b].state = -1
+	canvas_manager.board_cells[coord_b].shifter_direction = Vector2i.ZERO
 	
 	canvas_manager.board_cells[coord_a].is_locked = false
 	canvas_manager.board_cells[coord_b].is_locked = false
@@ -280,6 +288,9 @@ func _remove_pair_by_coord(coord: Vector2i):
 			canvas_manager.board_cells[p["b"]].is_linked_pair = false
 			canvas_manager.board_cells[p["a"]].state = -1
 			canvas_manager.board_cells[p["b"]].state = -1
+			
+			canvas_manager.board_cells[p["a"]].shifter_direction = Vector2i.ZERO 
+			canvas_manager.board_cells[p["b"]].shifter_direction = Vector2i.ZERO
 			
 			canvas_manager.board_cells[p["a"]].is_locked = false
 			canvas_manager.board_cells[p["b"]].is_locked = false
@@ -326,6 +337,7 @@ func _on_clear_board():
 	for coord in canvas_manager.board_cells:
 		var cell = canvas_manager.board_cells[coord]
 		cell.state = -1
+		cell.shifter_direction = Vector2i.ZERO 
 		cell.is_playable = true
 		cell.is_linked_pair = false 
 		cell.is_locked = false
@@ -370,7 +382,11 @@ func _on_test_mode_entered():
 	
 	for coord in canvas_manager.board_cells:
 		var cell = canvas_manager.board_cells[coord]
-		playtest_snapshot[coord] = cell.state
+		
+		playtest_snapshot[coord] = {
+			"state": cell.state,
+			"shifter_direction": cell.shifter_direction
+		}
 		
 		if cell.state == -2:
 			cell.is_playable = false
@@ -429,13 +445,15 @@ func _on_test_mode_exited():
 	for coord in canvas_manager.board_cells:
 		var cell = canvas_manager.board_cells[coord]
 		cell.clear_highlight()
-		var restored_state = playtest_snapshot[coord]
-		cell.state = restored_state
 		
-		if restored_state == -2:
+		var restored = playtest_snapshot[coord]
+		cell.state = restored["state"]
+		cell.shifter_direction = restored["shifter_direction"]
+		
+		if cell.state == -2:
 			cell.is_playable = false
 			cell.is_locked = true
-		elif restored_state != -1 and restored_state != 3:
+		elif cell.state != -1 and cell.state != 3:
 			cell.is_playable = true
 			cell.is_locked = true
 		else:
@@ -558,7 +576,8 @@ func _on_load_level():
 			if "time_limit" in loaded_level:
 				ui_manager.set_time_limit(loaded_level.time_limit)
 			
-			var raw_tiles = loaded_level.available_tiles if "available_tiles" in loaded_level and loaded_level.available_tiles.size() > 0 else [0, 1]
+			# Updated fallback to include Joker (2)
+			var raw_tiles = loaded_level.available_tiles if "available_tiles" in loaded_level and loaded_level.available_tiles.size() > 0 else [0, 1, 2]
 			var sanitized_tiles: Array = []
 			for tile in raw_tiles:
 				sanitized_tiles.append(int(tile))

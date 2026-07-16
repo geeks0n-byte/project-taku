@@ -67,6 +67,7 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 			cell.is_playable = true
 			cell.is_locked = false
 			cell.is_linked_pair = false 
+			cell.shifter_direction = Vector2i.ZERO # Ensure it resets correctly
 			cell.update_visuals()
 			
 			interceptor.size = Vector2(CELL_SIZE, CELL_SIZE)
@@ -115,35 +116,14 @@ func load_layout(new_width: int, new_height: int, layout_data: Dictionary, shift
 		if board_cells.has(pair["a"]): board_cells[pair["a"]].is_linked_pair = true
 		if board_cells.has(pair["b"]): board_cells[pair["b"]].is_linked_pair = true
 		if board_cells.has(pair["active"]):
-			board_cells[pair["active"]].state = 3
+			var active_coord = pair["active"]
+			var inactive_coord = pair["b"] if active_coord == pair["a"] else pair["a"]
+			board_cells[active_coord].state = 3
+			board_cells[active_coord].shifter_direction = inactive_coord - active_coord
 			
 	for coord in board_cells:
 		board_cells[coord].update_visuals()
 
-	trigger_redraw()
-
-# --- NEW: Inject the Random Generator layout directly onto the board ---
-func apply_generated_layout(layout_data: Dictionary):
-	loaded_shifter_pairs.clear()
-	loaded_constraint_pairs.clear()
-	
-	for coord in layout_data:
-		if board_cells.has(coord):
-			var cell = board_cells[coord]
-			var state = layout_data[coord]
-			cell.state = state
-			
-			if state == -2:
-				cell.is_playable = false
-				cell.is_locked = true
-			elif state >= 0:
-				cell.is_playable = true
-				cell.is_locked = true
-			else:
-				cell.is_playable = true
-				cell.is_locked = false
-			cell.update_visuals()
-			
 	trigger_redraw()
 
 func _cache_board_lines():
@@ -210,27 +190,6 @@ func _draw_overlays():
 		if draw_bottom: overlay_drawer.draw_line(pos_bl, pos_br, line_color, line_width)
 		if draw_top: overlay_drawer.draw_line(pos_tl, pos_tr, line_color, line_width)
 		if draw_left: overlay_drawer.draw_line(pos_tl, pos_bl, line_color, line_width)
-
-	var arrow_color = Color(0.7, 0.3, 1.0, 0.9) 
-	for pair in loaded_shifter_pairs:
-		var coord_a = pair["a"]
-		var coord_b = pair["b"]
-		if not (board_cells.has(coord_a) and board_cells.has(coord_b)): continue
-			
-		var pos_a = Vector2(coord_a.x * CELL_SIZE + CELL_SIZE/2.0, coord_a.y * CELL_SIZE + CELL_SIZE/2.0)
-		var pos_b = Vector2(coord_b.x * CELL_SIZE + CELL_SIZE/2.0, coord_b.y * CELL_SIZE + CELL_SIZE/2.0)
-		
-		var midpoint = (pos_a + pos_b) / 2.0
-		var pointing_dir = Vector2.ZERO
-		if board_cells[coord_a].state == 3: pointing_dir = (pos_b - pos_a).normalized()
-		else: pointing_dir = (pos_a - pos_b).normalized()
-			
-		var size = 18.0 
-		var tip = midpoint + pointing_dir * (size / 2.0)
-		var wing1 = midpoint - pointing_dir * (size / 2.0) + pointing_dir.orthogonal() * size
-		var wing2 = midpoint - pointing_dir * (size / 2.0) - pointing_dir.orthogonal() * size
-		
-		overlay_drawer.draw_polyline(PackedVector2Array([wing1, tip, wing2]), arrow_color, 6.0)
 
 	var equals_color = Color(1.0, 1.0, 1.0, 0.9)
 	var diff_color = Color(1.0, 1.0, 1.0, 0.9) 

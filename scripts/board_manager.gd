@@ -17,7 +17,7 @@ var overlay_drawer: Node2D
 
 func _ready():
 	overlay_drawer = Node2D.new()
-	overlay_drawer.z_index = 10 # FIXED: Boosted from 1 to 10 so it renders on top of tiles!
+	overlay_drawer.z_index = 10 
 	overlay_drawer.draw.connect(_draw_overlays)
 	add_child(overlay_drawer)
 
@@ -26,11 +26,12 @@ func trigger_redraw():
 	if overlay_drawer:
 		overlay_drawer.queue_redraw()
 
-func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1], shifter_pairs: Array = [], constraint_pairs: Array = []):
+# Updated default arg to [0, 1, 2]
+func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shifter_pairs: Array = [], constraint_pairs: Array = []):
 	board_cells.clear()
 	var pool_index = 0
 	
-	var allowed_tiles = available_tiles if available_tiles.size() > 0 else [0, 1]
+	var allowed_tiles = available_tiles if available_tiles.size() > 0 else [0, 1, 2] # Fallback updated
 	var max_x = 0
 	for coord in layout_data:
 		if coord.x > max_x: max_x = coord.x
@@ -60,6 +61,8 @@ func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1], shifte
 		cell.allowed_cycle_tiles = int_allowed_tiles
 		
 		cell.is_linked_pair = false
+		cell.shifter_direction = Vector2i.ZERO 
+		
 		if cell.shifter_toggled.is_connected(_on_shifter_tile_toggled):
 			cell.shifter_toggled.disconnect(_on_shifter_tile_toggled)
 		
@@ -102,8 +105,14 @@ func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1], shifte
 			cell_b.link_partner = a
 			cell_b.shifter_toggled.connect(_on_shifter_tile_toggled)
 			
-			if active == a: cell_a.state = 3
-			else: cell_b.state = 3
+			if active == a: 
+				cell_a.state = 3
+				cell_a.shifter_direction = b - a 
+				cell_b.shifter_direction = Vector2i.ZERO
+			else: 
+				cell_b.state = 3
+				cell_b.shifter_direction = a - b 
+				cell_a.shifter_direction = Vector2i.ZERO
 			
 			cell_a.update_visuals()
 			cell_b.update_visuals()
@@ -117,7 +126,10 @@ func _on_shifter_tile_toggled(clicked_coord: Vector2i):
 	var partner_cell = board_cells[partner_coord]
 	
 	clicked_cell.state = -1 
+	clicked_cell.shifter_direction = Vector2i.ZERO
+	
 	partner_cell.state = 3
+	partner_cell.shifter_direction = clicked_coord - partner_coord
 	
 	clicked_cell.update_visuals()
 	partner_cell.update_visuals()
@@ -167,50 +179,25 @@ func _draw_overlays():
 		var pos_bl = Vector2(coord.x * CELL_SIZE, (coord.y + 1) * CELL_SIZE)
 		var pos_br = Vector2((coord.x + 1) * CELL_SIZE, (coord.y + 1) * CELL_SIZE)
 		
-		# Right Edge
 		var right_playable = false
 		if board_cells.has(coord + Vector2i(1, 0)): 
 			right_playable = board_cells[coord + Vector2i(1, 0)].state != -2
 		if is_playable or right_playable:
 			overlay_drawer.draw_line(pos_tr, pos_br, line_color, line_width)
 			
-		# Bottom Edge
 		var bot_playable = false
 		if board_cells.has(coord + Vector2i(0, 1)): 
 			bot_playable = board_cells[coord + Vector2i(0, 1)].state != -2
 		if is_playable or bot_playable:
 			overlay_drawer.draw_line(pos_bl, pos_br, line_color, line_width)
 
-		# Top Edge (Only draw if neighbor is out-of-bounds)
 		if not board_cells.has(coord + Vector2i(0, -1)):
 			if is_playable:
 				overlay_drawer.draw_line(pos_tl, pos_tr, line_color, line_width)
 				
-		# Left Edge (Only draw if neighbor is out-of-bounds)
 		if not board_cells.has(coord + Vector2i(-1, 0)):
 			if is_playable:
 				overlay_drawer.draw_line(pos_tl, pos_bl, line_color, line_width)
-
-	var arrow_color = Color(0.7, 0.3, 1.0, 0.9) 
-	for pair in active_shifter_pairs:
-		var coord_a = pair["a"]
-		var coord_b = pair["b"]
-		if not (board_cells.has(coord_a) and board_cells.has(coord_b)): continue
-			
-		var pos_a = Vector2(coord_a.x * CELL_SIZE + CELL_SIZE/2.0, coord_a.y * CELL_SIZE + CELL_SIZE/2.0)
-		var pos_b = Vector2(coord_b.x * CELL_SIZE + CELL_SIZE/2.0, coord_b.y * CELL_SIZE + CELL_SIZE/2.0)
-		
-		var midpoint = (pos_a + pos_b) / 2.0
-		var pointing_dir = Vector2.ZERO
-		if board_cells[coord_a].state == 3: pointing_dir = (pos_b - pos_a).normalized()
-		else: pointing_dir = (pos_a - pos_b).normalized()
-			
-		var size = 18.0 
-		var tip = midpoint + pointing_dir * (size / 2.0)
-		var wing1 = midpoint - pointing_dir * (size / 2.0) + pointing_dir.orthogonal() * size
-		var wing2 = midpoint - pointing_dir * (size / 2.0) - pointing_dir.orthogonal() * size
-		
-		overlay_drawer.draw_polyline(PackedVector2Array([wing1, tip, wing2]), arrow_color, 6.0)
 
 	var equals_color = Color(1.0, 1.0, 1.0, 0.9)
 	var diff_color = Color(1.0, 1.0, 1.0, 0.9) 
