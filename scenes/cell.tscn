@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://d25rxch5oti18" path="res://scripts/cell.gd" id="1_k6tqi"]
 [ext_resource type="Texture2D" uid="uid://ci71ltxqka6f8" path="res://icons/tiles/tile_empty.svg" id="2_4kve2"]
 [ext_resource type="Texture2D" uid="uid://j7fscbkdrsrm" path="res://icons/tiles/tile_lock.svg" id="4_ds1sf"]
-[ext_resource type="Texture2D" uid="uid://cr3gyfkb3xwqs" path="res://icons/tiles/tile_wall.svg" id="6_v4toj"]
+[ext_resource type="Texture2D" uid="uid://bdfny1sxgf6ux" path="res://icons/tiles/tile_wall.svg" id="6_v4toj"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_q20q2"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
