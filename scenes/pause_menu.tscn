@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://b63k7kkhmvpc7" path="res://scripts/pause_menu.gd" id="1_n87rw"]
 [ext_resource type="Texture2D" uid="uid://ds4khbnemdfjp" path="res://icons/buttons/Big@2x.png" id="2_myx47"]
-[ext_resource type="Texture2D" uid="uid://bwtkif7iq7ypx" path="res://icons/buttons/button_black.png" id="3_kukqi"]
+[ext_resource type="Texture2D" uid="uid://f783gmenppba" path="res://icons/buttons/button_tile_gray.svg" id="3_kukqi"]
 
 [node name="PauseMenu" type="Control" unique_id=1796595449]
 layout_mode = 3
@@ -53,6 +53,7 @@ offset_right = 829.0
 offset_bottom = 567.0
 scale = Vector2(0.6, 0.6)
 texture_normal = ExtResource("3_kukqi")
+stretch_mode = 0
 
 [node name="ResumeLabel" type="Label" parent="ResumeButton" unique_id=1253357902]
 layout_mode = 0
@@ -97,6 +98,7 @@ offset_right = 833.0
 offset_bottom = 866.0
 scale = Vector2(0.6, 0.6)
 texture_normal = ExtResource("3_kukqi")
+stretch_mode = 0
 
 [node name="AutoWinLabel" type="Label" parent="AutoWinButton" unique_id=407596096]
 top_level = true
@@ -119,6 +121,7 @@ offset_right = 834.0
 offset_bottom = 1020.0
 scale = Vector2(0.6, 0.6)
 texture_normal = ExtResource("3_kukqi")
+stretch_mode = 0
 
 [node name="QuitLabel" type="Label" parent="QuitButton" unique_id=1999363146]
 top_level = true

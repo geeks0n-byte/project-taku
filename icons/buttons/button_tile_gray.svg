@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 16" width="256" height="128" shape-rendering="crispEdges">
+  <!-- Outer Bevel & Base Shadow -->
+  <rect x="1" y="1" width="30" height="14" fill="#1a1a1a" />
+  
+  <!-- Main Surface: Medium Gray -->
+  <rect x="1" y="1" width="30" height="13" fill="#7d7d7d" />
+  
+  <!-- Top & Left Glossy Highlights: Light Silver -->
+  <rect x="1" y="1" width="29" height="1" fill="#c2c3c7" />
+  <rect x="1" y="2" width="1" height="11" fill="#c2c3c7" />
+  
+  <!-- Bottom & Right Bevel Shadows: Dark Charcoal -->
+  <rect x="2" y="13" width="29" height="1" fill="#3a3a3a" />
+  <rect x="30" y="2" width="1" height="12" fill="#3a3a3a" />
+  
+  <!-- Center Core -->
+  <rect x="3" y="3" width="26" height="8" fill="#c2c3c7" />
+  <rect x="4" y="4" width="24" height="7" fill="#7d7d7d" />
+</svg>
