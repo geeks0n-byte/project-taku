@@ -5,7 +5,7 @@ extends EditorScript
 var master_level_database: Array = [
 	{
 		"number": 1,
-		# NEW: Define your allowed tiles here! [0 = Red, 1 = Blue, 2 = Green Wildcard]
+		"time_limit": 0, # 0 = Unlimited Time!
 		"available_tiles": [0, 1, 2], 
 		"layout": {
 			Vector2i(0,0): -1, Vector2i(1,0): -1, Vector2i(2,0): 2,  Vector2i(3,0): -1, Vector2i(4,0): -1, Vector2i(5,0): -1, Vector2i(6,0): -1,
@@ -15,12 +15,21 @@ var master_level_database: Array = [
 			Vector2i(0,4): -1, Vector2i(1,4): -1, Vector2i(2,4): -1, Vector2i(3,4): -2,  Vector2i(4,4): -1, Vector2i(5,4): -1, Vector2i(6,4): -1,
 			Vector2i(0,5): 1,  Vector2i(1,5): -1, Vector2i(2,5): -1, Vector2i(3,5): -1, Vector2i(4,5): -1, Vector2i(5,5): 1,  Vector2i(6,5): 2,
 			Vector2i(0,6): -1, Vector2i(1,6): 2,  Vector2i(2,6): -1, Vector2i(3,6): 0,  Vector2i(4,6): -1, Vector2i(5,6): -1, Vector2i(6,6): -1,
-		}
+		},
+		# NEW: Define Shifter pairs. "a" and "b" are the two linked coordinates. "active" is where the purple tile currently sits.
+		"shifter_pairs": [
+			{"a": Vector2i(0,0), "b": Vector2i(1,0), "active": Vector2i(0,0)}
+		],
+		# NEW: Define Constraints. type can be "equals" (=) or "not_equals" (x)
+		"constraint_pairs": [
+			{"a": Vector2i(2,2), "b": Vector2i(3,2), "type": "equals"}
+		]
 	},
 	{
 		"number": 2,
-		# If you completely omit "available_tiles" here, the script will automatically
-		# default to [0, 1] when building the file, saving you typing time!
+		"time_limit": 60,
+		# If omitted, available_tiles defaults to [0, 1]
+		# If omitted, shifter_pairs and constraint_pairs default to empty arrays []
 		"layout": {
 			Vector2i(0,0): -1, Vector2i(1,0): -1, Vector2i(2,0): -1, Vector2i(3,0): -1, Vector2i(4,0): 1,  Vector2i(5,0): -1, Vector2i(6,0): -1,
 			Vector2i(0,1): -1, Vector2i(1,1): -2, Vector2i(2,1): -1, Vector2i(3,1): 2,  Vector2i(4,1): -1, Vector2i(5,1): -1, Vector2i(6,1): -1,
@@ -44,14 +53,31 @@ func _run():
 		new_level.level_number = data["number"]
 		new_level.layout = data["layout"]
 		
-		# --- NEW: Safely read and assign available tiles ---
-		var allowed: Array[int] = [0, 1] # Fallback
+		# --- TIME LIMIT ---
+		if data.has("time_limit"):
+			new_level.time_limit = data["time_limit"]
+		else:
+			new_level.time_limit = 60 # Default fallback
+		
+		# --- AVAILABLE TILES ---
+		var allowed: Array[int] = [0, 1] 
 		if data.has("available_tiles"):
-			# .assign() safely forces the dictionary array into Godot's strictly typed Array[int]
 			allowed.assign(data["available_tiles"])
 		new_level.available_tiles = allowed
-		# ---------------------------------------------------
 		
+		# --- SHIFTER PAIRS ---
+		var shifters: Array = []
+		if data.has("shifter_pairs"):
+			shifters.assign(data["shifter_pairs"].duplicate(true))
+		new_level.shifter_pairs = shifters
+		
+		# --- CONSTRAINT PAIRS ---
+		var constraints: Array = []
+		if data.has("constraint_pairs"):
+			constraints.assign(data["constraint_pairs"].duplicate(true))
+		new_level.constraint_pairs = constraints
+		
+		# --- DYNAMIC GRID SIZING ---
 		var max_x = 0
 		var max_y = 0
 		
@@ -66,7 +92,7 @@ func _run():
 		var result = ResourceSaver.save(new_level, save_path)
 		
 		if result == OK:
-			print("Successfully created resource: ", save_path, " (Size: %dx%d, Tiles: %s)" % [new_level.width, new_level.height, str(allowed)])
+			print("Successfully created resource: ", save_path, " (Size: %dx%d, Time: %ds, Tiles: %s, Shifters: %d, Constraints: %d)" % [new_level.width, new_level.height, new_level.time_limit, str(allowed), shifters.size(), constraints.size()])
 		else:
 			print("Generation Error on path: ", save_path, " Code: ", result)
 			

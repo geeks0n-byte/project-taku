@@ -70,7 +70,7 @@ signal overwrite_confirmed
 var editor_width: int = 3
 var editor_height: int = 3
 var editor_level: int = 1
-var editor_time_limit: int = 30
+var editor_time_limit: int = 60 # Default is set to 60s
 
 var brush_button_group: ButtonGroup = ButtonGroup.new()
 
@@ -193,9 +193,13 @@ func _build_playtest_hud():
 
 func update_playtest_hud(time_remaining: int, moves: int):
 	if pt_timer_label:
-		var minutes = max(0, int(time_remaining / 60.0))
-		var seconds = max(0, time_remaining % 60)
-		pt_timer_label.text = "Time: %02d:%02d" % [minutes, seconds]
+		# FIXED: Show ∞ instead of 00:00 when time limit is infinite (0)
+		if editor_time_limit == 0:
+			pt_timer_label.text = "Time: ∞"
+		else:
+			var minutes = max(0, int(time_remaining / 60.0))
+			var seconds = max(0, time_remaining % 60)
+			pt_timer_label.text = "Time: %02d:%02d" % [minutes, seconds]
 	if pt_moves_label:
 		pt_moves_label.text = "Shifter Moves: %d" % moves
 
@@ -242,7 +246,8 @@ func get_time_limit() -> int:
 	return editor_time_limit
 	
 func set_time_limit(val: int):
-	editor_time_limit = max(5, val)
+	# Changed max clamp value from 5 to 0 to allow infinite setups
+	editor_time_limit = max(0, val)
 	_update_number_labels()
 
 func update_dynamic_editor_layout(_board_y: float = 0.0, _board_height: float = 0.0) -> void:
@@ -267,7 +272,12 @@ func _update_number_labels():
 	if width_label: width_label.text = "X: " + str(editor_width)
 	if height_label: height_label.text = "Y: " + str(editor_height)
 	if level_label: level_label.text = "Lvl: " + str(editor_level)
-	if time_label: time_label.text = "Time: " + str(editor_time_limit) + "s"
+	if time_label:
+		# FIXED: Show ∞ instead of 0s in the Designer Mode input
+		if editor_time_limit == 0:
+			time_label.text = "Time: ∞"
+		else:
+			time_label.text = "Time: " + str(editor_time_limit) + "s"
 
 func _update_panel_layout(_grid_width: int, _grid_height: int):
 	var screen_width = get_viewport().get_visible_rect().size.x
@@ -441,15 +451,15 @@ func _connect_ui_signals():
 	if level_minus: level_minus.pressed.connect(func(): _adjust_value("level", -1))
 	if level_plus: level_plus.pressed.connect(func(): _adjust_value("level", 1))
 	
-	if time_minus: time_minus.pressed.connect(func(): _adjust_value("time", -5))
-	if time_plus: time_plus.pressed.connect(func(): _adjust_value("time", 5))
+	if time_minus: time_minus.pressed.connect(func(): _adjust_value("time", -30))
+	if time_plus: time_plus.pressed.connect(func(): _adjust_value("time", 30))
 
 func _adjust_value(target: String, amount: int):
 	match target:
 		"width": editor_width = clamp(editor_width + amount, 3, 9) 
 		"height": editor_height = clamp(editor_height + amount, 3, 11)
 		"level": editor_level = max(1, editor_level + amount) 
-		"time": editor_time_limit = max(5, editor_time_limit + amount)
+		"time": editor_time_limit = max(0, editor_time_limit + amount)
 	_update_number_labels()
 
 func _on_set_size_pressed():

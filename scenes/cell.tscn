@@ -2,8 +2,8 @@
 
 [ext_resource type="Script" uid="uid://d25rxch5oti18" path="res://scripts/cell.gd" id="1_k6tqi"]
 [ext_resource type="Texture2D" uid="uid://ci71ltxqka6f8" path="res://icons/tiles/tile_empty.svg" id="2_4kve2"]
+[ext_resource type="Texture2D" uid="uid://j7fscbkdrsrm" path="res://icons/tiles/tile_lock.svg" id="4_ds1sf"]
 [ext_resource type="Texture2D" uid="uid://cr3gyfkb3xwqs" path="res://icons/tiles/tile_wall.svg" id="6_v4toj"]
-[ext_resource type="Texture2D" uid="uid://dd618veklx7ig" path="res://icons/placeholder_icons/lock.png" id="7_4kve2"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_q20q2"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
@@ -58,7 +58,6 @@ color = Color(0.60784316, 0.3647059, 0.8980392, 0.33333334)
 
 [node name="LockIcon" type="TextureRect" parent="." unique_id=1354384231]
 visible = false
-modulate = Color(1, 1, 1, 0.39215687)
 z_index = 3
 layout_mode = 1
 anchors_preset = 15
@@ -67,6 +66,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = ExtResource("7_4kve2")
+texture = ExtResource("4_ds1sf")
 expand_mode = 1
 stretch_mode = 5

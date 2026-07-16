@@ -224,9 +224,13 @@ func trigger_victory():
 		SaveManager.unlock_level(next_level_to_unlock)
 	
 	var elapsed = starting_time_limit - time_remaining
+	if starting_time_limit == 0:
+		elapsed = 0 # No time has technically elapsed in countdown terms if there was no countdown
 	var minutes = int(elapsed / 60.0)
 	var seconds = elapsed % 60
 	var formatted_elapsed = "%02d:%02d" % [minutes, seconds]
+	if starting_time_limit == 0:
+		formatted_elapsed = "Unlimited"
 	
 	ui_manager.show_victory(display_num, is_last, formatted_elapsed, is_custom)
 
@@ -289,6 +293,10 @@ func _on_quit_to_menu():
 
 func _on_timer_timeout():
 	if is_game_active and not is_paused:
+		# If starting limit is 0, time limit is infinite; do not tick down or fail
+		if starting_time_limit == 0:
+			return
+			
 		time_remaining -= 1
 		_update_timer_display()
 		
@@ -296,6 +304,10 @@ func _on_timer_timeout():
 			trigger_defeat()
 
 func _update_timer_display():
+	if starting_time_limit == 0:
+		ui_manager.update_timer("No Limit")
+		return
+		
 	var minutes = int(time_remaining / 60.0)
 	var seconds = time_remaining % 60
 	if minutes < 0: minutes = 0

@@ -156,7 +156,7 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 					
 					playtest_shifter_moves += 1
 					if ui_manager.has_method("update_playtest_hud"):
-						ui_manager.update_playtest_hud(playtest_time_remaining, playtest_shifter_moves)
+						_update_playtest_hud_wrapper()
 					canvas_manager.trigger_redraw() 
 					break
 				elif p["b"] == coord and canvas_manager.board_cells.has(p["a"]):
@@ -166,7 +166,7 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 					
 					playtest_shifter_moves += 1
 					if ui_manager.has_method("update_playtest_hud"):
-						ui_manager.update_playtest_hud(playtest_time_remaining, playtest_shifter_moves)
+						_update_playtest_hud_wrapper()
 					canvas_manager.trigger_redraw() 
 					break
 		else:
@@ -367,22 +367,36 @@ func _on_test_mode_entered():
 	playtest_time_remaining = ui_manager.get_time_limit()
 	playtest_shifter_moves = 0
 	if ui_manager.has_method("update_playtest_hud"):
-		ui_manager.update_playtest_hud(playtest_time_remaining, playtest_shifter_moves)
+		_update_playtest_hud_wrapper()
 	playtest_timer.start()
 		
 	ui_manager.toggle_playtest_visibility(true)
-	ui_manager.update_status("PLAYTEST ACTIVE: Solve it before time runs out!", Color.YELLOW)
+	if ui_manager.get_time_limit() == 0:
+		ui_manager.update_status("PLAYTEST ACTIVE: Take all the time you need!", Color.YELLOW)
+	else:
+		ui_manager.update_status("PLAYTEST ACTIVE: Solve it before time runs out!", Color.YELLOW)
 	
 	_run_playtest_validation_pass()
 
 func _on_playtest_timer_timeout():
 	if is_playtesting:
+		# FIXED: If limit is set to 0, do not tick down or trigger defeat
+		if ui_manager.get_time_limit() == 0:
+			return
+			
 		playtest_time_remaining -= 1
 		if ui_manager.has_method("update_playtest_hud"):
-			ui_manager.update_playtest_hud(playtest_time_remaining, playtest_shifter_moves)
+			_update_playtest_hud_wrapper()
 		
 		if playtest_time_remaining <= 0:
 			_trigger_playtest_defeat()
+
+func _update_playtest_hud_wrapper():
+	if ui_manager.get_time_limit() == 0:
+		# Pass 0 down, UIManager will translate this directly into ∞
+		ui_manager.update_playtest_hud(0, playtest_shifter_moves)
+	else:
+		ui_manager.update_playtest_hud(playtest_time_remaining, playtest_shifter_moves)
 
 func _on_test_mode_exited():
 	is_playtesting = false

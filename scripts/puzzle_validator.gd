@@ -15,21 +15,39 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 			if state_a < 0 or state_b < 0:
 				continue
 
-			var is_joker_involved = (state_a == 2 or state_b == 2)
-			
-			if not is_joker_involved:
-				if pair["type"] == "equals" and state_a != state_b:
-					is_valid = false
-					if not errors.has("Equal constraint violated."):
-						errors.append("Equal constraint violated.")
-					if cell_a.has_method("set_error_highlight"): cell_a.set_error_highlight()
-					if cell_b.has_method("set_error_highlight"): cell_b.set_error_highlight()
-				elif pair["type"] == "not_equals" and state_a == state_b:
-					is_valid = false
-					if not errors.has("Not Equal constraint violated."):
-						errors.append("Not Equal constraint violated.")
-					if cell_a.has_method("set_error_highlight"): cell_a.set_error_highlight()
-					if cell_b.has_method("set_error_highlight"): cell_b.set_error_highlight()
+			var can_be_equal = false
+			var can_be_not_equal = false
+
+			if state_a == 3 or state_b == 3:
+				if state_a == state_b:
+					can_be_equal = true
+					can_be_not_equal = false
+				else:
+					can_be_equal = false
+					can_be_not_equal = true
+			elif state_a == 2 or state_b == 2:
+				can_be_equal = true
+				can_be_not_equal = true
+			else:
+				if state_a == state_b:
+					can_be_equal = true
+					can_be_not_equal = false
+				else:
+					can_be_equal = false
+					can_be_not_equal = true
+
+			if pair["type"] == "equals" and not can_be_equal:
+				is_valid = false
+				if not errors.has("Equal constraint violated."):
+					errors.append("Equal constraint violated.")
+				if cell_a.has_method("set_error_highlight"): cell_a.set_error_highlight()
+				if cell_b.has_method("set_error_highlight"): cell_b.set_error_highlight()
+			elif pair["type"] == "not_equals" and not can_be_not_equal:
+				is_valid = false
+				if not errors.has("Not Equal constraint violated."):
+					errors.append("Not Equal constraint violated.")
+				if cell_a.has_method("set_error_highlight"): cell_a.set_error_highlight()
+				if cell_b.has_method("set_error_highlight"): cell_b.set_error_highlight()
 
 	for line_data in cached_lines:
 		var coords = line_data["coords"]
@@ -48,7 +66,7 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 			elif st == 1: count_1 += 1
 			elif st == 2: count_jokers += 1
 
-		# NEW RULE: Max 1 Joker per row/column
+		# Max 1 Joker per row/column
 		if count_jokers > 1:
 			is_valid = false
 			if not errors.has("Max 1 Joker allowed per row and column."):
@@ -87,7 +105,7 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 				playable_count += 1
 				if v >= 0: 
 					filled_count += 1
-				# NEW RULE: Green tiles are excluded from this color parity math
+				# Green tiles are excluded from this color parity math
 				if v == 0 or v == 1:
 					colorable_tiles += 1
 					
