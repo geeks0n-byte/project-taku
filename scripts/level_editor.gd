@@ -115,12 +115,24 @@ func _bind_signals():
 	ui_manager.save_requested.connect(_on_save_level)
 	ui_manager.load_requested.connect(_on_load_level) 
 	ui_manager.clear_requested.connect(_on_clear_board) 
+	ui_manager.random_requested.connect(_on_random_board_requested) # NEW
 	ui_manager.main_menu_requested.connect(_on_main_menu)
 	ui_manager.test_mode_entered.connect(_on_test_mode_entered)
 	ui_manager.test_mode_exited.connect(_on_test_mode_exited)
 	ui_manager.grid_size_changed.connect(_on_grid_size_changed) 
 	ui_manager.overwrite_confirmed.connect(_execute_save)
 	canvas_manager.canvas_cell_clicked.connect(_on_canvas_cell_clicked)
+
+# --- NEW: Random Generator Handler ---
+func _on_random_board_requested():
+	if is_playtesting: return
+	
+	# Generate the layout using the new static generator
+	var layout = PuzzleGenerator.generate_random_layout(canvas_manager.grid_width, canvas_manager.grid_height, ui_manager.get_allowed_tiles())
+	
+	# Pass it back into the canvas
+	canvas_manager.apply_generated_layout(layout)
+	ui_manager.update_status("Random puzzle generated!", Color(0.4, 1.0, 0.4))
 
 func _on_grid_size_changed(new_width: int, new_height: int):
 	if is_playtesting: return
@@ -343,6 +355,7 @@ func _scan_directory(path_to_scan: String) -> Array:
 
 func _on_test_mode_entered():
 	is_playtesting = true
+	canvas_manager.is_playtesting = true
 	playtest_snapshot.clear()
 	link_first_selection = null
 	
@@ -376,11 +389,11 @@ func _on_test_mode_entered():
 	else:
 		ui_manager.update_status("PLAYTEST ACTIVE: Solve it before time runs out!", Color.YELLOW)
 	
+	canvas_manager.trigger_redraw()
 	_run_playtest_validation_pass()
 
 func _on_playtest_timer_timeout():
 	if is_playtesting:
-		# FIXED: If limit is set to 0, do not tick down or trigger defeat
 		if ui_manager.get_time_limit() == 0:
 			return
 			
@@ -393,13 +406,13 @@ func _on_playtest_timer_timeout():
 
 func _update_playtest_hud_wrapper():
 	if ui_manager.get_time_limit() == 0:
-		# Pass 0 down, UIManager will translate this directly into ∞
 		ui_manager.update_playtest_hud(0, playtest_shifter_moves)
 	else:
 		ui_manager.update_playtest_hud(playtest_time_remaining, playtest_shifter_moves)
 
 func _on_test_mode_exited():
 	is_playtesting = false
+	canvas_manager.is_playtesting = false 
 	playtest_timer.stop()
 	ui_manager.hide_victory_overlay()
 	link_first_selection = null

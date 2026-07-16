@@ -17,9 +17,11 @@ var loaded_shifter_pairs: Array = []
 var loaded_constraint_pairs: Array = [] 
 var overlay_drawer: Node2D
 
+var is_playtesting: bool = false 
+
 func _ready():
 	overlay_drawer = Node2D.new()
-	overlay_drawer.z_index = 10 # FIXED: Render above the cell textures
+	overlay_drawer.z_index = 10 
 	overlay_drawer.draw.connect(_draw_overlays)
 	add_child(overlay_drawer)
 
@@ -120,6 +122,30 @@ func load_layout(new_width: int, new_height: int, layout_data: Dictionary, shift
 
 	trigger_redraw()
 
+# --- NEW: Inject the Random Generator layout directly onto the board ---
+func apply_generated_layout(layout_data: Dictionary):
+	loaded_shifter_pairs.clear()
+	loaded_constraint_pairs.clear()
+	
+	for coord in layout_data:
+		if board_cells.has(coord):
+			var cell = board_cells[coord]
+			var state = layout_data[coord]
+			cell.state = state
+			
+			if state == -2:
+				cell.is_playable = false
+				cell.is_locked = true
+			elif state >= 0:
+				cell.is_playable = true
+				cell.is_locked = true
+			else:
+				cell.is_playable = true
+				cell.is_locked = false
+			cell.update_visuals()
+			
+	trigger_redraw()
+
 func _cache_board_lines():
 	cached_lines.clear()
 	var rows = {}
@@ -154,36 +180,36 @@ func _draw_overlays():
 	
 	for coord in board_cells:
 		var cell = board_cells[coord]
-		var is_playable = cell.state != -2
 		
 		var pos_tl = Vector2(coord.x * CELL_SIZE, coord.y * CELL_SIZE)
 		var pos_tr = Vector2((coord.x + 1) * CELL_SIZE, coord.y * CELL_SIZE)
 		var pos_bl = Vector2(coord.x * CELL_SIZE, (coord.y + 1) * CELL_SIZE)
 		var pos_br = Vector2((coord.x + 1) * CELL_SIZE, (coord.y + 1) * CELL_SIZE)
 		
-		# Right Edge
-		var right_playable = false
-		if board_cells.has(coord + Vector2i(1, 0)): 
-			right_playable = board_cells[coord + Vector2i(1, 0)].state != -2
-		if is_playable or right_playable:
-			overlay_drawer.draw_line(pos_tr, pos_br, line_color, line_width)
+		var draw_right = false
+		var draw_bottom = false
+		var draw_top = false
+		var draw_left = false
+		
+		if is_playtesting:
+			var is_playable = cell.state != -2
+			var right_playable = board_cells.has(coord + Vector2i(1, 0)) and board_cells[coord + Vector2i(1, 0)].state != -2
+			var bot_playable = board_cells.has(coord + Vector2i(0, 1)) and board_cells[coord + Vector2i(0, 1)].state != -2
 			
-		# Bottom Edge
-		var bot_playable = false
-		if board_cells.has(coord + Vector2i(0, 1)): 
-			bot_playable = board_cells[coord + Vector2i(0, 1)].state != -2
-		if is_playable or bot_playable:
-			overlay_drawer.draw_line(pos_bl, pos_br, line_color, line_width)
-
-		# Top Edge (Only draw if neighbor is out-of-bounds)
-		if not board_cells.has(coord + Vector2i(0, -1)):
-			if is_playable:
-				overlay_drawer.draw_line(pos_tl, pos_tr, line_color, line_width)
-				
-		# Left Edge (Only draw if neighbor is out-of-bounds)
-		if not board_cells.has(coord + Vector2i(-1, 0)):
-			if is_playable:
-				overlay_drawer.draw_line(pos_tl, pos_bl, line_color, line_width)
+			draw_right = is_playable or right_playable
+			draw_bottom = is_playable or bot_playable
+			draw_top = is_playable and not board_cells.has(coord + Vector2i(0, -1))
+			draw_left = is_playable and not board_cells.has(coord + Vector2i(-1, 0))
+		else:
+			draw_right = true
+			draw_bottom = true
+			draw_top = not board_cells.has(coord + Vector2i(0, -1))
+			draw_left = not board_cells.has(coord + Vector2i(-1, 0))
+			
+		if draw_right: overlay_drawer.draw_line(pos_tr, pos_br, line_color, line_width)
+		if draw_bottom: overlay_drawer.draw_line(pos_bl, pos_br, line_color, line_width)
+		if draw_top: overlay_drawer.draw_line(pos_tl, pos_tr, line_color, line_width)
+		if draw_left: overlay_drawer.draw_line(pos_tl, pos_bl, line_color, line_width)
 
 	var arrow_color = Color(0.7, 0.3, 1.0, 0.9) 
 	for pair in loaded_shifter_pairs:

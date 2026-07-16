@@ -5,6 +5,7 @@ signal brush_changed(state_id: int, brush_name: String)
 signal save_requested
 signal load_requested
 signal clear_requested
+signal random_requested # Signal for random generator
 signal main_menu_requested
 signal test_mode_entered
 signal test_mode_exited
@@ -70,17 +71,27 @@ signal overwrite_confirmed
 var editor_width: int = 3
 var editor_height: int = 3
 var editor_level: int = 1
-var editor_time_limit: int = 0
+var editor_time_limit: int = 0 
 
 var brush_button_group: ButtonGroup = ButtonGroup.new()
 
 var playtest_hud_container: HBoxContainer
 var pt_timer_label: Label
 var pt_moves_label: Label
+var random_button: Button 
 
 func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 	editor_width = grid_width
 	editor_height = grid_height
+	
+	# Dynamically build the RANDOM button, add the playing dice emoji, and place it inside grid_size_container at index 0
+	if grid_size_container and not random_button:
+		random_button = Button.new()
+		random_button.text = "🎲 RANDOM"
+		random_button.add_theme_font_size_override("font_size", 28)
+		random_button.pressed.connect(func(): random_requested.emit())
+		grid_size_container.add_child(random_button)
+		grid_size_container.move_child(random_button, 0)
 	
 	_setup_brush_toggles()
 	_setup_tree_checkbox_icons()
@@ -193,7 +204,6 @@ func _build_playtest_hud():
 
 func update_playtest_hud(time_remaining: int, moves: int):
 	if pt_timer_label:
-		# FIXED: Show ∞ instead of 00:00 when time limit is infinite (0)
 		if editor_time_limit == 0:
 			pt_timer_label.text = "Time: ∞"
 		else:
@@ -246,7 +256,6 @@ func get_time_limit() -> int:
 	return editor_time_limit
 	
 func set_time_limit(val: int):
-	# Changed max clamp value from 5 to 0 to allow infinite setups
 	editor_time_limit = max(0, val)
 	_update_number_labels()
 
@@ -273,7 +282,6 @@ func _update_number_labels():
 	if height_label: height_label.text = "Y: " + str(editor_height)
 	if level_label: level_label.text = "Lvl: " + str(editor_level)
 	if time_label:
-		# FIXED: Show ∞ instead of 0s in the Designer Mode input
 		if editor_time_limit == 0:
 			time_label.text = "Time: ∞"
 		else:

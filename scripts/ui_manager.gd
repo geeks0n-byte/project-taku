@@ -25,6 +25,7 @@ signal play_again_requested
 @onready var defeat_panel = get_node_or_null("../EndLayer/DefeatPanel")
 var defeat_restart_button: Button
 var defeat_main_menu_button: Button
+var defeat_label: Label # Added reference for your defeat text
 
 @onready var how_to_play_container = $"../HowToPlayLayer/CenterContainer"
 @onready var how_to_play_panel = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel" 
@@ -99,6 +100,11 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 			defeat_restart_button = defeat_panel.find_child("TryAgainButton", true, false)
 		defeat_main_menu_button = defeat_panel.find_child("MainMenuButton", true, false)
 		
+		# Find the defeat label so we can position it
+		defeat_label = defeat_panel.find_child("DefeatLabel", true, false)
+		if not defeat_label:
+			defeat_label = defeat_panel.find_child("Label", true, false)
+		
 		if defeat_restart_button: defeat_restart_button.text = "Try Again"
 
 	if win_label:
@@ -109,6 +115,16 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER 
 		win_label.autowrap_mode = TextServer.AUTOWRAP_WORD 
 		
+	# --- FIXED: Explicitly size and center the Defeat Label ---
+	if defeat_label:
+		defeat_label.add_theme_font_size_override("font_size", 32)
+		defeat_label.modulate = Color(1.0, 0.3, 0.3) # Red for defeat
+		defeat_label.size = Vector2(square_panel_size.x, 70)
+		defeat_label.position = Vector2(0, 20)
+		defeat_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		defeat_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	# ----------------------------------------------------------
+		
 	if time_result_label:
 		time_result_label.add_theme_font_size_override("font_size", 24)
 		time_result_label.modulate = Color(0.9, 0.9, 0.9)
@@ -118,7 +134,6 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 
 	var v_start_y = 210 
 	
-	# --- FIXED: Explicit positioning for BOTH Victory and Defeat Buttons ---
 	if restart_button:
 		restart_button.add_theme_font_size_override("font_size", 28)
 		restart_button.position = Vector2(button_center_x, v_start_y)
@@ -140,7 +155,6 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		defeat_main_menu_button.add_theme_font_size_override("font_size", 28)
 		defeat_main_menu_button.position = Vector2(button_center_x, v_start_y)
 		defeat_main_menu_button.size = menu_button_size
-	# -----------------------------------------------------------------------
 
 	var tutorial_size = Vector2(700, 800)
 	if how_to_play_panel:
