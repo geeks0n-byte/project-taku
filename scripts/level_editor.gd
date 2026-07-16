@@ -115,7 +115,7 @@ func _bind_signals():
 	ui_manager.save_requested.connect(_on_save_level)
 	ui_manager.load_requested.connect(_on_load_level) 
 	ui_manager.clear_requested.connect(_on_clear_board) 
-	ui_manager.random_requested.connect(_on_random_board_requested) # NEW
+	ui_manager.random_requested.connect(_on_random_board_requested)
 	ui_manager.main_menu_requested.connect(_on_main_menu)
 	ui_manager.test_mode_entered.connect(_on_test_mode_entered)
 	ui_manager.test_mode_exited.connect(_on_test_mode_exited)
@@ -123,16 +123,24 @@ func _bind_signals():
 	ui_manager.overwrite_confirmed.connect(_execute_save)
 	canvas_manager.canvas_cell_clicked.connect(_on_canvas_cell_clicked)
 
-# --- NEW: Random Generator Handler ---
+# --- UPDATED: Random Generator Hook now pulls min/max bounds ---
 func _on_random_board_requested():
 	if is_playtesting: return
 	
-	# Generate the layout using the new static generator
-	var layout = PuzzleGenerator.generate_random_layout(canvas_manager.grid_width, canvas_manager.grid_height, ui_manager.get_allowed_tiles())
+	# Randomize grid size based on the exact editor min/max bounds!
+	var rand_w = randi_range(EditorUIManager.MIN_GRID_WIDTH, EditorUIManager.MAX_GRID_WIDTH)
+	var rand_h = randi_range(EditorUIManager.MIN_GRID_HEIGHT, EditorUIManager.MAX_GRID_HEIGHT)
 	
-	# Pass it back into the canvas
-	canvas_manager.apply_generated_layout(layout)
-	ui_manager.update_status("Random puzzle generated!", Color(0.4, 1.0, 0.4))
+	# Force UI and Grid to update to new size
+	ui_manager.sync_size_displays(rand_w, rand_h)
+	
+	# Generate the solved dictionary with punched out holes
+	var generated = PuzzleGenerator.generate_random_layout(rand_w, rand_h, ui_manager.get_allowed_tiles())
+	
+	# Inject directly into Canvas. load_layout() automatically locks the clues in place!
+	canvas_manager.load_layout(rand_w, rand_h, generated["layout"], generated["shifters"], generated["constraints"])
+	
+	ui_manager.update_status("Generated %dx%d random puzzle!" % [rand_w, rand_h], Color(0.4, 1.0, 0.4))
 
 func _on_grid_size_changed(new_width: int, new_height: int):
 	if is_playtesting: return

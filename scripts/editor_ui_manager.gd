@@ -5,12 +5,18 @@ signal brush_changed(state_id: int, brush_name: String)
 signal save_requested
 signal load_requested
 signal clear_requested
-signal random_requested # Signal for random generator
+signal random_requested 
 signal main_menu_requested
 signal test_mode_entered
 signal test_mode_exited
 signal grid_size_changed(new_width: int, new_height: int) 
 signal overwrite_confirmed
+
+# --- NEW: Centralized Grid Constraints ---
+const MIN_GRID_WIDTH: int = 3
+const MAX_GRID_WIDTH: int = 9
+const MIN_GRID_HEIGHT: int = 3
+const MAX_GRID_HEIGHT: int = 11
 
 @export var icon_wall: Texture2D
 @export var icon_empty: Texture2D
@@ -84,7 +90,6 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 	editor_width = grid_width
 	editor_height = grid_height
 	
-	# Dynamically build the RANDOM button, add the playing dice emoji, and place it inside grid_size_container at index 0
 	if grid_size_container and not random_button:
 		random_button = Button.new()
 		random_button.text = "🎲 RANDOM"
@@ -464,8 +469,8 @@ func _connect_ui_signals():
 
 func _adjust_value(target: String, amount: int):
 	match target:
-		"width": editor_width = clamp(editor_width + amount, 3, 9) 
-		"height": editor_height = clamp(editor_height + amount, 3, 11)
+		"width": editor_width = clamp(editor_width + amount, MIN_GRID_WIDTH, MAX_GRID_WIDTH) 
+		"height": editor_height = clamp(editor_height + amount, MIN_GRID_HEIGHT, MAX_GRID_HEIGHT)
 		"level": editor_level = max(1, editor_level + amount) 
 		"time": editor_time_limit = max(0, editor_time_limit + amount)
 	_update_number_labels()
