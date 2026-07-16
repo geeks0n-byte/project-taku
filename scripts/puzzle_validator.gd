@@ -98,28 +98,22 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 
 		var playable_count = 0
 		var filled_count = 0
-		var colorable_tiles = 0
 		
 		for v in line_vals:
 			if v != -2: 
 				playable_count += 1
 				if v >= 0: 
 					filled_count += 1
-				# Green tiles are excluded from this color parity math
-				if v == 0 or v == 1:
-					colorable_tiles += 1
 					
 		if playable_count > 0 and filled_count == playable_count:
-			var max_allowed = int(ceil(colorable_tiles / 2.0))
-			if count_0 > max_allowed or count_1 > max_allowed:
+			# STRICT EQUALITY RULE: 0s and 1s must be exactly equal
+			if count_0 != count_1:
 				is_valid = false
 				if not errors.has("Unequal 0s and 1s in a completed line."):
 					errors.append("Unequal 0s and 1s in a completed line.")
 				for c in coords:
 					var cell = board_cells[c]
-					var local_st = cell.state
-						
-					if local_st >= 0 and local_st <= 1 and cell.has_method("set_error_highlight"):
+					if cell.has_method("set_error_highlight"):
 						cell.set_error_highlight()
 
 	return {"valid": is_valid, "errors": errors}
