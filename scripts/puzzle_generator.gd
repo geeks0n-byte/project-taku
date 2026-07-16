@@ -10,8 +10,6 @@ static func generate_random_layout(width: int, height: int, _allowed_tiles: Arra
 			layout[Vector2i(x, y)] = -1
 
 	# 2. Place random corner walls (0 to 3 walls max)
-	# By explicitly restricting walls to the absolute outer corners, 
-	# we guarantee they NEVER split the board or get trapped inside playable tiles!
 	var corners = [Vector2i(0,0), Vector2i(width-1, 0), Vector2i(0, height-1), Vector2i(width-1, height-1)]
 	corners.shuffle()
 	var num_walls = randi() % 4 
@@ -31,15 +29,45 @@ static func generate_random_layout(width: int, height: int, _allowed_tiles: Arra
 	var shifter_a = Vector2i(-1, -1)
 	var shifter_b = Vector2i(-1, -1)
 	
-	if has_shifter and empty_cells.size() >= 2:
-		shifter_a = empty_cells.pop_back()
-		shifter_b = empty_cells.pop_back()
-		layout[shifter_a] = 3 # Hard-lock the Shifter into the solved board
-		empty_cells.append(shifter_b) # The partner space must be solved normally
-		empty_cells.shuffle()
+	if has_shifter:
+		var found_pair = false
+		for i in range(empty_cells.size()):
+			var candidate_a = empty_cells[i]
+			
+			# Grab adjacent neighbor coordinates
+			var neighbors = [
+				candidate_a + Vector2i(1, 0),
+				candidate_a + Vector2i(-1, 0),
+				candidate_a + Vector2i(0, 1),
+				candidate_a + Vector2i(0, -1)
+			]
+			neighbors.shuffle()
+			
+			# Check if any neighbor is also an empty, playable cell
+			for candidate_b in neighbors:
+				var b_index = empty_cells.find(candidate_b)
+				if b_index != -1:
+					shifter_a = candidate_a
+					shifter_b = candidate_b
+					
+					# Remove both from the empty_cells array
+					empty_cells.remove_at(max(i, b_index))
+					empty_cells.remove_at(min(i, b_index))
+					
+					layout[shifter_a] = 3 # Hard-lock the Shifter into the solved board
+					empty_cells.append(shifter_b) # The partner space must be solved normally
+					empty_cells.shuffle()
+					
+					found_pair = true
+					break
+					
+			if found_pair:
+				break
+				
+		if not found_pair:
+			has_shifter = false # Failsafe: No adjacent empty tiles available
 
 	# 5. Run the Backtracking Solver to generate a valid finished board
-	# We force [0, 1, 2] so the solver can always use Jokers to balance odd-sized grids
 	var solver_tiles = [0, 1, 2] 
 	var iter_tracker = {"count": 0}
 	_solve(layout, empty_cells, 0, width, height, solver_tiles, iter_tracker)
@@ -50,7 +78,6 @@ static func generate_random_layout(width: int, height: int, _allowed_tiles: Arra
 	for y in range(height):
 		for x in range(width):
 			var c = Vector2i(x, y)
-			# Only place constraints between Yellow (0) and Blue (1) to keep clues strictly logical
 			if layout[c] == 0 or layout[c] == 1:
 				var right = c + Vector2i(1, 0)
 				var down = c + Vector2i(0, 1)
@@ -67,14 +94,15 @@ static func generate_random_layout(width: int, height: int, _allowed_tiles: Arra
 		constraints.append({"a": p.a, "b": p.b, "type": type})
 
 	# 7. Punch Holes in the board to turn it into a puzzle!
-	# We want to leave as FEW tiles as possible (around 15% to 20%)
 	var filled_cells = []
 	for c in layout.keys():
 		if layout[c] >= 0 and layout[c] != 3: 
 			filled_cells.append(c)
 			
 	filled_cells.shuffle()
-	var keep_count = max(2, int(filled_cells.size() * 0.15)) 
+	
+	# BUG FIX: Clamped the keep_count so it can never exceed the actual number of filled cells
+	var keep_count = min(filled_cells.size(), max(2, int(filled_cells.size() * 0.15)))
 	
 	var clues = []
 	for i in range(keep_count):
@@ -86,12 +114,11 @@ static func generate_random_layout(width: int, height: int, _allowed_tiles: Arra
 		if layout[c] == -2:
 			final_layout[c] = -2
 		elif clues.has(c):
-			final_layout[c] = layout[c] # Keep this tile as a locked clue
+			final_layout[c] = layout[c] 
 		else:
-			final_layout[c] = -1 # Erase for the player to figure out
+			final_layout[c] = -1 
 			
 	if has_shifter:
-		# Randomize where the Shifter physically starts so the player might have to move it
 		var active_node = shifter_a if randi() % 2 == 0 else shifter_b
 		shifters.append({"a": shifter_a, "b": shifter_b, "active": active_node})
 		final_layout[shifter_a] = -1
@@ -108,12 +135,11 @@ static func _solve(layout: Dictionary, empty_cells: Array, index: int, w: int, h
 	if index >= empty_cells.size(): return true
 	
 	iter.count += 1
-	# Failsafe: Abort solver if stuck in an impossible math loop to prevent game freeze
 	if iter.count > 5000: return true 
 	
 	var coord = empty_cells[index]
 	var shuffled_allowed = allowed.duplicate()
-	shuffled_allowed.shuffle() # Randomize tile tests so boards aren't always 0-heavy
+	shuffled_allowed.shuffle() 
 	
 	for val in shuffled_allowed:
 		if _is_valid_placement(coord, val, layout, w, h):
@@ -135,7 +161,7 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 
 	layout[coord] = val 
 	
-	# Rule 2: Max 2 of the same color in a row (Jokers act as Wildcards)
+	# Rule 2: Max 2 of the same color in a row
 	for x in range(max(0, coord.x - 2), min(w - 2, coord.x + 1)):
 		var v1 = layout.get(Vector2i(x, coord.y), -1)
 		var v2 = layout.get(Vector2i(x+1, coord.y), -1)

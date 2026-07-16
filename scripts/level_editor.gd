@@ -123,22 +123,20 @@ func _bind_signals():
 	ui_manager.overwrite_confirmed.connect(_execute_save)
 	canvas_manager.canvas_cell_clicked.connect(_on_canvas_cell_clicked)
 
-# --- UPDATED: Random Generator Hook now pulls min/max bounds ---
 func _on_random_board_requested():
 	if is_playtesting: return
 	
-	# Randomize grid size based on the exact editor min/max bounds!
 	var rand_w = randi_range(EditorUIManager.MIN_GRID_WIDTH, EditorUIManager.MAX_GRID_WIDTH)
 	var rand_h = randi_range(EditorUIManager.MIN_GRID_HEIGHT, EditorUIManager.MAX_GRID_HEIGHT)
 	
-	# Force UI and Grid to update to new size
 	ui_manager.sync_size_displays(rand_w, rand_h)
 	
-	# Generate the solved dictionary with punched out holes
 	var generated = PuzzleGenerator.generate_random_layout(rand_w, rand_h, ui_manager.get_allowed_tiles())
 	
-	# Inject directly into Canvas. load_layout() automatically locks the clues in place!
 	canvas_manager.load_layout(rand_w, rand_h, generated["layout"], generated["shifters"], generated["constraints"])
+	
+	# FIXED: Added the recenter call so the board physically moves to match its new dimensions!
+	_recenter_editor_layout(rand_w, rand_h)
 	
 	ui_manager.update_status("Generated %dx%d random puzzle!" % [rand_w, rand_h], Color(0.4, 1.0, 0.4))
 
