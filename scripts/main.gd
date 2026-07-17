@@ -22,6 +22,7 @@ var is_paused: bool = false
 var current_level_index: int = 0
 
 var pending_hints: Array = [] 
+var solved_solution_reference: Dictionary = {}
 
 func _ready():
 	_load_all_levels_from_storage()
@@ -176,10 +177,15 @@ func generate_board():
 	elif "red_pairs" in current_level_resource:
 		s_pairs = current_level_resource.red_pairs
 		
+	# --- NEW: Show/Hide move counter based on shifter pairs ---
+	ui_manager.set_move_counter_visibility(s_pairs.size() > 0)
+		
 	var c_pairs: Array = []
 	if "constraint_pairs" in current_level_resource:
 		c_pairs = current_level_resource.constraint_pairs.duplicate()
 		
+	solved_solution_reference = current_level_resource.layout.duplicate()
+	
 	pending_hints = c_pairs.duplicate()
 	pending_hints.shuffle()
 	
@@ -203,7 +209,6 @@ func _on_hint_requested():
 	var selected_hint = null
 	var skipped_hints = []
 	
-	# Loop until we find a hint the player hasn't already fulfilled
 	while pending_hints.size() > 0:
 		var candidate = pending_hints.pop_back()
 		var coord_a = candidate["a"]
@@ -214,7 +219,6 @@ func _on_hint_requested():
 		var current_b = board_manager.board_cells[coord_b].state if board_manager.board_cells.has(coord_b) else -1
 		
 		var is_satisfied = false
-		# Check if the player already placed tiles here AND they meet the hint's rule
 		if current_a != -1 and current_b != -1:
 			if type == "equals" and current_a == current_b:
 				is_satisfied = true
@@ -222,17 +226,15 @@ func _on_hint_requested():
 				is_satisfied = true
 				
 		if is_satisfied:
-			skipped_hints.append(candidate) # Save it in case they delete their tiles later
+			skipped_hints.append(candidate) 
 			continue
 			
 		selected_hint = candidate
 		break
 		
-	# Put the skipped hints back into the deck so they aren't lost forever
 	pending_hints.append_array(skipped_hints)
 	pending_hints.shuffle()
 	
-	# Failsafe: If ALL remaining hints are satisfied but the player clicked anyway, just reveal one!
 	if selected_hint == null and pending_hints.size() > 0:
 		selected_hint = pending_hints.pop_back()
 		

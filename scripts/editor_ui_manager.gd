@@ -226,6 +226,11 @@ func _on_pt_reset_pressed(): playtest_reset_requested.emit()
 func _on_pt_rules_pressed(): playtest_rules_requested.emit()
 func _on_pt_hint_pressed(): playtest_hint_requested.emit()
 
+# --- NEW VISIBILITY TOGGLE ---
+func set_playtest_move_counter_visibility(is_visible: bool):
+	if pt_moves_label:
+		pt_moves_label.visible = is_visible
+
 func update_playtest_hint_count(count: int):
 	pt_current_hint_count = count
 	if pt_hint_button:
@@ -249,13 +254,13 @@ func _build_playtest_hud():
 	pt_timer_label.add_theme_font_size_override("font_size", 32)
 	pt_timer_label.modulate = Color(0.9, 0.9, 0.9)
 	pt_timer_label.position = Vector2(420, 115) 
-	pt_timer_label.size = Vector2(300, 50) # INCREASED width
+	pt_timer_label.size = Vector2(300, 50) 
 	playtest_hud_container.add_child(pt_timer_label)
 	
 	pt_moves_label = Label.new()
 	pt_moves_label.add_theme_font_size_override("font_size", 28)
 	pt_moves_label.modulate = Color(1.0, 0.6, 0.2)
-	pt_moves_label.position = Vector2(750, 115) # PUSHED right
+	pt_moves_label.position = Vector2(750, 115) 
 	pt_moves_label.size = Vector2(300, 50)
 	playtest_hud_container.add_child(pt_moves_label)
 

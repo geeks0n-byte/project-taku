@@ -136,7 +136,6 @@ func _on_random_board_requested():
 	var target_w = canvas_manager.grid_width
 	var target_h = canvas_manager.grid_height
 	
-	# FIXED: Force the UI to discard any un-SET values and perfectly match the actual canvas!
 	ui_manager.sync_size_displays(target_w, target_h)
 	
 	var generated = PuzzleGenerator.generate_random_layout(target_w, target_h, ui_manager.get_allowed_tiles())
@@ -415,6 +414,11 @@ func _on_test_mode_entered():
 		
 	playtest_time_remaining = ui_manager.get_time_limit()
 	playtest_shifter_moves = 0
+	
+	# --- NEW: Show/Hide playtest move counter based on shifter pairs ---
+	var has_shifters = canvas_manager.loaded_shifter_pairs.size() > 0
+	ui_manager.set_playtest_move_counter_visibility(has_shifters)
+	
 	if ui_manager.has_method("update_playtest_hud"):
 		_update_playtest_hud_wrapper()
 	playtest_timer.start()
@@ -460,6 +464,10 @@ func _on_playtest_reset_requested():
 	
 	playtest_time_remaining = ui_manager.get_time_limit()
 	playtest_shifter_moves = 0
+	
+	var has_shifters = canvas_manager.loaded_shifter_pairs.size() > 0
+	ui_manager.set_playtest_move_counter_visibility(has_shifters)
+	
 	if ui_manager.has_method("update_playtest_hud"):
 		_update_playtest_hud_wrapper()
 		
