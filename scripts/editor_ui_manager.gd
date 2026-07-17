@@ -12,9 +12,9 @@ signal test_mode_exited
 signal grid_size_changed(new_width: int, new_height: int) 
 signal overwrite_confirmed
 
-signal playtest_reset_requested # NEW
-signal playtest_rules_requested # NEW
-signal playtest_hint_requested # NEW
+signal playtest_reset_requested 
+signal playtest_rules_requested 
+signal playtest_hint_requested 
 
 const MIN_GRID_WIDTH: int = 3
 const MAX_GRID_WIDTH: int = 9
@@ -84,12 +84,11 @@ var editor_time_limit: int = 0
 
 var brush_button_group: ButtonGroup = ButtonGroup.new()
 
-var playtest_hud_container: HBoxContainer
+var playtest_hud_container: Control
 var pt_timer_label: Label
 var pt_moves_label: Label
 var random_button: Button 
 
-# NEW: Playtest HUD Buttons
 var pt_reset_button: Button
 var pt_rules_button: Button
 var pt_hint_button: Button
@@ -108,7 +107,6 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		grid_size_container.add_child(random_button)
 		grid_size_container.move_child(random_button, 0)
 	
-	# --- NEW: Build Playtest Specific Top Buttons ---
 	if not pt_reset_button:
 		pt_reset_button = Button.new()
 		pt_reset_button.name = "PTResetButton"
@@ -128,7 +126,7 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 	pt_rules_button.text = "Rules"
 	pt_rules_button.add_theme_font_size_override("font_size", 28)
 	pt_rules_button.global_position = Vector2(440, 40)
-	pt_rules_button.size = Vector2(180, 60)
+	pt_rules_button.size = Vector2(140, 60) 
 	pt_rules_button.visible = false
 	if not pt_rules_button.pressed.is_connected(_on_pt_rules_pressed):
 		pt_rules_button.pressed.connect(_on_pt_rules_pressed)
@@ -138,12 +136,11 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		pt_hint_button.name = "PTHintButton"
 		root_parent.add_child(pt_hint_button)
 	pt_hint_button.add_theme_font_size_override("font_size", 28)
-	pt_hint_button.global_position = Vector2(640, 40)
+	pt_hint_button.global_position = Vector2(600, 40) 
 	pt_hint_button.size = Vector2(160, 60)
 	pt_hint_button.visible = false
 	if not pt_hint_button.pressed.is_connected(_on_pt_hint_pressed):
 		pt_hint_button.pressed.connect(_on_pt_hint_pressed)
-	# --------------------------------------------------
 	
 	_setup_brush_toggles()
 	_setup_tree_checkbox_icons()
@@ -225,7 +222,6 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 	_set_button_labels()
 	_connect_ui_signals()
 
-# --- NEW: Playtest Signal Hooks ---
 func _on_pt_reset_pressed(): playtest_reset_requested.emit()
 func _on_pt_rules_pressed(): playtest_rules_requested.emit()
 func _on_pt_hint_pressed(): playtest_hint_requested.emit()
@@ -235,7 +231,6 @@ func update_playtest_hint_count(count: int):
 	if pt_hint_button:
 		pt_hint_button.text = "💡 Hint (" + str(count) + ")"
 		pt_hint_button.disabled = (count <= 0)
-# ----------------------------------
 
 func show_overwrite_warning():
 	if overwrite_panel:
@@ -244,39 +239,32 @@ func show_overwrite_warning():
 func _build_playtest_hud():
 	if not editor_ui_root: return
 	
-	playtest_hud_container = HBoxContainer.new()
+	playtest_hud_container = Control.new()
 	playtest_hud_container.name = "PlaytestHUD"
 	editor_ui_root.add_child(playtest_hud_container)
-	
-	var screen_width = get_viewport().get_visible_rect().size.x
-	playtest_hud_container.position = Vector2(0, 40)
-	playtest_hud_container.size = Vector2(screen_width, 60)
-	playtest_hud_container.alignment = BoxContainer.ALIGNMENT_CENTER
-	playtest_hud_container.add_theme_constant_override("separation", 100)
 	playtest_hud_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	playtest_hud_container.visible = false
 	
 	pt_timer_label = Label.new()
 	pt_timer_label.add_theme_font_size_override("font_size", 32)
 	pt_timer_label.modulate = Color(0.9, 0.9, 0.9)
-	# Pushed further right mimicking the main game HUD
-	pt_timer_label.position = Vector2(850, 40)
+	pt_timer_label.position = Vector2(420, 115) 
 	playtest_hud_container.add_child(pt_timer_label)
 	
 	pt_moves_label = Label.new()
-	pt_moves_label.add_theme_font_size_override("font_size", 32)
+	pt_moves_label.add_theme_font_size_override("font_size", 28)
 	pt_moves_label.modulate = Color(1.0, 0.6, 0.2)
-	pt_moves_label.position = Vector2(850, 90)
+	pt_moves_label.position = Vector2(640, 115) 
 	playtest_hud_container.add_child(pt_moves_label)
 
 func update_playtest_hud(time_remaining: int, moves: int):
 	if pt_timer_label:
 		if editor_time_limit == 0:
-			pt_timer_label.text = "Time: ∞"
+			pt_timer_label.text = "Time left: ∞"
 		else:
 			var minutes = max(0, int(time_remaining / 60.0))
 			var seconds = max(0, time_remaining % 60)
-			pt_timer_label.text = "Time: %02d:%02d" % [minutes, seconds]
+			pt_timer_label.text = "Time left: %02d:%02d" % [minutes, seconds]
 	if pt_moves_label:
 		pt_moves_label.text = "Shifter Moves: %d" % moves
 
@@ -353,9 +341,9 @@ func _update_number_labels():
 	if level_label: level_label.text = "Lvl: " + str(editor_level)
 	if time_label:
 		if editor_time_limit == 0:
-			time_label.text = "Time: ∞"
+			time_label.text = "Time limit: ∞" # Clarified for editor
 		else:
-			time_label.text = "Time: " + str(editor_time_limit) + "s"
+			time_label.text = "Time limit: " + str(editor_time_limit) + "s"
 
 func _update_panel_layout(_grid_width: int, _grid_height: int):
 	var screen_width = get_viewport().get_visible_rect().size.x
@@ -499,7 +487,7 @@ func _set_button_labels():
 	if level_minus: level_minus.text = "-"
 	if level_plus: level_plus.text = "+"
 	if time_minus: time_minus.text = "-"
-	if time_plus: time_plus.text = "+"
+	if time_plus: time_plus.text = "-"
 
 func _connect_ui_signals():
 	if clear_button: clear_button.pressed.connect(func(): clear_requested.emit()) 
@@ -566,7 +554,6 @@ func toggle_playtest_visibility(is_playtesting: bool):
 	if level_settings_container: level_settings_container.visible = not is_playtesting
 	if playtest_hud_container: playtest_hud_container.visible = is_playtesting
 	
-	# NEW: Toggle visibility of the new playtest buttons!
 	if pt_reset_button: pt_reset_button.visible = is_playtesting
 	if pt_rules_button: pt_rules_button.visible = is_playtesting
 	if pt_hint_button: pt_hint_button.visible = is_playtesting

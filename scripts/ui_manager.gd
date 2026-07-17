@@ -56,9 +56,8 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		how_to_play_button.text = "Rules" 
 		how_to_play_button.add_theme_font_size_override("font_size", 28)
 		how_to_play_button.global_position = Vector2(440, 40)
-		how_to_play_button.size = Vector2(180, 60) 
+		how_to_play_button.size = Vector2(140, 60) 
 
-	# FIXED: Create and place the Hint button exactly next to the Rules button
 	var root_parent = get_parent()
 	hint_button = root_parent.get_node_or_null("HintButton")
 	if not hint_button:
@@ -67,27 +66,26 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		root_parent.add_child(hint_button)
 		
 	hint_button.add_theme_font_size_override("font_size", 28)
-	hint_button.global_position = Vector2(640, 40) # Pushed right next to Rules (440 + 180 + 20 spacing)
-	hint_button.size = Vector2(160, 60) # Made height match the other top menu buttons
+	hint_button.global_position = Vector2(600, 40) 
+	hint_button.size = Vector2(160, 60) 
 	
-	# FIXED: Pushed the Timer and Move Counter far to the right so they sit alone
-	if timer_label:
-		timer_label.add_theme_font_size_override("font_size", 32)
-		timer_label.modulate = Color(0.9, 0.9, 0.9)
-		timer_label.global_position = Vector2(850, 40) # Moved from 650 -> 850
-		timer_label.size = Vector2(300, 50)
-		
-	if move_counter_label:
-		move_counter_label.add_theme_font_size_override("font_size", 28)
-		move_counter_label.modulate = Color(1.0, 0.6, 0.2)
-		move_counter_label.global_position = Vector2(850, 90) # Moved from 650 -> 850
-		move_counter_label.size = Vector2(300, 50)
-		
 	if level_label:
 		level_label.add_theme_font_size_override("font_size", 32)
 		level_label.modulate = Color(1.0, 1.0, 1.0)
 		level_label.global_position = Vector2(120, 115)
-		level_label.size = Vector2(400, 50)
+		level_label.size = Vector2(280, 50)
+		
+	if timer_label:
+		timer_label.add_theme_font_size_override("font_size", 32)
+		timer_label.modulate = Color(0.9, 0.9, 0.9)
+		timer_label.global_position = Vector2(420, 115) 
+		timer_label.size = Vector2(200, 50)
+		
+	if move_counter_label:
+		move_counter_label.add_theme_font_size_override("font_size", 28)
+		move_counter_label.modulate = Color(1.0, 0.6, 0.2)
+		move_counter_label.global_position = Vector2(640, 115) 
+		move_counter_label.size = Vector2(300, 50)
 
 	if status_label:
 		status_label.text = "Fill the board following the rules!"
@@ -240,7 +238,8 @@ func _on_main_menu_pressed():
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
 func update_timer(formatted_time: String):
-	if timer_label: timer_label.text = "Time: " + formatted_time
+	# FIXED: Changed "Time" to "Time left"
+	if timer_label: timer_label.text = "Time left: " + formatted_time
 
 func update_move_counter(moves: int):
 	if move_counter_label: move_counter_label.text = "Shifter Moves: %d" % moves
