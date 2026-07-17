@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 640" width="1080" height="1920" shape-rendering="crispEdges">
+  <!-- Deep Space Void -->
+  <rect width="360" height="640" fill="#0f0f1b" />
+
+  <!-- Massive Diagonal Nebula Bands (Violet & Magenta) -->
+  <!-- Layer 1 -->
+  <rect x="0" y="50" width="200" height="150" fill="#1d2b53" opacity="0.3" />
+  <rect x="50" y="100" width="250" height="100" fill="#1d2b53" opacity="0.4" />
+  <rect x="150" y="150" width="250" height="120" fill="#1d2b53" opacity="0.3" />
+  <rect x="200" y="220" width="200" height="150" fill="#1d2b53" opacity="0.2" />
+  <!-- Layer 2 -->
+  <rect x="-50" y="350" width="250" height="120" fill="#1d2b53" opacity="0.4" />
+  <rect x="50" y="420" width="300" height="100" fill="#1d2b53" opacity="0.5" />
+  <rect x="150" y="480" width="250" height="150" fill="#1d2b53" opacity="0.3" />
+  
+  <!-- Magenta Dust Highlights -->
+  <rect x="80" y="120" width="150" height="50" fill="#7e2553" opacity="0.3" />
+  <rect x="120" y="440" width="180" height="60" fill="#7e2553" opacity="0.3" />
+
+  <!-- Dense Starfield -->
+  <!-- Tiny Stars (Dark Gray) -->
+  <path d="M20 40h2v2h-2z M80 90h2v2h-2z M150 30h2v2h-2z M280 60h2v2h-2z M320 150h2v2h-2z M50 200h2v2h-2z M180 250h2v2h-2z M250 300h2v2h-2z M30 350h2v2h-2z M100 400h2v2h-2z M280 450h2v2h-2z M60 500h2v2h-2z M150 550h2v2h-2z M220 600h2v2h-2z M320 580h2v2h-2z" fill="#7d7d7d" />
+  
+  <!-- Medium Stars (Cyan) -->
+  <path d="M60 60h2v2h-2z M200 100h2v2h-2z M300 200h2v2h-2z M80 280h2v2h-2z M220 380h2v2h-2z M40 450h2v2h-2z M310 520h2v2h-2z M180 600h2v2h-2z M120 180h2v2h-2z" fill="#abffe6" />
+
+  <!-- Medium Stars (Pink) -->
+  <path d="M120 70h2v2h-2z M250 140h2v2h-2z M40 220h2v2h-2z M160 320h2v2h-2z M280 360h2v2h-2z M90 520h2v2h-2z M250 560h2v2h-2z" fill="#ff77a8" />
+
+  <!-- Large Sparkle Stars -->
+  <g fill="#ffffff">
+    <!-- Star 1 -->
+    <rect x="100" y="150" width="2" height="6" />
+    <rect x="98" y="152" width="6" height="2" />
+    <!-- Star 2 -->
+    <rect x="260" y="240" width="2" height="6" />
+    <rect x="258" y="242" width="6" height="2" />
+    <!-- Star 3 -->
+    <rect x="140" y="420" width="2" height="6" />
+    <rect x="138" y="422" width="6" height="2" />
+    <!-- Star 4 -->
+    <rect x="290" y="480" width="2" height="6" />
+    <rect x="288" y="482" width="6" height="2" />
+  </g>
+</svg>

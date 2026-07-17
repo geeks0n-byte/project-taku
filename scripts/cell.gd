@@ -10,7 +10,7 @@ var is_locked: bool = false
 var is_linked_pair: bool = false
 var link_partner: Vector2i
 var shifter_direction: Vector2i = Vector2i.ZERO
-var allowed_cycle_tiles: Array[int] = [0, 1, 2] # Default fallback updated
+var allowed_cycle_tiles: Array[int] = [0, 1, 2] 
 
 @export var tex_empty: Texture2D
 @export var tex_wall: Texture2D
@@ -121,6 +121,14 @@ func update_visuals():
 				chevron_icon.texture = tex_chevron_right
 		else:
 			chevron_icon.visible = false
+			
+	# --- NEW: Transparency logic for Empty and Wall states ---
+	if state == -2:
+		modulate = Color(1.0, 1.0, 1.0, 0.0) # Wall is completely invisible
+	elif state == -1:
+		modulate = Color(1.0, 1.0, 1.0, 0.85) # Empty is 15% transparent (85% opaque)
+	else:
+		modulate = Color(1.0, 1.0, 1.0, 1.0) # Everything else is 100% solid
 		
 	if not tile_icon:
 		return
