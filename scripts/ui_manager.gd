@@ -79,12 +79,12 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		timer_label.add_theme_font_size_override("font_size", 32)
 		timer_label.modulate = Color(0.9, 0.9, 0.9)
 		timer_label.global_position = Vector2(420, 115) 
-		timer_label.size = Vector2(200, 50)
+		timer_label.size = Vector2(300, 50) # INCREASED width
 		
 	if move_counter_label:
 		move_counter_label.add_theme_font_size_override("font_size", 28)
 		move_counter_label.modulate = Color(1.0, 0.6, 0.2)
-		move_counter_label.global_position = Vector2(640, 115) 
+		move_counter_label.global_position = Vector2(750, 115) # PUSHED right
 		move_counter_label.size = Vector2(300, 50)
 
 	if status_label:
@@ -238,7 +238,6 @@ func _on_main_menu_pressed():
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
 func update_timer(formatted_time: String):
-	# FIXED: Changed "Time" to "Time left"
 	if timer_label: timer_label.text = "Time left: " + formatted_time
 
 func update_move_counter(moves: int):

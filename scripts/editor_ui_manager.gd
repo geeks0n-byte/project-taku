@@ -249,12 +249,14 @@ func _build_playtest_hud():
 	pt_timer_label.add_theme_font_size_override("font_size", 32)
 	pt_timer_label.modulate = Color(0.9, 0.9, 0.9)
 	pt_timer_label.position = Vector2(420, 115) 
+	pt_timer_label.size = Vector2(300, 50) # INCREASED width
 	playtest_hud_container.add_child(pt_timer_label)
 	
 	pt_moves_label = Label.new()
 	pt_moves_label.add_theme_font_size_override("font_size", 28)
 	pt_moves_label.modulate = Color(1.0, 0.6, 0.2)
-	pt_moves_label.position = Vector2(640, 115) 
+	pt_moves_label.position = Vector2(750, 115) # PUSHED right
+	pt_moves_label.size = Vector2(300, 50)
 	playtest_hud_container.add_child(pt_moves_label)
 
 func update_playtest_hud(time_remaining: int, moves: int):
@@ -341,7 +343,7 @@ func _update_number_labels():
 	if level_label: level_label.text = "Lvl: " + str(editor_level)
 	if time_label:
 		if editor_time_limit == 0:
-			time_label.text = "Time limit: ∞" # Clarified for editor
+			time_label.text = "Time limit: ∞" 
 		else:
 			time_label.text = "Time limit: " + str(editor_time_limit) + "s"
 

@@ -17,7 +17,6 @@ var playtest_timer: Timer
 var playtest_time_remaining: int = 0
 var playtest_shifter_moves: int = 0
 
-# NEW: Editor hint system tracking
 var playtest_hidden_constraints: Array = []
 var playtest_pending_hints: Array = []
 
@@ -127,17 +126,18 @@ func _bind_signals():
 	ui_manager.overwrite_confirmed.connect(_execute_save)
 	canvas_manager.canvas_cell_clicked.connect(_on_canvas_cell_clicked)
 	
-	# NEW: Hooks for the newly added playtest HUD buttons
 	ui_manager.playtest_reset_requested.connect(_on_playtest_reset_requested)
 	ui_manager.playtest_rules_requested.connect(_on_playtest_rules_requested)
 	ui_manager.playtest_hint_requested.connect(_on_playtest_hint_requested)
 
-# FIXED: Reverted to pulling width and height directly from canvas constraints
 func _on_random_board_requested():
 	if is_playtesting: return
 	
 	var target_w = canvas_manager.grid_width
 	var target_h = canvas_manager.grid_height
+	
+	# FIXED: Force the UI to discard any un-SET values and perfectly match the actual canvas!
+	ui_manager.sync_size_displays(target_w, target_h)
 	
 	var generated = PuzzleGenerator.generate_random_layout(target_w, target_h, ui_manager.get_allowed_tiles())
 	
@@ -378,7 +378,6 @@ func _scan_directory(path_to_scan: String) -> Array:
 		dir.list_dir_end()
 	return found_files
 
-# --- NEW: Playtest button logic implemented here ---
 func _on_test_mode_entered():
 	is_playtesting = true
 	canvas_manager.is_playtesting = true
@@ -407,7 +406,6 @@ func _on_test_mode_entered():
 			cell.is_locked = false
 		cell.update_visuals()
 	
-	# Extract and hide constraints so they can be used as hints
 	playtest_hidden_constraints = canvas_manager.loaded_constraint_pairs.duplicate()
 	canvas_manager.loaded_constraint_pairs.clear()
 	
@@ -455,7 +453,6 @@ func _on_playtest_reset_requested():
 			cell.is_locked = false
 		cell.update_visuals()
 		
-	# Reset the hints entirely
 	canvas_manager.loaded_constraint_pairs.clear()
 	playtest_pending_hints = playtest_hidden_constraints.duplicate()
 	playtest_pending_hints.shuffle()
@@ -482,8 +479,6 @@ func _on_playtest_hint_requested():
 
 func _on_playtest_rules_requested():
 	if not is_playtesting: return
-	# Note: Since the HowToPlay menu logic is in main.tscn, we send a notification to the user here
-	# unless they've copied that node structure to the Editor Scene!
 	ui_manager.update_status("Rules button active! (Copy HowToPlayPanel into the editor scene to display it)", Color.YELLOW)
 
 func _on_playtest_timer_timeout():
@@ -533,7 +528,6 @@ func _on_test_mode_exited():
 			cell.is_locked = false
 		cell.update_visuals()
 		
-	# Restore any constraints they explicitly designed
 	canvas_manager.loaded_constraint_pairs = playtest_hidden_constraints.duplicate()
 		
 	canvas_manager.trigger_redraw()
