@@ -92,7 +92,7 @@ func _load_core_level(res: LevelData):
 	if is_playtesting: return
 	link_first_selection = null
 	
-	# FIXED: Mathematically extract exact grid size from layout dictionary keys!
+	# Mathematically extract exact grid size from layout dictionary keys for backwards compatibility!
 	var actual_w = 3
 	var actual_h = 3
 	if res.layout.size() > 0:
@@ -159,6 +159,12 @@ func _on_random_board_requested():
 	
 	var generated = PuzzleGenerator.generate_random_layout(target_w, target_h, ui_manager.get_allowed_tiles())
 	
+	# CRASH FIX: Check if generation was successful before proceeding
+	if generated.is_empty() or not generated.has("layout"):
+		ui_manager.update_status("ERROR: Generator timeout! Try again or clear walls/shifters.", Color(1.0, 0.3, 0.3))
+		return
+	
+	# Clear the board cleanly to prevent weird overlaps
 	canvas_manager.generate_blank_canvas(target_w, target_h)
 	canvas_manager.load_layout(target_w, target_h, generated["layout"], generated["shifters"], generated["constraints"])
 	
@@ -690,7 +696,6 @@ func _on_load_level():
 		if loaded_level:
 			link_first_selection = null
 			
-			# FIXED: Mathematically extract exact grid size from layout dictionary keys!
 			var actual_w = 3
 			var actual_h = 3
 			if loaded_level.layout.size() > 0:

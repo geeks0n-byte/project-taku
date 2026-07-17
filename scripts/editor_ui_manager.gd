@@ -15,12 +15,12 @@ signal overwrite_confirmed
 signal playtest_reset_requested 
 signal playtest_rules_requested 
 signal playtest_hint_requested 
-signal resume_from_tutorial_requested # NEW
+signal resume_from_tutorial_requested 
 
 const MIN_GRID_WIDTH: int = 3
 const MAX_GRID_WIDTH: int = 9
 const MIN_GRID_HEIGHT: int = 3
-const MAX_GRID_HEIGHT: int = 11
+const MAX_GRID_HEIGHT: int = 9 # CHANGED FROM 11 TO 9
 
 @export var icon_wall: Texture2D
 @export var icon_empty: Texture2D
@@ -96,8 +96,8 @@ var pt_rules_button: Button
 var pt_hint_button: Button
 var pt_current_hint_count: int = 0
 
-var how_to_play_container: Control # NEW
-var tutorial_back_button: Button # NEW
+var how_to_play_container: Control
+var tutorial_back_button: Button 
 
 func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 	editor_width = grid_width
@@ -124,7 +124,6 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 	if not pt_reset_button.pressed.is_connected(_on_pt_reset_pressed):
 		pt_reset_button.pressed.connect(_on_pt_reset_pressed)
 		
-	# --- NEW: Added back the Rules button for the editor playtest! ---
 	if not pt_rules_button:
 		pt_rules_button = Button.new()
 		pt_rules_button.name = "PTRulesButton"
@@ -142,7 +141,7 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		pt_hint_button.name = "PTHintButton"
 		root_parent.add_child(pt_hint_button)
 	pt_hint_button.add_theme_font_size_override("font_size", 28)
-	pt_hint_button.global_position = Vector2(600, 40) # Resumes position beside Rules
+	pt_hint_button.global_position = Vector2(600, 40) 
 	pt_hint_button.size = Vector2(160, 60)
 	pt_hint_button.visible = false
 	if not pt_hint_button.pressed.is_connected(_on_pt_hint_pressed):
@@ -225,7 +224,6 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 	if exit_test_button:
 		exit_test_button.visible = false
 		
-	# --- NEW: Locate and connect HowToPlayLayer in the editor ---
 	how_to_play_container = root_parent.get_node_or_null("HowToPlayLayer/CenterContainer")
 	var how_to_play_panel = root_parent.get_node_or_null("HowToPlayLayer/CenterContainer/HowToPlayPanel")
 	var rules_label = root_parent.get_node_or_null("HowToPlayLayer/CenterContainer/HowToPlayPanel/RulesLabel")
@@ -259,7 +257,6 @@ func _on_pt_reset_pressed(): playtest_reset_requested.emit()
 func _on_pt_rules_pressed(): playtest_rules_requested.emit()
 func _on_pt_hint_pressed(): playtest_hint_requested.emit()
 
-# --- NEW: Handles Editor Tutorial Flow ---
 func show_how_to_play():
 	if how_to_play_container:
 		how_to_play_container.visible = true
