@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://cuf448q3tm0yy"]
 
 [ext_resource type="Script" uid="uid://cu6cq88gr24e3" path="res://scripts/main.gd" id="1_trceg"]
-[ext_resource type="Texture2D" uid="uid://dg1hdehaae7u0" path="res://icons/bg_cosmos.svg" id="5_tbgi4"]
+[ext_resource type="Texture2D" uid="uid://cbth8fmjnwqf3" path="res://icons/bg_cosmos.svg" id="5_tbgi4"]
 [ext_resource type="Script" uid="uid://cmilped3wai4n" path="res://scripts/board_manager.gd" id="12_y6deb"]
 [ext_resource type="Script" uid="uid://dcrkhyr8vhs3g" path="res://scripts/ui_manager.gd" id="13_og1vs"]
 [ext_resource type="PackedScene" uid="uid://qah3m84a46oi" path="res://scenes/pause_menu.tscn" id="14_a8y0u"]
@@ -131,31 +131,30 @@ layout_mode = 0
 offset_right = 40.0
 offset_bottom = 40.0
 bbcode_enabled = true
-text = "[center][font_size=46][color=gold]HOW TO PLAY[/color][/font_size][/center]
+text = "[center][font_size=64][b]HOW TO PLAY[/b][/font_size][/center]
 
-[font_size=28]Fill the grid before the timer runs out![/font_size]
-
-[font_size=26]
-[img width=48 height=48]res://icons/tiles/tile_yellow.svg[/img] [img width=48 height=48]res://icons/tiles/tile_blue.svg[/img] [b]Balance:[/b] Every row and column must contain an equal amount of Zero and One blocks.
-
-[img width=48 height=48]res://icons/tiles/tile_green.svg[/img] [b]Wildcard:[/b] Joker blocks act as both Zero and One at the exact same time. [color=green][b]MAX 1 PER LINE![/b][/color]
-
-[img width=48 height=48]res://icons/placeholder_icons/lock.png[/img] [b]Locked:[/b] Blocks with a lock icon are fixed.
-
-[img width=48 height=48]res://icons/tiles/tile_purple.svg[/img] [b]The Shifter:[/b] Shifter blocks swap dynamically between two cells linked by a purple arrow.
-
-[b]Relationships:[/b] Cells linked by [b]=[/b] MUST contain the exact same block. Cells linked by [b]×[/b] MUST contain different blocks.
+[font_size=42][b][color=#88ccff]TILE TYPES[/color][/b][/font_size]
+[font_size=32]
+• [b]Basic Tiles:[/b] [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [color=#ffeb3b]Yellow[/color] and [img=48x48]res://icons/tiles/tile_blue.svg[/img] [color=#2196f3]Blue[/color] tiles. Use these to fill the empty spaces on the board.
+• [img=48x48]res://icons/tiles/tile_green.svg[/img] [color=#4caf50][b]Jokers:[/b][/color] Can act as either [color=#ffeb3b]Yellow[/color] or [color=#2196f3]Blue[/color] to complete a line. You may only place [b]one[/b] [color=#4caf50]Joker[/color] per row and column!
+• [img=48x48]res://icons/tiles/tile_purple.svg[/img] [color=#9c27b0][b]Shifters:[/b][/color] These come in pairs. Clicking the active [color=#9c27b0]Shifter[/color] pushes its partner one space in the direction of the arrow ([img=56x56]res://icons/tiles/tile_purple_up.svg[/img][img=56x56]res://icons/tiles/tile_purple_down.svg[/img][img=56x56]res://icons/tiles/tile_purple_left.svg[/img][img=56x56]res://icons/tiles/tile_purple_right.svg[/img]).
+• [img=56x56]res://icons/tiles/tile_lock.svg[/img] [b]Locks:[/b] Any tile displaying a padlock icon is permanently fixed to the board.
 [/font_size]
 
-[font_size=26][color=tomato][b]No Three-in-a-Row Rule:[/b][/color]
-You cannot place three blocks of the same value in an unbroken line. Jokers will trigger a violation if mixed with two identical blocks![/font_size]
+[font_size=42][b][color=#88ccff]THE RULES[/color][/b][/font_size]
+[font_size=32]
+• [b]Equal Balance:[/b] Every row and column must contain an equal number of [color=#ffeb3b]Yellow[/color] and [color=#2196f3]Blue[/color] tiles.
+• [b]The Rule of Two:[/b] No more than two tiles of the same color can sit next to each other in any row or column.
+  [color=#ff8888][i]Invalid Combinations (3 in a row):[/i][/color]
+  [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [img=48x48]res://icons/tiles/tile_yellow.svg[/img]  (Three [color=#ffeb3b]Yellows[/color])
+  [img=48x48]res://icons/tiles/tile_blue.svg[/img] [img=48x48]res://icons/tiles/tile_blue.svg[/img] [img=48x48]res://icons/tiles/tile_green.svg[/img]  (Two [color=#2196f3]Blues[/color] + [color=#4caf50]Joker[/color])
+  [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [img=48x48]res://icons/tiles/tile_green.svg[/img] [img=48x48]res://icons/tiles/tile_yellow.svg[/img]  ([color=#ffeb3b]Yellow[/color] + [color=#4caf50]Joker[/color] + [color=#ffeb3b]Yellow[/color])
+[/font_size]
 
-[font_size=26]
-[color=red][b]X FORBIDDEN:[/b][/color]
-[img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_blue.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_green.svg[/img]
-
-[color=green][b]✓ ALLOWED:[/b][/color]
-[img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img]  or  [img width=36 height=36]res://icons/tiles/tile_yellow.svg[/img][img width=36 height=36]res://icons/tiles/tile_green.svg[/img][img width=36 height=36]res://icons/tiles/tile_blue.svg[/img]
+[font_size=42][b][color=#88ccff]HINTS[/color][/b][/font_size]
+[font_size=32]
+• An [b]=[/b] symbol between two cells means they must be the [i]same[/i] color.
+• A [b]×[/b] symbol between two cells means they must be [i]different[/i] colors.
 [/font_size]"
 
 [node name="BackButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=1004694894]

@@ -24,6 +24,8 @@ var current_level_index: int = 0
 var pending_hints: Array = [] 
 var solved_solution_reference: Dictionary = {}
 
+var required_jokers: int = 0 
+
 func _ready():
 	_load_all_levels_from_storage()
 	_intercept_global_selection()
@@ -177,8 +179,19 @@ func generate_board():
 	elif "red_pairs" in current_level_resource:
 		s_pairs = current_level_resource.red_pairs
 		
-	# --- NEW: Show/Hide move counter based on shifter pairs ---
 	ui_manager.set_move_counter_visibility(s_pairs.size() > 0)
+	
+	# --- NEW: Reduced Jokers based on prefilled constraints ---
+	var prefilled_jokers = 0
+	for coord in current_level_resource.layout:
+		if current_level_resource.layout[coord] == 2:
+			prefilled_jokers += 1
+			
+	required_jokers = min(current_level_resource.width, current_level_resource.height)
+	required_jokers = max(0, required_jokers - prefilled_jokers)
+	
+	var has_jokers = (2 in tiles_list)
+	ui_manager.set_joker_counter_visibility(has_jokers)
 		
 	var c_pairs: Array = []
 	if "constraint_pairs" in current_level_resource:
@@ -192,6 +205,8 @@ func generate_board():
 	ui_manager.display_level(current_level_resource.level_number, is_custom)
 	board_manager.build_grid(current_level_resource.layout, tiles_list, s_pairs, [])
 	
+	_update_joker_count()
+	
 	ui_manager.update_hint_count(pending_hints.size())
 	
 	var board_pixel_height = current_level_resource.height * board_manager.CELL_SIZE
@@ -202,6 +217,13 @@ func generate_board():
 	
 	ui_manager.update_dynamic_layout(new_board_y, board_pixel_height)
 	_run_validation_pass()
+
+func _update_joker_count():
+	var current_jokers = 0
+	for coord in board_manager.board_cells:
+		if board_manager.board_cells[coord].state == 2 and not board_manager.board_cells[coord].is_locked:
+			current_jokers += 1
+	ui_manager.update_joker_counter(current_jokers, required_jokers)
 
 func _on_hint_requested():
 	if not is_game_active or is_paused: return
@@ -248,6 +270,7 @@ func _on_hint_requested():
 
 func _on_cell_changed(_coord: Vector2i):
 	if not is_game_active or is_paused: return
+	_update_joker_count() 
 	_run_validation_pass()
 
 func _on_shifter_move_made():

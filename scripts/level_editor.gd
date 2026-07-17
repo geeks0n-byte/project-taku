@@ -19,6 +19,7 @@ var playtest_shifter_moves: int = 0
 
 var playtest_hidden_constraints: Array = []
 var playtest_pending_hints: Array = []
+var playtest_required_jokers: int = 0 
 
 func _ready():
 	_bind_signals()
@@ -129,6 +130,9 @@ func _bind_signals():
 	ui_manager.playtest_reset_requested.connect(_on_playtest_reset_requested)
 	ui_manager.playtest_rules_requested.connect(_on_playtest_rules_requested)
 	ui_manager.playtest_hint_requested.connect(_on_playtest_hint_requested)
+	
+	# --- NEW: Connect the resume from tutorial signal ---
+	ui_manager.resume_from_tutorial_requested.connect(_on_resume_from_tutorial)
 
 func _on_random_board_requested():
 	if is_playtesting: return
@@ -210,6 +214,7 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 					cell.state = allowed[current_idx + 1] 
 					
 		cell.update_visuals()
+		_update_playtest_joker_count()
 		_run_playtest_validation_pass()
 	else:
 		if current_brush_state >= 3 and current_brush_state <= 5:
@@ -377,6 +382,13 @@ func _scan_directory(path_to_scan: String) -> Array:
 		dir.list_dir_end()
 	return found_files
 
+func _update_playtest_joker_count():
+	var count = 0
+	for coord in canvas_manager.board_cells:
+		if canvas_manager.board_cells[coord].state == 2 and not canvas_manager.board_cells[coord].is_locked:
+			count += 1
+	ui_manager.update_playtest_joker_counter(count, playtest_required_jokers)
+
 func _on_test_mode_entered():
 	is_playtesting = true
 	canvas_manager.is_playtesting = true
@@ -386,6 +398,8 @@ func _on_test_mode_entered():
 	if core_levels_container:
 		core_levels_container.visible = false 
 	
+	var prefilled_jokers = 0
+	
 	for coord in canvas_manager.board_cells:
 		var cell = canvas_manager.board_cells[coord]
 		
@@ -393,6 +407,9 @@ func _on_test_mode_entered():
 			"state": cell.state,
 			"shifter_direction": cell.shifter_direction
 		}
+		
+		if cell.state == 2:
+			prefilled_jokers += 1
 		
 		if cell.state == -2:
 			cell.is_playable = false
@@ -415,9 +432,15 @@ func _on_test_mode_entered():
 	playtest_time_remaining = ui_manager.get_time_limit()
 	playtest_shifter_moves = 0
 	
-	# --- NEW: Show/Hide playtest move counter based on shifter pairs ---
 	var has_shifters = canvas_manager.loaded_shifter_pairs.size() > 0
 	ui_manager.set_playtest_move_counter_visibility(has_shifters)
+	
+	playtest_required_jokers = min(canvas_manager.grid_width, canvas_manager.grid_height)
+	playtest_required_jokers = max(0, playtest_required_jokers - prefilled_jokers)
+	
+	var has_jokers = (2 in ui_manager.get_allowed_tiles())
+	ui_manager.set_playtest_joker_counter_visibility(has_jokers)
+	_update_playtest_joker_count()
 	
 	if ui_manager.has_method("update_playtest_hud"):
 		_update_playtest_hud_wrapper()
@@ -468,12 +491,28 @@ func _on_playtest_reset_requested():
 	var has_shifters = canvas_manager.loaded_shifter_pairs.size() > 0
 	ui_manager.set_playtest_move_counter_visibility(has_shifters)
 	
+	_update_playtest_joker_count()
+	
 	if ui_manager.has_method("update_playtest_hud"):
 		_update_playtest_hud_wrapper()
 		
 	playtest_timer.start()
 	canvas_manager.trigger_redraw()
 	_run_playtest_validation_pass()
+
+# --- NEW: Launching the Rules panel correctly from Editor ---
+func _on_playtest_rules_requested():
+	if not is_playtesting: return
+	playtest_timer.stop()
+	if ui_manager.has_method("show_how_to_play"):
+		ui_manager.show_how_to_play()
+	else:
+		ui_manager.update_status("Please add the HowToPlayLayer to this scene to use rules.", Color.YELLOW)
+
+# --- NEW: Resuming the timer when returning from tutorial ---
+func _on_resume_from_tutorial():
+	if is_playtesting:
+		playtest_timer.start()
 
 func _on_playtest_hint_requested():
 	if not is_playtesting: return
@@ -484,10 +523,6 @@ func _on_playtest_hint_requested():
 		canvas_manager.trigger_redraw()
 		ui_manager.update_playtest_hint_count(playtest_pending_hints.size())
 		_run_playtest_validation_pass()
-
-func _on_playtest_rules_requested():
-	if not is_playtesting: return
-	ui_manager.update_status("Rules button active! (Copy HowToPlayPanel into the editor scene to display it)", Color.YELLOW)
 
 func _on_playtest_timer_timeout():
 	if is_playtesting:

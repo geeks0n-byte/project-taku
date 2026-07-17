@@ -15,6 +15,7 @@ signal overwrite_confirmed
 signal playtest_reset_requested 
 signal playtest_rules_requested 
 signal playtest_hint_requested 
+signal resume_from_tutorial_requested # NEW
 
 const MIN_GRID_WIDTH: int = 3
 const MAX_GRID_WIDTH: int = 9
@@ -87,12 +88,16 @@ var brush_button_group: ButtonGroup = ButtonGroup.new()
 var playtest_hud_container: Control
 var pt_timer_label: Label
 var pt_moves_label: Label
+var pt_jokers_label: Label 
 var random_button: Button 
 
 var pt_reset_button: Button
 var pt_rules_button: Button
 var pt_hint_button: Button
 var pt_current_hint_count: int = 0
+
+var how_to_play_container: Control # NEW
+var tutorial_back_button: Button # NEW
 
 func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 	editor_width = grid_width
@@ -119,6 +124,7 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 	if not pt_reset_button.pressed.is_connected(_on_pt_reset_pressed):
 		pt_reset_button.pressed.connect(_on_pt_reset_pressed)
 		
+	# --- NEW: Added back the Rules button for the editor playtest! ---
 	if not pt_rules_button:
 		pt_rules_button = Button.new()
 		pt_rules_button.name = "PTRulesButton"
@@ -136,7 +142,7 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		pt_hint_button.name = "PTHintButton"
 		root_parent.add_child(pt_hint_button)
 	pt_hint_button.add_theme_font_size_override("font_size", 28)
-	pt_hint_button.global_position = Vector2(600, 40) 
+	pt_hint_button.global_position = Vector2(600, 40) # Resumes position beside Rules
 	pt_hint_button.size = Vector2(160, 60)
 	pt_hint_button.visible = false
 	if not pt_hint_button.pressed.is_connected(_on_pt_hint_pressed):
@@ -218,6 +224,33 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 	
 	if exit_test_button:
 		exit_test_button.visible = false
+		
+	# --- NEW: Locate and connect HowToPlayLayer in the editor ---
+	how_to_play_container = root_parent.get_node_or_null("HowToPlayLayer/CenterContainer")
+	var how_to_play_panel = root_parent.get_node_or_null("HowToPlayLayer/CenterContainer/HowToPlayPanel")
+	var rules_label = root_parent.get_node_or_null("HowToPlayLayer/CenterContainer/HowToPlayPanel/RulesLabel")
+	tutorial_back_button = root_parent.get_node_or_null("HowToPlayLayer/CenterContainer/HowToPlayPanel/BackButton")
+	
+	var tutorial_size = Vector2(850, 1200) 
+	if how_to_play_panel:
+		how_to_play_panel.custom_minimum_size = tutorial_size
+		how_to_play_panel.size = tutorial_size
+		var solid_style = StyleBoxFlat.new()
+		solid_style.bg_color = Color(0.12, 0.12, 0.12, 1.0) 
+		how_to_play_panel.add_theme_stylebox_override("panel", solid_style)
+		
+	if rules_label:
+		rules_label.position = Vector2(30, 30)
+		rules_label.size = Vector2(790, 1090) 
+		
+	if tutorial_back_button:
+		var btn_size = Vector2(140, 50)
+		tutorial_back_button.size = btn_size
+		var btn_x = (tutorial_size.x - btn_size.x) / 2
+		var btn_y = tutorial_size.y - btn_size.y - 30
+		tutorial_back_button.position = Vector2(btn_x, btn_y)
+		if not tutorial_back_button.pressed.is_connected(_on_tutorial_back_pressed):
+			tutorial_back_button.pressed.connect(_on_tutorial_back_pressed)
 	
 	_set_button_labels()
 	_connect_ui_signals()
@@ -225,6 +258,32 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 func _on_pt_reset_pressed(): playtest_reset_requested.emit()
 func _on_pt_rules_pressed(): playtest_rules_requested.emit()
 func _on_pt_hint_pressed(): playtest_hint_requested.emit()
+
+# --- NEW: Handles Editor Tutorial Flow ---
+func show_how_to_play():
+	if how_to_play_container:
+		how_to_play_container.visible = true
+	if pt_reset_button: pt_reset_button.disabled = true
+	if pt_rules_button: pt_rules_button.disabled = true
+	if pt_hint_button: pt_hint_button.disabled = true
+	if exit_test_button: exit_test_button.disabled = true
+
+func _on_tutorial_back_pressed():
+	if how_to_play_container:
+		how_to_play_container.visible = false
+	if pt_reset_button: pt_reset_button.disabled = false
+	if pt_rules_button: pt_rules_button.disabled = false
+	if pt_hint_button: pt_hint_button.disabled = (pt_current_hint_count <= 0)
+	if exit_test_button: exit_test_button.disabled = false
+	resume_from_tutorial_requested.emit()
+
+func update_playtest_joker_counter(current: int, required: int):
+	if pt_jokers_label:
+		pt_jokers_label.text = "%d/%d Jokers used" % [current, required]
+
+func set_playtest_joker_counter_visibility(is_visible: bool):
+	if pt_jokers_label:
+		pt_jokers_label.visible = is_visible
 
 func set_playtest_move_counter_visibility(is_visible: bool):
 	if pt_moves_label:
@@ -250,17 +309,24 @@ func _build_playtest_hud():
 	playtest_hud_container.visible = false
 	
 	pt_timer_label = Label.new()
-	pt_timer_label.add_theme_font_size_override("font_size", 32)
+	pt_timer_label.add_theme_font_size_override("font_size", 28)
 	pt_timer_label.modulate = Color(0.9, 0.9, 0.9)
-	pt_timer_label.position = Vector2(420, 115) 
-	pt_timer_label.size = Vector2(300, 50) 
+	pt_timer_label.position = Vector2(120, 115) 
+	pt_timer_label.size = Vector2(280, 50) 
 	playtest_hud_container.add_child(pt_timer_label)
+	
+	pt_jokers_label = Label.new()
+	pt_jokers_label.add_theme_font_size_override("font_size", 28)
+	pt_jokers_label.modulate = Color(0.4, 1.0, 0.4) 
+	pt_jokers_label.position = Vector2(440, 115)
+	pt_jokers_label.size = Vector2(280, 50)
+	playtest_hud_container.add_child(pt_jokers_label)
 	
 	pt_moves_label = Label.new()
 	pt_moves_label.add_theme_font_size_override("font_size", 28)
 	pt_moves_label.modulate = Color(1.0, 0.6, 0.2)
-	pt_moves_label.position = Vector2(750, 115) 
-	pt_moves_label.size = Vector2(300, 50)
+	pt_moves_label.position = Vector2(760, 115) 
+	pt_moves_label.size = Vector2(280, 50)
 	playtest_hud_container.add_child(pt_moves_label)
 
 func update_playtest_hud(time_remaining: int, moves: int):
@@ -493,7 +559,6 @@ func _set_button_labels():
 	if level_minus: level_minus.text = "-"
 	if level_plus: level_plus.text = "+"
 	if time_minus: time_minus.text = "-"
-	# FIXED: Added the plus icon!
 	if time_plus: time_plus.text = "+"
 
 func _connect_ui_signals():

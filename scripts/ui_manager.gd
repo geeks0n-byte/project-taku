@@ -34,6 +34,7 @@ var defeat_label: Label
 @onready var tutorial_back_button = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/BackButton"
 
 var hint_button: Button 
+var joker_counter_label: Label 
 var current_hint_count: int = 0
 
 var _is_last_level_completed: bool = false
@@ -70,22 +71,32 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 	hint_button.size = Vector2(160, 60) 
 	
 	if level_label:
-		level_label.add_theme_font_size_override("font_size", 32)
+		level_label.add_theme_font_size_override("font_size", 28)
 		level_label.modulate = Color(1.0, 1.0, 1.0)
-		level_label.global_position = Vector2(120, 115)
+		level_label.global_position = Vector2(780, 48) 
 		level_label.size = Vector2(280, 50)
 		
 	if timer_label:
-		timer_label.add_theme_font_size_override("font_size", 32)
+		timer_label.add_theme_font_size_override("font_size", 28)
 		timer_label.modulate = Color(0.9, 0.9, 0.9)
-		timer_label.global_position = Vector2(420, 115) 
-		timer_label.size = Vector2(300, 50) 
+		timer_label.global_position = Vector2(120, 115) 
+		timer_label.size = Vector2(280, 50) 
 		
+	joker_counter_label = root_parent.get_node_or_null("JokerCounterLabel")
+	if not joker_counter_label:
+		joker_counter_label = Label.new()
+		joker_counter_label.name = "JokerCounterLabel"
+		root_parent.add_child(joker_counter_label)
+	joker_counter_label.add_theme_font_size_override("font_size", 28)
+	joker_counter_label.modulate = Color(0.4, 1.0, 0.4) 
+	joker_counter_label.global_position = Vector2(440, 115)
+	joker_counter_label.size = Vector2(280, 50)
+
 	if move_counter_label:
 		move_counter_label.add_theme_font_size_override("font_size", 28)
 		move_counter_label.modulate = Color(1.0, 0.6, 0.2)
-		move_counter_label.global_position = Vector2(750, 115) 
-		move_counter_label.size = Vector2(300, 50)
+		move_counter_label.global_position = Vector2(760, 115) 
+		move_counter_label.size = Vector2(280, 50)
 
 	if status_label:
 		status_label.text = "Fill the board following the rules!"
@@ -169,7 +180,8 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		defeat_main_menu_button.position = Vector2(button_center_x, v_start_y)
 		defeat_main_menu_button.size = menu_button_size
 
-	var tutorial_size = Vector2(700, 800)
+	# --- FIXED: Increased height to 1200 so it doesn't scroll ---
+	var tutorial_size = Vector2(850, 1200) 
 	if how_to_play_panel:
 		how_to_play_panel.custom_minimum_size = tutorial_size
 		how_to_play_panel.size = tutorial_size
@@ -179,7 +191,8 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		
 	if rules_label:
 		rules_label.position = Vector2(30, 30)
-		rules_label.size = Vector2(640, 680) 
+		rules_label.size = Vector2(790, 1090) 
+		
 	if tutorial_back_button:
 		var btn_size = Vector2(140, 50)
 		tutorial_back_button.size = btn_size
@@ -190,7 +203,14 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 
 	_connect_signals()
 
-# --- NEW VISIBILITY TOGGLE ---
+func update_joker_counter(current: int, required: int):
+	if joker_counter_label:
+		joker_counter_label.text = "%d/%d Jokers used" % [current, required]
+
+func set_joker_counter_visibility(is_visible: bool):
+	if joker_counter_label:
+		joker_counter_label.visible = is_visible
+
 func set_move_counter_visibility(is_visible: bool):
 	if move_counter_label:
 		move_counter_label.visible = is_visible
