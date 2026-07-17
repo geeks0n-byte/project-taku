@@ -226,7 +226,6 @@ func _on_pt_reset_pressed(): playtest_reset_requested.emit()
 func _on_pt_rules_pressed(): playtest_rules_requested.emit()
 func _on_pt_hint_pressed(): playtest_hint_requested.emit()
 
-# --- NEW VISIBILITY TOGGLE ---
 func set_playtest_move_counter_visibility(is_visible: bool):
 	if pt_moves_label:
 		pt_moves_label.visible = is_visible
@@ -494,7 +493,8 @@ func _set_button_labels():
 	if level_minus: level_minus.text = "-"
 	if level_plus: level_plus.text = "+"
 	if time_minus: time_minus.text = "-"
-	if time_plus: time_plus.text = "-"
+	# FIXED: Added the plus icon!
+	if time_plus: time_plus.text = "+"
 
 func _connect_ui_signals():
 	if clear_button: clear_button.pressed.connect(func(): clear_requested.emit()) 
