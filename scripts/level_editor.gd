@@ -92,14 +92,31 @@ func _load_core_level(res: LevelData):
 	if is_playtesting: return
 	link_first_selection = null
 	
+	# FIXED: Mathematically extract exact grid size from layout dictionary keys!
+	var actual_w = 3
+	var actual_h = 3
+	if res.layout.size() > 0:
+		var max_x = 0
+		var max_y = 0
+		for coord in res.layout.keys():
+			if coord.x > max_x: max_x = coord.x
+			if coord.y > max_y: max_y = coord.y
+		actual_w = max_x + 1
+		actual_h = max_y + 1
+	elif "width" in res and "height" in res:
+		actual_w = res.width
+		actual_h = res.height
+	
 	var s_pairs = []
 	if "shifter_pairs" in res: s_pairs = res.shifter_pairs
 	elif "red_pairs" in res: s_pairs = res.red_pairs
 	
 	var c_pairs = res.constraint_pairs if "constraint_pairs" in res else []
-	canvas_manager.load_layout(res.width, res.height, res.layout, s_pairs, c_pairs)
 	
-	_recenter_editor_layout(res.width, res.height)
+	canvas_manager.generate_blank_canvas(actual_w, actual_h)
+	canvas_manager.load_layout(actual_w, actual_h, res.layout, s_pairs, c_pairs)
+	
+	_recenter_editor_layout(actual_w, actual_h)
 	
 	if "time_limit" in res:
 		ui_manager.set_time_limit(res.time_limit)
@@ -111,7 +128,7 @@ func _load_core_level(res: LevelData):
 		
 	ui_manager.set_allowed_tiles(sanitized_tiles)
 	
-	ui_manager.sync_size_displays(res.width, res.height)
+	ui_manager.sync_size_displays(actual_w, actual_h)
 	ui_manager.update_status("SUCCESS: Loaded CORE Level " + str(res.level_number) + " as a template.", Color(0.4, 1.0, 0.4))
 
 func _bind_signals():
@@ -130,8 +147,6 @@ func _bind_signals():
 	ui_manager.playtest_reset_requested.connect(_on_playtest_reset_requested)
 	ui_manager.playtest_rules_requested.connect(_on_playtest_rules_requested)
 	ui_manager.playtest_hint_requested.connect(_on_playtest_hint_requested)
-	
-	# --- NEW: Connect the resume from tutorial signal ---
 	ui_manager.resume_from_tutorial_requested.connect(_on_resume_from_tutorial)
 
 func _on_random_board_requested():
@@ -144,6 +159,7 @@ func _on_random_board_requested():
 	
 	var generated = PuzzleGenerator.generate_random_layout(target_w, target_h, ui_manager.get_allowed_tiles())
 	
+	canvas_manager.generate_blank_canvas(target_w, target_h)
 	canvas_manager.load_layout(target_w, target_h, generated["layout"], generated["shifters"], generated["constraints"])
 	
 	_recenter_editor_layout(target_w, target_h)
@@ -500,7 +516,6 @@ func _on_playtest_reset_requested():
 	canvas_manager.trigger_redraw()
 	_run_playtest_validation_pass()
 
-# --- NEW: Launching the Rules panel correctly from Editor ---
 func _on_playtest_rules_requested():
 	if not is_playtesting: return
 	playtest_timer.stop()
@@ -509,7 +524,6 @@ func _on_playtest_rules_requested():
 	else:
 		ui_manager.update_status("Please add the HowToPlayLayer to this scene to use rules.", Color.YELLOW)
 
-# --- NEW: Resuming the timer when returning from tutorial ---
 func _on_resume_from_tutorial():
 	if is_playtesting:
 		playtest_timer.start()
@@ -676,14 +690,31 @@ func _on_load_level():
 		if loaded_level:
 			link_first_selection = null
 			
+			# FIXED: Mathematically extract exact grid size from layout dictionary keys!
+			var actual_w = 3
+			var actual_h = 3
+			if loaded_level.layout.size() > 0:
+				var max_x = 0
+				var max_y = 0
+				for coord in loaded_level.layout.keys():
+					if coord.x > max_x: max_x = coord.x
+					if coord.y > max_y: max_y = coord.y
+				actual_w = max_x + 1
+				actual_h = max_y + 1
+			elif "width" in loaded_level and "height" in loaded_level:
+				actual_w = loaded_level.width
+				actual_h = loaded_level.height
+			
 			var s_pairs = []
 			if "shifter_pairs" in loaded_level: s_pairs = loaded_level.shifter_pairs
 			elif "red_pairs" in loaded_level: s_pairs = loaded_level.red_pairs
 			
 			var c_pairs = loaded_level.constraint_pairs if "constraint_pairs" in loaded_level else []
-			canvas_manager.load_layout(loaded_level.width, loaded_level.height, loaded_level.layout, s_pairs, c_pairs)
 			
-			_recenter_editor_layout(loaded_level.width, loaded_level.height)
+			canvas_manager.generate_blank_canvas(actual_w, actual_h)
+			canvas_manager.load_layout(actual_w, actual_h, loaded_level.layout, s_pairs, c_pairs)
+			
+			_recenter_editor_layout(actual_w, actual_h)
 			
 			if "time_limit" in loaded_level:
 				ui_manager.set_time_limit(loaded_level.time_limit)
@@ -695,7 +726,7 @@ func _on_load_level():
 				
 			ui_manager.set_allowed_tiles(sanitized_tiles)
 			
-			ui_manager.sync_size_displays(loaded_level.width, loaded_level.height)
+			ui_manager.sync_size_displays(actual_w, actual_h)
 			ui_manager.update_status("SUCCESS: Loaded Custom Level " + str(level_num), Color(0.4, 1.0, 0.4))
 		else:
 			ui_manager.update_status("ERROR: Failed to parse LevelData resource.", Color(1.0, 0.3, 0.3))

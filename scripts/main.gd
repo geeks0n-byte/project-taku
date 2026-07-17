@@ -159,6 +159,21 @@ func generate_board():
 	var current_level_resource = levels[current_level_index]
 	var is_custom = current_level_resource.resource_path.begins_with("user://")
 	
+	# FIXED: Mathematically extract exact grid size from layout dictionary keys!
+	var actual_w = 6
+	var actual_h = 6
+	if current_level_resource.layout.size() > 0:
+		var max_x = 0
+		var max_y = 0
+		for coord in current_level_resource.layout.keys():
+			if coord.x > max_x: max_x = coord.x
+			if coord.y > max_y: max_y = coord.y
+		actual_w = max_x + 1
+		actual_h = max_y + 1
+	else:
+		if "width" in current_level_resource: actual_w = current_level_resource.width
+		if "height" in current_level_resource: actual_h = current_level_resource.height
+	
 	starting_time_limit = current_level_resource.get("time_limit") if "time_limit" in current_level_resource else 120
 	time_remaining = starting_time_limit
 	shifter_move_count = 0
@@ -181,13 +196,12 @@ func generate_board():
 		
 	ui_manager.set_move_counter_visibility(s_pairs.size() > 0)
 	
-	# --- NEW: Reduced Jokers based on prefilled constraints ---
 	var prefilled_jokers = 0
 	for coord in current_level_resource.layout:
 		if current_level_resource.layout[coord] == 2:
 			prefilled_jokers += 1
 			
-	required_jokers = min(current_level_resource.width, current_level_resource.height)
+	required_jokers = min(actual_w, actual_h)
 	required_jokers = max(0, required_jokers - prefilled_jokers)
 	
 	var has_jokers = (2 in tiles_list)
@@ -209,7 +223,7 @@ func generate_board():
 	
 	ui_manager.update_hint_count(pending_hints.size())
 	
-	var board_pixel_height = current_level_resource.height * board_manager.CELL_SIZE
+	var board_pixel_height = actual_h * board_manager.CELL_SIZE
 	var screen_height = get_viewport_rect().size.y
 	
 	var new_board_y = (screen_height / 3.0) - (board_pixel_height / 2.0)
