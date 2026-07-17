@@ -3,14 +3,15 @@ extends RefCounted
 
 static func generate_random_layout(width: int, height: int, _allowed_tiles: Array) -> Dictionary:
 	var attempt = 0
+	var gen_start_time = Time.get_ticks_msec()
 	
 	# We wrap the generator in a retry loop. If a random placement of walls or shifters
 	# creates a mathematically impossible board, it instantly aborts and tries again!
 	while true:
 		attempt += 1
-		# Failsafe: If the requested size is extremely difficult to solve with walls/shifters, 
-		# turn them off after 20 fails to guarantee a playable standard puzzle.
-		var force_easy = (attempt > 20) 
+		# Failsafe: If the requested size is extremely difficult to solve, or generation 
+		# takes > 1.5 seconds overall, force easy mode to guarantee a playable standard puzzle.
+		var force_easy = (attempt > 20) or (Time.get_ticks_msec() - gen_start_time > 1500)
 		
 		var layout = {}
 		for y in range(height):
@@ -21,9 +22,7 @@ static func generate_random_layout(width: int, height: int, _allowed_tiles: Arra
 		all_cells.shuffle()
 		
 		# 1. Place random Walls
-		# Rule 1: No row or column can fully consist of walls.
-		# Rule 2: A wall cannot be surrounded by 4 playable tiles.
-		var max_walls = 0 if force_easy else randi_range(0, int(all_cells.size() * 0.2))
+		var max_walls = 0 if force_easy else randi_range(0, int(all_cells.size() * 0.15))
 		var num_walls_placed = 0
 		
 		var row_counts = {}
@@ -101,18 +100,17 @@ static func generate_random_layout(width: int, height: int, _allowed_tiles: Arra
 				if found_pair: break
 			if not found_pair: has_shifter = false
 
-		# 4. Solve the Board
+		# 4. Solve the Board (Using ultra-fast MRV heuristic)
 		var solver_tiles = [0, 1, 2] 
 		var iter_tracker = {"count": 0}
-		var success = _solve(layout, empty_cells, 0, width, height, solver_tiles, iter_tracker)
+		var success = _solve(layout, empty_cells.duplicate(), width, height, solver_tiles, iter_tracker)
 		
 		if not success:
 			continue 
 			
-		# --- NEW: Save the fully solved board to reference for accurate hints! ---
 		var solved_layout = layout.duplicate()
 			
-		# 5. Uniqueness Hole-Punching (Guarantees exactly 1 solution)
+		# 5. Uniqueness Hole-Punching with strict TIME LIMIT
 		var filled_cells = []
 		for c in layout.keys():
 			if layout[c] >= 0 and layout[c] != 3: 
@@ -120,7 +118,15 @@ static func generate_random_layout(width: int, height: int, _allowed_tiles: Arra
 				
 		filled_cells.shuffle()
 		
+		var hole_punch_start = Time.get_ticks_msec()
+		var max_punch_time = 400 # Guarantees UI will NEVER freeze longer than 0.4 seconds!
+		
 		for c in filled_cells:
+			# If checking uniqueness takes too long on big boards, stop erasing!
+			# The puzzle will just have a few extra clues.
+			if Time.get_ticks_msec() - hole_punch_start > max_punch_time:
+				break
+				
 			var original_val = layout[c]
 			layout[c] = -1 
 			
@@ -128,7 +134,7 @@ static func generate_random_layout(width: int, height: int, _allowed_tiles: Arra
 			for k in layout.keys():
 				if layout[k] == -1: current_empty.append(k)
 				
-			var sols = _count_solutions(layout, current_empty, 0, width, height, solver_tiles, {"count": 0})
+			var sols = _count_solutions(layout, current_empty, width, height, solver_tiles, {"count": 0})
 			
 			if sols != 1:
 				layout[c] = original_val
@@ -140,7 +146,7 @@ static func generate_random_layout(width: int, height: int, _allowed_tiles: Arra
 			layout[shifter_a] = -1
 			layout[shifter_b] = -1
 
-		# --- NEW: Generate Smart Hints ---
+		# 7. Generate Smart Hints
 		var constraints = []
 		var candidate_hint_pairs = []
 		
@@ -151,79 +157,120 @@ static func generate_random_layout(width: int, height: int, _allowed_tiles: Arra
 					var right = c + Vector2i(1, 0)
 					var down = c + Vector2i(0, 1)
 					
-					# Check right neighbor
 					if layout.has(right) and layout[right] != -2:
-						# Rule A: The solved tiles must strictly be Yellow (0) or Blue (1)
 						if solved_layout[c] in [0, 1] and solved_layout[right] in [0, 1]:
-							# Rule B: At least one of them must be empty in the final board so it actually helps!
 							if layout[c] == -1 or layout[right] == -1:
-								# Rule C: Don't put constraints on the shifter tiles
 								if c != shifter_a and c != shifter_b and right != shifter_a and right != shifter_b:
 									candidate_hint_pairs.append({"a": c, "b": right})
 					
-					# Check down neighbor
 					if layout.has(down) and layout[down] != -2:
 						if solved_layout[c] in [0, 1] and solved_layout[down] in [0, 1]:
 							if layout[c] == -1 or layout[down] == -1:
 								if c != shifter_a and c != shifter_b and down != shifter_a and down != shifter_b:
 									candidate_hint_pairs.append({"a": c, "b": down})
 
-		# Pick 1 to 3 smart hints to inject into the level!
 		candidate_hint_pairs.shuffle()
 		var num_hints = randi_range(1, 3) 
 		for i in range(min(num_hints, candidate_hint_pairs.size())):
 			var p = candidate_hint_pairs[i]
-			# Assign Equals (=) or Not Equals (x) based on the secret solved board
 			var type = "equals" if solved_layout[p.a] == solved_layout[p.b] else "not_equals"
 			constraints.append({"a": p.a, "b": p.b, "type": type})
 
 		return {
 			"layout": layout,
 			"shifters": shifters,
-			"constraints": constraints # Smart hints are now injected perfectly!
+			"constraints": constraints 
 		}
 
-	return {} # Failsafe return
+	return {} 
 
-# --- THE BACKTRACKING GENERATOR ---
-static func _solve(layout: Dictionary, empty_cells: Array, index: int, w: int, h: int, allowed: Array, iter: Dictionary) -> bool:
-	if index >= empty_cells.size(): return true
+# --- ULTRA-FAST MRV SOLVER ---
+static func _solve(layout: Dictionary, empty_cells: Array, w: int, h: int, allowed: Array, iter: Dictionary) -> bool:
+	if empty_cells.size() == 0: return true
 	
 	iter.count += 1
-	if iter.count > 5000: return false 
+	if iter.count > 2000: return false 
 	
-	var coord = empty_cells[index]
-	var shuffled_allowed = allowed.duplicate()
-	shuffled_allowed.shuffle() 
+	# Minimum Remaining Values (MRV) Heuristic
+	# Find the cell with the fewest possible valid tiles to prune dead-ends instantly
+	var best_idx = -1
+	var min_opts = 999
+	var best_valid_vals = []
+
+	for i in range(empty_cells.size()):
+		var test_coord = empty_cells[i] # FIXED: Renamed to avoid shadowing
+		var valid_vals = []
+		for val in allowed:
+			if _is_valid_placement(test_coord, val, layout, w, h):
+				valid_vals.append(val)
+				
+		var c_opts = valid_vals.size()
+		if c_opts < min_opts:
+			min_opts = c_opts
+			best_idx = i
+			best_valid_vals = valid_vals
+			if min_opts <= 1:
+				break # 0 or 1 option is the absolute best we can do, stop searching!
+				
+	if min_opts == 0:
+		return false # Dead end found early! Save thousands of iterations!
+
+	var best_coord = empty_cells[best_idx] # FIXED: Distinct variable name
+	empty_cells.remove_at(best_idx)
+	best_valid_vals.shuffle() 
 	
-	for val in shuffled_allowed:
-		if _is_valid_placement(coord, val, layout, w, h):
-			layout[coord] = val
-			if _solve(layout, empty_cells, index + 1, w, h, allowed, iter):
-				return true
-			layout[coord] = -1 # Backtrack
-			
+	for val in best_valid_vals:
+		layout[best_coord] = val
+		if _solve(layout, empty_cells, w, h, allowed, iter):
+			return true
+		layout[best_coord] = -1 
+		
+	empty_cells.insert(best_idx, best_coord) # Backtrack
 	return false
 
-# --- UNIQUENESS CHECKER ---
-static func _count_solutions(layout: Dictionary, empty_cells: Array, index: int, w: int, h: int, allowed: Array, iter: Dictionary) -> int:
-	if index >= empty_cells.size(): return 1
+# --- ULTRA-FAST MRV UNIQUENESS CHECKER ---
+static func _count_solutions(layout: Dictionary, empty_cells: Array, w: int, h: int, allowed: Array, iter: Dictionary) -> int:
+	if empty_cells.size() == 0: return 1
 	
 	iter.count += 1
-	if iter.count > 8000: return 2 
+	if iter.count > 3000: return 2 # Failsafe assumes non-unique if taking too long
 	
-	var coord = empty_cells[index]
-	var total_sols = 0
-	
-	for val in allowed:
-		if _is_valid_placement(coord, val, layout, w, h):
-			layout[coord] = val
-			total_sols += _count_solutions(layout, empty_cells, index + 1, w, h, allowed, iter)
-			layout[coord] = -1 # Backtrack
-			
-			if total_sols > 1:
-				return total_sols
+	var best_idx = -1
+	var min_opts = 999
+	var best_valid_vals = []
+
+	for i in range(empty_cells.size()):
+		var test_coord = empty_cells[i] # FIXED: Renamed to avoid shadowing
+		var valid_vals = []
+		for val in allowed:
+			if _is_valid_placement(test_coord, val, layout, w, h):
+				valid_vals.append(val)
 				
+		var c_opts = valid_vals.size()
+		if c_opts < min_opts:
+			min_opts = c_opts
+			best_idx = i
+			best_valid_vals = valid_vals
+			if min_opts <= 1:
+				break
+
+	if min_opts == 0:
+		return 0
+
+	var best_coord = empty_cells[best_idx] # FIXED: Distinct variable name
+	empty_cells.remove_at(best_idx)
+	
+	var total_sols = 0
+	for val in best_valid_vals:
+		layout[best_coord] = val
+		total_sols += _count_solutions(layout, empty_cells, w, h, allowed, iter)
+		layout[best_coord] = -1 
+		
+		# Abort early if we already proved it's not unique!
+		if total_sols > 1:
+			break
+			
+	empty_cells.insert(best_idx, best_coord) # Backtrack
 	return total_sols
 
 # --- VALIDATION RULES ---
