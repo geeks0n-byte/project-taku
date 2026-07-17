@@ -7,7 +7,7 @@ signal how_to_play_requested
 signal resume_from_tutorial_requested 
 signal next_level_requested  
 signal play_again_requested  
-signal hint_requested # NEW
+signal hint_requested 
 
 @onready var level_label = $"../LevelLabel"
 @onready var status_label = $"../StatusLabel"
@@ -33,37 +33,13 @@ var defeat_label: Label
 @onready var rules_label = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/RulesLabel"
 @onready var tutorial_back_button = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/BackButton"
 
-var hint_button: Button # NEW
+var hint_button: Button 
 var current_hint_count: int = 0
 
 var _is_last_level_completed: bool = false
 
 func setup_ui(_show_debug_tools: bool, cell_size: float):
 	
-	# NEW: Dynamically create and place the Hint button so it works instantly
-	var root_parent = get_parent()
-	hint_button = root_parent.get_node_or_null("HintButton")
-	if not hint_button:
-		hint_button = Button.new()
-		hint_button.name = "HintButton"
-		root_parent.add_child(hint_button)
-		
-	hint_button.add_theme_font_size_override("font_size", 28)
-	hint_button.global_position = Vector2(550, 115)
-	hint_button.size = Vector2(160, 50)
-	
-	if timer_label:
-		timer_label.add_theme_font_size_override("font_size", 32)
-		timer_label.modulate = Color(0.9, 0.9, 0.9)
-		timer_label.global_position = Vector2(650, 40)
-		timer_label.size = Vector2(300, 50)
-		
-	if move_counter_label:
-		move_counter_label.add_theme_font_size_override("font_size", 28)
-		move_counter_label.modulate = Color(1.0, 0.6, 0.2)
-		move_counter_label.global_position = Vector2(650, 90)
-		move_counter_label.size = Vector2(300, 50)
-		
 	if pause_button:
 		pause_button.text = "Pause"
 		pause_button.add_theme_font_size_override("font_size", 28)
@@ -81,6 +57,31 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		how_to_play_button.add_theme_font_size_override("font_size", 28)
 		how_to_play_button.global_position = Vector2(440, 40)
 		how_to_play_button.size = Vector2(180, 60) 
+
+	# FIXED: Create and place the Hint button exactly next to the Rules button
+	var root_parent = get_parent()
+	hint_button = root_parent.get_node_or_null("HintButton")
+	if not hint_button:
+		hint_button = Button.new()
+		hint_button.name = "HintButton"
+		root_parent.add_child(hint_button)
+		
+	hint_button.add_theme_font_size_override("font_size", 28)
+	hint_button.global_position = Vector2(640, 40) # Pushed right next to Rules (440 + 180 + 20 spacing)
+	hint_button.size = Vector2(160, 60) # Made height match the other top menu buttons
+	
+	# FIXED: Pushed the Timer and Move Counter far to the right so they sit alone
+	if timer_label:
+		timer_label.add_theme_font_size_override("font_size", 32)
+		timer_label.modulate = Color(0.9, 0.9, 0.9)
+		timer_label.global_position = Vector2(850, 40) # Moved from 650 -> 850
+		timer_label.size = Vector2(300, 50)
+		
+	if move_counter_label:
+		move_counter_label.add_theme_font_size_override("font_size", 28)
+		move_counter_label.modulate = Color(1.0, 0.6, 0.2)
+		move_counter_label.global_position = Vector2(850, 90) # Moved from 650 -> 850
+		move_counter_label.size = Vector2(300, 50)
 		
 	if level_label:
 		level_label.add_theme_font_size_override("font_size", 32)
@@ -191,7 +192,6 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 
 	_connect_signals()
 
-# --- NEW: Dynamically updates the Hint counter UI ---
 func update_hint_count(count: int):
 	current_hint_count = count
 	if hint_button:
@@ -207,7 +207,6 @@ func set_hud_buttons_disabled(is_disabled: bool):
 	if reset_button: reset_button.disabled = is_disabled
 	if how_to_play_button: how_to_play_button.disabled = is_disabled
 	if hint_button: 
-		# Prevents re-enabling an empty hint button when unpausing
 		hint_button.disabled = is_disabled or (current_hint_count <= 0) 
 
 func _connect_signals():

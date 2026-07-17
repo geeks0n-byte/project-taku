@@ -26,7 +26,7 @@ offset_bottom = 817.96
 theme_override_font_sizes/font_size = 41
 text = "Paused"
 horizontal_alignment = 1
-vertical_alignment = 1
+vertical_alignment = 2
 
 [node name="TextureRect" type="TextureRect" parent="." unique_id=202879118]
 layout_mode = 0

@@ -2,140 +2,195 @@ class_name PuzzleGenerator
 extends RefCounted
 
 static func generate_random_layout(width: int, height: int, _allowed_tiles: Array) -> Dictionary:
-	var layout = {}
+	var attempt = 0
 	
-	# 1. Initialize an empty board
-	for y in range(height):
-		for x in range(width):
-			layout[Vector2i(x, y)] = -1
+	# We wrap the generator in a retry loop. If a random placement of walls or shifters
+	# creates a mathematically impossible board, it instantly aborts and tries again!
+	while true:
+		attempt += 1
+		# Failsafe: If the requested size is extremely difficult to solve with walls/shifters, 
+		# turn them off after 20 fails to guarantee a playable standard puzzle.
+		var force_easy = (attempt > 20) 
+		
+		var layout = {}
+		for y in range(height):
+			for x in range(width):
+				layout[Vector2i(x, y)] = -1
 
-	# 2. Place random corner walls (0 to 3 walls max)
-	var corners = [Vector2i(0,0), Vector2i(width-1, 0), Vector2i(0, height-1), Vector2i(width-1, height-1)]
-	corners.shuffle()
-	var num_walls = randi() % 4 
-	for i in range(num_walls):
-		layout[corners[i]] = -2
+		var all_cells = layout.keys()
+		all_cells.shuffle()
+		
+		# 1. Place random Walls
+		# Rule 1: No row or column can fully consist of walls.
+		# Rule 2: A wall cannot be surrounded by 4 playable tiles.
+		var max_walls = 0 if force_easy else randi_range(0, int(all_cells.size() * 0.2))
+		var num_walls_placed = 0
+		
+		var row_counts = {}
+		var col_counts = {}
+		for i in range(height): row_counts[i] = 0
+		for i in range(width): col_counts[i] = 0
 
-	# 3. Gather all empty playable cells
-	var empty_cells = []
-	for c in layout.keys():
-		if layout[c] == -1: 
-			empty_cells.append(c)
-	empty_cells.shuffle()
-
-	# 4. Generate Shifters (75% chance to include a Shifter pair)
-	var shifters = []
-	var has_shifter = (randi() % 100 < 75)
-	var shifter_a = Vector2i(-1, -1)
-	var shifter_b = Vector2i(-1, -1)
-	
-	if has_shifter:
-		var found_pair = false
-		for i in range(empty_cells.size()):
-			var candidate_a = empty_cells[i]
+		for coord in all_cells:
+			if num_walls_placed >= max_walls: break
 			
-			# Grab adjacent neighbor coordinates
-			var neighbors = [
-				candidate_a + Vector2i(1, 0),
-				candidate_a + Vector2i(-1, 0),
-				candidate_a + Vector2i(0, 1),
-				candidate_a + Vector2i(0, -1)
-			]
-			neighbors.shuffle()
-			
-			# Check if any neighbor is also an empty, playable cell
-			for candidate_b in neighbors:
-				var b_index = empty_cells.find(candidate_b)
-				if b_index != -1:
-					shifter_a = candidate_a
-					shifter_b = candidate_b
-					
-					# Remove both from the empty_cells array
-					empty_cells.remove_at(max(i, b_index))
-					empty_cells.remove_at(min(i, b_index))
-					
-					layout[shifter_a] = 3 # Hard-lock the Shifter into the solved board
-					empty_cells.append(shifter_b) # The partner space must be solved normally
-					empty_cells.shuffle()
-					
-					found_pair = true
-					break
-					
-			if found_pair:
-				break
+			if row_counts[coord.y] >= width - 1 or col_counts[coord.x] >= height - 1:
+				continue
 				
-		if not found_pair:
-			has_shifter = false # Failsafe: No adjacent empty tiles available
-
-	# 5. Run the Backtracking Solver to generate a valid finished board
-	var solver_tiles = [0, 1, 2] 
-	var iter_tracker = {"count": 0}
-	_solve(layout, empty_cells, 0, width, height, solver_tiles, iter_tracker)
-
-	# 6. Generate Constraints (1 to 4 random pairs)
-	var constraints = []
-	var adjacent_pairs = []
-	for y in range(height):
-		for x in range(width):
-			var c = Vector2i(x, y)
-			if layout[c] == 0 or layout[c] == 1:
-				var right = c + Vector2i(1, 0)
-				var down = c + Vector2i(0, 1)
-				if layout.has(right) and (layout[right] == 0 or layout[right] == 1):
-					adjacent_pairs.append({"a": c, "b": right})
-				if layout.has(down) and (layout[down] == 0 or layout[down] == 1):
-					adjacent_pairs.append({"a": c, "b": down})
-
-	adjacent_pairs.shuffle()
-	var num_constraints = randi_range(1, 4)
-	for i in range(min(num_constraints, adjacent_pairs.size())):
-		var p = adjacent_pairs[i]
-		var type = "equals" if layout[p.a] == layout[p.b] else "not_equals"
-		constraints.append({"a": p.a, "b": p.b, "type": type})
-
-	# 7. Punch Holes in the board to turn it into a puzzle!
-	var filled_cells = []
-	for c in layout.keys():
-		if layout[c] >= 0 and layout[c] != 3: 
-			filled_cells.append(c)
+			var neighbors = [
+				coord + Vector2i(1, 0),
+				coord + Vector2i(-1, 0),
+				coord + Vector2i(0, 1),
+				coord + Vector2i(0, -1)
+			]
 			
-	filled_cells.shuffle()
-	
-	# BUG FIX: Clamped the keep_count so it can never exceed the actual number of filled cells
-	var keep_count = min(filled_cells.size(), max(2, int(filled_cells.size() * 0.15)))
-	
-	var clues = []
-	for i in range(keep_count):
-		clues.append(filled_cells[i])
+			var playable_count = 0
+			for n in neighbors:
+				if layout.has(n) and layout[n] != -2:
+					playable_count += 1
+					
+			if playable_count == 4:
+				continue 
+				
+			layout[coord] = -2
+			row_counts[coord.y] += 1
+			col_counts[coord.x] += 1
+			num_walls_placed += 1
 
-	# 8. Compile the Final Layout
-	var final_layout = {}
-	for c in layout.keys():
-		if layout[c] == -2:
-			final_layout[c] = -2
-		elif clues.has(c):
-			final_layout[c] = layout[c] 
-		else:
-			final_layout[c] = -1 
+		# 2. Gather Empty Cells
+		var empty_cells = []
+		for c in layout.keys():
+			if layout[c] == -1: 
+				empty_cells.append(c)
+		empty_cells.shuffle()
+
+		# 3. Generate Shifters (75% chance)
+		var shifters = []
+		var has_shifter = false if force_easy else (randi() % 100 < 75)
+		var shifter_a = Vector2i(-1, -1)
+		var shifter_b = Vector2i(-1, -1)
+		
+		if has_shifter:
+			var found_pair = false
+			for i in range(empty_cells.size()):
+				var candidate_a = empty_cells[i]
+				var neighbors = [
+					candidate_a + Vector2i(1, 0),
+					candidate_a + Vector2i(-1, 0),
+					candidate_a + Vector2i(0, 1),
+					candidate_a + Vector2i(0, -1)
+				]
+				neighbors.shuffle()
+				
+				for candidate_b in neighbors:
+					var b_index = empty_cells.find(candidate_b)
+					if b_index != -1:
+						shifter_a = candidate_a
+						shifter_b = candidate_b
+						
+						empty_cells.remove_at(max(i, b_index))
+						empty_cells.remove_at(min(i, b_index))
+						
+						layout[shifter_a] = 3 
+						empty_cells.append(shifter_b) 
+						empty_cells.shuffle()
+						
+						found_pair = true
+						break
+						
+				if found_pair: break
+			if not found_pair: has_shifter = false
+
+		# 4. Solve the Board
+		var solver_tiles = [0, 1, 2] 
+		var iter_tracker = {"count": 0}
+		var success = _solve(layout, empty_cells, 0, width, height, solver_tiles, iter_tracker)
+		
+		if not success:
+			continue 
 			
-	if has_shifter:
-		var active_node = shifter_a if randi() % 2 == 0 else shifter_b
-		shifters.append({"a": shifter_a, "b": shifter_b, "active": active_node})
-		final_layout[shifter_a] = -1
-		final_layout[shifter_b] = -1
+		# --- NEW: Save the fully solved board to reference for accurate hints! ---
+		var solved_layout = layout.duplicate()
+			
+		# 5. Uniqueness Hole-Punching (Guarantees exactly 1 solution)
+		var filled_cells = []
+		for c in layout.keys():
+			if layout[c] >= 0 and layout[c] != 3: 
+				filled_cells.append(c)
+				
+		filled_cells.shuffle()
+		
+		for c in filled_cells:
+			var original_val = layout[c]
+			layout[c] = -1 
+			
+			var current_empty = []
+			for k in layout.keys():
+				if layout[k] == -1: current_empty.append(k)
+				
+			var sols = _count_solutions(layout, current_empty, 0, width, height, solver_tiles, {"count": 0})
+			
+			if sols != 1:
+				layout[c] = original_val
 
-	return {
-		"layout": final_layout,
-		"shifters": shifters,
-		"constraints": constraints
-	}
+		# 6. Finalize Shifter Display
+		if has_shifter:
+			var active_node = shifter_a if randi() % 2 == 0 else shifter_b
+			shifters.append({"a": shifter_a, "b": shifter_b, "active": active_node})
+			layout[shifter_a] = -1
+			layout[shifter_b] = -1
 
-# --- THE BACKTRACKING SOLVER ALGORITHM ---
+		# --- NEW: Generate Smart Hints ---
+		var constraints = []
+		var candidate_hint_pairs = []
+		
+		for y in range(height):
+			for x in range(width):
+				var c = Vector2i(x, y)
+				if layout[c] != -2:
+					var right = c + Vector2i(1, 0)
+					var down = c + Vector2i(0, 1)
+					
+					# Check right neighbor
+					if layout.has(right) and layout[right] != -2:
+						# Rule A: The solved tiles must strictly be Yellow (0) or Blue (1)
+						if solved_layout[c] in [0, 1] and solved_layout[right] in [0, 1]:
+							# Rule B: At least one of them must be empty in the final board so it actually helps!
+							if layout[c] == -1 or layout[right] == -1:
+								# Rule C: Don't put constraints on the shifter tiles
+								if c != shifter_a and c != shifter_b and right != shifter_a and right != shifter_b:
+									candidate_hint_pairs.append({"a": c, "b": right})
+					
+					# Check down neighbor
+					if layout.has(down) and layout[down] != -2:
+						if solved_layout[c] in [0, 1] and solved_layout[down] in [0, 1]:
+							if layout[c] == -1 or layout[down] == -1:
+								if c != shifter_a and c != shifter_b and down != shifter_a and down != shifter_b:
+									candidate_hint_pairs.append({"a": c, "b": down})
+
+		# Pick 1 to 3 smart hints to inject into the level!
+		candidate_hint_pairs.shuffle()
+		var num_hints = randi_range(1, 3) 
+		for i in range(min(num_hints, candidate_hint_pairs.size())):
+			var p = candidate_hint_pairs[i]
+			# Assign Equals (=) or Not Equals (x) based on the secret solved board
+			var type = "equals" if solved_layout[p.a] == solved_layout[p.b] else "not_equals"
+			constraints.append({"a": p.a, "b": p.b, "type": type})
+
+		return {
+			"layout": layout,
+			"shifters": shifters,
+			"constraints": constraints # Smart hints are now injected perfectly!
+		}
+
+	return {} # Failsafe return
+
+# --- THE BACKTRACKING GENERATOR ---
 static func _solve(layout: Dictionary, empty_cells: Array, index: int, w: int, h: int, allowed: Array, iter: Dictionary) -> bool:
 	if index >= empty_cells.size(): return true
 	
 	iter.count += 1
-	if iter.count > 5000: return true 
+	if iter.count > 5000: return false 
 	
 	var coord = empty_cells[index]
 	var shuffled_allowed = allowed.duplicate()
@@ -150,8 +205,29 @@ static func _solve(layout: Dictionary, empty_cells: Array, index: int, w: int, h
 			
 	return false
 
+# --- UNIQUENESS CHECKER ---
+static func _count_solutions(layout: Dictionary, empty_cells: Array, index: int, w: int, h: int, allowed: Array, iter: Dictionary) -> int:
+	if index >= empty_cells.size(): return 1
+	
+	iter.count += 1
+	if iter.count > 8000: return 2 
+	
+	var coord = empty_cells[index]
+	var total_sols = 0
+	
+	for val in allowed:
+		if _is_valid_placement(coord, val, layout, w, h):
+			layout[coord] = val
+			total_sols += _count_solutions(layout, empty_cells, index + 1, w, h, allowed, iter)
+			layout[coord] = -1 # Backtrack
+			
+			if total_sols > 1:
+				return total_sols
+				
+	return total_sols
+
+# --- VALIDATION RULES ---
 static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w: int, h: int) -> bool:
-	# Rule 1: Max 1 Joker per row/col
 	if val == 2:
 		var joker_col = 0
 		var joker_row = 0
@@ -161,7 +237,6 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 
 	layout[coord] = val 
 	
-	# Rule 2: Max 2 of the same color in a row
 	for x in range(max(0, coord.x - 2), min(w - 2, coord.x + 1)):
 		var v1 = layout.get(Vector2i(x, coord.y), -1)
 		var v2 = layout.get(Vector2i(x+1, coord.y), -1)
@@ -184,7 +259,6 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 				layout[coord] = -1
 				return false
 
-	# Rule 3: Strict Equality Parity
 	var col_playable = 0; var col_filled = 0; var col_0 = 0; var col_1 = 0
 	for y in range(h):
 		var st = layout.get(Vector2i(coord.x, y), -1)

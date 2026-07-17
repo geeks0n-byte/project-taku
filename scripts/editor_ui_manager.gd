@@ -12,6 +12,10 @@ signal test_mode_exited
 signal grid_size_changed(new_width: int, new_height: int) 
 signal overwrite_confirmed
 
+signal playtest_reset_requested # NEW
+signal playtest_rules_requested # NEW
+signal playtest_hint_requested # NEW
+
 const MIN_GRID_WIDTH: int = 3
 const MAX_GRID_WIDTH: int = 9
 const MIN_GRID_HEIGHT: int = 3
@@ -85,9 +89,16 @@ var pt_timer_label: Label
 var pt_moves_label: Label
 var random_button: Button 
 
+# NEW: Playtest HUD Buttons
+var pt_reset_button: Button
+var pt_rules_button: Button
+var pt_hint_button: Button
+var pt_current_hint_count: int = 0
+
 func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 	editor_width = grid_width
 	editor_height = grid_height
+	var root_parent = get_parent()
 	
 	if grid_size_container and not random_button:
 		random_button = Button.new()
@@ -96,6 +107,43 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		random_button.pressed.connect(func(): random_requested.emit())
 		grid_size_container.add_child(random_button)
 		grid_size_container.move_child(random_button, 0)
+	
+	# --- NEW: Build Playtest Specific Top Buttons ---
+	if not pt_reset_button:
+		pt_reset_button = Button.new()
+		pt_reset_button.name = "PTResetButton"
+		root_parent.add_child(pt_reset_button)
+	pt_reset_button.text = "Reset"
+	pt_reset_button.add_theme_font_size_override("font_size", 28)
+	pt_reset_button.global_position = Vector2(280, 40)
+	pt_reset_button.size = Vector2(140, 60)
+	pt_reset_button.visible = false
+	if not pt_reset_button.pressed.is_connected(_on_pt_reset_pressed):
+		pt_reset_button.pressed.connect(_on_pt_reset_pressed)
+		
+	if not pt_rules_button:
+		pt_rules_button = Button.new()
+		pt_rules_button.name = "PTRulesButton"
+		root_parent.add_child(pt_rules_button)
+	pt_rules_button.text = "Rules"
+	pt_rules_button.add_theme_font_size_override("font_size", 28)
+	pt_rules_button.global_position = Vector2(440, 40)
+	pt_rules_button.size = Vector2(180, 60)
+	pt_rules_button.visible = false
+	if not pt_rules_button.pressed.is_connected(_on_pt_rules_pressed):
+		pt_rules_button.pressed.connect(_on_pt_rules_pressed)
+		
+	if not pt_hint_button:
+		pt_hint_button = Button.new()
+		pt_hint_button.name = "PTHintButton"
+		root_parent.add_child(pt_hint_button)
+	pt_hint_button.add_theme_font_size_override("font_size", 28)
+	pt_hint_button.global_position = Vector2(640, 40)
+	pt_hint_button.size = Vector2(160, 60)
+	pt_hint_button.visible = false
+	if not pt_hint_button.pressed.is_connected(_on_pt_hint_pressed):
+		pt_hint_button.pressed.connect(_on_pt_hint_pressed)
+	# --------------------------------------------------
 	
 	_setup_brush_toggles()
 	_setup_tree_checkbox_icons()
@@ -177,6 +225,18 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 	_set_button_labels()
 	_connect_ui_signals()
 
+# --- NEW: Playtest Signal Hooks ---
+func _on_pt_reset_pressed(): playtest_reset_requested.emit()
+func _on_pt_rules_pressed(): playtest_rules_requested.emit()
+func _on_pt_hint_pressed(): playtest_hint_requested.emit()
+
+func update_playtest_hint_count(count: int):
+	pt_current_hint_count = count
+	if pt_hint_button:
+		pt_hint_button.text = "💡 Hint (" + str(count) + ")"
+		pt_hint_button.disabled = (count <= 0)
+# ----------------------------------
+
 func show_overwrite_warning():
 	if overwrite_panel:
 		overwrite_panel.visible = true
@@ -199,11 +259,14 @@ func _build_playtest_hud():
 	pt_timer_label = Label.new()
 	pt_timer_label.add_theme_font_size_override("font_size", 32)
 	pt_timer_label.modulate = Color(0.9, 0.9, 0.9)
+	# Pushed further right mimicking the main game HUD
+	pt_timer_label.position = Vector2(850, 40)
 	playtest_hud_container.add_child(pt_timer_label)
 	
 	pt_moves_label = Label.new()
 	pt_moves_label.add_theme_font_size_override("font_size", 32)
 	pt_moves_label.modulate = Color(1.0, 0.6, 0.2)
+	pt_moves_label.position = Vector2(850, 90)
 	playtest_hud_container.add_child(pt_moves_label)
 
 func update_playtest_hud(time_remaining: int, moves: int):
@@ -224,7 +287,7 @@ func _setup_tree_checkbox_icons():
 	
 	if allow_zero:
 		allow_zero.toggle_mode = true
-		allow_zero.button_pressed = true # Check by default
+		allow_zero.button_pressed = true 
 		if tex_zero_file: allow_zero.icon = tex_zero_file
 		elif icon_zero: allow_zero.icon = icon_zero
 		allow_zero.expand_icon = true
@@ -232,7 +295,7 @@ func _setup_tree_checkbox_icons():
 		
 	if allow_one:
 		allow_one.toggle_mode = true
-		allow_one.button_pressed = true # Check by default
+		allow_one.button_pressed = true 
 		if tex_one_file: allow_one.icon = tex_one_file
 		elif icon_one: allow_one.icon = icon_one
 		allow_one.expand_icon = true
@@ -240,7 +303,7 @@ func _setup_tree_checkbox_icons():
 		
 	if allow_joker:
 		allow_joker.toggle_mode = true
-		allow_joker.button_pressed = true # Check by default
+		allow_joker.button_pressed = true 
 		if tex_joker_file: allow_joker.icon = tex_joker_file
 		elif icon_joker: allow_joker.icon = icon_joker
 		allow_joker.expand_icon = true
@@ -251,8 +314,6 @@ func get_allowed_tiles() -> Array:
 	if allow_zero and allow_zero.button_pressed: tiles.append(0)
 	if allow_one and allow_one.button_pressed: tiles.append(1)
 	if allow_joker and allow_joker.button_pressed: tiles.append(2)
-	
-	# Updated fallback to include Joker (2)
 	if tiles.size() == 0: tiles = [0, 1, 2] 
 	return tiles
 
@@ -504,6 +565,11 @@ func toggle_playtest_visibility(is_playtesting: bool):
 	
 	if level_settings_container: level_settings_container.visible = not is_playtesting
 	if playtest_hud_container: playtest_hud_container.visible = is_playtesting
+	
+	# NEW: Toggle visibility of the new playtest buttons!
+	if pt_reset_button: pt_reset_button.visible = is_playtesting
+	if pt_rules_button: pt_rules_button.visible = is_playtesting
+	if pt_hint_button: pt_hint_button.visible = is_playtesting
 	
 	exit_test_button.visible = is_playtesting
 

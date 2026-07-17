@@ -22,7 +22,6 @@ var is_paused: bool = false
 var current_level_index: int = 0
 
 var pending_hints: Array = [] 
-var solved_solution_reference: Dictionary = {}
 
 func _ready():
 	_load_all_levels_from_storage()
@@ -167,7 +166,6 @@ func generate_board():
 	
 	board_manager.process_mode = Node.PROCESS_MODE_INHERIT
 	
-	# Updated fallback array to include Joker (2)
 	var tiles_list: Array = [0, 1, 2] 
 	if "available_tiles" in current_level_resource and current_level_resource.available_tiles.size() > 0:
 		tiles_list = current_level_resource.available_tiles
@@ -182,8 +180,6 @@ func generate_board():
 	if "constraint_pairs" in current_level_resource:
 		c_pairs = current_level_resource.constraint_pairs.duplicate()
 		
-	solved_solution_reference = current_level_resource.layout.duplicate()
-	
 	pending_hints = c_pairs.duplicate()
 	pending_hints.shuffle()
 	
@@ -205,23 +201,40 @@ func _on_hint_requested():
 	if not is_game_active or is_paused: return
 	
 	var selected_hint = null
+	var skipped_hints = []
 	
+	# Loop until we find a hint the player hasn't already fulfilled
 	while pending_hints.size() > 0:
 		var candidate = pending_hints.pop_back()
 		var coord_a = candidate["a"]
 		var coord_b = candidate["b"]
+		var type = candidate["type"]
 		
 		var current_a = board_manager.board_cells[coord_a].state if board_manager.board_cells.has(coord_a) else -1
 		var current_b = board_manager.board_cells[coord_b].state if board_manager.board_cells.has(coord_b) else -1
 		
-		var solution_a = solved_solution_reference.get(coord_a, -1)
-		var solution_b = solved_solution_reference.get(coord_b, -1)
-		
-		if current_a == solution_a and current_b == solution_b:
+		var is_satisfied = false
+		# Check if the player already placed tiles here AND they meet the hint's rule
+		if current_a != -1 and current_b != -1:
+			if type == "equals" and current_a == current_b:
+				is_satisfied = true
+			elif type == "not_equals" and current_a != current_b:
+				is_satisfied = true
+				
+		if is_satisfied:
+			skipped_hints.append(candidate) # Save it in case they delete their tiles later
 			continue
 			
 		selected_hint = candidate
 		break
+		
+	# Put the skipped hints back into the deck so they aren't lost forever
+	pending_hints.append_array(skipped_hints)
+	pending_hints.shuffle()
+	
+	# Failsafe: If ALL remaining hints are satisfied but the player clicked anyway, just reveal one!
+	if selected_hint == null and pending_hints.size() > 0:
+		selected_hint = pending_hints.pop_back()
 		
 	if selected_hint != null:
 		board_manager.active_constraint_pairs.append(selected_hint)

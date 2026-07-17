@@ -17,6 +17,10 @@ var playtest_timer: Timer
 var playtest_time_remaining: int = 0
 var playtest_shifter_moves: int = 0
 
+# NEW: Editor hint system tracking
+var playtest_hidden_constraints: Array = []
+var playtest_pending_hints: Array = []
+
 func _ready():
 	_bind_signals()
 	
@@ -100,7 +104,6 @@ func _load_core_level(res: LevelData):
 	if "time_limit" in res:
 		ui_manager.set_time_limit(res.time_limit)
 	
-	# Updated fallback to include Joker (2)
 	var raw_tiles = res.available_tiles if "available_tiles" in res and res.available_tiles.size() > 0 else [0, 1, 2]
 	var sanitized_tiles: Array = []
 	for tile in raw_tiles:
@@ -123,22 +126,26 @@ func _bind_signals():
 	ui_manager.grid_size_changed.connect(_on_grid_size_changed) 
 	ui_manager.overwrite_confirmed.connect(_execute_save)
 	canvas_manager.canvas_cell_clicked.connect(_on_canvas_cell_clicked)
+	
+	# NEW: Hooks for the newly added playtest HUD buttons
+	ui_manager.playtest_reset_requested.connect(_on_playtest_reset_requested)
+	ui_manager.playtest_rules_requested.connect(_on_playtest_rules_requested)
+	ui_manager.playtest_hint_requested.connect(_on_playtest_hint_requested)
 
+# FIXED: Reverted to pulling width and height directly from canvas constraints
 func _on_random_board_requested():
 	if is_playtesting: return
 	
-	var rand_w = randi_range(EditorUIManager.MIN_GRID_WIDTH, EditorUIManager.MAX_GRID_WIDTH)
-	var rand_h = randi_range(EditorUIManager.MIN_GRID_HEIGHT, EditorUIManager.MAX_GRID_HEIGHT)
+	var target_w = canvas_manager.grid_width
+	var target_h = canvas_manager.grid_height
 	
-	ui_manager.sync_size_displays(rand_w, rand_h)
+	var generated = PuzzleGenerator.generate_random_layout(target_w, target_h, ui_manager.get_allowed_tiles())
 	
-	var generated = PuzzleGenerator.generate_random_layout(rand_w, rand_h, ui_manager.get_allowed_tiles())
+	canvas_manager.load_layout(target_w, target_h, generated["layout"], generated["shifters"], generated["constraints"])
 	
-	canvas_manager.load_layout(rand_w, rand_h, generated["layout"], generated["shifters"], generated["constraints"])
+	_recenter_editor_layout(target_w, target_h)
 	
-	_recenter_editor_layout(rand_w, rand_h)
-	
-	ui_manager.update_status("Generated %dx%d random puzzle!" % [rand_w, rand_h], Color(0.4, 1.0, 0.4))
+	ui_manager.update_status("Generated %dx%d random puzzle!" % [target_w, target_h], Color(0.4, 1.0, 0.4))
 
 func _on_grid_size_changed(new_width: int, new_height: int):
 	if is_playtesting: return
@@ -371,6 +378,7 @@ func _scan_directory(path_to_scan: String) -> Array:
 		dir.list_dir_end()
 	return found_files
 
+# --- NEW: Playtest button logic implemented here ---
 func _on_test_mode_entered():
 	is_playtesting = true
 	canvas_manager.is_playtesting = true
@@ -398,6 +406,14 @@ func _on_test_mode_entered():
 			cell.is_playable = true
 			cell.is_locked = false
 		cell.update_visuals()
+	
+	# Extract and hide constraints so they can be used as hints
+	playtest_hidden_constraints = canvas_manager.loaded_constraint_pairs.duplicate()
+	canvas_manager.loaded_constraint_pairs.clear()
+	
+	playtest_pending_hints = playtest_hidden_constraints.duplicate()
+	playtest_pending_hints.shuffle()
+	ui_manager.update_playtest_hint_count(playtest_pending_hints.size())
 		
 	playtest_time_remaining = ui_manager.get_time_limit()
 	playtest_shifter_moves = 0
@@ -413,6 +429,62 @@ func _on_test_mode_entered():
 	
 	canvas_manager.trigger_redraw()
 	_run_playtest_validation_pass()
+
+func _on_playtest_reset_requested():
+	if not is_playtesting: return
+	
+	playtest_timer.stop()
+	ui_manager.hide_victory_overlay()
+	
+	for coord in canvas_manager.board_cells:
+		var cell = canvas_manager.board_cells[coord]
+		cell.clear_highlight()
+		
+		var restored = playtest_snapshot[coord]
+		cell.state = restored["state"]
+		cell.shifter_direction = restored["shifter_direction"]
+		
+		if cell.state == -2:
+			cell.is_playable = false
+			cell.is_locked = true
+		elif cell.state != -1 and cell.state != 3:
+			cell.is_playable = true
+			cell.is_locked = true
+		else:
+			cell.is_playable = true
+			cell.is_locked = false
+		cell.update_visuals()
+		
+	# Reset the hints entirely
+	canvas_manager.loaded_constraint_pairs.clear()
+	playtest_pending_hints = playtest_hidden_constraints.duplicate()
+	playtest_pending_hints.shuffle()
+	ui_manager.update_playtest_hint_count(playtest_pending_hints.size())
+	
+	playtest_time_remaining = ui_manager.get_time_limit()
+	playtest_shifter_moves = 0
+	if ui_manager.has_method("update_playtest_hud"):
+		_update_playtest_hud_wrapper()
+		
+	playtest_timer.start()
+	canvas_manager.trigger_redraw()
+	_run_playtest_validation_pass()
+
+func _on_playtest_hint_requested():
+	if not is_playtesting: return
+	
+	if playtest_pending_hints.size() > 0:
+		var hint = playtest_pending_hints.pop_back()
+		canvas_manager.loaded_constraint_pairs.append(hint)
+		canvas_manager.trigger_redraw()
+		ui_manager.update_playtest_hint_count(playtest_pending_hints.size())
+		_run_playtest_validation_pass()
+
+func _on_playtest_rules_requested():
+	if not is_playtesting: return
+	# Note: Since the HowToPlay menu logic is in main.tscn, we send a notification to the user here
+	# unless they've copied that node structure to the Editor Scene!
+	ui_manager.update_status("Rules button active! (Copy HowToPlayPanel into the editor scene to display it)", Color.YELLOW)
 
 func _on_playtest_timer_timeout():
 	if is_playtesting:
@@ -460,6 +532,9 @@ func _on_test_mode_exited():
 			cell.is_playable = true
 			cell.is_locked = false
 		cell.update_visuals()
+		
+	# Restore any constraints they explicitly designed
+	canvas_manager.loaded_constraint_pairs = playtest_hidden_constraints.duplicate()
 		
 	canvas_manager.trigger_redraw()
 	ui_manager.toggle_playtest_visibility(false)
@@ -576,7 +651,6 @@ func _on_load_level():
 			if "time_limit" in loaded_level:
 				ui_manager.set_time_limit(loaded_level.time_limit)
 			
-			# Updated fallback to include Joker (2)
 			var raw_tiles = loaded_level.available_tiles if "available_tiles" in loaded_level and loaded_level.available_tiles.size() > 0 else [0, 1, 2]
 			var sanitized_tiles: Array = []
 			for tile in raw_tiles:
