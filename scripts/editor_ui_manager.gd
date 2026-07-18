@@ -126,7 +126,7 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 			
 		if not keep_walls_toggle:
 			keep_walls_toggle = CheckButton.new()
-			keep_walls_toggle.text = "Keep Walls"
+			keep_walls_toggle.text = "Lock Walls"
 			keep_walls_toggle.button_pressed = false 
 			keep_walls_toggle.add_theme_font_size_override("font_size", 24)
 			grid_size_container.add_child(keep_walls_toggle)
@@ -453,11 +453,9 @@ func _update_number_labels():
 	if time_label:
 		if editor_time_limit == 0:
 			time_label.text = "∞"
-			# Boost the infinity sign size so it matches standard text height better
 			time_label.add_theme_font_size_override("font_size", 56) 
 		else:
 			time_label.text = str(editor_time_limit) + "s"
-			# Return to standard font size when showing numbers
 			time_label.add_theme_font_size_override("font_size", 28) 
 
 func _update_panel_layout(_grid_width: int, _grid_height: int):

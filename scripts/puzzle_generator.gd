@@ -1,7 +1,7 @@
 class_name PuzzleGenerator
 extends RefCounted
 
-static func generate_random_layout(width: int, height: int, allowed_tiles: Array, current_layout: Dictionary = {}, require_unique: bool = true, keep_walls: bool = false) -> Dictionary:
+static func generate_random_layout(width: int, height: int, allowed_tiles: Array, current_layout: Dictionary = {}, require_unique: bool = true, lock_walls: bool = false) -> Dictionary:
 	var attempt = 0
 	
 	var solver_tiles = allowed_tiles.duplicate()
@@ -21,7 +21,7 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		for y in range(height):
 			for x in range(width):
 				var c = Vector2i(x, y)
-				if keep_walls and current_layout.has(c) and current_layout[c] == -2:
+				if lock_walls and current_layout.has(c) and current_layout[c] == -2:
 					layout[c] = -2 
 					has_existing_walls = true
 				else:
@@ -30,8 +30,8 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		var all_cells = layout.keys()
 		all_cells.shuffle()
 
-		# STEP 1B: If "Keep Walls" was OFF, generate fresh random walls!
-		if not keep_walls or not has_existing_walls:
+		# STEP 1B: If "Lock Walls" is OFF, generate fresh random walls!
+		if not lock_walls:
 			var max_walls = 0 if force_easy else randi_range(0, int(all_cells.size() * 0.15))
 			var num_walls_placed = 0
 			var row_counts = {}; var col_counts = {}
@@ -63,24 +63,27 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		empty_cells.shuffle()
 
 		# ==========================================
-		# STEP 2: Fill remaining cells with Shifters (~20% or AT LEAST 1)
+		# STEP 2: Fill remaining cells with Shifters (~20%)
 		# ==========================================
 		var shifters = []
 		var total_playable = empty_cells.size()
 		
+		# Allow generation of 2 shifter pairs on small boards if 1 pair mathematically blocks generation!
 		var target_shifter_pairs = int(round((total_playable * 0.20) / 2.0))
-		if target_shifter_pairs < 1 and total_playable >= 2:
+		if target_shifter_pairs <= 1 and total_playable >= 4:
+			target_shifter_pairs = randi_range(1, 2)
+		elif target_shifter_pairs < 1 and total_playable >= 2:
 			target_shifter_pairs = 1
 		
 		var pairs_placed = 0
-		var shifter_attempts = 0
 		
-		while pairs_placed < target_shifter_pairs and shifter_attempts < 100:
-			shifter_attempts += 1
-			if empty_cells.size() < 2: break
-			
-			var idx_a = randi() % empty_cells.size()
-			var candidate_a = empty_cells[idx_a]
+		# Create an isolated pool of cells to test so it NEVER reuses or overlaps
+		var available_starts = empty_cells.duplicate()
+		available_starts.shuffle()
+		
+		while pairs_placed < target_shifter_pairs and available_starts.size() > 0:
+			var candidate_a = available_starts.pop_back()
+			if not empty_cells.has(candidate_a): continue
 			
 			var neighbors = [
 				candidate_a + Vector2i(1, 0), candidate_a + Vector2i(-1, 0),
@@ -90,12 +93,10 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 			
 			var placed = false
 			for candidate_b in neighbors:
-				var idx_b = empty_cells.find(candidate_b)
-				if idx_b != -1:
+				if layout.has(candidate_b) and layout[candidate_b] == -1 and empty_cells.has(candidate_b):
 					var active_node = candidate_a if randi() % 2 == 0 else candidate_b
 					var inactive_node = candidate_b if active_node == candidate_a else candidate_a
 					
-					# FIX: Set the inactive node to -3 (Track). This makes it act like a wall!
 					layout[active_node] = 3
 					layout[inactive_node] = -3
 					
@@ -103,8 +104,7 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 					for c in [candidate_a, candidate_b]:
 						var p_r = 0; var s_r = 0
 						for x in range(width):
-							var st = layout[Vector2i(x, c.y)]
-							# -3 is ignored, so the track doesn't count towards row limits!
+							var st = layout.get(Vector2i(x, c.y), -1)
 							if st in [-1, 0, 1, 2, 3]: 
 								p_r += 1
 								if st == 3: s_r += 1
@@ -112,7 +112,7 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 						
 						var p_c = 0; var s_c = 0
 						for y in range(height):
-							var st = layout[Vector2i(c.x, y)]
+							var st = layout.get(Vector2i(c.x, y), -1)
 							if st in [-1, 0, 1, 2, 3]:
 								p_c += 1
 								if st == 3: s_c += 1
@@ -120,9 +120,9 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 						
 					if placement_valid:
 						shifters.append({"a": candidate_a, "b": candidate_b, "active": active_node})
-						# FIX: Remove BOTH cells from empty_cells so they can NEVER be reused or filled!
 						empty_cells.erase(candidate_a)
 						empty_cells.erase(candidate_b)
+						available_starts.erase(candidate_b) 
 						placed = true
 						pairs_placed += 1
 						break
@@ -131,6 +131,33 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 						layout[inactive_node] = -1
 			if placed: continue
 
+		# Fast Fail: If it couldn't place the exact target without overlapping, abort attempt!
+		if pairs_placed < target_shifter_pairs:
+			continue
+
+		# Fast Math Parity Rejector: Detects mathematically impossible boards instantly!
+		var r_sum = 0
+		var c_sum = 0
+		for yy in range(height):
+			var p = 0; var s = 0
+			for xx in range(width):
+				var st = layout.get(Vector2i(xx, yy), -1)
+				if st in [-1, 0, 1, 2, 3]:
+					p += 1
+					if st == 3: s += 1
+			r_sum += (p - s) % 2
+		for xx in range(width):
+			var p = 0; var s = 0
+			for yy in range(height):
+				var st = layout.get(Vector2i(xx, yy), -1)
+				if st in [-1, 0, 1, 2, 3]:
+					p += 1
+					if st == 3: s += 1
+			c_sum += (p - s) % 2
+
+		if r_sum != c_sum:
+			continue 
+
 		# Solve the rest of the board with Yellow, Blue, Green (0, 1, 2)
 		var iter_tracker = {"count": 0}
 		var success = _solve(layout, empty_cells.duplicate(), width, height, solver_tiles, [], iter_tracker)
@@ -138,7 +165,6 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 			
 		var solved_layout = layout.duplicate()
 		
-		# --- JOKER CALCULATION ---
 		var total_jokers_generated = 0
 		for c in solved_layout.keys():
 			if solved_layout[c] == 2:
@@ -220,7 +246,7 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 			else:
 				cleared_count += 1
 
-		# FIX: Erase the temporary 3 and -3 markers so Editor treats them as pure blank pairs!
+		# Erase the internal 3/-3 structural states before passing back to Editor
 		for pair in shifters:
 			layout[pair.a] = -1
 			layout[pair.b] = -1
@@ -315,7 +341,6 @@ static func _count_solutions(layout: Dictionary, empty_cells: Array, w: int, h: 
 static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w: int, h: int, constraints: Array) -> bool:
 	layout[coord] = val 
 	
-	# 1. Block 3-in-a-row (Jokers actively act as both colors for this check)
 	for x in range(max(0, coord.x - 2), min(w - 2, coord.x + 1)):
 		var v1 = layout.get(Vector2i(x, coord.y), -1)
 		var v2 = layout.get(Vector2i(x+1, coord.y), -1)
@@ -338,11 +363,9 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 				layout[coord] = -1
 				return false
 
-	# 2. Perfect Row Parity 
 	var p_row = 0; var s_row = 0; var j_row = 0; var empty_row = 0; var b0_row = 0; var b1_row = 0
 	for x in range(w):
 		var st = layout.get(Vector2i(x, coord.y), -1)
-		# -3 is explicitly ignored because it is just a track for the shifter!
 		if st in [-1, 0, 1, 2, 3]:
 			p_row += 1
 			if st == -1: empty_row += 1
@@ -359,7 +382,6 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 	var target_0_row = int((p_row - req_j_row - s_row) / 2.0)
 	if b0_row > target_0_row or b1_row > target_0_row: layout[coord] = -1; return false
 		
-	# 3. Perfect Column Parity 
 	var p_col = 0; var s_col = 0; var j_col = 0; var empty_col = 0; var b0_col = 0; var b1_col = 0
 	for y in range(h):
 		var st = layout.get(Vector2i(coord.x, y), -1)
@@ -379,7 +401,6 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 	var target_0_col = int((p_col - req_j_col - s_col) / 2.0)
 	if b0_col > target_0_col or b1_col > target_0_col: layout[coord] = -1; return false
 
-	# 4. Check Constraints
 	for c in constraints:
 		if c.a == coord or c.b == coord:
 			var other_coord = c.b if c.a == coord else c.a

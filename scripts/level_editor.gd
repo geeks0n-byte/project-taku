@@ -158,12 +158,12 @@ func _on_random_board_requested():
 	
 	ui_manager.sync_size_displays(target_w, target_h)
 	
-	var keep_walls = false
+	var lock_walls = false
 	if ui_manager.has_method("is_keep_walls_requested"):
-		keep_walls = ui_manager.is_keep_walls_requested()
+		lock_walls = ui_manager.is_keep_walls_requested()
 		
 	var current_layout = {}
-	if keep_walls:
+	if lock_walls:
 		for c in canvas_manager.board_cells:
 			if canvas_manager.board_cells[c].state == -2:
 				current_layout[c] = -2
@@ -172,8 +172,7 @@ func _on_random_board_requested():
 	if ui_manager.has_method("is_unique_solution_required"):
 		require_unique = ui_manager.is_unique_solution_required()
 	
-	# UPDATED: We now pass keep_walls to the generator so it knows whether to randomize new walls!
-	var generated = PuzzleGenerator.generate_random_layout(target_w, target_h, ui_manager.get_allowed_tiles(), current_layout, require_unique, keep_walls)
+	var generated = PuzzleGenerator.generate_random_layout(target_w, target_h, ui_manager.get_allowed_tiles(), current_layout, require_unique, lock_walls)
 	
 	if generated.is_empty() or not generated.has("layout"):
 		ui_manager.update_status("ERROR: Math conflict! Try removing a few walls or shrinking the grid.", Color(1.0, 0.3, 0.3))
@@ -186,8 +185,8 @@ func _on_random_board_requested():
 	
 	_recenter_editor_layout(target_w, target_h)
 	
-	var status_text = "Generated %dx%d puzzle keeping existing walls!" % [target_w, target_h]
-	if not keep_walls: status_text = "Generated %dx%d with randomized walls!" % [target_w, target_h]
+	var status_text = "Generated %dx%d puzzle with locked walls!" % [target_w, target_h]
+	if not lock_walls: status_text = "Generated %dx%d with randomized walls!" % [target_w, target_h]
 	if not require_unique: status_text = "Generated %dx%d (Multi-Solution Allowed)!" % [target_w, target_h]
 	ui_manager.update_status(status_text, Color(0.4, 1.0, 0.4))
 
