@@ -17,13 +17,11 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		# STEP 1: Generate board & respect existing walls
 		# ==========================================
 		var layout = {}
-		var has_existing_walls = false
 		for y in range(height):
 			for x in range(width):
 				var c = Vector2i(x, y)
 				if lock_walls and current_layout.has(c) and current_layout[c] == -2:
 					layout[c] = -2 
-					has_existing_walls = true
 				else:
 					layout[c] = -1
 
@@ -341,6 +339,7 @@ static func _count_solutions(layout: Dictionary, empty_cells: Array, w: int, h: 
 static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w: int, h: int, constraints: Array) -> bool:
 	layout[coord] = val 
 	
+	# 1. Block 3-in-a-row (Jokers actively act as both colors for this check)
 	for x in range(max(0, coord.x - 2), min(w - 2, coord.x + 1)):
 		var v1 = layout.get(Vector2i(x, coord.y), -1)
 		var v2 = layout.get(Vector2i(x+1, coord.y), -1)
@@ -363,6 +362,7 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 				layout[coord] = -1
 				return false
 
+	# 2. Perfect Row Parity 
 	var p_row = 0; var s_row = 0; var j_row = 0; var empty_row = 0; var b0_row = 0; var b1_row = 0
 	for x in range(w):
 		var st = layout.get(Vector2i(x, coord.y), -1)
@@ -382,6 +382,7 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 	var target_0_row = int((p_row - req_j_row - s_row) / 2.0)
 	if b0_row > target_0_row or b1_row > target_0_row: layout[coord] = -1; return false
 		
+	# 3. Perfect Column Parity 
 	var p_col = 0; var s_col = 0; var j_col = 0; var empty_col = 0; var b0_col = 0; var b1_col = 0
 	for y in range(h):
 		var st = layout.get(Vector2i(coord.x, y), -1)
@@ -401,6 +402,7 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 	var target_0_col = int((p_col - req_j_col - s_col) / 2.0)
 	if b0_col > target_0_col or b1_col > target_0_col: layout[coord] = -1; return false
 
+	# 4. Check Constraints
 	for c in constraints:
 		if c.a == coord or c.b == coord:
 			var other_coord = c.b if c.a == coord else c.a
