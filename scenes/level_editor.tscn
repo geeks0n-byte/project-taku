@@ -59,10 +59,6 @@ layout_mode = 2
 layout_mode = 2
 text = "+"
 
-[node name="SetSizeButton" type="Button" parent="EditorUI/ControlPanel/GridSizeContainer" unique_id=778361384]
-layout_mode = 2
-text = "SET"
-
 [node name="BrushContainer" type="HBoxContainer" parent="EditorUI/ControlPanel" unique_id=571217567]
 layout_mode = 0
 offset_left = 50.0
