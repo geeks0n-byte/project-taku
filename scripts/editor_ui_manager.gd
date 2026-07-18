@@ -15,7 +15,10 @@ signal overwrite_confirmed
 signal playtest_reset_requested 
 signal playtest_rules_requested 
 signal playtest_hint_requested 
+signal playtest_undo_requested 
+signal playtest_redo_requested 
 signal resume_from_tutorial_requested 
+signal allowed_tiles_changed # NEW SIGNAL
 
 const MIN_GRID_WIDTH: int = 3
 const MAX_GRID_WIDTH: int = 9
@@ -97,6 +100,8 @@ var keep_walls_toggle: CheckButton
 var pt_reset_button: Button
 var pt_rules_button: Button
 var pt_hint_button: Button
+var pt_undo_button: Button
+var pt_redo_button: Button
 var pt_current_hint_count: int = 0
 
 var how_to_play_container: Control
@@ -127,7 +132,7 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		if not keep_walls_toggle:
 			keep_walls_toggle = CheckButton.new()
 			keep_walls_toggle.text = "Lock Walls"
-			keep_walls_toggle.button_pressed = true # ON BY DEFAULT
+			keep_walls_toggle.button_pressed = true 
 			keep_walls_toggle.add_theme_font_size_override("font_size", 24)
 			grid_size_container.add_child(keep_walls_toggle)
 			grid_size_container.move_child(keep_walls_toggle, 2)
@@ -143,40 +148,49 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		else:
 			time_title_label.text = "TIME LIMIT:"
 	
-	if not pt_reset_button:
-		pt_reset_button = Button.new()
-		pt_reset_button.name = "PTResetButton"
-		root_parent.add_child(pt_reset_button)
+	if not pt_reset_button: pt_reset_button = Button.new(); pt_reset_button.name = "PTResetButton"; root_parent.add_child(pt_reset_button)
 	pt_reset_button.text = "Reset"
-	pt_reset_button.add_theme_font_size_override("font_size", 28)
-	pt_reset_button.global_position = Vector2(280, 40)
-	pt_reset_button.size = Vector2(140, 60)
+	pt_reset_button.add_theme_font_size_override("font_size", 24)
+	pt_reset_button.global_position = Vector2(160, 40)
+	pt_reset_button.size = Vector2(130, 60)
 	pt_reset_button.visible = false
-	if not pt_reset_button.pressed.is_connected(_on_pt_reset_pressed):
-		pt_reset_button.pressed.connect(_on_pt_reset_pressed)
+	if not pt_reset_button.pressed.is_connected(func(): playtest_reset_requested.emit()):
+		pt_reset_button.pressed.connect(func(): playtest_reset_requested.emit())
 		
-	if not pt_rules_button:
-		pt_rules_button = Button.new()
-		pt_rules_button.name = "PTRulesButton"
-		root_parent.add_child(pt_rules_button)
+	if not pt_rules_button: pt_rules_button = Button.new(); pt_rules_button.name = "PTRulesButton"; root_parent.add_child(pt_rules_button)
 	pt_rules_button.text = "Rules"
-	pt_rules_button.add_theme_font_size_override("font_size", 28)
-	pt_rules_button.global_position = Vector2(440, 40)
-	pt_rules_button.size = Vector2(140, 60) 
+	pt_rules_button.add_theme_font_size_override("font_size", 24)
+	pt_rules_button.global_position = Vector2(310, 40)
+	pt_rules_button.size = Vector2(130, 60) 
 	pt_rules_button.visible = false
-	if not pt_rules_button.pressed.is_connected(_on_pt_rules_pressed):
-		pt_rules_button.pressed.connect(_on_pt_rules_pressed)
+	if not pt_rules_button.pressed.is_connected(func(): playtest_rules_requested.emit()):
+		pt_rules_button.pressed.connect(func(): playtest_rules_requested.emit())
 		
-	if not pt_hint_button:
-		pt_hint_button = Button.new()
-		pt_hint_button.name = "PTHintButton"
-		root_parent.add_child(pt_hint_button)
-	pt_hint_button.add_theme_font_size_override("font_size", 28)
-	pt_hint_button.global_position = Vector2(600, 40) 
-	pt_hint_button.size = Vector2(160, 60)
+	if not pt_hint_button: pt_hint_button = Button.new(); pt_hint_button.name = "PTHintButton"; root_parent.add_child(pt_hint_button)
+	pt_hint_button.add_theme_font_size_override("font_size", 24)
+	pt_hint_button.global_position = Vector2(460, 40) 
+	pt_hint_button.size = Vector2(150, 60)
 	pt_hint_button.visible = false
-	if not pt_hint_button.pressed.is_connected(_on_pt_hint_pressed):
-		pt_hint_button.pressed.connect(_on_pt_hint_pressed)
+	if not pt_hint_button.pressed.is_connected(func(): playtest_hint_requested.emit()):
+		pt_hint_button.pressed.connect(func(): playtest_hint_requested.emit())
+		
+	if not pt_undo_button: pt_undo_button = Button.new(); pt_undo_button.name = "PTUndoButton"; root_parent.add_child(pt_undo_button)
+	pt_undo_button.text = "⟲ Undo"
+	pt_undo_button.add_theme_font_size_override("font_size", 24)
+	pt_undo_button.global_position = Vector2(630, 40) 
+	pt_undo_button.size = Vector2(130, 60)
+	pt_undo_button.visible = false
+	if not pt_undo_button.pressed.is_connected(func(): playtest_undo_requested.emit()):
+		pt_undo_button.pressed.connect(func(): playtest_undo_requested.emit())
+		
+	if not pt_redo_button: pt_redo_button = Button.new(); pt_redo_button.name = "PTRedoButton"; root_parent.add_child(pt_redo_button)
+	pt_redo_button.text = "Redo ⟳"
+	pt_redo_button.add_theme_font_size_override("font_size", 24)
+	pt_redo_button.global_position = Vector2(780, 40) 
+	pt_redo_button.size = Vector2(130, 60)
+	pt_redo_button.visible = false
+	if not pt_redo_button.pressed.is_connected(func(): playtest_redo_requested.emit()):
+		pt_redo_button.pressed.connect(func(): playtest_redo_requested.emit())
 	
 	_setup_brush_toggles()
 	_setup_tree_checkbox_icons()
@@ -278,25 +292,19 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		var btn_x = (tutorial_size.x - btn_size.x) / 2
 		var btn_y = tutorial_size.y - btn_size.y - 30
 		tutorial_back_button.position = Vector2(btn_x, btn_y)
-		if not tutorial_back_button.pressed.is_connected(_on_tutorial_back_pressed):
-			tutorial_back_button.pressed.connect(_on_tutorial_back_pressed)
+		if not tutorial_back_button.pressed.is_connected(func(): resume_from_tutorial_requested.emit()):
+			tutorial_back_button.pressed.connect(func(): resume_from_tutorial_requested.emit())
 	
 	_set_button_labels()
 	_connect_ui_signals()
 
 func is_unique_solution_required() -> bool:
-	if unique_solution_toggle:
-		return unique_solution_toggle.button_pressed
+	if unique_solution_toggle: return unique_solution_toggle.button_pressed
 	return false 
 	
 func is_keep_walls_requested() -> bool:
-	if keep_walls_toggle:
-		return keep_walls_toggle.button_pressed
-	return true # CHANGED FALLBACK TO TRUE
-	
-func _on_pt_reset_pressed(): playtest_reset_requested.emit()
-func _on_pt_rules_pressed(): playtest_rules_requested.emit()
-func _on_pt_hint_pressed(): playtest_hint_requested.emit()
+	if keep_walls_toggle: return keep_walls_toggle.button_pressed
+	return true 
 
 func show_how_to_play():
 	if how_to_play_container:
@@ -304,28 +312,23 @@ func show_how_to_play():
 	if pt_reset_button: pt_reset_button.disabled = true
 	if pt_rules_button: pt_rules_button.disabled = true
 	if pt_hint_button: pt_hint_button.disabled = true
+	if pt_undo_button: pt_undo_button.disabled = true
+	if pt_redo_button: pt_redo_button.disabled = true
 	if exit_test_button: exit_test_button.disabled = true
 
-func _on_tutorial_back_pressed():
-	if how_to_play_container:
-		how_to_play_container.visible = false
-	if pt_reset_button: pt_reset_button.disabled = false
-	if pt_rules_button: pt_rules_button.disabled = false
-	if pt_hint_button: pt_hint_button.disabled = (pt_current_hint_count <= 0)
-	if exit_test_button: exit_test_button.disabled = false
-	resume_from_tutorial_requested.emit()
+func update_undo_redo_buttons(can_undo: bool, can_redo: bool):
+	if pt_undo_button: pt_undo_button.disabled = not can_undo
+	if pt_redo_button: pt_redo_button.disabled = not can_redo
 
 func update_playtest_joker_counter(current: int, required: int):
 	if pt_jokers_label:
 		pt_jokers_label.text = "%d/%d Jokers used" % [current, required]
 
 func set_playtest_joker_counter_visibility(is_visible: bool):
-	if pt_jokers_label:
-		pt_jokers_label.visible = is_visible
+	if pt_jokers_label: pt_jokers_label.visible = is_visible
 
 func set_playtest_move_counter_visibility(is_visible: bool):
-	if pt_moves_label:
-		pt_moves_label.visible = is_visible
+	if pt_moves_label: pt_moves_label.visible = is_visible
 
 func update_playtest_hint_count(count: int):
 	pt_current_hint_count = count
@@ -334,8 +337,7 @@ func update_playtest_hint_count(count: int):
 		pt_hint_button.disabled = (count <= 0)
 
 func show_overwrite_warning():
-	if overwrite_panel:
-		overwrite_panel.visible = true
+	if overwrite_panel: overwrite_panel.visible = true
 
 func _build_playtest_hud():
 	if not editor_ui_root: return
@@ -353,12 +355,13 @@ func _build_playtest_hud():
 	pt_timer_label.size = Vector2(280, 50) 
 	playtest_hud_container.add_child(pt_timer_label)
 	
+	# FIX: Joker label moved OUT of PlaytestHUD so it persists in the Editor!
 	pt_jokers_label = Label.new()
 	pt_jokers_label.add_theme_font_size_override("font_size", 28)
 	pt_jokers_label.modulate = Color(0.4, 1.0, 0.4) 
 	pt_jokers_label.position = Vector2(440, 115)
 	pt_jokers_label.size = Vector2(280, 50)
-	playtest_hud_container.add_child(pt_jokers_label)
+	editor_ui_root.add_child(pt_jokers_label)
 	
 	pt_moves_label = Label.new()
 	pt_moves_label.add_theme_font_size_override("font_size", 28)
@@ -420,8 +423,7 @@ func set_allowed_tiles(tiles: Array):
 	if allow_one: allow_one.button_pressed = (1 in tiles)
 	if allow_joker: allow_joker.button_pressed = (2 in tiles)
 
-func get_time_limit() -> int:
-	return editor_time_limit
+func get_time_limit() -> int: return editor_time_limit
 	
 func set_time_limit(val: int):
 	editor_time_limit = max(0, val)
@@ -603,33 +605,33 @@ func _set_button_labels():
 
 func _connect_ui_signals():
 	if clear_button: clear_button.pressed.connect(func(): clear_requested.emit()) 
-	
 	wall_button.pressed.connect(func(): brush_changed.emit(-2, "Wall"))
 	empty_button.pressed.connect(func(): brush_changed.emit(-1, "Empty (Clear)"))
 	zero_button.pressed.connect(func(): brush_changed.emit(0, "Prefilled Zero"))
 	one_button.pressed.connect(func(): brush_changed.emit(1, "Prefilled One"))
 	joker_button.pressed.connect(func(): brush_changed.emit(2, "Joker"))
 	if shifter_button: shifter_button.pressed.connect(func(): brush_changed.emit(3, "Shifter Pair Link Tool"))
-	
 	if equals_button: equals_button.pressed.connect(func(): brush_changed.emit(4, "Equals (=) Link Tool"))
 	if not_equals_button: not_equals_button.pressed.connect(func(): brush_changed.emit(5, "Not Equals (×) Link Tool"))
-	
 	save_button.pressed.connect(func(): save_requested.emit())
 	if load_button: load_button.pressed.connect(func(): load_requested.emit()) 
 	if main_menu_button: main_menu_button.pressed.connect(func(): main_menu_requested.emit())
 	test_button.pressed.connect(func(): test_mode_entered.emit())
 	exit_test_button.pressed.connect(func(): test_mode_exited.emit())
 	return_button.pressed.connect(func(): test_mode_exited.emit())
-	
 	if width_minus: width_minus.pressed.connect(func(): _adjust_value("width", -1))
 	if width_plus: width_plus.pressed.connect(func(): _adjust_value("width", 1))
 	if height_minus: height_minus.pressed.connect(func(): _adjust_value("height", -1))
 	if height_plus: height_plus.pressed.connect(func(): _adjust_value("height", 1))
 	if level_minus: level_minus.pressed.connect(func(): _adjust_value("level", -1))
 	if level_plus: level_plus.pressed.connect(func(): _adjust_value("level", 1))
-	
 	if time_minus: time_minus.pressed.connect(func(): _adjust_value("time", -30))
 	if time_plus: time_plus.pressed.connect(func(): _adjust_value("time", 30))
+	
+	# Emit signal when allowed tiles checkboxes are toggled
+	if allow_zero: allow_zero.pressed.connect(func(): allowed_tiles_changed.emit())
+	if allow_one: allow_one.pressed.connect(func(): allowed_tiles_changed.emit())
+	if allow_joker: allow_joker.pressed.connect(func(): allowed_tiles_changed.emit())
 
 func _adjust_value(target: String, amount: int):
 	var grid_changed = false
@@ -663,19 +665,18 @@ func toggle_playtest_visibility(is_playtesting: bool):
 	if main_menu_button: main_menu_button.visible = not is_playtesting
 	if clear_button: clear_button.visible = not is_playtesting
 	test_button.visible = not is_playtesting
-	
 	if level_minus: level_minus.visible = not is_playtesting
 	if level_label: level_label.visible = not is_playtesting
 	if level_plus: level_plus.visible = not is_playtesting
 	if grid_size_container: grid_size_container.visible = not is_playtesting 
-	
 	if level_settings_container: level_settings_container.visible = not is_playtesting
 	if playtest_hud_container: playtest_hud_container.visible = is_playtesting
 	
 	if pt_reset_button: pt_reset_button.visible = is_playtesting
 	if pt_rules_button: pt_rules_button.visible = is_playtesting
 	if pt_hint_button: pt_hint_button.visible = is_playtesting
-	
+	if pt_undo_button: pt_undo_button.visible = is_playtesting
+	if pt_redo_button: pt_redo_button.visible = is_playtesting
 	exit_test_button.visible = is_playtesting
 
 func display_victory_overlay(compiled_text: String):
@@ -691,5 +692,4 @@ func display_victory_overlay(compiled_text: String):
 func hide_victory_overlay():
 	if playtest_victory_panel: playtest_victory_panel.visible = false
 
-func get_level_number() -> int:
-	return editor_level
+func get_level_number() -> int: return editor_level

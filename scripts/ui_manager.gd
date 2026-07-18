@@ -9,6 +9,10 @@ signal next_level_requested
 signal play_again_requested  
 signal hint_requested 
 
+# --- NEW SIGNALS FOR UNDO / REDO ---
+signal undo_requested
+signal redo_requested
+
 @onready var level_label = $"../LevelLabel"
 @onready var status_label = $"../StatusLabel"
 @onready var pause_button = $"../PauseButton"
@@ -34,6 +38,8 @@ var defeat_label: Label
 @onready var tutorial_back_button = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/BackButton"
 
 var hint_button: Button 
+var undo_button: Button
+var redo_button: Button
 var joker_counter_label: Label 
 var current_hint_count: int = 0
 
@@ -43,37 +49,63 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 	
 	if pause_button:
 		pause_button.text = "Pause"
-		pause_button.add_theme_font_size_override("font_size", 28)
-		pause_button.global_position = Vector2(120, 40) 
-		pause_button.size = Vector2(140, 60)
+		pause_button.add_theme_font_size_override("font_size", 24)
+		pause_button.global_position = Vector2(160, 40) 
+		pause_button.size = Vector2(130, 60)
 
 	if reset_button:
 		reset_button.text = "Reset"
-		reset_button.add_theme_font_size_override("font_size", 28)
-		reset_button.global_position = Vector2(280, 40)
-		reset_button.size = Vector2(140, 60)
+		reset_button.add_theme_font_size_override("font_size", 24)
+		reset_button.global_position = Vector2(310, 40)
+		reset_button.size = Vector2(130, 60)
 		
 	if how_to_play_button:
 		how_to_play_button.text = "Rules" 
-		how_to_play_button.add_theme_font_size_override("font_size", 28)
-		how_to_play_button.global_position = Vector2(440, 40)
-		how_to_play_button.size = Vector2(140, 60) 
+		how_to_play_button.add_theme_font_size_override("font_size", 24)
+		how_to_play_button.global_position = Vector2(460, 40)
+		how_to_play_button.size = Vector2(130, 60) 
 
 	var root_parent = get_parent()
+	
+	# --- HINT BUTTON ---
 	hint_button = root_parent.get_node_or_null("HintButton")
 	if not hint_button:
 		hint_button = Button.new()
 		hint_button.name = "HintButton"
 		root_parent.add_child(hint_button)
 		
-	hint_button.add_theme_font_size_override("font_size", 28)
-	hint_button.global_position = Vector2(600, 40) 
-	hint_button.size = Vector2(160, 60) 
+	hint_button.add_theme_font_size_override("font_size", 24)
+	hint_button.global_position = Vector2(610, 40) 
+	hint_button.size = Vector2(140, 60) 
+	
+	# --- NEW: UNDO BUTTON ---
+	undo_button = root_parent.get_node_or_null("UndoButton")
+	if not undo_button:
+		undo_button = Button.new()
+		undo_button.name = "UndoButton"
+		root_parent.add_child(undo_button)
+	
+	undo_button.text = "⟲ Undo"
+	undo_button.add_theme_font_size_override("font_size", 24)
+	undo_button.global_position = Vector2(770, 40) 
+	undo_button.size = Vector2(130, 60)
+	
+	# --- NEW: REDO BUTTON ---
+	redo_button = root_parent.get_node_or_null("RedoButton")
+	if not redo_button:
+		redo_button = Button.new()
+		redo_button.name = "RedoButton"
+		root_parent.add_child(redo_button)
+		
+	redo_button.text = "Redo ⟳"
+	redo_button.add_theme_font_size_override("font_size", 24)
+	redo_button.global_position = Vector2(920, 40) 
+	redo_button.size = Vector2(130, 60)
 	
 	if level_label:
 		level_label.add_theme_font_size_override("font_size", 28)
 		level_label.modulate = Color(1.0, 1.0, 1.0)
-		level_label.global_position = Vector2(780, 48) 
+		level_label.global_position = Vector2(780, 115) 
 		level_label.size = Vector2(280, 50)
 		
 	if timer_label:
@@ -180,7 +212,6 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 		defeat_main_menu_button.position = Vector2(button_center_x, v_start_y)
 		defeat_main_menu_button.size = menu_button_size
 
-	# --- FIXED: Increased height to 1200 so it doesn't scroll ---
 	var tutorial_size = Vector2(850, 1200) 
 	if how_to_play_panel:
 		how_to_play_panel.custom_minimum_size = tutorial_size
@@ -203,6 +234,10 @@ func setup_ui(_show_debug_tools: bool, cell_size: float):
 
 	_connect_signals()
 
+func update_undo_redo_buttons(can_undo: bool, can_redo: bool):
+	if undo_button: undo_button.disabled = not can_undo
+	if redo_button: redo_button.disabled = not can_redo
+
 func update_joker_counter(current: int, required: int):
 	if joker_counter_label:
 		joker_counter_label.text = "%d/%d Jokers used" % [current, required]
@@ -223,14 +258,16 @@ func update_hint_count(count: int):
 
 func update_dynamic_layout(board_y: float, board_height: float):
 	if status_label:
+		# CORRECTLY ANCHORS ERROR TEXT BELOW THE BOARD
 		status_label.global_position.y = board_y + board_height + 40
 
 func set_hud_buttons_disabled(is_disabled: bool):
 	if pause_button: pause_button.disabled = is_disabled
 	if reset_button: reset_button.disabled = is_disabled
 	if how_to_play_button: how_to_play_button.disabled = is_disabled
-	if hint_button: 
-		hint_button.disabled = is_disabled or (current_hint_count <= 0) 
+	if hint_button: hint_button.disabled = is_disabled or (current_hint_count <= 0) 
+	if undo_button: undo_button.disabled = is_disabled
+	if redo_button: redo_button.disabled = is_disabled
 
 func _connect_signals():
 	if pause_button: pause_button.pressed.connect(func(): pause_requested.emit())
@@ -238,6 +275,12 @@ func _connect_signals():
 	if how_to_play_button: how_to_play_button.pressed.connect(func(): how_to_play_requested.emit())
 	if hint_button and not hint_button.pressed.is_connected(_on_hint_pressed):
 		hint_button.pressed.connect(_on_hint_pressed)
+		
+	if undo_button and not undo_button.pressed.is_connected(func(): undo_requested.emit()):
+		undo_button.pressed.connect(func(): undo_requested.emit())
+		
+	if redo_button and not redo_button.pressed.is_connected(func(): redo_requested.emit()):
+		redo_button.pressed.connect(func(): redo_requested.emit())
 		
 	if restart_button: restart_button.pressed.connect(_on_victory_button_pressed)
 	if main_menu_button: main_menu_button.pressed.connect(_on_main_menu_pressed)

@@ -26,6 +26,11 @@ var solved_solution_reference: Dictionary = {}
 
 var required_jokers: int = 0 
 
+var undo_stack: Array = []
+var redo_stack: Array = []
+var current_game_state: Dictionary = {}
+var _is_recording_action: bool = false
+
 func _ready():
 	_load_all_levels_from_storage()
 	_intercept_global_selection()
@@ -49,6 +54,11 @@ func _bind_submanager_signals():
 	ui_manager.how_to_play_requested.connect(_on_how_to_play)
 	ui_manager.resume_from_tutorial_requested.connect(_on_resume)
 	ui_manager.hint_requested.connect(_on_hint_requested) 
+	
+	if ui_manager.has_signal("undo_requested"):
+		ui_manager.undo_requested.connect(_on_undo_requested)
+	if ui_manager.has_signal("redo_requested"):
+		ui_manager.redo_requested.connect(_on_redo_requested)
 	
 	board_manager.cell_changed.connect(_on_cell_changed)
 	board_manager.shifter_move_made.connect(_on_shifter_move_made)
@@ -200,7 +210,6 @@ func generate_board():
 		if current_level_resource.layout[coord] == 2:
 			prefilled_jokers += 1
 			
-	# --- NEW JOKER CALCULATION & UI HIDING ---
 	var saved_req_jokers = current_level_resource.get("required_jokers") if "required_jokers" in current_level_resource else -1
 	
 	if saved_req_jokers == -1:
@@ -210,8 +219,7 @@ func generate_board():
 		
 	required_jokers = max(0, required_jokers - prefilled_jokers)
 	
-	# Only show the joker counter if Jokers are actually required (> 0) and allowed in the UI
-	var has_jokers = (2 in tiles_list) and (required_jokers > 0)
+	var has_jokers = (required_jokers > 0)
 	ui_manager.set_joker_counter_visibility(has_jokers)
 		
 	var c_pairs: Array = []
@@ -227,7 +235,6 @@ func generate_board():
 	board_manager.build_grid(current_level_resource.layout, tiles_list, s_pairs, [])
 	
 	_update_joker_count()
-	
 	ui_manager.update_hint_count(pending_hints.size())
 	
 	var board_pixel_height = actual_h * board_manager.CELL_SIZE
@@ -236,8 +243,72 @@ func generate_board():
 	var new_board_y = (screen_height / 3.0) - (board_pixel_height / 2.0)
 	board_manager.position.y = new_board_y 
 	
-	ui_manager.update_dynamic_layout(new_board_y, board_pixel_height)
+	undo_stack.clear()
+	redo_stack.clear()
+	current_game_state = _create_game_snapshot()
+	if ui_manager.has_method("update_undo_redo_buttons"):
+		ui_manager.update_undo_redo_buttons(false, false)
+	
 	_run_validation_pass()
+
+func _create_game_snapshot() -> Dictionary:
+	var snap = {}
+	for coord in board_manager.board_cells:
+		var cell = board_manager.board_cells[coord]
+		snap[coord] = {
+			"state": cell.state,
+			"shifter_direction": cell.shifter_direction
+		}
+	return {
+		"cells": snap,
+		"moves": shifter_move_count
+	}
+
+func _apply_game_snapshot(snap: Dictionary):
+	shifter_move_count = snap["moves"]
+	ui_manager.update_move_counter(shifter_move_count)
+	
+	var cells = snap["cells"]
+	for coord in cells:
+		var cell = board_manager.board_cells[coord]
+		cell.state = cells[coord]["state"]
+		cell.shifter_direction = cells[coord]["shifter_direction"]
+		cell.update_visuals()
+		
+	_update_joker_count()
+	if board_manager.has_method("trigger_redraw"):
+		board_manager.trigger_redraw()
+	_run_validation_pass()
+
+func _record_game_action():
+	_is_recording_action = false
+	var new_state = _create_game_snapshot()
+	undo_stack.append(current_game_state)
+	redo_stack.clear()
+	current_game_state = new_state
+	
+	if ui_manager.has_method("update_undo_redo_buttons"):
+		ui_manager.update_undo_redo_buttons(undo_stack.size() > 0, false)
+
+func _on_undo_requested():
+	if not is_game_active or is_paused or undo_stack.is_empty(): return
+	redo_stack.append(current_game_state)
+	var prev_state = undo_stack.pop_back()
+	_apply_game_snapshot(prev_state)
+	current_game_state = prev_state
+	
+	if ui_manager.has_method("update_undo_redo_buttons"):
+		ui_manager.update_undo_redo_buttons(undo_stack.size() > 0, redo_stack.size() > 0)
+
+func _on_redo_requested():
+	if not is_game_active or is_paused or redo_stack.is_empty(): return
+	undo_stack.append(current_game_state)
+	var next_state = redo_stack.pop_back()
+	_apply_game_snapshot(next_state)
+	current_game_state = next_state
+	
+	if ui_manager.has_method("update_undo_redo_buttons"):
+		ui_manager.update_undo_redo_buttons(undo_stack.size() > 0, redo_stack.size() > 0)
 
 func _update_joker_count():
 	var current_jokers = 0
@@ -258,6 +329,18 @@ func _on_hint_requested():
 		var coord_b = candidate["b"]
 		var type = candidate["type"]
 		
+		# --- RULE 1: Prevent Overlapping Hints! ---
+		var cell_already_has_hint = false
+		for active_hint in board_manager.active_constraint_pairs:
+			if active_hint["a"] == coord_a or active_hint["b"] == coord_a or active_hint["a"] == coord_b or active_hint["b"] == coord_b:
+				cell_already_has_hint = true
+				break
+				
+		if cell_already_has_hint:
+			skipped_hints.append(candidate)
+			continue
+		
+		# --- RULE 2: Skip if visually correctly satisfied ---
 		var current_a = board_manager.board_cells[coord_a].state if board_manager.board_cells.has(coord_a) else -1
 		var current_b = board_manager.board_cells[coord_b].state if board_manager.board_cells.has(coord_b) else -1
 		
@@ -275,29 +358,35 @@ func _on_hint_requested():
 		selected_hint = candidate
 		break
 		
+	# Put visually satisfied or overlapping hints back in the pile
 	pending_hints.append_array(skipped_hints)
 	pending_hints.shuffle()
 	
-	if selected_hint == null and pending_hints.size() > 0:
-		selected_hint = pending_hints.pop_back()
-		
 	if selected_hint != null:
 		board_manager.active_constraint_pairs.append(selected_hint)
 		board_manager.trigger_redraw()
 		ui_manager.update_hint_count(pending_hints.size())
 		_run_validation_pass()
 	else:
-		ui_manager.update_hint_count(0)
+		ui_manager.show_status_errors(["No useful hints available for your current layout!"])
 
 func _on_cell_changed(_coord: Vector2i):
 	if not is_game_active or is_paused: return
 	_update_joker_count() 
 	_run_validation_pass()
+	
+	if not _is_recording_action:
+		_is_recording_action = true
+		call_deferred("_record_game_action")
 
 func _on_shifter_move_made():
 	if not is_game_active or is_paused: return
 	shifter_move_count += 1
 	ui_manager.update_move_counter(shifter_move_count)
+	
+	if not _is_recording_action:
+		_is_recording_action = true
+		call_deferred("_record_game_action")
 
 func _run_validation_pass():
 	board_manager.clear_highlights()

@@ -22,6 +22,10 @@ var playtest_pending_hints: Array = []
 var playtest_required_jokers: int = 0 
 var current_level_required_jokers: int = -1 
 
+var pt_undo_stack: Array = []
+var pt_redo_stack: Array = []
+var pt_current_state_record: Dictionary = {}
+
 func _ready():
 	_bind_signals()
 	
@@ -34,6 +38,8 @@ func _ready():
 	canvas_manager.generate_blank_canvas(canvas_manager.grid_width, canvas_manager.grid_height)
 	_recenter_editor_layout(canvas_manager.grid_width, canvas_manager.grid_height)
 	_populate_core_levels_container()
+	
+	_update_editor_joker_counter_display()
 
 func _recenter_editor_layout(width: int, height: int) -> void:
 	var board_pixel_width = width * canvas_manager.CELL_SIZE
@@ -128,9 +134,9 @@ func _load_core_level(res: LevelData):
 		sanitized_tiles.append(int(tile))
 		
 	ui_manager.set_allowed_tiles(sanitized_tiles)
-	
 	ui_manager.sync_size_displays(actual_w, actual_h)
 	ui_manager.update_status("SUCCESS: Loaded CORE Level " + str(res.level_number) + " as a template.", Color(0.4, 1.0, 0.4))
+	_update_editor_joker_counter_display()
 
 func _bind_signals():
 	ui_manager.brush_changed.connect(_on_brush_changed)
@@ -148,7 +154,10 @@ func _bind_signals():
 	ui_manager.playtest_reset_requested.connect(_on_playtest_reset_requested)
 	ui_manager.playtest_rules_requested.connect(_on_playtest_rules_requested)
 	ui_manager.playtest_hint_requested.connect(_on_playtest_hint_requested)
+	ui_manager.playtest_undo_requested.connect(_on_playtest_undo_requested)
+	ui_manager.playtest_redo_requested.connect(_on_playtest_redo_requested)
 	ui_manager.resume_from_tutorial_requested.connect(_on_resume_from_tutorial)
+	ui_manager.allowed_tiles_changed.connect(_update_editor_joker_counter_display) 
 
 func _on_random_board_requested():
 	if is_playtesting: return
@@ -184,6 +193,7 @@ func _on_random_board_requested():
 	canvas_manager.load_layout(target_w, target_h, generated["layout"], generated["shifters"], generated["constraints"])
 	
 	_recenter_editor_layout(target_w, target_h)
+	_update_editor_joker_counter_display()
 	
 	var status_text = "Generated %dx%d puzzle with locked walls!" % [target_w, target_h]
 	if not lock_walls: status_text = "Generated %dx%d with randomized walls!" % [target_w, target_h]
@@ -198,6 +208,7 @@ func _on_grid_size_changed(new_width: int, new_height: int):
 	canvas_manager.generate_blank_canvas(new_width, new_height)
 	_recenter_editor_layout(new_width, new_height)
 	ui_manager.update_status("Grid resized to %d x %d" % [new_width, new_height], Color.WHITE)
+	_update_editor_joker_counter_display()
 
 func _on_brush_changed(state_id: int, brush_name: String):
 	if is_playtesting: return
@@ -257,6 +268,13 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 		cell.update_visuals()
 		_update_playtest_joker_count()
 		_run_playtest_validation_pass()
+		
+		var new_state = _create_playtest_snapshot()
+		pt_undo_stack.append(pt_current_state_record)
+		pt_redo_stack.clear()
+		pt_current_state_record = new_state
+		ui_manager.update_undo_redo_buttons(pt_undo_stack.size() > 0, false)
+
 	else:
 		if current_brush_state >= 3 and current_brush_state <= 5:
 			if link_first_selection == null:
@@ -309,6 +327,26 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 			cell.is_playable = true
 			cell.is_locked = false
 		cell.update_visuals()
+		
+		_update_editor_joker_counter_display()
+
+func _update_editor_joker_counter_display():
+	if is_playtesting: return
+	var prefilled_jokers = 0
+	for coord in canvas_manager.board_cells:
+		if canvas_manager.board_cells[coord].state == 2:
+			prefilled_jokers += 1
+			
+	var total_required = current_level_required_jokers
+	if total_required == -1:
+		total_required = min(canvas_manager.grid_width, canvas_manager.grid_height)
+		
+	total_required = max(0, total_required)
+	
+	var has_jokers = (total_required > 0)
+	ui_manager.set_playtest_joker_counter_visibility(has_jokers)
+	
+	ui_manager.update_playtest_joker_counter(prefilled_jokers, total_required)
 
 func _execute_pair_link_creation(coord_a: Vector2i, coord_b: Vector2i):
 	_remove_pair_by_coord(coord_a)
@@ -363,7 +401,6 @@ func _execute_constraint_creation(coord_a: Vector2i, coord_b: Vector2i, type: St
 			
 	var new_constraint = {"a": coord_a, "b": coord_b, "type": type}
 	canvas_manager.loaded_constraint_pairs.append(new_constraint)
-	
 	canvas_manager.trigger_redraw()
 	ui_manager.update_status("Constraint successfully linked!", Color(0.4, 1.0, 0.4))
 
@@ -373,12 +410,6 @@ func _remove_constraint_by_coord(coord: Vector2i):
 		if p["a"] == coord or p["b"] == coord:
 			canvas_manager.loaded_constraint_pairs.remove_at(i)
 	canvas_manager.trigger_redraw()
-
-func _is_shifter_linked(coord: Vector2i) -> bool:
-	for p in canvas_manager.loaded_shifter_pairs:
-		if p["a"] == coord or p["b"] == coord:
-			return true
-	return false
 
 func _on_clear_board():
 	if is_playtesting: return
@@ -398,6 +429,7 @@ func _on_clear_board():
 		
 	canvas_manager.trigger_redraw()
 	ui_manager.update_status("Board cleared!", Color.WHITE)
+	_update_editor_joker_counter_display()
 
 func _is_layout_empty(layout: Dictionary) -> bool:
 	for coord in layout:
@@ -423,6 +455,50 @@ func _scan_directory(path_to_scan: String) -> Array:
 			file_name = dir.get_next()
 		dir.list_dir_end()
 	return found_files
+
+func _create_playtest_snapshot() -> Dictionary:
+	var snap = {}
+	for coord in canvas_manager.board_cells:
+		var cell = canvas_manager.board_cells[coord]
+		snap[coord] = {
+			"state": cell.state,
+			"shifter_direction": cell.shifter_direction
+		}
+	return {
+		"cells": snap,
+		"moves": playtest_shifter_moves
+	}
+
+func _apply_playtest_snapshot(snap: Dictionary):
+	playtest_shifter_moves = snap["moves"]
+	var cells = snap["cells"]
+	for coord in cells:
+		var cell = canvas_manager.board_cells[coord]
+		cell.state = cells[coord]["state"]
+		cell.shifter_direction = cells[coord]["shifter_direction"]
+		cell.update_visuals()
+		
+	_update_playtest_joker_count()
+	if ui_manager.has_method("update_playtest_hud"):
+		_update_playtest_hud_wrapper()
+	canvas_manager.trigger_redraw()
+	_run_playtest_validation_pass()
+
+func _on_playtest_undo_requested():
+	if not is_playtesting or pt_undo_stack.is_empty(): return
+	pt_redo_stack.append(pt_current_state_record)
+	var prev_state = pt_undo_stack.pop_back()
+	_apply_playtest_snapshot(prev_state)
+	pt_current_state_record = prev_state
+	ui_manager.update_undo_redo_buttons(pt_undo_stack.size() > 0, pt_redo_stack.size() > 0)
+
+func _on_playtest_redo_requested():
+	if not is_playtesting or pt_redo_stack.is_empty(): return
+	pt_undo_stack.append(pt_current_state_record)
+	var next_state = pt_redo_stack.pop_back()
+	_apply_playtest_snapshot(next_state)
+	pt_current_state_record = next_state
+	ui_manager.update_undo_redo_buttons(pt_undo_stack.size() > 0, pt_redo_stack.size() > 0)
 
 func _update_playtest_joker_count():
 	var count = 0
@@ -484,9 +560,14 @@ func _on_test_mode_entered():
 		
 	playtest_required_jokers = max(0, playtest_required_jokers - prefilled_jokers)
 	
-	var has_jokers = (2 in ui_manager.get_allowed_tiles()) and (playtest_required_jokers > 0)
+	var has_jokers = (playtest_required_jokers > 0)
 	ui_manager.set_playtest_joker_counter_visibility(has_jokers)
 	_update_playtest_joker_count()
+	
+	pt_undo_stack.clear()
+	pt_redo_stack.clear()
+	pt_current_state_record = _create_playtest_snapshot()
+	ui_manager.update_undo_redo_buttons(false, false)
 	
 	if ui_manager.has_method("update_playtest_hud"):
 		_update_playtest_hud_wrapper()
@@ -539,6 +620,11 @@ func _on_playtest_reset_requested():
 	
 	_update_playtest_joker_count()
 	
+	pt_undo_stack.clear()
+	pt_redo_stack.clear()
+	pt_current_state_record = _create_playtest_snapshot()
+	ui_manager.update_undo_redo_buttons(false, false)
+	
 	if ui_manager.has_method("update_playtest_hud"):
 		_update_playtest_hud_wrapper()
 		
@@ -561,12 +647,55 @@ func _on_resume_from_tutorial():
 func _on_playtest_hint_requested():
 	if not is_playtesting: return
 	
-	if playtest_pending_hints.size() > 0:
-		var hint = playtest_pending_hints.pop_back()
-		canvas_manager.loaded_constraint_pairs.append(hint)
+	var selected_hint = null
+	var skipped_hints = []
+	
+	while playtest_pending_hints.size() > 0:
+		var candidate = playtest_pending_hints.pop_back()
+		var coord_a = candidate["a"]
+		var coord_b = candidate["b"]
+		var type = candidate["type"]
+		
+		# --- RULE 1: Prevent Overlapping Hints! ---
+		var cell_already_has_hint = false
+		for active_hint in canvas_manager.loaded_constraint_pairs:
+			if active_hint["a"] == coord_a or active_hint["b"] == coord_a or active_hint["a"] == coord_b or active_hint["b"] == coord_b:
+				cell_already_has_hint = true
+				break
+				
+		if cell_already_has_hint:
+			skipped_hints.append(candidate)
+			continue
+		
+		# --- RULE 2: Skip if visually correctly satisfied ---
+		var current_a = canvas_manager.board_cells[coord_a].state if canvas_manager.board_cells.has(coord_a) else -1
+		var current_b = canvas_manager.board_cells[coord_b].state if canvas_manager.board_cells.has(coord_b) else -1
+		
+		var is_satisfied = false
+		if current_a != -1 and current_b != -1:
+			if type == "equals" and current_a == current_b:
+				is_satisfied = true
+			elif type == "not_equals" and current_a != current_b:
+				is_satisfied = true
+				
+		if is_satisfied:
+			skipped_hints.append(candidate) 
+			continue
+			
+		selected_hint = candidate
+		break
+		
+	# Put visually satisfied or overlapping hints back in the pile
+	playtest_pending_hints.append_array(skipped_hints)
+	playtest_pending_hints.shuffle()
+	
+	if selected_hint != null:
+		canvas_manager.loaded_constraint_pairs.append(selected_hint)
 		canvas_manager.trigger_redraw()
 		ui_manager.update_playtest_hint_count(playtest_pending_hints.size())
 		_run_playtest_validation_pass()
+	else:
+		ui_manager.update_status("No useful hints available for your current layout!", Color(1.0, 0.6, 0.2))
 
 func _on_playtest_timer_timeout():
 	if is_playtesting:
@@ -620,6 +749,7 @@ func _on_test_mode_exited():
 	canvas_manager.trigger_redraw()
 	ui_manager.toggle_playtest_visibility(false)
 	_on_brush_changed(current_brush_state, "Designer Mode Restored")
+	_update_editor_joker_counter_display()
 
 func _run_playtest_validation_pass():
 	canvas_manager.clear_highlights()
@@ -757,9 +887,9 @@ func _on_load_level():
 				sanitized_tiles.append(int(tile))
 				
 			ui_manager.set_allowed_tiles(sanitized_tiles)
-			
 			ui_manager.sync_size_displays(actual_w, actual_h)
 			ui_manager.update_status("SUCCESS: Loaded Custom Level " + str(level_num), Color(0.4, 1.0, 0.4))
+			_update_editor_joker_counter_display()
 		else:
 			ui_manager.update_status("ERROR: Failed to parse LevelData resource.", Color(1.0, 0.3, 0.3))
 	else:
