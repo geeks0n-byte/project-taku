@@ -159,7 +159,6 @@ func generate_board():
 	var current_level_resource = levels[current_level_index]
 	var is_custom = current_level_resource.resource_path.begins_with("user://")
 	
-	# FIXED: Mathematically extract exact grid size from layout dictionary keys!
 	var actual_w = 6
 	var actual_h = 6
 	if current_level_resource.layout.size() > 0:
@@ -201,10 +200,18 @@ func generate_board():
 		if current_level_resource.layout[coord] == 2:
 			prefilled_jokers += 1
 			
-	required_jokers = min(actual_w, actual_h)
+	# --- NEW JOKER CALCULATION & UI HIDING ---
+	var saved_req_jokers = current_level_resource.get("required_jokers") if "required_jokers" in current_level_resource else -1
+	
+	if saved_req_jokers == -1:
+		required_jokers = min(actual_w, actual_h)
+	else:
+		required_jokers = saved_req_jokers
+		
 	required_jokers = max(0, required_jokers - prefilled_jokers)
 	
-	var has_jokers = (2 in tiles_list)
+	# Only show the joker counter if Jokers are actually required (> 0) and allowed in the UI
+	var has_jokers = (2 in tiles_list) and (required_jokers > 0)
 	ui_manager.set_joker_counter_visibility(has_jokers)
 		
 	var c_pairs: Array = []

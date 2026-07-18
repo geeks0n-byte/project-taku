@@ -20,7 +20,7 @@ signal resume_from_tutorial_requested
 const MIN_GRID_WIDTH: int = 3
 const MAX_GRID_WIDTH: int = 9
 const MIN_GRID_HEIGHT: int = 3
-const MAX_GRID_HEIGHT: int = 9 # CHANGED FROM 11 TO 9
+const MAX_GRID_HEIGHT: int = 9
 
 @export var icon_wall: Texture2D
 @export var icon_empty: Texture2D
@@ -37,7 +37,6 @@ const MAX_GRID_HEIGHT: int = 9 # CHANGED FROM 11 TO 9
 @onready var height_minus = editor_ui_root.find_child("HeightMinus", true, false)
 @onready var height_label = editor_ui_root.find_child("HeightLabel", true, false)
 @onready var height_plus = editor_ui_root.find_child("HeightPlus", true, false)
-@onready var set_size_button = editor_ui_root.find_child("SetSizeButton", true, false)
 
 @onready var level_settings_container = editor_ui_root.find_child("LevelSettingsContainer", true, false)
 @onready var allow_zero = editor_ui_root.find_child("AllowZero", true, false)
@@ -90,6 +89,8 @@ var pt_timer_label: Label
 var pt_moves_label: Label
 var pt_jokers_label: Label 
 var random_button: Button 
+var unique_solution_toggle: CheckButton
+var keep_walls_toggle: CheckButton
 
 var pt_reset_button: Button
 var pt_rules_button: Button
@@ -104,13 +105,30 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 	editor_height = grid_height
 	var root_parent = get_parent()
 	
-	if grid_size_container and not random_button:
-		random_button = Button.new()
-		random_button.text = "🎲 RANDOM"
-		random_button.add_theme_font_size_override("font_size", 28)
-		random_button.pressed.connect(func(): random_requested.emit())
-		grid_size_container.add_child(random_button)
-		grid_size_container.move_child(random_button, 0)
+	if grid_size_container:
+		if not random_button:
+			random_button = Button.new()
+			random_button.text = "🎲 RANDOM"
+			random_button.add_theme_font_size_override("font_size", 28)
+			random_button.pressed.connect(func(): random_requested.emit())
+			grid_size_container.add_child(random_button)
+			grid_size_container.move_child(random_button, 0)
+			
+		if not unique_solution_toggle:
+			unique_solution_toggle = CheckButton.new()
+			unique_solution_toggle.text = "Unique Solution"
+			unique_solution_toggle.button_pressed = false # OFF BY DEFAULT
+			unique_solution_toggle.add_theme_font_size_override("font_size", 24)
+			grid_size_container.add_child(unique_solution_toggle)
+			grid_size_container.move_child(unique_solution_toggle, 1)
+			
+		if not keep_walls_toggle:
+			keep_walls_toggle = CheckButton.new()
+			keep_walls_toggle.text = "Keep Walls"
+			keep_walls_toggle.button_pressed = false # OFF BY DEFAULT
+			keep_walls_toggle.add_theme_font_size_override("font_size", 24)
+			grid_size_container.add_child(keep_walls_toggle)
+			grid_size_container.move_child(keep_walls_toggle, 2)
 	
 	if not pt_reset_button:
 		pt_reset_button = Button.new()
@@ -252,6 +270,16 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 	
 	_set_button_labels()
 	_connect_ui_signals()
+
+func is_unique_solution_required() -> bool:
+	if unique_solution_toggle:
+		return unique_solution_toggle.button_pressed
+	return false # UPDATED DEFAULT FALLBACK
+	
+func is_keep_walls_requested() -> bool:
+	if keep_walls_toggle:
+		return keep_walls_toggle.button_pressed
+	return false # UPDATED DEFAULT FALLBACK
 
 func _on_pt_reset_pressed(): playtest_reset_requested.emit()
 func _on_pt_rules_pressed(): playtest_rules_requested.emit()
@@ -547,7 +575,6 @@ func _set_button_labels():
 	if load_button: load_button.text = "📂 LOAD"
 	if test_button: test_button.text = "▶️ TEST"
 	if exit_test_button: exit_test_button.text = "⏹️ EXIT TEST"
-	if set_size_button: set_size_button.text = "✅ SET" 
 	
 	if width_minus: width_minus.text = "-"
 	if width_plus: width_plus.text = "+"
@@ -578,7 +605,6 @@ func _connect_ui_signals():
 	exit_test_button.pressed.connect(func(): test_mode_exited.emit())
 	return_button.pressed.connect(func(): test_mode_exited.emit())
 	
-	if set_size_button: set_size_button.pressed.connect(_on_set_size_pressed)
 	if width_minus: width_minus.pressed.connect(func(): _adjust_value("width", -1))
 	if width_plus: width_plus.pressed.connect(func(): _adjust_value("width", 1))
 	if height_minus: height_minus.pressed.connect(func(): _adjust_value("height", -1))
@@ -590,16 +616,23 @@ func _connect_ui_signals():
 	if time_plus: time_plus.pressed.connect(func(): _adjust_value("time", 30))
 
 func _adjust_value(target: String, amount: int):
+	var grid_changed = false
 	match target:
-		"width": editor_width = clamp(editor_width + amount, MIN_GRID_WIDTH, MAX_GRID_WIDTH) 
-		"height": editor_height = clamp(editor_height + amount, MIN_GRID_HEIGHT, MAX_GRID_HEIGHT)
+		"width": 
+			var old = editor_width
+			editor_width = clamp(editor_width + amount, MIN_GRID_WIDTH, MAX_GRID_WIDTH)
+			if old != editor_width: grid_changed = true
+		"height": 
+			var old = editor_height
+			editor_height = clamp(editor_height + amount, MIN_GRID_HEIGHT, MAX_GRID_HEIGHT)
+			if old != editor_height: grid_changed = true
 		"level": editor_level = max(1, editor_level + amount) 
 		"time": editor_time_limit = max(0, editor_time_limit + amount)
 	_update_number_labels()
-
-func _on_set_size_pressed():
-	_update_panel_layout(editor_width, editor_height)
-	grid_size_changed.emit(editor_width, editor_height)
+	
+	if grid_changed:
+		_update_panel_layout(editor_width, editor_height)
+		grid_size_changed.emit(editor_width, editor_height)
 
 func update_status(msg: String, text_color: Color):
 	if status_label:

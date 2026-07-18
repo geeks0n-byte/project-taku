@@ -20,6 +20,7 @@ var playtest_shifter_moves: int = 0
 var playtest_hidden_constraints: Array = []
 var playtest_pending_hints: Array = []
 var playtest_required_jokers: int = 0 
+var current_level_required_jokers: int = -1 # Default to -1 for manual/unknown boards
 
 func _ready():
 	_bind_signals()
@@ -92,7 +93,6 @@ func _load_core_level(res: LevelData):
 	if is_playtesting: return
 	link_first_selection = null
 	
-	# Mathematically extract exact grid size from layout dictionary keys for backwards compatibility!
 	var actual_w = 3
 	var actual_h = 3
 	if res.layout.size() > 0:
@@ -112,6 +112,7 @@ func _load_core_level(res: LevelData):
 	elif "red_pairs" in res: s_pairs = res.red_pairs
 	
 	var c_pairs = res.constraint_pairs if "constraint_pairs" in res else []
+	current_level_required_jokers = res.get("required_jokers") if "required_jokers" in res else -1
 	
 	canvas_manager.generate_blank_canvas(actual_w, actual_h)
 	canvas_manager.load_layout(actual_w, actual_h, res.layout, s_pairs, c_pairs)
@@ -157,24 +158,38 @@ func _on_random_board_requested():
 	
 	ui_manager.sync_size_displays(target_w, target_h)
 	
-	var generated = PuzzleGenerator.generate_random_layout(target_w, target_h, ui_manager.get_allowed_tiles())
+	# Pass existing walls into generator ONLY if the user wants to keep them!
+	var current_layout = {}
+	if ui_manager.has_method("is_keep_walls_requested") and ui_manager.is_keep_walls_requested():
+		for c in canvas_manager.board_cells:
+			if canvas_manager.board_cells[c].state == -2:
+				current_layout[c] = -2
 	
-	# CRASH FIX: Check if generation was successful before proceeding
+	var require_unique = true
+	if ui_manager.has_method("is_unique_solution_required"):
+		require_unique = ui_manager.is_unique_solution_required()
+	
+	var generated = PuzzleGenerator.generate_random_layout(target_w, target_h, ui_manager.get_allowed_tiles(), current_layout, require_unique)
+	
 	if generated.is_empty() or not generated.has("layout"):
-		ui_manager.update_status("ERROR: Generator timeout! Try again or clear walls/shifters.", Color(1.0, 0.3, 0.3))
+		ui_manager.update_status("ERROR: Math conflict! Try removing a few walls or shrinking the grid.", Color(1.0, 0.3, 0.3))
 		return
+		
+	current_level_required_jokers = generated.get("total_jokers", 0)
 	
-	# Clear the board cleanly to prevent weird overlaps
 	canvas_manager.generate_blank_canvas(target_w, target_h)
 	canvas_manager.load_layout(target_w, target_h, generated["layout"], generated["shifters"], generated["constraints"])
 	
 	_recenter_editor_layout(target_w, target_h)
 	
-	ui_manager.update_status("Generated %dx%d random puzzle!" % [target_w, target_h], Color(0.4, 1.0, 0.4))
+	var status_text = "Generated %dx%d puzzle keeping existing walls!" % [target_w, target_h]
+	if not require_unique: status_text = "Generated %dx%d (Multi-Solution Allowed)!" % [target_w, target_h]
+	ui_manager.update_status(status_text, Color(0.4, 1.0, 0.4))
 
 func _on_grid_size_changed(new_width: int, new_height: int):
 	if is_playtesting: return
 	link_first_selection = null
+	current_level_required_jokers = -1
 	
 	canvas_manager.generate_blank_canvas(new_width, new_height)
 	_recenter_editor_layout(new_width, new_height)
@@ -366,6 +381,7 @@ func _on_clear_board():
 	canvas_manager.loaded_shifter_pairs.clear()
 	canvas_manager.loaded_constraint_pairs.clear() 
 	link_first_selection = null
+	current_level_required_jokers = -1
 	
 	for coord in canvas_manager.board_cells:
 		var cell = canvas_manager.board_cells[coord]
@@ -457,10 +473,18 @@ func _on_test_mode_entered():
 	var has_shifters = canvas_manager.loaded_shifter_pairs.size() > 0
 	ui_manager.set_playtest_move_counter_visibility(has_shifters)
 	
-	playtest_required_jokers = min(canvas_manager.grid_width, canvas_manager.grid_height)
+	# --- JOKER COUNTER LOGIC FIX ---
+	if current_level_required_jokers == -1:
+		# If user just drew a board by hand and hit Test, assume max possible jokers
+		playtest_required_jokers = min(canvas_manager.grid_width, canvas_manager.grid_height)
+	else:
+		# If the board was generated or loaded from a saved file, use the exact math!
+		playtest_required_jokers = current_level_required_jokers
+		
 	playtest_required_jokers = max(0, playtest_required_jokers - prefilled_jokers)
 	
-	var has_jokers = (2 in ui_manager.get_allowed_tiles())
+	# Only show the joker counter if Jokers are actually required (> 0) and allowed in the UI
+	var has_jokers = (2 in ui_manager.get_allowed_tiles()) and (playtest_required_jokers > 0)
 	ui_manager.set_playtest_joker_counter_visibility(has_jokers)
 	_update_playtest_joker_count()
 	
@@ -655,6 +679,8 @@ func _execute_save():
 	new_level_resource.height = canvas_manager.grid_height
 	new_level_resource.layout = output_layout
 	
+	new_level_resource.set("required_jokers", current_level_required_jokers)
+	
 	var processed_pairs: Array = []
 	for pair in canvas_manager.loaded_shifter_pairs:
 		var active_pos = pair["a"]
@@ -715,6 +741,7 @@ func _on_load_level():
 			elif "red_pairs" in loaded_level: s_pairs = loaded_level.red_pairs
 			
 			var c_pairs = loaded_level.constraint_pairs if "constraint_pairs" in loaded_level else []
+			current_level_required_jokers = loaded_level.get("required_jokers") if "required_jokers" in loaded_level else -1
 			
 			canvas_manager.generate_blank_canvas(actual_w, actual_h)
 			canvas_manager.load_layout(actual_w, actual_h, loaded_level.layout, s_pairs, c_pairs)

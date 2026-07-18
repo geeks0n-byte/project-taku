@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256" shape-rendering="crispEdges">
+  <defs>
+    <!-- Clipping path to maintain the rounded corners of the app icon -->
+    <clipPath id="app-clip">
+      <rect x="0" y="0" width="64" height="64" rx="14" />
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#app-clip)">
+    <!-- Deep Space Blue Base -->
+    <rect width="64" height="64" fill="#00123a" />
+    
+    <!-- Distant/Dim Stars -->
+    <g fill="#404040">
+      <path d="M6 10h1v1h-1z M24 5h1v1h-1z M48 12h1v1h-1z M14 28h1v1h-1z M38 25h1v1h-1z M58 20h1v1h-1z M5 45h1v1h-1z M26 42h1v1h-1z M50 48h1v1h-1z M18 58h1v1h-1z M44 56h1v1h-1z M34 14h1v1h-1z" />
+    </g>
+    
+    <!-- Bright/Foreground Stars -->
+    <g fill="#ffffff">
+      <path d="M14 14h1v1h-1z M40 8h1v1h-1z M54 28h1v1h-1z M8 32h1v1h-1z M46 36h1v1h-1z M22 52h1v1h-1z M60 48h1v1h-1z M10 56h1v1h-1z M32 60h1v1h-1z M28 20h1v1h-1z" />
+    </g>
+  </g>
+
+  <!-- Top-Left: Purple Tile -->
+  <g transform="translate(16,16)">
+    <rect x="1" y="1" width="14" height="14" fill="#1a1a1a" />
+    <rect x="1" y="1" width="14" height="13" fill="#7e2553" />
+    <rect x="1" y="1" width="13" height="1" fill="#ff77a8" />
+    <rect x="1" y="2" width="1" height="11" fill="#ff77a8" />
+    <rect x="2" y="13" width="13" height="1" fill="#1d2b53" />
+    <rect x="14" y="2" width="1" height="12" fill="#1d2b53" />
+    <rect x="3" y="3" width="10" height="8" fill="#ff77a8" />
+    <rect x="4" y="4" width="8" height="7" fill="#7e2553" />
+  </g>
+
+  <!-- Top-Right: Dark Yellow Tile -->
+  <g transform="translate(32,16)">
+    <rect x="1" y="1" width="14" height="14" fill="#1a1a1a" />
+    <rect x="1" y="1" width="14" height="13" fill="#c49c00" />
+    <rect x="1" y="1" width="13" height="1" fill="#ffe066" />
+    <rect x="1" y="2" width="1" height="11" fill="#ffe066" />
+    <rect x="2" y="13" width="13" height="1" fill="#704700" />
+    <rect x="14" y="2" width="1" height="12" fill="#704700" />
+    <rect x="3" y="3" width="10" height="8" fill="#ffe066" />
+    <rect x="4" y="4" width="8" height="7" fill="#c49c00" />
+  </g>
+
+  <!-- Bottom-Left: Blue Tile -->
+  <g transform="translate(16,32)">
+    <rect x="1" y="1" width="14" height="14" fill="#1a1a1a" />
+    <rect x="1" y="1" width="14" height="13" fill="#29adff" />
+    <rect x="1" y="1" width="13" height="1" fill="#abffe6" />
+    <rect x="1" y="2" width="1" height="11" fill="#abffe6" />
+    <rect x="2" y="13" width="13" height="1" fill="#1d2b53" />
+    <rect x="14" y="2" width="1" height="12" fill="#1d2b53" />
+    <rect x="3" y="3" width="10" height="8" fill="#abffe6" />
+    <rect x="4" y="4" width="8" height="7" fill="#29adff" />
+  </g>
+
+  <!-- Bottom-Right: Green Tile -->
+  <g transform="translate(32,32)">
+    <rect x="1" y="1" width="14" height="14" fill="#1a1a1a" />
+    <rect x="1" y="1" width="14" height="13" fill="#00e436" />
+    <rect x="1" y="1" width="13" height="1" fill="#a1ff00" />
+    <rect x="1" y="2" width="1" height="11" fill="#a1ff00" />
+    <rect x="2" y="13" width="13" height="1" fill="#1f5125" />
+    <rect x="14" y="2" width="1" height="12" fill="#1f5125" />
+    <rect x="3" y="3" width="10" height="8" fill="#a1ff00" />
+    <rect x="4" y="4" width="8" height="7" fill="#00e436" />
+  </g>
+</svg>
