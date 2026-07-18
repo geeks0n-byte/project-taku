@@ -9,7 +9,6 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 	if not (0 in solver_tiles): solver_tiles.append(0)
 	if not (1 in solver_tiles): solver_tiles.append(1)
 	
-	# Increased attempts because the fast math rejector burns through bad attempts in microseconds!
 	while attempt < 500: 
 		attempt += 1
 		var force_easy = (attempt > 100)
@@ -100,7 +99,6 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 					layout[inactive_node] = -1
 					
 					shifters.append({"a": candidate_a, "b": candidate_b, "active": active_node, "inactive": inactive_node})
-					# Only erase active from solver. Inactive stays in empty_cells to be solved!
 					empty_cells.erase(active_node)
 					available_starts.erase(candidate_b) 
 					placed = true
@@ -112,7 +110,6 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 			continue
 
 		# --- FAST MATH PARITY REJECTOR ---
-		# Instantly detects if the board is mathematically unsolvable before wasting solver resources
 		var r_sum = 0
 		var c_sum = 0
 		for yy in range(height):
@@ -173,7 +170,6 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		var green_cells = []
 		
 		for c in layout.keys():
-			# Gather all generated Yellow, Blue, Green tiles
 			if layout[c] >= 0 and layout[c] <= 2: 
 				all_filled_cells.append(c)
 				if layout[c] == 2:
@@ -181,7 +177,6 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 					
 		var clearable_cells = all_filled_cells.duplicate()
 		
-		# CRITICAL FIX: Ensure inactive shifter cells are cleared and never kept as fixed tiles!
 		for pair in shifters:
 			clearable_cells.erase(pair.inactive)
 			layout[pair.inactive] = -1
@@ -233,6 +228,13 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		for pair in shifters:
 			layout[pair.a] = -1
 			layout[pair.b] = -1
+			
+			# --- NEW: Randomize Shifter Starting Position! ---
+			# 50% chance to spawn the shifter in the "wrong" spot so the player has to move it.
+			if randi() % 2 == 0:
+				var temp = pair.active
+				pair.active = pair.inactive
+				pair.inactive = temp
 
 		return {
 			"layout": layout,
