@@ -20,7 +20,7 @@ var playtest_shifter_moves: int = 0
 var playtest_hidden_constraints: Array = []
 var playtest_pending_hints: Array = []
 var playtest_required_jokers: int = 0 
-var current_level_required_jokers: int = -1 # Default to -1 for manual/unknown boards
+var current_level_required_jokers: int = -1 
 
 func _ready():
 	_bind_signals()
@@ -158,9 +158,12 @@ func _on_random_board_requested():
 	
 	ui_manager.sync_size_displays(target_w, target_h)
 	
-	# Pass existing walls into generator ONLY if the user wants to keep them!
+	var keep_walls = false
+	if ui_manager.has_method("is_keep_walls_requested"):
+		keep_walls = ui_manager.is_keep_walls_requested()
+		
 	var current_layout = {}
-	if ui_manager.has_method("is_keep_walls_requested") and ui_manager.is_keep_walls_requested():
+	if keep_walls:
 		for c in canvas_manager.board_cells:
 			if canvas_manager.board_cells[c].state == -2:
 				current_layout[c] = -2
@@ -169,7 +172,8 @@ func _on_random_board_requested():
 	if ui_manager.has_method("is_unique_solution_required"):
 		require_unique = ui_manager.is_unique_solution_required()
 	
-	var generated = PuzzleGenerator.generate_random_layout(target_w, target_h, ui_manager.get_allowed_tiles(), current_layout, require_unique)
+	# UPDATED: We now pass keep_walls to the generator so it knows whether to randomize new walls!
+	var generated = PuzzleGenerator.generate_random_layout(target_w, target_h, ui_manager.get_allowed_tiles(), current_layout, require_unique, keep_walls)
 	
 	if generated.is_empty() or not generated.has("layout"):
 		ui_manager.update_status("ERROR: Math conflict! Try removing a few walls or shrinking the grid.", Color(1.0, 0.3, 0.3))
@@ -183,6 +187,7 @@ func _on_random_board_requested():
 	_recenter_editor_layout(target_w, target_h)
 	
 	var status_text = "Generated %dx%d puzzle keeping existing walls!" % [target_w, target_h]
+	if not keep_walls: status_text = "Generated %dx%d with randomized walls!" % [target_w, target_h]
 	if not require_unique: status_text = "Generated %dx%d (Multi-Solution Allowed)!" % [target_w, target_h]
 	ui_manager.update_status(status_text, Color(0.4, 1.0, 0.4))
 
@@ -473,17 +478,13 @@ func _on_test_mode_entered():
 	var has_shifters = canvas_manager.loaded_shifter_pairs.size() > 0
 	ui_manager.set_playtest_move_counter_visibility(has_shifters)
 	
-	# --- JOKER COUNTER LOGIC FIX ---
 	if current_level_required_jokers == -1:
-		# If user just drew a board by hand and hit Test, assume max possible jokers
 		playtest_required_jokers = min(canvas_manager.grid_width, canvas_manager.grid_height)
 	else:
-		# If the board was generated or loaded from a saved file, use the exact math!
 		playtest_required_jokers = current_level_required_jokers
 		
 	playtest_required_jokers = max(0, playtest_required_jokers - prefilled_jokers)
 	
-	# Only show the joker counter if Jokers are actually required (> 0) and allowed in the UI
 	var has_jokers = (2 in ui_manager.get_allowed_tiles()) and (playtest_required_jokers > 0)
 	ui_manager.set_playtest_joker_counter_visibility(has_jokers)
 	_update_playtest_joker_count()

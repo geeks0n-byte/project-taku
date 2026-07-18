@@ -46,6 +46,8 @@ const MAX_GRID_HEIGHT: int = 9
 @onready var time_label = editor_ui_root.find_child("TimeLabel", true, false)
 @onready var time_plus = editor_ui_root.find_child("TimePlus", true, false)
 
+var time_title_label: Label 
+
 @onready var level_minus = editor_ui_root.find_child("LevelMinus", true, false)
 @onready var level_label = editor_ui_root.find_child("LevelLabel", true, false)
 @onready var level_plus = editor_ui_root.find_child("LevelPlus", true, false)
@@ -117,7 +119,7 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		if not unique_solution_toggle:
 			unique_solution_toggle = CheckButton.new()
 			unique_solution_toggle.text = "Unique Solution"
-			unique_solution_toggle.button_pressed = false # OFF BY DEFAULT
+			unique_solution_toggle.button_pressed = false 
 			unique_solution_toggle.add_theme_font_size_override("font_size", 24)
 			grid_size_container.add_child(unique_solution_toggle)
 			grid_size_container.move_child(unique_solution_toggle, 1)
@@ -125,10 +127,21 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		if not keep_walls_toggle:
 			keep_walls_toggle = CheckButton.new()
 			keep_walls_toggle.text = "Keep Walls"
-			keep_walls_toggle.button_pressed = false # OFF BY DEFAULT
+			keep_walls_toggle.button_pressed = false 
 			keep_walls_toggle.add_theme_font_size_override("font_size", 24)
 			grid_size_container.add_child(keep_walls_toggle)
 			grid_size_container.move_child(keep_walls_toggle, 2)
+			
+	if level_settings_container and time_minus:
+		time_title_label = editor_ui_root.find_child("TimeTitleLabel", true, false)
+		if not time_title_label:
+			time_title_label = Label.new()
+			time_title_label.name = "TimeTitleLabel"
+			time_title_label.text = "TIME LIMIT:"
+			level_settings_container.add_child(time_title_label)
+			level_settings_container.move_child(time_title_label, time_minus.get_index())
+		else:
+			time_title_label.text = "TIME LIMIT:"
 	
 	if not pt_reset_button:
 		pt_reset_button = Button.new()
@@ -274,12 +287,12 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 func is_unique_solution_required() -> bool:
 	if unique_solution_toggle:
 		return unique_solution_toggle.button_pressed
-	return false # UPDATED DEFAULT FALLBACK
+	return false 
 	
 func is_keep_walls_requested() -> bool:
 	if keep_walls_toggle:
 		return keep_walls_toggle.button_pressed
-	return false # UPDATED DEFAULT FALLBACK
+	return false 
 
 func _on_pt_reset_pressed(): playtest_reset_requested.emit()
 func _on_pt_rules_pressed(): playtest_rules_requested.emit()
@@ -436,11 +449,16 @@ func _update_number_labels():
 	if width_label: width_label.text = "X: " + str(editor_width)
 	if height_label: height_label.text = "Y: " + str(editor_height)
 	if level_label: level_label.text = "Lvl: " + str(editor_level)
+	
 	if time_label:
 		if editor_time_limit == 0:
-			time_label.text = "Time limit: ∞" 
+			time_label.text = "∞"
+			# Boost the infinity sign size so it matches standard text height better
+			time_label.add_theme_font_size_override("font_size", 56) 
 		else:
-			time_label.text = "Time limit: " + str(editor_time_limit) + "s"
+			time_label.text = str(editor_time_limit) + "s"
+			# Return to standard font size when showing numbers
+			time_label.add_theme_font_size_override("font_size", 28) 
 
 func _update_panel_layout(_grid_width: int, _grid_height: int):
 	var screen_width = get_viewport().get_visible_rect().size.x
@@ -469,7 +487,7 @@ func _update_panel_layout(_grid_width: int, _grid_height: int):
 				else:
 					child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 					child.custom_minimum_size = Vector2(0, 80)
-				if child is Button or child is Label or child is CheckBox:
+				if child is Button or child is CheckBox or (child is Label and child != time_label):
 					if not child.has_theme_font_size_override("font_size"):
 						child.add_theme_font_size_override("font_size", 28)
 				if child is Label:
