@@ -127,7 +127,7 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		if not keep_walls_toggle:
 			keep_walls_toggle = CheckButton.new()
 			keep_walls_toggle.text = "Lock Walls"
-			keep_walls_toggle.button_pressed = false 
+			keep_walls_toggle.button_pressed = true # ON BY DEFAULT
 			keep_walls_toggle.add_theme_font_size_override("font_size", 24)
 			grid_size_container.add_child(keep_walls_toggle)
 			grid_size_container.move_child(keep_walls_toggle, 2)
@@ -292,8 +292,8 @@ func is_unique_solution_required() -> bool:
 func is_keep_walls_requested() -> bool:
 	if keep_walls_toggle:
 		return keep_walls_toggle.button_pressed
-	return false 
-
+	return true # CHANGED FALLBACK TO TRUE
+	
 func _on_pt_reset_pressed(): playtest_reset_requested.emit()
 func _on_pt_rules_pressed(): playtest_rules_requested.emit()
 func _on_pt_hint_pressed(): playtest_hint_requested.emit()

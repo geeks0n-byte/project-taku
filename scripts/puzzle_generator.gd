@@ -9,26 +9,28 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 	if not (0 in solver_tiles): solver_tiles.append(0)
 	if not (1 in solver_tiles): solver_tiles.append(1)
 	
-	while attempt < 200: 
+	# Increased attempts because the fast math rejector burns through bad attempts in microseconds!
+	while attempt < 500: 
 		attempt += 1
-		var force_easy = (attempt > 40)
+		var force_easy = (attempt > 100)
 		
 		# ==========================================
 		# STEP 1: Generate board & respect existing walls
 		# ==========================================
 		var layout = {}
+		var has_existing_walls = false
 		for y in range(height):
 			for x in range(width):
 				var c = Vector2i(x, y)
 				if lock_walls and current_layout.has(c) and current_layout[c] == -2:
 					layout[c] = -2 
+					has_existing_walls = true
 				else:
 					layout[c] = -1
 
 		var all_cells = layout.keys()
 		all_cells.shuffle()
 
-		# STEP 1B: If "Lock Walls" is OFF, generate fresh random walls!
 		if not lock_walls:
 			var max_walls = 0 if force_easy else randi_range(0, int(all_cells.size() * 0.15))
 			var num_walls_placed = 0
@@ -61,12 +63,12 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		empty_cells.shuffle()
 
 		# ==========================================
-		# STEP 2: Fill remaining cells with Shifters (~20%)
+		# STEP 2: Fill remaining cells with Shifters
 		# ==========================================
 		var shifters = []
 		var total_playable = empty_cells.size()
 		
-		# Allow generation of 2 shifter pairs on small boards if 1 pair mathematically blocks generation!
+		# Allow 2 pairs on small boards to ensure it doesn't get trapped by parity limits!
 		var target_shifter_pairs = int(round((total_playable * 0.20) / 2.0))
 		if target_shifter_pairs <= 1 and total_playable >= 4:
 			target_shifter_pairs = randi_range(1, 2)
@@ -74,8 +76,6 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 			target_shifter_pairs = 1
 		
 		var pairs_placed = 0
-		
-		# Create an isolated pool of cells to test so it NEVER reuses or overlaps
 		var available_starts = empty_cells.duplicate()
 		available_starts.shuffle()
 		
@@ -95,63 +95,42 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 					var active_node = candidate_a if randi() % 2 == 0 else candidate_b
 					var inactive_node = candidate_b if active_node == candidate_a else candidate_a
 					
+					# Active is Purple. Inactive is Empty (Solver will fill it!)
 					layout[active_node] = 3
-					layout[inactive_node] = -3
+					layout[inactive_node] = -1
 					
-					var placement_valid = true
-					for c in [candidate_a, candidate_b]:
-						var p_r = 0; var s_r = 0
-						for x in range(width):
-							var st = layout.get(Vector2i(x, c.y), -1)
-							if st in [-1, 0, 1, 2, 3]: 
-								p_r += 1
-								if st == 3: s_r += 1
-						if p_r % 2 == 1 and s_r > 1: placement_valid = false
-						
-						var p_c = 0; var s_c = 0
-						for y in range(height):
-							var st = layout.get(Vector2i(c.x, y), -1)
-							if st in [-1, 0, 1, 2, 3]:
-								p_c += 1
-								if st == 3: s_c += 1
-						if p_c % 2 == 1 and s_c > 1: placement_valid = false
-						
-					if placement_valid:
-						shifters.append({"a": candidate_a, "b": candidate_b, "active": active_node})
-						empty_cells.erase(candidate_a)
-						empty_cells.erase(candidate_b)
-						available_starts.erase(candidate_b) 
-						placed = true
-						pairs_placed += 1
-						break
-					else:
-						layout[active_node] = -1
-						layout[inactive_node] = -1
+					shifters.append({"a": candidate_a, "b": candidate_b, "active": active_node, "inactive": inactive_node})
+					# Only erase active from solver. Inactive stays in empty_cells to be solved!
+					empty_cells.erase(active_node)
+					available_starts.erase(candidate_b) 
+					placed = true
+					pairs_placed += 1
+					break
 			if placed: continue
 
-		# Fast Fail: If it couldn't place the exact target without overlapping, abort attempt!
 		if pairs_placed < target_shifter_pairs:
 			continue
 
-		# Fast Math Parity Rejector: Detects mathematically impossible boards instantly!
+		# --- FAST MATH PARITY REJECTOR ---
+		# Instantly detects if the board is mathematically unsolvable before wasting solver resources
 		var r_sum = 0
 		var c_sum = 0
 		for yy in range(height):
 			var p = 0; var s = 0
 			for xx in range(width):
 				var st = layout.get(Vector2i(xx, yy), -1)
-				if st in [-1, 0, 1, 2, 3]:
+				if st != -2:
 					p += 1
 					if st == 3: s += 1
-			r_sum += (p - s) % 2
+			r_sum += (p + s) % 2
 		for xx in range(width):
 			var p = 0; var s = 0
 			for yy in range(height):
 				var st = layout.get(Vector2i(xx, yy), -1)
-				if st in [-1, 0, 1, 2, 3]:
+				if st != -2:
 					p += 1
 					if st == 3: s += 1
-			c_sum += (p - s) % 2
+			c_sum += (p + s) % 2
 
 		if r_sum != c_sum:
 			continue 
@@ -194,13 +173,19 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		var green_cells = []
 		
 		for c in layout.keys():
-			if layout[c] >= 0: 
+			# Gather all generated Yellow, Blue, Green tiles
+			if layout[c] >= 0 and layout[c] <= 2: 
 				all_filled_cells.append(c)
 				if layout[c] == 2:
 					green_cells.append(c)
 					
 		var clearable_cells = all_filled_cells.duplicate()
 		
+		# CRITICAL FIX: Ensure inactive shifter cells are cleared and never kept as fixed tiles!
+		for pair in shifters:
+			clearable_cells.erase(pair.inactive)
+			layout[pair.inactive] = -1
+
 		if green_cells.size() > 0:
 			green_cells.shuffle()
 			clearable_cells.erase(green_cells[0])
@@ -244,7 +229,7 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 			else:
 				cleared_count += 1
 
-		# Erase the internal 3/-3 structural states before passing back to Editor
+		# Erase internal structural state before sending cleanly back to Editor
 		for pair in shifters:
 			layout[pair.a] = -1
 			layout[pair.b] = -1
@@ -339,7 +324,6 @@ static func _count_solutions(layout: Dictionary, empty_cells: Array, w: int, h: 
 static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w: int, h: int, constraints: Array) -> bool:
 	layout[coord] = val 
 	
-	# 1. Block 3-in-a-row (Jokers actively act as both colors for this check)
 	for x in range(max(0, coord.x - 2), min(w - 2, coord.x + 1)):
 		var v1 = layout.get(Vector2i(x, coord.y), -1)
 		var v2 = layout.get(Vector2i(x+1, coord.y), -1)
@@ -362,11 +346,10 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 				layout[coord] = -1
 				return false
 
-	# 2. Perfect Row Parity 
 	var p_row = 0; var s_row = 0; var j_row = 0; var empty_row = 0; var b0_row = 0; var b1_row = 0
 	for x in range(w):
 		var st = layout.get(Vector2i(x, coord.y), -1)
-		if st in [-1, 0, 1, 2, 3]:
+		if st != -2:
 			p_row += 1
 			if st == -1: empty_row += 1
 			elif st == 3: s_row += 1
@@ -374,7 +357,7 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 			elif st == 0: b0_row += 1
 			elif st == 1: b1_row += 1
 			
-	var req_j_row = (p_row - s_row) % 2
+	var req_j_row = (p_row + s_row) % 2
 	
 	if j_row > req_j_row: layout[coord] = -1; return false
 	if empty_row == 0 and j_row != req_j_row: layout[coord] = -1; return false
@@ -382,11 +365,10 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 	var target_0_row = int((p_row - req_j_row - s_row) / 2.0)
 	if b0_row > target_0_row or b1_row > target_0_row: layout[coord] = -1; return false
 		
-	# 3. Perfect Column Parity 
 	var p_col = 0; var s_col = 0; var j_col = 0; var empty_col = 0; var b0_col = 0; var b1_col = 0
 	for y in range(h):
 		var st = layout.get(Vector2i(coord.x, y), -1)
-		if st in [-1, 0, 1, 2, 3]:
+		if st != -2:
 			p_col += 1
 			if st == -1: empty_col += 1
 			elif st == 3: s_col += 1
@@ -394,7 +376,7 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 			elif st == 0: b0_col += 1
 			elif st == 1: b1_col += 1
 			
-	var req_j_col = (p_col - s_col) % 2
+	var req_j_col = (p_col + s_col) % 2
 	
 	if j_col > req_j_col: layout[coord] = -1; return false
 	if empty_col == 0 and j_col != req_j_col: layout[coord] = -1; return false
@@ -402,7 +384,6 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 	var target_0_col = int((p_col - req_j_col - s_col) / 2.0)
 	if b0_col > target_0_col or b1_col > target_0_col: layout[coord] = -1; return false
 
-	# 4. Check Constraints
 	for c in constraints:
 		if c.a == coord or c.b == coord:
 			var other_coord = c.b if c.a == coord else c.a
