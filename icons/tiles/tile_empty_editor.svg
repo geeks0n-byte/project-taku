@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128" shape-rendering="crispEdges">
+  <!-- Top-Left Corner Bracket (Original Dark Gray) -->
+  <rect x="1" y="1" width="3" height="1" fill="#404040" />
+  <rect x="1" y="2" width="1" height="2" fill="#404040" />
+  
+  <!-- Top-Right Corner Bracket -->
+  <rect x="12" y="1" width="3" height="1" fill="#404040" />
+  <rect x="14" y="2" width="1" height="2" fill="#404040" />
+  
+  <!-- Bottom-Left Corner Bracket -->
+  <rect x="1" y="14" width="3" height="1" fill="#404040" />
+  <rect x="1" y="12" width="1" height="2" fill="#404040" />
+  
+  <!-- Bottom-Right Corner Bracket -->
+  <rect x="12" y="14" width="3" height="1" fill="#404040" />
+  <rect x="14" y="12" width="1" height="2" fill="#404040" />
+  
+  <!-- Center Guide Dot -->
+  <rect x="7" y="7" width="2" height="2" fill="#2d2d2d" />
+</svg>
