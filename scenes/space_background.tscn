@@ -13,21 +13,21 @@ motion_mirroring = Vector2(1080, 1920)
 
 [node name="TextureRect" type="TextureRect" parent="FarDustLayer" unique_id=1870615536]
 texture_filter = 1
-anchors_preset = 15
+anchors_preset = 10
 anchor_right = 1.0
-anchor_bottom = 1.0
+offset_left = -540.0
+offset_right = 1620.0
+offset_bottom = 3840.0
 grow_horizontal = 2
-grow_vertical = 2
 texture = ExtResource("2_wjgca")
+stretch_mode = 1
 
 [node name="BrightStarsLayer" type="ParallaxLayer" parent="." unique_id=1739252845]
 motion_mirroring = Vector2(1080, 1920)
 
 [node name="TextureRect" type="TextureRect" parent="BrightStarsLayer" unique_id=1789434994]
 texture_filter = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_right = 2160.0
+offset_bottom = 3840.0
 texture = ExtResource("3_grjle")
+stretch_mode = 1

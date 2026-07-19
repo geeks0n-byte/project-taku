@@ -38,6 +38,7 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 	loaded_constraint_pairs.clear()
 	
 	var pool_index = 0
+	var margin = 5.0
 	
 	for y in range(grid_height):
 		for x in range(grid_width):
@@ -67,11 +68,11 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 			cell.is_playable = true
 			cell.is_locked = false
 			cell.is_linked_pair = false 
-			cell.shifter_direction = Vector2i.ZERO # Ensure it resets correctly
+			cell.shifter_direction = Vector2i.ZERO
 			cell.update_visuals()
 			
-			interceptor.size = Vector2(CELL_SIZE, CELL_SIZE)
-			interceptor.position = cell.position
+			interceptor.size = Vector2(CELL_SIZE - (2 * margin), CELL_SIZE - (2 * margin))
+			interceptor.position = cell.position + Vector2(margin, margin)
 			
 			for conn in interceptor.gui_input.get_connections():
 				interceptor.gui_input.disconnect(conn.callable)

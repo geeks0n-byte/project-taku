@@ -30,6 +30,8 @@ var allowed_cycle_tiles: Array[int] = [0, 1, 2]
 @onready var tile_icon = $TileIcon
 @onready var chevron_icon = get_node_or_null("ChevronIcon")
 
+const CLICK_MARGIN = 5.0
+
 func _ready():
 	custom_minimum_size = Vector2(120, 120)
 	
@@ -51,8 +53,6 @@ func _ready():
 		error_highlight.draw.connect(_draw_error_border)
 		
 	if tile_icon: tile_icon.z_index = 3
-		
-	pressed.connect(_on_pressed)
 
 func _draw_error_border():
 	if error_highlight:
@@ -70,7 +70,13 @@ func _stretch_node_to_parent(node: Control, margin: float = 0.0):
 		node.offset_right = margin
 		node.offset_bottom = margin
 
-func _on_pressed():
+func _gui_input(event):
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.position.x > CLICK_MARGIN and event.position.x < (size.x - CLICK_MARGIN) and \
+		   event.position.y > CLICK_MARGIN and event.position.y < (size.y - CLICK_MARGIN):
+			_perform_action()
+
+func _perform_action():
 	if not is_playable or is_locked:
 		return
 		
@@ -122,16 +128,14 @@ func update_visuals():
 		else:
 			chevron_icon.visible = false
 			
-	# --- NEW: Transparency logic for Empty and Wall states ---
 	if state == -2:
-		modulate = Color(1.0, 1.0, 1.0, 0.0) # Wall is completely invisible
+		modulate = Color(1.0, 1.0, 1.0, 0.0) 
 	elif state == -1:
-		modulate = Color(1.0, 1.0, 1.0, 0.85) # Empty is 15% transparent (85% opaque)
+		modulate = Color(1.0, 1.0, 1.0, 0.85) 
 	else:
-		modulate = Color(1.0, 1.0, 1.0, 1.0) # Everything else is 100% solid
+		modulate = Color(1.0, 1.0, 1.0, 1.0) 
 		
-	if not tile_icon:
-		return
+	if not tile_icon: return
 		
 	match state:
 		-2: tile_icon.texture = tex_wall

@@ -800,6 +800,15 @@ func _connect_ui_signals():
 	if allow_zero: allow_zero.pressed.connect(func(): allowed_tiles_changed.emit())
 	if allow_one: allow_one.pressed.connect(func(): allowed_tiles_changed.emit())
 	if allow_joker: allow_joker.pressed.connect(func(): allowed_tiles_changed.emit())
+	
+	if unique_solution_toggle and not unique_solution_toggle.pressed.is_connected(_on_settings_toggle_pressed):
+		unique_solution_toggle.pressed.connect(_on_settings_toggle_pressed)
+	if keep_walls_toggle and not keep_walls_toggle.pressed.is_connected(_on_settings_toggle_pressed):
+		keep_walls_toggle.pressed.connect(_on_settings_toggle_pressed)
+
+func _on_settings_toggle_pressed():
+	if not is_playtesting_mode:
+		update_status("", Color.WHITE)
 
 func _adjust_value(target: String, amount: int):
 	var grid_changed = false
@@ -815,6 +824,9 @@ func _adjust_value(target: String, amount: int):
 		"level": editor_level = max(1, editor_level + amount) 
 		"time": editor_time_limit = max(0, editor_time_limit + amount)
 	_update_number_labels()
+	
+	if not is_playtesting_mode:
+		update_status("", Color.WHITE)
 	
 	if grid_changed:
 		_update_panel_layout(editor_width, editor_height)
