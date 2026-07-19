@@ -9,10 +9,10 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 	if not (0 in solver_tiles): solver_tiles.append(0)
 	if not (1 in solver_tiles): solver_tiles.append(1)
 	
-	# Increased attempts because the fast math rejector burns through bad attempts in microseconds!
-	while attempt < 500: 
+	# Massive window to generate randomized walls and dynamic shifters securely
+	while attempt < 2500: 
 		attempt += 1
-		var force_easy = (attempt > 100)
+		var force_no_walls = (attempt > 2000)
 		
 		# ==========================================
 		# STEP 1: Generate board & respect existing walls
@@ -30,7 +30,7 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		all_cells.shuffle()
 
 		if not lock_walls:
-			var max_walls = 0 if force_easy else randi_range(0, int(all_cells.size() * 0.15))
+			var max_walls = 0 if force_no_walls else randi_range(0, int(all_cells.size() * 0.15))
 			var num_walls_placed = 0
 			var row_counts = {}; var col_counts = {}
 			for i in range(height): row_counts[i] = 0
@@ -66,12 +66,22 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		var shifters = []
 		var total_playable = empty_cells.size()
 		
-		# Allow 2 pairs on small boards to ensure it doesn't get trapped by parity limits!
-		var target_shifter_pairs = int(round((total_playable * 0.20) / 2.0))
+		var base_shifter_pairs = int(round((total_playable * 0.20) / 2.0))
+		var target_shifter_pairs = base_shifter_pairs
+		
+		# --- DYNAMIC SHIFTER ESCALATOR ---
+		# Every 75 attempts, inject 1 more pair of Purples to resolve parity imbalances (e.g. 3x6 grids)
+		# Fixed warning: Divided by 75.0 before casting to int
+		target_shifter_pairs += int(attempt / 75.0)
+		
 		if target_shifter_pairs <= 1 and total_playable >= 4:
 			target_shifter_pairs = randi_range(1, 2)
 		elif target_shifter_pairs < 1 and total_playable >= 2:
 			target_shifter_pairs = 1
+			
+		# Caps injection mathematically so it doesn't try to cram 8 pairs into a 3x3 board
+		# Fixed warning: Divided by 2.0 before casting to int
+		target_shifter_pairs = min(target_shifter_pairs, int(total_playable / 2.0))
 		
 		var pairs_placed = 0
 		var available_starts = empty_cells.duplicate()
@@ -93,12 +103,10 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 					var active_node = candidate_a if randi() % 2 == 0 else candidate_b
 					var inactive_node = candidate_b if active_node == candidate_a else candidate_a
 					
-					# Active is Purple. Inactive is Empty (Solver will fill it!)
 					layout[active_node] = 3
 					layout[inactive_node] = -1
 					
 					shifters.append({"a": candidate_a, "b": candidate_b, "active": active_node, "inactive": inactive_node})
-					# Only erase active from solver. Inactive stays in empty_cells to be solved!
 					empty_cells.erase(active_node)
 					available_starts.erase(candidate_b) 
 					placed = true
@@ -109,8 +117,6 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		if pairs_placed < target_shifter_pairs:
 			continue
 
-		# --- FAST MATH PARITY REJECTOR ---
-		# Instantly detects if the board is mathematically unsolvable before wasting solver resources
 		var r_sum = 0
 		var c_sum = 0
 		for yy in range(height):
@@ -167,16 +173,14 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		# ==========================================
 		# STEP 4: Smart Hole Punching
 		# ==========================================
-		# CRITICAL FIX: Forcefully wipe inactive shifter cells BEFORE gathering standard tiles
 		for pair in shifters:
 			layout[pair.inactive] = -1
 			
 		var all_filled_cells = []
 		var green_cells = []
-		var color_cells = [] # NEW: Tracks Yellows (0) and Blues (1)
+		var color_cells = [] 
 		
 		for c in layout.keys():
-			# Gather all remaining permanent tiles
 			if layout[c] >= 0 and layout[c] <= 2: 
 				all_filled_cells.append(c)
 				if layout[c] == 2:
@@ -186,12 +190,10 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 					
 		var clearable_cells = all_filled_cells.duplicate()
 		
-		# Protect at least 1 Green tile
 		if green_cells.size() > 0:
 			green_cells.shuffle()
 			clearable_cells.erase(green_cells[0])
 			
-		# NEW: Protect at least 1 Yellow or Blue tile so it never gets deleted!
 		if color_cells.size() > 0:
 			color_cells.shuffle()
 			clearable_cells.erase(color_cells[0])
@@ -235,12 +237,10 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 			else:
 				cleared_count += 1
 
-		# Erase internal structural state before sending cleanly back to Editor
 		for pair in shifters:
 			layout[pair.a] = -1
 			layout[pair.b] = -1
 			
-			# Randomize Shifter Starting Position
 			if randi() % 2 == 0:
 				var temp = pair.active
 				pair.active = pair.inactive
@@ -332,7 +332,7 @@ static func _count_solutions(layout: Dictionary, empty_cells: Array, w: int, h: 
 	empty_cells.insert(best_idx, best_coord) 
 	return total_sols
 
-# --- MATHEMATICAL PARITY VALIDATION ---
+# --- STRICT PARITY VALIDATION ---
 static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w: int, h: int, constraints: Array) -> bool:
 	layout[coord] = val 
 	

@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://bea1srhxq5xh2"]
 
 [ext_resource type="Script" uid="uid://vq06fy81b0wh" path="res://scripts/level_editor.gd" id="1_5u7ie"]
+[ext_resource type="Texture2D" uid="uid://cbth8fmjnwqf3" path="res://icons/bg_cosmos.svg" id="2_4ohjn"]
 [ext_resource type="Script" uid="uid://h58ihw84sbgu" path="res://scripts/editor_canvas_manager.gd" id="2_nh68x"]
 [ext_resource type="Script" uid="uid://dp2q4jgxwyjal" path="res://scripts/editor_ui_manager.gd" id="3_eovuc"]
 [ext_resource type="Texture2D" uid="uid://ci71ltxqka6f8" path="res://icons/tiles/tile_empty.svg" id="3_l4hv8"]
@@ -12,6 +13,25 @@
 
 [node name="LevelEditor" type="Node2D" unique_id=1779207314]
 script = ExtResource("1_5u7ie")
+
+[node name="EditorBackground" type="ColorRect" parent="." unique_id=1852044637]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.3019608, 0.3019608, 0.3019608, 1)
+
+[node name="GameBackground" type="TextureRect" parent="." unique_id=1295673848]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_4ohjn")
 
 [node name="EditorCanvasManager" type="Node2D" parent="." unique_id=2117784922]
 position = Vector2(120, 180)
@@ -170,22 +190,20 @@ text = "LEVEL:"
 layout_mode = 2
 text = "+"
 
-[node name="ExitTestButton" type="Button" parent="EditorUI/ControlPanel/ConfigContainer" unique_id=589975085]
-layout_mode = 2
-text = "EXIT TEST"
-
 [node name="CoreLevelsContainer" type="HBoxContainer" parent="EditorUI/ControlPanel" unique_id=725060860]
 layout_mode = 0
 offset_right = 40.0
 offset_bottom = 40.0
 
-[node name="StatusLabel" type="Label" parent="EditorUI/ControlPanel" unique_id=1868498315]
+[node name="StatusLabel" type="RichTextLabel" parent="EditorUI/ControlPanel" unique_id=431741727]
 custom_minimum_size = Vector2(360, 100)
 layout_mode = 0
 offset_left = 20.0
 offset_top = 200.0
 offset_right = 380.0
 offset_bottom = 480.0
+bbcode_enabled = true
+scroll_active = false
 autowrap_mode = 2
 
 [node name="PlaytestVictoryPanel" type="Panel" parent="EditorUI" unique_id=419984448]
@@ -247,29 +265,39 @@ layout_mode = 0
 offset_right = 40.0
 offset_bottom = 40.0
 bbcode_enabled = true
-text = "[center][font_size=64][b]HOW TO PLAY[/b][/font_size][/center]
+text = "[center][font_size=56][b]HOW TO PLAY[/b][/font_size][/center]
 
-[font_size=42][b][color=#88ccff]TILE TYPES[/color][/b][/font_size]
-[font_size=32]
-• [b]Basic Tiles:[/b] [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [color=#ffeb3b]Yellow[/color] and [img=48x48]res://icons/tiles/tile_blue.svg[/img] [color=#2196f3]Blue[/color] tiles. Use these to fill the empty spaces on the board.
-• [img=48x48]res://icons/tiles/tile_green.svg[/img] [color=#4caf50][b]Jokers:[/b][/color] Can act as either [color=#ffeb3b]Yellow[/color] or [color=#2196f3]Blue[/color] to complete a line. You may only place [b]one[/b] [color=#4caf50]Joker[/color] per row and column!
-• [img=48x48]res://icons/tiles/tile_purple.svg[/img] [color=#9c27b0][b]Shifters:[/b][/color] These come in pairs. Clicking the active [color=#9c27b0]Shifter[/color] pushes its partner one space in the direction of the arrow ([img=56x56]res://icons/tiles/tile_purple_up.svg[/img][img=56x56]res://icons/tiles/tile_purple_down.svg[/img][img=56x56]res://icons/tiles/tile_purple_left.svg[/img][img=56x56]res://icons/tiles/tile_purple_right.svg[/img]).
-• [img=56x56]res://icons/tiles/tile_lock.svg[/img] [b]Locks:[/b] Any tile displaying a padlock icon is permanently fixed to the board.
-[/font_size]
-
-[font_size=42][b][color=#88ccff]THE RULES[/color][/b][/font_size]
 [font_size=32]
 • [b]Equal Balance:[/b] Every row and column must contain an equal number of [color=#ffeb3b]Yellow[/color] and [color=#2196f3]Blue[/color] tiles.
-• [b]The Rule of Two:[/b] No more than two tiles of the same color can sit next to each other in any row or column.
-  [color=#ff8888][i]Invalid Combinations (3 in a row):[/i][/color]
-  [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [img=48x48]res://icons/tiles/tile_yellow.svg[/img]  (Three [color=#ffeb3b]Yellows[/color])
-  [img=48x48]res://icons/tiles/tile_blue.svg[/img] [img=48x48]res://icons/tiles/tile_blue.svg[/img] [img=48x48]res://icons/tiles/tile_green.svg[/img]  (Two [color=#2196f3]Blues[/color] + [color=#4caf50]Joker[/color])
-  [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [img=48x48]res://icons/tiles/tile_green.svg[/img] [img=48x48]res://icons/tiles/tile_yellow.svg[/img]  ([color=#ffeb3b]Yellow[/color] + [color=#4caf50]Joker[/color] + [color=#ffeb3b]Yellow[/color])
+
+• [b]The Rule of Two:[/b] No more than two tiles of the same color may be placed next to each other in any row or column.
+
+              ❌ [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [img=48x48]res://icons/tiles/tile_yellow.svg[/img]  (Three [color=#ffeb3b]Yellows[/color])
+              ❌ [img=48x48]res://icons/tiles/tile_blue.svg[/img] [img=48x48]res://icons/tiles/tile_blue.svg[/img] [img=48x48]res://icons/tiles/tile_blue.svg[/img]  (Three [color=#2196f3]Blues[/color])
+              ✅ [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [img=48x48]res://icons/tiles/tile_blue.svg[/img]  (Valid Mix)
 [/font_size]
 
-[font_size=42][b][color=#88ccff]HINTS[/color][/b][/font_size]
+[center][font_size=42][b][color=#88ccff]TILE TYPES[/color][/b][/font_size][/center]
+
+[font_size=32]
+• [b]Basic Tiles:[/b] [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [color=#ffeb3b]Yellow[/color] and [img=48x48]res://icons/tiles/tile_blue.svg[/img] [color=#2196f3]Blue[/color] tiles. Use these to fill the empty spaces on the board.
+
+• [img=48x48]res://icons/tiles/tile_green.svg[/img] [color=#4caf50][b]Green Tiles:[/b][/color] Since [color=#4caf50]green[/color] is a combination of [color=#ffeb3b]yellow[/color] and [color=#2196f3]blue[/color], this combined tile acts as both of those colors. Each row and column can contain a maximum of one [color=#4caf50]green[/color] tile.
+
+              ❌ [img=48x48]res://icons/tiles/tile_blue.svg[/img] [img=48x48]res://icons/tiles/tile_blue.svg[/img] [img=48x48]res://icons/tiles/tile_green.svg[/img]  (Two [color=#2196f3]Blues[/color] + [color=#4caf50]Green[/color])
+              ❌ [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [img=48x48]res://icons/tiles/tile_green.svg[/img] [img=48x48]res://icons/tiles/tile_yellow.svg[/img]  ([color=#ffeb3b]Yellow[/color] + [color=#4caf50]Green[/color] + [color=#ffeb3b]Yellow[/color])
+              ✅ [img=48x48]res://icons/tiles/tile_blue.svg[/img] [img=48x48]res://icons/tiles/tile_green.svg[/img] [img=48x48]res://icons/tiles/tile_yellow.svg[/img]  (Valid Mix)
+
+• [img=48x48]res://icons/tiles/tile_purple.svg[/img] [color=#9c27b0][b]Purple Tiles:[/b][/color] These shifter tiles must be moved to their correct positions to solve the puzzle. When clicked, a [color=#9c27b0]purple[/color] tile moves between two neighboring cells. The arrow indicates the direction of its next move ([img=56x56]res://icons/tiles/tile_purple_up.svg[/img][img=56x56]res://icons/tiles/tile_purple_down.svg[/img][img=56x56]res://icons/tiles/tile_purple_left.svg[/img][img=56x56]res://icons/tiles/tile_purple_right.svg[/img]).
+
+• [img height=72 region=16,0,96,128]res://icons/tiles/tile_lock.svg[/img] [b]Locks:[/b] Any tile displaying a padlock icon is permanently fixed to the board.
+[/font_size]
+
+[center][font_size=42][b][color=#88ccff]HINTS[/color][/b][/font_size][/center]
+
 [font_size=32]
 • An [b]=[/b] symbol between two cells means they must be the [i]same[/i] color.
+
 • A [b]×[/b] symbol between two cells means they must be [i]different[/i] colors.
 [/font_size]"
 

@@ -235,19 +235,28 @@ func generate_board():
 	board_manager.build_grid(current_level_resource.layout, tiles_list, s_pairs, [])
 	
 	_update_joker_count()
-	ui_manager.update_hint_count(pending_hints.size())
 	
+	# --- PERFECT BOARD Y-POSITIONING ---
 	var board_pixel_height = actual_h * board_manager.CELL_SIZE
 	var screen_height = get_viewport_rect().size.y
+	var centered_board_y = 0.0
 	
-	var new_board_y = (screen_height / 3.0) - (board_pixel_height / 2.0)
-	board_manager.position.y = new_board_y 
+	var top_hud_bottom = 195.0
+	var fixed_gap = 40.0
+	
+	if actual_h <= 7:
+		centered_board_y = (screen_height / 3.0) - (board_pixel_height / 2.0)
+		if centered_board_y < (top_hud_bottom + fixed_gap):
+			centered_board_y = top_hud_bottom + fixed_gap
+	else:
+		centered_board_y = top_hud_bottom + fixed_gap
+	
+	board_manager.position.y = centered_board_y 
+	ui_manager.update_dynamic_layout(centered_board_y, board_pixel_height)
 	
 	undo_stack.clear()
 	redo_stack.clear()
 	current_game_state = _create_game_snapshot()
-	if ui_manager.has_method("update_undo_redo_buttons"):
-		ui_manager.update_undo_redo_buttons(false, false)
 	
 	_run_validation_pass()
 
@@ -286,9 +295,7 @@ func _record_game_action():
 	undo_stack.append(current_game_state)
 	redo_stack.clear()
 	current_game_state = new_state
-	
-	if ui_manager.has_method("update_undo_redo_buttons"):
-		ui_manager.update_undo_redo_buttons(undo_stack.size() > 0, false)
+	ui_manager.update_undo_redo_buttons(undo_stack.size() > 0, false)
 
 func _on_undo_requested():
 	if not is_game_active or is_paused or undo_stack.is_empty(): return
@@ -296,9 +303,7 @@ func _on_undo_requested():
 	var prev_state = undo_stack.pop_back()
 	_apply_game_snapshot(prev_state)
 	current_game_state = prev_state
-	
-	if ui_manager.has_method("update_undo_redo_buttons"):
-		ui_manager.update_undo_redo_buttons(undo_stack.size() > 0, redo_stack.size() > 0)
+	ui_manager.update_undo_redo_buttons(undo_stack.size() > 0, redo_stack.size() > 0)
 
 func _on_redo_requested():
 	if not is_game_active or is_paused or redo_stack.is_empty(): return
@@ -306,9 +311,7 @@ func _on_redo_requested():
 	var next_state = redo_stack.pop_back()
 	_apply_game_snapshot(next_state)
 	current_game_state = next_state
-	
-	if ui_manager.has_method("update_undo_redo_buttons"):
-		ui_manager.update_undo_redo_buttons(undo_stack.size() > 0, redo_stack.size() > 0)
+	ui_manager.update_undo_redo_buttons(undo_stack.size() > 0, redo_stack.size() > 0)
 
 func _update_joker_count():
 	var current_jokers = 0
@@ -316,6 +319,29 @@ func _update_joker_count():
 		if board_manager.board_cells[coord].state == 2 and not board_manager.board_cells[coord].is_locked:
 			current_jokers += 1
 	ui_manager.update_joker_counter(current_jokers, required_jokers)
+
+func _get_usable_hints_count() -> int:
+	var count = 0
+	for candidate in pending_hints:
+		var coord_a = candidate["a"]
+		var coord_b = candidate["b"]
+		var type = candidate["type"]
+		
+		var overlap = false
+		for active in board_manager.active_constraint_pairs:
+			if active["a"] == coord_a or active["b"] == coord_a or active["a"] == coord_b or active["b"] == coord_b:
+				overlap = true; break
+		if overlap: continue
+		
+		var current_a = board_manager.board_cells[coord_a].state if board_manager.board_cells.has(coord_a) else -1
+		var current_b = board_manager.board_cells[coord_b].state if board_manager.board_cells.has(coord_b) else -1
+		
+		if current_a != -1 and current_b != -1:
+			if type == "equals" and current_a == current_b: continue
+			if type == "not_equals" and current_a != current_b: continue
+			
+		count += 1
+	return count
 
 func _on_hint_requested():
 	if not is_game_active or is_paused: return
@@ -329,7 +355,6 @@ func _on_hint_requested():
 		var coord_b = candidate["b"]
 		var type = candidate["type"]
 		
-		# --- RULE 1: Prevent Overlapping Hints! ---
 		var cell_already_has_hint = false
 		for active_hint in board_manager.active_constraint_pairs:
 			if active_hint["a"] == coord_a or active_hint["b"] == coord_a or active_hint["a"] == coord_b or active_hint["b"] == coord_b:
@@ -340,7 +365,6 @@ func _on_hint_requested():
 			skipped_hints.append(candidate)
 			continue
 		
-		# --- RULE 2: Skip if visually correctly satisfied ---
 		var current_a = board_manager.board_cells[coord_a].state if board_manager.board_cells.has(coord_a) else -1
 		var current_b = board_manager.board_cells[coord_b].state if board_manager.board_cells.has(coord_b) else -1
 		
@@ -358,17 +382,13 @@ func _on_hint_requested():
 		selected_hint = candidate
 		break
 		
-	# Put visually satisfied or overlapping hints back in the pile
 	pending_hints.append_array(skipped_hints)
 	pending_hints.shuffle()
 	
 	if selected_hint != null:
 		board_manager.active_constraint_pairs.append(selected_hint)
 		board_manager.trigger_redraw()
-		ui_manager.update_hint_count(pending_hints.size())
 		_run_validation_pass()
-	else:
-		ui_manager.show_status_errors(["No useful hints available for your current layout!"])
 
 func _on_cell_changed(_coord: Vector2i):
 	if not is_game_active or is_paused: return
@@ -391,6 +411,9 @@ func _on_shifter_move_made():
 func _run_validation_pass():
 	board_manager.clear_highlights()
 	var results = PuzzleValidator.validate_board(board_manager.board_cells, board_manager.cached_lines, board_manager.active_constraint_pairs)
+	
+	ui_manager.set_hint_button_disabled(_get_usable_hints_count() == 0)
+	ui_manager.update_undo_redo_buttons(undo_stack.size() > 0, redo_stack.size() > 0)
 	
 	if not results["valid"]:
 		ui_manager.show_status_errors(results["errors"])
@@ -452,6 +475,7 @@ func _on_resume():
 	if timer_node: timer_node.start()
 	board_manager.process_mode = Node.PROCESS_MODE_INHERIT
 	ui_manager.set_hud_buttons_disabled(false)
+	ui_manager.update_undo_redo_buttons(undo_stack.size() > 0, redo_stack.size() > 0)
 	pause_menu.hide() 
 
 func _on_reset():
@@ -494,7 +518,7 @@ func _on_timer_timeout():
 
 func _update_timer_display():
 	if starting_time_limit == 0:
-		ui_manager.update_timer("No Limit")
+		ui_manager.update_timer("∞")
 		return
 		
 	var minutes = int(time_remaining / 60.0)
