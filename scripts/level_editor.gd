@@ -609,6 +609,9 @@ func _on_test_mode_entered():
 	for coord in canvas_manager.board_cells:
 		var cell = canvas_manager.board_cells[coord]
 		
+		# TRIGGER THE NEW TEST MODE FLAG
+		cell.is_test_mode = true
+		
 		playtest_snapshot[coord] = {
 			"state": cell.state,
 			"shifter_direction": cell.shifter_direction
@@ -807,6 +810,10 @@ func _on_test_mode_exited():
 	
 	for coord in canvas_manager.board_cells:
 		var cell = canvas_manager.board_cells[coord]
+		
+		# REVERT THE TEST MODE FLAG TO SHOW EDITOR TILE AGAIN
+		cell.is_test_mode = false
+		
 		cell.clear_highlight()
 		
 		var restored = playtest_snapshot[coord]
