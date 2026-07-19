@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://cuf448q3tm0yy"]
 
 [ext_resource type="Script" uid="uid://cu6cq88gr24e3" path="res://scripts/main.gd" id="1_trceg"]
-[ext_resource type="Texture2D" uid="uid://cbth8fmjnwqf3" path="res://icons/bg_cosmos.svg" id="5_tbgi4"]
+[ext_resource type="PackedScene" uid="uid://bjs0g2pap4nsi" path="res://scenes/space_background.tscn" id="5_tbgi4"]
 [ext_resource type="Script" uid="uid://cmilped3wai4n" path="res://scripts/board_manager.gd" id="12_y6deb"]
 [ext_resource type="Script" uid="uid://dcrkhyr8vhs3g" path="res://scripts/ui_manager.gd" id="13_og1vs"]
 [ext_resource type="PackedScene" uid="uid://qah3m84a46oi" path="res://scenes/pause_menu.tscn" id="14_a8y0u"]
@@ -192,11 +192,4 @@ layer = 10
 [node name="PauseMenu" parent="PauseMenuLayer" unique_id=1796595449 instance=ExtResource("14_a8y0u")]
 unique_name_in_owner = true
 
-[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=186543681]
-layer = -1
-
-[node name="TextureRect" type="TextureRect" parent="CanvasLayer" unique_id=887116659]
-texture_filter = 1
-offset_right = 40.0
-offset_bottom = 40.0
-texture = ExtResource("5_tbgi4")
+[node name="SpaceBackground" parent="." unique_id=2028332427 instance=ExtResource("5_tbgi4")]

@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://bjs0g2pap4nsi"]
+
+[ext_resource type="Script" uid="uid://ctg0e3ums5qno" path="res://scripts/space_background.gd" id="1_a600q"]
+[ext_resource type="Texture2D" uid="uid://deju7gbe15nbd" path="res://icons/bg_stars_dust.svg" id="2_wjgca"]
+[ext_resource type="Texture2D" uid="uid://ympgm2ghr6dj" path="res://icons/bg_stars_bright.svg" id="3_grjle"]
+
+[node name="SpaceBackground" type="ParallaxBackground" unique_id=2028332427]
+script = ExtResource("1_a600q")
+
+[node name="FarDustLayer" type="ParallaxLayer" parent="." unique_id=1295626981]
+motion_scale = Vector2(0.4, 0.4)
+motion_mirroring = Vector2(1080, 1920)
+
+[node name="TextureRect" type="TextureRect" parent="FarDustLayer" unique_id=1870615536]
+texture_filter = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2_wjgca")
+
+[node name="BrightStarsLayer" type="ParallaxLayer" parent="." unique_id=1739252845]
+motion_mirroring = Vector2(1080, 1920)
+
+[node name="TextureRect" type="TextureRect" parent="BrightStarsLayer" unique_id=1789434994]
+texture_filter = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("3_grjle")
