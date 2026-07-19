@@ -69,7 +69,6 @@ func _populate_core_levels_container():
 	if not core_levels_container: return
 		
 	for child in core_levels_container.get_children():
-		# Protect the Main Menu button from deletion!
 		if child.name != "MainMenuButton":
 			child.queue_free()
 		
@@ -104,12 +103,10 @@ func _populate_core_levels_container():
 		empty_lbl.text = "No playable core levels found."
 		core_levels_container.add_child(empty_lbl)
 
-	# Inject an expanding invisible spacer to push the Main Menu button to the right edge
 	var dynamic_spacer = Control.new()
 	dynamic_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	core_levels_container.add_child(dynamic_spacer)
 
-	# Ensure the Main Menu button stays at the very end of the row (after the spacer)
 	var mm_btn = core_levels_container.get_node_or_null("MainMenuButton")
 	if mm_btn:
 		core_levels_container.move_child(mm_btn, -1)
@@ -243,33 +240,25 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 		var allowed = ui_manager.get_allowed_tiles()
 		
 		if cell.state == 3:
-			for p in canvas_manager.loaded_shifter_pairs:
-				if p["a"] == coord and canvas_manager.board_cells.has(p["b"]):
-					cell.state = -1
-					cell.shifter_direction = Vector2i.ZERO 
-					var partner = canvas_manager.board_cells[p["b"]]
-					partner.state = 3
-					partner.shifter_direction = coord - p["b"] 
-					partner.update_visuals()
+			var partner_coord = coord + cell.shifter_direction
+			if canvas_manager.board_cells.has(partner_coord):
+				var partner = canvas_manager.board_cells[partner_coord]
+				
+				# --- MODIFIED COLLISION CHECK ---
+				if partner.state == 3:
+					ui_manager.update_playtest_status("No space to move! The cell is occupied by another [color=#9c27b0]Purple[/color] tile.", Color.WHITE)
+					return
 					
-					playtest_shifter_moves += 1
-					if ui_manager.has_method("update_playtest_hud"):
-						_update_playtest_hud_wrapper()
-					canvas_manager.trigger_redraw() 
-					break
-				elif p["b"] == coord and canvas_manager.board_cells.has(p["a"]):
-					cell.state = -1
-					cell.shifter_direction = Vector2i.ZERO 
-					var partner = canvas_manager.board_cells[p["a"]]
-					partner.state = 3
-					partner.shifter_direction = coord - p["a"] 
-					partner.update_visuals()
-					
-					playtest_shifter_moves += 1
-					if ui_manager.has_method("update_playtest_hud"):
-						_update_playtest_hud_wrapper()
-					canvas_manager.trigger_redraw() 
-					break
+				cell.state = -1
+				cell.shifter_direction = Vector2i.ZERO 
+				partner.state = 3
+				partner.shifter_direction = coord - partner_coord 
+				partner.update_visuals()
+				
+				playtest_shifter_moves += 1
+				if ui_manager.has_method("update_playtest_hud"):
+					_update_playtest_hud_wrapper()
+				canvas_manager.trigger_redraw() 
 		else:
 			if cell.state == -1:
 				cell.state = allowed[0] 
@@ -360,45 +349,78 @@ func _update_editor_joker_counter_display():
 	ui_manager.update_playtest_joker_counter(prefilled_jokers, total_required)
 
 func _execute_pair_link_creation(coord_a: Vector2i, coord_b: Vector2i):
-	_remove_pair_by_coord(coord_a)
-	_remove_pair_by_coord(coord_b)
+	var pairs_to_remove = []
+	for i in range(canvas_manager.loaded_shifter_pairs.size() - 1, -1, -1):
+		var p = canvas_manager.loaded_shifter_pairs[i]
+		if p["active"] == coord_a or p["active"] == coord_b:
+			pairs_to_remove.append(i)
+		elif (p["a"] == coord_a and p["b"] == coord_b) or (p["a"] == coord_b and p["b"] == coord_a):
+			if not pairs_to_remove.has(i): pairs_to_remove.append(i)
+			
+	pairs_to_remove.sort()
+	pairs_to_remove.reverse()
 	
+	var changed_cells = [coord_a, coord_b]
+	for idx in pairs_to_remove:
+		var p = canvas_manager.loaded_shifter_pairs[idx]
+		if not changed_cells.has(p["a"]): changed_cells.append(p["a"])
+		if not changed_cells.has(p["b"]): changed_cells.append(p["b"])
+		canvas_manager.loaded_shifter_pairs.remove_at(idx)
+		
 	var new_pair = {"a": coord_a, "b": coord_b, "active": coord_a}
 	canvas_manager.loaded_shifter_pairs.append(new_pair)
 	
-	canvas_manager.board_cells[coord_a].is_linked_pair = true
-	canvas_manager.board_cells[coord_b].is_linked_pair = true
-	canvas_manager.board_cells[coord_a].state = 3
-	canvas_manager.board_cells[coord_a].shifter_direction = coord_b - coord_a 
-	canvas_manager.board_cells[coord_b].state = -1
-	canvas_manager.board_cells[coord_b].shifter_direction = Vector2i.ZERO
-	
-	canvas_manager.board_cells[coord_a].is_locked = false
-	canvas_manager.board_cells[coord_b].is_locked = false
-	
-	canvas_manager.board_cells[coord_a].update_visuals()
-	canvas_manager.board_cells[coord_b].update_visuals()
+	for c in changed_cells:
+		_recalculate_cell_pair_state(c)
+		
 	canvas_manager.trigger_redraw()
 
 func _remove_pair_by_coord(coord: Vector2i):
+	var changed_cells = []
 	for i in range(canvas_manager.loaded_shifter_pairs.size() - 1, -1, -1):
 		var p = canvas_manager.loaded_shifter_pairs[i]
 		if p["a"] == coord or p["b"] == coord:
-			canvas_manager.board_cells[p["a"]].is_linked_pair = false
-			canvas_manager.board_cells[p["b"]].is_linked_pair = false
-			canvas_manager.board_cells[p["a"]].state = -1
-			canvas_manager.board_cells[p["b"]].state = -1
-			
-			canvas_manager.board_cells[p["a"]].shifter_direction = Vector2i.ZERO 
-			canvas_manager.board_cells[p["b"]].shifter_direction = Vector2i.ZERO
-			
-			canvas_manager.board_cells[p["a"]].is_locked = false
-			canvas_manager.board_cells[p["b"]].is_locked = false
-			
-			canvas_manager.board_cells[p["a"]].update_visuals()
-			canvas_manager.board_cells[p["b"]].update_visuals()
+			if not changed_cells.has(p["a"]): changed_cells.append(p["a"])
+			if not changed_cells.has(p["b"]): changed_cells.append(p["b"])
 			canvas_manager.loaded_shifter_pairs.remove_at(i)
+			
+	for c in changed_cells:
+		_recalculate_cell_pair_state(c)
+		
 	canvas_manager.trigger_redraw()
+
+func _recalculate_cell_pair_state(c: Vector2i):
+	if not canvas_manager.board_cells.has(c): return
+	var cell = canvas_manager.board_cells[c]
+	var is_active_in_any = false
+	var is_target_in_any = false
+	var new_direction = Vector2i.ZERO
+	
+	for p in canvas_manager.loaded_shifter_pairs:
+		if p["active"] == c:
+			is_active_in_any = true
+			var partner = p["b"] if p["a"] == c else p["a"]
+			new_direction = partner - c
+		elif p["a"] == c or p["b"] == c:
+			is_target_in_any = true
+			
+	if is_active_in_any:
+		cell.is_linked_pair = true
+		cell.state = 3
+		cell.shifter_direction = new_direction
+		cell.is_locked = false
+	elif is_target_in_any:
+		cell.is_linked_pair = true
+		cell.state = -1
+		cell.shifter_direction = Vector2i.ZERO
+		cell.is_locked = false
+	else:
+		cell.is_linked_pair = false
+		cell.state = -1
+		cell.shifter_direction = Vector2i.ZERO
+		cell.is_locked = false
+		
+	cell.update_visuals()
 
 func _execute_constraint_creation(coord_a: Vector2i, coord_b: Vector2i, type: String):
 	var first_cell = canvas_manager.board_cells[coord_a]

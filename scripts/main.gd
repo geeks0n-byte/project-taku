@@ -62,6 +62,7 @@ func _bind_submanager_signals():
 	
 	board_manager.cell_changed.connect(_on_cell_changed)
 	board_manager.shifter_move_made.connect(_on_shifter_move_made)
+	board_manager.invalid_move_attempted.connect(_on_invalid_move_attempted)
 	
 	pause_menu.resume_pressed.connect(_on_resume)
 	pause_menu.restart_pressed.connect(_on_restart_level)
@@ -69,6 +70,10 @@ func _bind_submanager_signals():
 	pause_menu.quit_pressed.connect(_on_quit_to_menu)
 	ui_manager.next_level_requested.connect(_on_next_level)
 	ui_manager.play_again_requested.connect(_on_play_again)
+
+func _on_invalid_move_attempted(msg: String):
+	if not is_game_active or is_paused: return
+	ui_manager.show_status_errors([msg])
 
 func _load_all_levels_from_storage() -> void:
 	core_levels.clear()
@@ -236,7 +241,6 @@ func generate_board():
 	
 	_update_joker_count()
 	
-	# --- PERFECT BOARD Y-POSITIONING ---
 	var board_pixel_height = actual_h * board_manager.CELL_SIZE
 	var screen_height = get_viewport_rect().size.y
 	var centered_board_y = 0.0

@@ -3,6 +3,7 @@ extends Node2D
 
 signal cell_changed(coord: Vector2i)
 signal shifter_move_made
+signal invalid_move_attempted(message: String)
 
 @export var cell_scene: PackedScene = preload("res://scenes/cell.tscn")
 const CELL_SIZE = 120 
@@ -26,12 +27,11 @@ func trigger_redraw():
 	if overlay_drawer:
 		overlay_drawer.queue_redraw()
 
-# Updated default arg to [0, 1, 2]
 func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shifter_pairs: Array = [], constraint_pairs: Array = []):
 	board_cells.clear()
 	var pool_index = 0
 	
-	var allowed_tiles = available_tiles if available_tiles.size() > 0 else [0, 1, 2] # Fallback updated
+	var allowed_tiles = available_tiles if available_tiles.size() > 0 else [0, 1, 2] 
 	var max_x = 0
 	for coord in layout_data:
 		if coord.x > max_x: max_x = coord.x
@@ -98,21 +98,23 @@ func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shi
 			var cell_b = board_cells[b]
 			
 			cell_a.is_linked_pair = true
-			cell_a.link_partner = b
-			cell_a.shifter_toggled.connect(_on_shifter_tile_toggled)
+			if not cell_a.shifter_toggled.is_connected(_on_shifter_tile_toggled):
+				cell_a.shifter_toggled.connect(_on_shifter_tile_toggled)
 			
 			cell_b.is_linked_pair = true
-			cell_b.link_partner = a
-			cell_b.shifter_toggled.connect(_on_shifter_tile_toggled)
+			if not cell_b.shifter_toggled.is_connected(_on_shifter_tile_toggled):
+				cell_b.shifter_toggled.connect(_on_shifter_tile_toggled)
 			
 			if active == a: 
 				cell_a.state = 3
 				cell_a.shifter_direction = b - a 
-				cell_b.shifter_direction = Vector2i.ZERO
+				if cell_b.state != 3: 
+					cell_b.shifter_direction = Vector2i.ZERO
 			else: 
 				cell_b.state = 3
 				cell_b.shifter_direction = a - b 
-				cell_a.shifter_direction = Vector2i.ZERO
+				if cell_a.state != 3:
+					cell_a.shifter_direction = Vector2i.ZERO
 			
 			cell_a.update_visuals()
 			cell_b.update_visuals()
@@ -122,8 +124,20 @@ func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shi
 
 func _on_shifter_tile_toggled(clicked_coord: Vector2i):
 	var clicked_cell = board_cells[clicked_coord]
-	var partner_coord = clicked_cell.link_partner
+	
+	if clicked_cell.state != 3:
+		return
+		
+	var partner_coord = clicked_coord + clicked_cell.shifter_direction
+	if not board_cells.has(partner_coord):
+		return
+		
 	var partner_cell = board_cells[partner_coord]
+	
+	# --- MODIFIED COLLISION CHECK ---
+	if partner_cell.state == 3:
+		invalid_move_attempted.emit("No space to move! The cell is occupied by another [color=#9c27b0]Purple[/color] tile.")
+		return
 	
 	clicked_cell.state = -1 
 	clicked_cell.shifter_direction = Vector2i.ZERO

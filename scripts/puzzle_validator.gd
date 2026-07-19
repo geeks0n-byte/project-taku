@@ -71,10 +71,10 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 			elif st == 1: count_1 += 1
 			elif st == 2: count_jokers += 1
 
-		# Max 1 Combined Tile per row/column
+		# Max 1 Green Tile per row/column
 		if count_jokers > 1:
 			is_valid = false
-			var msg = "A maximum of one [color=#4DFF4D]Green[/color] combined tile is allowed per line."
+			var msg = "A maximum of 1 [color=#4DFF4D]Green[/color] tile is allowed per line."
 			if not errors.has(msg):
 				errors.append(msg)
 			for c in coords:
@@ -99,9 +99,9 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 					is_valid = false
 					var msg = ""
 					if has_joker:
-						msg = "A [color=#4DFF4D]Green[/color] combined tile creates a sequence of three [color=#FFD700]Yellow[/color] tiles."
+						msg = "A [color=#4DFF4D]Green[/color] tile creates a sequence of 3 [color=#FFD700]Yellow[/color] tiles."
 					else:
-						msg = "Three [color=#FFD700]Yellow[/color] tiles are placed next to each other."
+						msg = "3 [color=#FFD700]Yellow[/color] tiles are placed next to each other."
 					if not errors.has(msg):
 						errors.append(msg)
 					for j in range(3):
@@ -113,9 +113,9 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 					is_valid = false
 					var msg = ""
 					if has_joker:
-						msg = "A [color=#4DFF4D]Green[/color] combined tile creates a sequence of three [color=#4DA6FF]Blue[/color] tiles."
+						msg = "A [color=#4DFF4D]Green[/color] tile creates a sequence of 3 [color=#4DA6FF]Blue[/color] tiles."
 					else:
-						msg = "Three [color=#4DA6FF]Blue[/color] tiles are placed next to each other."
+						msg = "3 [color=#4DA6FF]Blue[/color] tiles are placed next to each other."
 					if not errors.has(msg):
 						errors.append(msg)
 					for j in range(3):
