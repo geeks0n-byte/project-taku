@@ -795,12 +795,12 @@ func _set_button_labels():
 		if tex_shifter_icon: shifter_button.icon = tex_shifter_icon
 		
 	if equals_button:
-		equals_button.text = "="
+		equals_button.text = "  =  "
 		equals_button.add_theme_font_size_override("font_size", _si(44))
 		equals_button.add_theme_color_override("font_outline_color", Color.BLACK)
 		equals_button.add_theme_constant_override("outline_size", _si(8))
 	if not_equals_button:
-		not_equals_button.text = "×"
+		not_equals_button.text = "  ×  "
 		not_equals_button.add_theme_font_size_override("font_size", _si(44))
 		not_equals_button.add_theme_color_override("font_outline_color", Color.BLACK)
 		not_equals_button.add_theme_constant_override("outline_size", _si(8))

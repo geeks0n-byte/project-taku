@@ -221,16 +221,24 @@ func _draw_overlays():
 				var l1_e = midpoint + perp * 8.0 + dir * 10.0
 				var l2_s = midpoint - perp * 8.0 - dir * 10.0
 				var l2_e = midpoint - perp * 8.0 + dir * 10.0
-				overlay_drawer.draw_line(l1_s, l1_e, outline_color, 8.0)
-				overlay_drawer.draw_line(l2_s, l2_e, outline_color, 8.0)
+				
+				var ext = dir * 2.0 # Extends outline endpoints past the inner white line
+				
+				overlay_drawer.draw_line(l1_s - ext, l1_e + ext, outline_color, 8.0)
+				overlay_drawer.draw_line(l2_s - ext, l2_e + ext, outline_color, 8.0)
 				overlay_drawer.draw_line(l1_s, l1_e, equals_color, 4.0)
 				overlay_drawer.draw_line(l2_s, l2_e, equals_color, 4.0)
+				
 			elif pair["type"] == "not_equals":
 				var l1_s = midpoint - dir * 12.0 - perp * 12.0
 				var l1_e = midpoint + dir * 12.0 + perp * 12.0
 				var l2_s = midpoint - dir * 12.0 + perp * 12.0
 				var l2_e = midpoint + dir * 12.0 - perp * 12.0
-				overlay_drawer.draw_line(l1_s, l1_e, outline_color, 8.0)
-				overlay_drawer.draw_line(l2_s, l2_e, outline_color, 8.0)
+				
+				var ext1 = (l1_e - l1_s).normalized() * 2.0 # Extends outline endpoints past the inner white line
+				var ext2 = (l2_e - l2_s).normalized() * 2.0
+				
+				overlay_drawer.draw_line(l1_s - ext1, l1_e + ext1, outline_color, 8.0)
+				overlay_drawer.draw_line(l2_s - ext2, l2_e + ext2, outline_color, 8.0)
 				overlay_drawer.draw_line(l1_s, l1_e, diff_color, 4.0)
 				overlay_drawer.draw_line(l2_s, l2_e, diff_color, 4.0)
