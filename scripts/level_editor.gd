@@ -26,6 +26,10 @@ var pt_undo_stack: Array = []
 var pt_redo_stack: Array = []
 var pt_current_state_record: Dictionary = {}
 
+var editor_undo_stack: Array = []
+var editor_redo_stack: Array = []
+var editor_current_state: Dictionary = {}
+
 func _ready():
 	_bind_signals()
 	
@@ -40,6 +44,9 @@ func _ready():
 	_populate_core_levels_container()
 	
 	_update_editor_joker_counter_display()
+	
+	editor_current_state = _create_editor_snapshot()
+	ui_manager.update_editor_undo_redo_buttons(false, false)
 
 func _recenter_editor_layout(width: int, height: int) -> void:
 	var board_pixel_width = width * canvas_manager.CELL_SIZE
@@ -100,16 +107,12 @@ func _populate_core_levels_container():
 			
 	if valid_count == 0:
 		var empty_lbl = Label.new()
-		empty_lbl.text = "No playable core levels found."
+		empty_lbl.text = "NO PLAYABLE CORE LEVELS FOUND."
 		core_levels_container.add_child(empty_lbl)
 
 	var dynamic_spacer = Control.new()
 	dynamic_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	core_levels_container.add_child(dynamic_spacer)
-
-	var mm_btn = core_levels_container.get_node_or_null("MainMenuButton")
-	if mm_btn:
-		core_levels_container.move_child(mm_btn, -1)
 
 func _load_core_level(res: LevelData):
 	if is_playtesting: return
@@ -151,8 +154,9 @@ func _load_core_level(res: LevelData):
 		
 	ui_manager.set_allowed_tiles(sanitized_tiles)
 	ui_manager.sync_size_displays(actual_w, actual_h)
-	ui_manager.update_status("Core Level " + str(res.level_number) + " imported successfully.", Color(0.4, 1.0, 0.4))
+	ui_manager.update_status("CORE LEVEL " + str(res.level_number) + " IMPORTED SUCCESSFULLY.", Color(0.4, 1.0, 0.4))
 	_update_editor_joker_counter_display()
+	_record_editor_change()
 
 func _bind_signals():
 	ui_manager.brush_changed.connect(_on_brush_changed)
@@ -167,6 +171,10 @@ func _bind_signals():
 	ui_manager.overwrite_confirmed.connect(_execute_save)
 	canvas_manager.canvas_cell_clicked.connect(_on_canvas_cell_clicked)
 	
+	ui_manager.editor_hint_toggled.connect(_on_editor_hint_toggled)
+	ui_manager.editor_undo_requested.connect(_on_editor_undo_requested)
+	ui_manager.editor_redo_requested.connect(_on_editor_redo_requested)
+	
 	ui_manager.playtest_reset_requested.connect(_on_playtest_reset_requested)
 	ui_manager.playtest_rules_requested.connect(_on_playtest_rules_requested)
 	ui_manager.playtest_hint_requested.connect(_on_playtest_hint_requested)
@@ -174,6 +182,69 @@ func _bind_signals():
 	ui_manager.playtest_redo_requested.connect(_on_playtest_redo_requested)
 	ui_manager.resume_from_tutorial_requested.connect(_on_resume_from_tutorial)
 	ui_manager.allowed_tiles_changed.connect(_on_allowed_tiles_changed) 
+
+func _on_editor_hint_toggled(is_on: bool):
+	if is_playtesting: return
+	canvas_manager.show_editor_hints = is_on
+	canvas_manager.trigger_redraw()
+
+func _create_editor_snapshot() -> Dictionary:
+	var snap = {}
+	for coord in canvas_manager.board_cells:
+		var cell = canvas_manager.board_cells[coord]
+		snap[coord] = {
+			"state": cell.state,
+			"shifter_direction": cell.shifter_direction,
+			"is_locked": cell.is_locked,
+			"is_playable": cell.is_playable,
+			"is_linked_pair": cell.is_linked_pair
+		}
+	return {
+		"cells": snap,
+		"shifters": canvas_manager.loaded_shifter_pairs.duplicate(true),
+		"constraints": canvas_manager.loaded_constraint_pairs.duplicate(true),
+		"jokers": current_level_required_jokers
+	}
+
+func _apply_editor_snapshot(snap: Dictionary):
+	var cells = snap["cells"]
+	for coord in cells:
+		var cell = canvas_manager.board_cells[coord]
+		cell.state = cells[coord]["state"]
+		cell.shifter_direction = cells[coord]["shifter_direction"]
+		cell.is_locked = cells[coord]["is_locked"]
+		cell.is_playable = cells[coord]["is_playable"]
+		cell.is_linked_pair = cells[coord]["is_linked_pair"]
+		cell.update_visuals()
+
+	canvas_manager.loaded_shifter_pairs = snap["shifters"].duplicate(true)
+	canvas_manager.loaded_constraint_pairs = snap["constraints"].duplicate(true)
+	current_level_required_jokers = snap["jokers"]
+
+	canvas_manager.trigger_redraw()
+	_update_editor_joker_counter_display()
+
+func _record_editor_change():
+	editor_undo_stack.append(editor_current_state)
+	editor_redo_stack.clear()
+	editor_current_state = _create_editor_snapshot()
+	ui_manager.update_editor_undo_redo_buttons(editor_undo_stack.size() > 0, false)
+
+func _on_editor_undo_requested():
+	if editor_undo_stack.is_empty(): return
+	editor_redo_stack.append(editor_current_state)
+	var prev = editor_undo_stack.pop_back()
+	_apply_editor_snapshot(prev)
+	editor_current_state = prev
+	ui_manager.update_editor_undo_redo_buttons(editor_undo_stack.size() > 0, editor_redo_stack.size() > 0)
+
+func _on_editor_redo_requested():
+	if editor_redo_stack.is_empty(): return
+	editor_undo_stack.append(editor_current_state)
+	var next = editor_redo_stack.pop_back()
+	_apply_editor_snapshot(next)
+	editor_current_state = next
+	ui_manager.update_editor_undo_redo_buttons(editor_undo_stack.size() > 0, editor_redo_stack.size() > 0)
 
 func _on_allowed_tiles_changed():
 	if is_playtesting: return
@@ -206,9 +277,9 @@ func _on_random_board_requested():
 	
 	if generated.is_empty() or not generated.has("layout"):
 		if lock_walls:
-			ui_manager.update_status("Generation failed: The locked walls make a valid solution impossible.", Color(1.0, 0.4, 0.4))
+			ui_manager.update_status("GENERATION FAILED: THE LOCKED WALLS MAKE A VALID SOLUTION IMPOSSIBLE.", Color(1.0, 0.4, 0.4))
 		else:
-			ui_manager.update_status("Generation failed: The constraints are too restrictive for this grid size.", Color(1.0, 0.4, 0.4))
+			ui_manager.update_status("GENERATION FAILED: THE CONSTRAINTS ARE TOO RESTRICTIVE FOR THIS GRID SIZE.", Color(1.0, 0.4, 0.4))
 		return
 		
 	current_level_required_jokers = generated.get("total_jokers", 0)
@@ -219,6 +290,7 @@ func _on_random_board_requested():
 	_recenter_editor_layout(target_w, target_h)
 	ui_manager.update_status("", Color.WHITE)
 	_update_editor_joker_counter_display()
+	_record_editor_change()
 
 func _on_grid_size_changed(new_width: int, new_height: int):
 	if is_playtesting: return
@@ -228,6 +300,11 @@ func _on_grid_size_changed(new_width: int, new_height: int):
 	canvas_manager.generate_blank_canvas(new_width, new_height)
 	_recenter_editor_layout(new_width, new_height)
 	_update_editor_joker_counter_display()
+	
+	editor_undo_stack.clear()
+	editor_redo_stack.clear()
+	editor_current_state = _create_editor_snapshot()
+	ui_manager.update_editor_undo_redo_buttons(false, false)
 
 func _on_brush_changed(state_id: int, _brush_name: String):
 	if is_playtesting: return
@@ -235,7 +312,7 @@ func _on_brush_changed(state_id: int, _brush_name: String):
 	if link_first_selection != null:
 		var cell = canvas_manager.board_cells[link_first_selection]
 		cell.update_visuals() 
-		ui_manager.update_status("Placement aborted.", Color.WHITE)
+		ui_manager.update_status("PLACEMENT ABORTED.", Color.WHITE)
 	else:
 		ui_manager.update_status("", Color.WHITE)
 		
@@ -246,6 +323,8 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 	var cell = canvas_manager.board_cells[coord]
 	
 	if is_playtesting:
+		canvas_manager.clear_highlights()
+		
 		if cell.is_locked: return 
 		var allowed = ui_manager.get_allowed_tiles()
 		
@@ -255,6 +334,7 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 				var partner = canvas_manager.board_cells[partner_coord]
 				
 				if partner.state == 3:
+					partner.set_error_highlight()
 					ui_manager.update_playtest_status("No space to move! The cell is occupied by another [color=#9c27b0]Purple[/color] tile.", Color.WHITE)
 					return
 					
@@ -284,23 +364,31 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 		
 		var new_state = _create_playtest_snapshot()
 		pt_undo_stack.append(pt_current_state_record)
+		
+		if pt_undo_stack.size() > 5:
+			pt_undo_stack.pop_front()
+			
 		pt_redo_stack.clear()
 		pt_current_state_record = new_state
 		ui_manager.update_undo_redo_buttons(pt_undo_stack.size() > 0, false)
 
 	else:
+		var pre_state = cell.state
+		var pre_lock = cell.is_locked
+		var pre_shifter = canvas_manager.loaded_shifter_pairs.size()
+		var pre_const = canvas_manager.loaded_constraint_pairs.size()
+
 		if current_brush_state >= 3 and current_brush_state <= 5:
 			if link_first_selection == null:
 				link_first_selection = coord
-				
 				cell.set_mask_color(Color(1.0, 1.0, 1.0, 0.4))
 				
 				if current_brush_state == 3:
-					ui_manager.update_status("Select a neighboring cell to place the second [color=#9c27b0]Purple[/color] tile.", Color.YELLOW)
+					ui_manager.update_status("SELECT A NEIGHBORING CELL TO PLACE THE SECOND [color=#9c27b0]PURPLE[/color] TILE.", Color.YELLOW)
 				elif current_brush_state == 4:
-					ui_manager.update_status("Select a neighboring cell to place the equals (=) link.", Color.YELLOW)
+					ui_manager.update_status("SELECT A NEIGHBORING CELL TO PLACE THE EQUALS (=) LINK.", Color.YELLOW)
 				elif current_brush_state == 5:
-					ui_manager.update_status("Select a neighboring cell to place the not-equals (×) link.", Color.YELLOW)
+					ui_manager.update_status("SELECT A NEIGHBORING CELL TO PLACE THE NOT-EQUALS (×) LINK.", Color.YELLOW)
 			else:
 				var first_coord = link_first_selection
 				link_first_selection = null
@@ -308,24 +396,26 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 				if first_coord == coord:
 					var first_cell = canvas_manager.board_cells[first_coord]
 					first_cell.update_visuals() 
-					ui_manager.update_status("Placement aborted.", Color.WHITE)
+					ui_manager.update_status("PLACEMENT ABORTED.", Color.WHITE)
 					return
 					
 				var diff = (coord - first_coord).abs()
 				if (diff.x == 1 and diff.y == 0) or (diff.x == 0 and diff.y == 1):
 					if current_brush_state == 3:
 						_execute_pair_link_creation(first_coord, coord)
-						ui_manager.update_status("[color=#9c27b0]Purple[/color] tile pair placed successfully.", Color(0.4, 1.0, 0.4))
+						ui_manager.update_status("[color=#9c27b0]PURPLE[/color] TILE PAIR PLACED SUCCESSFULLY.", Color(0.4, 1.0, 0.4))
 					elif current_brush_state == 4:
 						_execute_constraint_creation(first_coord, coord, "equals")
-						ui_manager.update_status("Equals (=) link placed successfully.", Color(0.4, 1.0, 0.4))
+						ui_manager.update_status("EQUALS (=) LINK PLACED SUCCESSFULLY.", Color(0.4, 1.0, 0.4))
 					elif current_brush_state == 5:
 						_execute_constraint_creation(first_coord, coord, "not_equals")
-						ui_manager.update_status("Not-equals (×) link placed successfully.", Color(0.4, 1.0, 0.4))
+						ui_manager.update_status("NOT-EQUALS (×) LINK PLACED SUCCESSFULLY.", Color(0.4, 1.0, 0.4))
+					
+					_record_editor_change()
 				else:
 					var first_cell = canvas_manager.board_cells[first_coord]
 					first_cell.update_visuals() 
-					ui_manager.update_status("Placement aborted: Cells must be adjacent.", Color(1.0, 0.4, 0.4))
+					ui_manager.update_status("PLACEMENT ABORTED: CELLS MUST BE ADJACENT.", Color(1.0, 0.4, 0.4))
 			return
 
 		if current_brush_state == -1:
@@ -348,6 +438,9 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 		
 		ui_manager.update_status("", Color.WHITE)
 		_update_editor_joker_counter_display()
+
+		if cell.state != pre_state or cell.is_locked != pre_lock or canvas_manager.loaded_shifter_pairs.size() != pre_shifter or canvas_manager.loaded_constraint_pairs.size() != pre_const:
+			_record_editor_change()
 
 func _update_editor_joker_counter_display():
 	if is_playtesting: return
@@ -457,6 +550,9 @@ func _execute_constraint_creation(coord_a: Vector2i, coord_b: Vector2i, type: St
 			
 	var new_constraint = {"a": coord_a, "b": coord_b, "type": type}
 	canvas_manager.loaded_constraint_pairs.append(new_constraint)
+	
+	canvas_manager.show_editor_hints = true
+	ui_manager.set_editor_hint_toggle(true)
 	canvas_manager.trigger_redraw()
 
 func _remove_constraint_by_coord(coord: Vector2i):
@@ -473,8 +569,18 @@ func _on_clear_board():
 	link_first_selection = null
 	current_level_required_jokers = -1
 	
+	var keep_walls = false
+	if ui_manager.has_method("is_keep_walls_requested"):
+		keep_walls = ui_manager.is_keep_walls_requested()
+	
 	for coord in canvas_manager.board_cells:
 		var cell = canvas_manager.board_cells[coord]
+		
+		if keep_walls and cell.state == -2:
+			cell.is_linked_pair = false 
+			cell.update_visuals()
+			continue
+			
 		cell.state = -1
 		cell.shifter_direction = Vector2i.ZERO 
 		cell.is_playable = true
@@ -485,6 +591,7 @@ func _on_clear_board():
 	canvas_manager.trigger_redraw()
 	ui_manager.update_status("", Color.WHITE)
 	_update_editor_joker_counter_display()
+	_record_editor_change()
 
 func _is_layout_empty(layout: Dictionary) -> bool:
 	for coord in layout:
@@ -550,6 +657,10 @@ func _on_playtest_undo_requested():
 func _on_playtest_redo_requested():
 	if not is_playtesting or pt_redo_stack.is_empty(): return
 	pt_undo_stack.append(pt_current_state_record)
+	
+	if pt_undo_stack.size() > 5:
+		pt_undo_stack.pop_front()
+		
 	var next_state = pt_redo_stack.pop_back()
 	_apply_playtest_snapshot(next_state)
 	pt_current_state_record = next_state
@@ -609,9 +720,6 @@ func _on_test_mode_entered():
 	for coord in canvas_manager.board_cells:
 		var cell = canvas_manager.board_cells[coord]
 		
-		# TRIGGER THE NEW TEST MODE FLAG
-		cell.is_test_mode = true
-		
 		playtest_snapshot[coord] = {
 			"state": cell.state,
 			"shifter_direction": cell.shifter_direction
@@ -629,6 +737,7 @@ func _on_test_mode_entered():
 		else:
 			cell.is_playable = true
 			cell.is_locked = false
+		cell.is_editor_mode = false
 		cell.update_visuals()
 	
 	playtest_hidden_constraints = canvas_manager.loaded_constraint_pairs.duplicate()
@@ -691,6 +800,7 @@ func _on_playtest_reset_requested():
 		else:
 			cell.is_playable = true
 			cell.is_locked = false
+		cell.is_editor_mode = false
 		cell.update_visuals()
 		
 	canvas_manager.loaded_constraint_pairs.clear()
@@ -720,13 +830,12 @@ func _on_playtest_rules_requested():
 	playtest_timer.stop()
 	if ui_manager.has_method("show_how_to_play"):
 		ui_manager.show_how_to_play()
-	else:
-		ui_manager.update_status("Please add the HowToPlayLayer to this scene to use rules.", Color.YELLOW)
 
 func _on_resume_from_tutorial():
 	if is_playtesting:
 		playtest_timer.start()
 		ui_manager.update_undo_redo_buttons(pt_undo_stack.size() > 0, pt_redo_stack.size() > 0)
+		ui_manager.set_hint_button_disabled(_get_usable_hints_count() == 0)
 
 func _on_playtest_hint_requested():
 	if not is_playtesting: return
@@ -810,10 +919,6 @@ func _on_test_mode_exited():
 	
 	for coord in canvas_manager.board_cells:
 		var cell = canvas_manager.board_cells[coord]
-		
-		# REVERT THE TEST MODE FLAG TO SHOW EDITOR TILE AGAIN
-		cell.is_test_mode = false
-		
 		cell.clear_highlight()
 		
 		var restored = playtest_snapshot[coord]
@@ -829,6 +934,7 @@ func _on_test_mode_exited():
 		else:
 			cell.is_playable = true
 			cell.is_locked = false
+		cell.is_editor_mode = true
 		cell.update_visuals()
 		
 	canvas_manager.loaded_constraint_pairs = playtest_hidden_constraints.duplicate()
@@ -839,7 +945,7 @@ func _on_test_mode_exited():
 
 func _run_playtest_validation_pass():
 	canvas_manager.clear_highlights()
-	var results = PuzzleValidator.validate_board(canvas_manager.board_cells, canvas_manager.cached_lines, canvas_manager.loaded_constraint_pairs)
+	var results = PuzzleValidator.validate_board(canvas_manager.board_cells, canvas_manager.cached_lines, canvas_manager.loaded_constraint_pairs, playtest_required_jokers)
 	
 	ui_manager.set_hint_button_disabled(_get_usable_hints_count() == 0)
 	ui_manager.update_undo_redo_buttons(pt_undo_stack.size() > 0, pt_redo_stack.size() > 0)
@@ -847,7 +953,7 @@ func _run_playtest_validation_pass():
 	if not results["valid"]:
 		ui_manager.update_playtest_status("\n".join(results["errors"]), Color.WHITE)
 	else:
-		ui_manager.update_playtest_status("", Color.WHITE)
+		ui_manager.update_playtest_status("Fill the empty spaces on the board.", Color.WHITE)
 		
 	if results["valid"] and canvas_manager.is_board_full():
 		_trigger_playtest_victory()
@@ -855,11 +961,13 @@ func _run_playtest_validation_pass():
 func _trigger_playtest_victory():
 	is_playtesting = false
 	playtest_timer.stop()
+	ui_manager.update_playtest_status("Puzzle solved!", Color(1.0, 0.84, 0.0))
 	ui_manager.display_victory_overlay("GOOD JOB!\nLEVEL IS SOLVABLE")
 
 func _trigger_playtest_defeat():
 	is_playtesting = false
 	playtest_timer.stop()
+	ui_manager.update_playtest_status("Time's up! The puzzle remains unsolved.", Color(1.0, 0.3, 0.3))
 	ui_manager.display_victory_overlay("DEFEAT!\nTIME RAN OUT")
 
 func _on_save_level():
@@ -925,9 +1033,9 @@ func _execute_save():
 	var save_result = ResourceSaver.save(new_level_resource, target_save_path)
 	
 	if save_result == OK:
-		ui_manager.update_status("Level saved successfully to custom tracks.", Color(0.4, 1.0, 0.4))
+		ui_manager.update_status("CUSTOM LEVEL " + str(level_num) + " SAVED SUCCESSFULLY.", Color(0.4, 1.0, 0.4))
 	else:
-		ui_manager.update_status("Error: Level save failed (" + error_string(save_result) + ").", Color(1.0, 0.4, 0.4))
+		ui_manager.update_status("ERROR: CUSTOM LEVEL " + str(level_num) + " SAVE FAILED (" + error_string(save_result).to_upper() + ").", Color(1.0, 0.4, 0.4))
 
 func _on_load_level():
 	if is_playtesting: return
@@ -975,12 +1083,13 @@ func _on_load_level():
 				
 			ui_manager.set_allowed_tiles(sanitized_tiles)
 			ui_manager.sync_size_displays(actual_w, actual_h)
-			ui_manager.update_status("Custom Level " + str(level_num) + " loaded successfully.", Color(0.4, 1.0, 0.4))
+			ui_manager.update_status("CUSTOM LEVEL " + str(level_num) + " LOADED SUCCESSFULLY.", Color(0.4, 1.0, 0.4))
 			_update_editor_joker_counter_display()
+			_record_editor_change()
 		else:
-			ui_manager.update_status("Error: Failed to read the level data.", Color(1.0, 0.4, 0.4))
+			ui_manager.update_status("ERROR: FAILED TO READ CUSTOM LEVEL " + str(level_num) + " DATA.", Color(1.0, 0.4, 0.4))
 	else:
-		ui_manager.update_status("No saved data found for Level " + str(level_num) + ".", Color(1.0, 0.8, 0.2))
+		ui_manager.update_status("NO SAVED DATA FOUND FOR CUSTOM LEVEL " + str(level_num) + ".", Color(1.0, 0.8, 0.2))
 
 func _on_main_menu():
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")

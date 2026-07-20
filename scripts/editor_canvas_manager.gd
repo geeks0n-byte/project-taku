@@ -18,6 +18,7 @@ var loaded_constraint_pairs: Array = []
 var overlay_drawer: Node2D
 
 var is_playtesting: bool = false 
+var show_editor_hints: bool = false 
 
 func _ready():
 	overlay_drawer = Node2D.new()
@@ -69,6 +70,7 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 			cell.is_locked = false
 			cell.is_linked_pair = false 
 			cell.shifter_direction = Vector2i.ZERO
+			cell.is_editor_mode = not is_playtesting
 			cell.update_visuals()
 			
 			interceptor.size = Vector2(CELL_SIZE - (2 * margin), CELL_SIZE - (2 * margin))
@@ -161,6 +163,7 @@ func _draw_overlays():
 	
 	for coord in board_cells:
 		var cell = board_cells[coord]
+		var is_playable = cell.state != -2
 		
 		var pos_tl = Vector2(coord.x * CELL_SIZE, coord.y * CELL_SIZE)
 		var pos_tr = Vector2((coord.x + 1) * CELL_SIZE, coord.y * CELL_SIZE)
@@ -173,12 +176,16 @@ func _draw_overlays():
 		var draw_left = false
 		
 		if is_playtesting:
-			var is_playable = cell.state != -2
-			var right_playable = board_cells.has(coord + Vector2i(1, 0)) and board_cells[coord + Vector2i(1, 0)].state != -2
-			var bot_playable = board_cells.has(coord + Vector2i(0, 1)) and board_cells[coord + Vector2i(0, 1)].state != -2
-			
+			var right_playable = false
+			if board_cells.has(coord + Vector2i(1, 0)): 
+				right_playable = board_cells[coord + Vector2i(1, 0)].state != -2
 			draw_right = is_playable or right_playable
+			
+			var bot_playable = false
+			if board_cells.has(coord + Vector2i(0, 1)): 
+				bot_playable = board_cells[coord + Vector2i(0, 1)].state != -2
 			draw_bottom = is_playable or bot_playable
+			
 			draw_top = is_playable and not board_cells.has(coord + Vector2i(0, -1))
 			draw_left = is_playable and not board_cells.has(coord + Vector2i(-1, 0))
 		else:
@@ -194,29 +201,36 @@ func _draw_overlays():
 
 	var equals_color = Color(1.0, 1.0, 1.0, 0.9)
 	var diff_color = Color(1.0, 1.0, 1.0, 0.9) 
-	for pair in loaded_constraint_pairs:
-		var coord_a = pair["a"]
-		var coord_b = pair["b"]
-		if not (board_cells.has(coord_a) and board_cells.has(coord_b)): continue
+	var outline_color = Color(0.0, 0.0, 0.0, 1.0)
+	
+	if is_playtesting or show_editor_hints:
+		for pair in loaded_constraint_pairs:
+			var coord_a = pair["a"]
+			var coord_b = pair["b"]
+			if not (board_cells.has(coord_a) and board_cells.has(coord_b)): continue
+				
+			var pos_a = Vector2(coord_a.x * CELL_SIZE + CELL_SIZE/2.0, coord_a.y * CELL_SIZE + CELL_SIZE/2.0)
+			var pos_b = Vector2(coord_b.x * CELL_SIZE + CELL_SIZE/2.0, coord_b.y * CELL_SIZE + CELL_SIZE/2.0)
 			
-		var pos_a = Vector2(coord_a.x * CELL_SIZE + CELL_SIZE/2.0, coord_a.y * CELL_SIZE + CELL_SIZE/2.0)
-		var pos_b = Vector2(coord_b.x * CELL_SIZE + CELL_SIZE/2.0, coord_b.y * CELL_SIZE + CELL_SIZE/2.0)
-		
-		var midpoint = (pos_a + pos_b) / 2.0
-		var dir = (pos_b - pos_a).normalized()
-		var perp = dir.orthogonal()
-		
-		if pair["type"] == "equals":
-			var l1_s = midpoint + perp * 8.0 - dir * 10.0
-			var l1_e = midpoint + perp * 8.0 + dir * 10.0
-			var l2_s = midpoint - perp * 8.0 - dir * 10.0
-			var l2_e = midpoint - perp * 8.0 + dir * 10.0
-			overlay_drawer.draw_line(l1_s, l1_e, equals_color, 4.0)
-			overlay_drawer.draw_line(l2_s, l2_e, equals_color, 4.0)
-		elif pair["type"] == "not_equals":
-			var l1_s = midpoint - dir * 12.0 - perp * 12.0
-			var l1_e = midpoint + dir * 12.0 + perp * 12.0
-			var l2_s = midpoint - dir * 12.0 + perp * 12.0
-			var l2_e = midpoint + dir * 12.0 - perp * 12.0
-			overlay_drawer.draw_line(l1_s, l1_e, diff_color, 4.0)
-			overlay_drawer.draw_line(l2_s, l2_e, diff_color, 4.0)
+			var midpoint = (pos_a + pos_b) / 2.0
+			var dir = (pos_b - pos_a).normalized()
+			var perp = dir.orthogonal()
+			
+			if pair["type"] == "equals":
+				var l1_s = midpoint + perp * 8.0 - dir * 10.0
+				var l1_e = midpoint + perp * 8.0 + dir * 10.0
+				var l2_s = midpoint - perp * 8.0 - dir * 10.0
+				var l2_e = midpoint - perp * 8.0 + dir * 10.0
+				overlay_drawer.draw_line(l1_s, l1_e, outline_color, 8.0)
+				overlay_drawer.draw_line(l2_s, l2_e, outline_color, 8.0)
+				overlay_drawer.draw_line(l1_s, l1_e, equals_color, 4.0)
+				overlay_drawer.draw_line(l2_s, l2_e, equals_color, 4.0)
+			elif pair["type"] == "not_equals":
+				var l1_s = midpoint - dir * 12.0 - perp * 12.0
+				var l1_e = midpoint + dir * 12.0 + perp * 12.0
+				var l2_s = midpoint - dir * 12.0 + perp * 12.0
+				var l2_e = midpoint + dir * 12.0 - perp * 12.0
+				overlay_drawer.draw_line(l1_s, l1_e, outline_color, 8.0)
+				overlay_drawer.draw_line(l2_s, l2_e, outline_color, 8.0)
+				overlay_drawer.draw_line(l1_s, l1_e, diff_color, 4.0)
+				overlay_drawer.draw_line(l2_s, l2_e, diff_color, 4.0)

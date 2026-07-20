@@ -48,7 +48,10 @@ func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shi
 			cell.visible = true
 		else:
 			cell = cell_scene.instantiate()
-			cell.cell_clicked.connect(func(c): cell_changed.emit(c))
+			cell.cell_clicked.connect(func(c): 
+				clear_highlights()
+				cell_changed.emit(c)
+			)
 			add_child(cell)
 			cell_pool.append(cell)
 			
@@ -123,6 +126,8 @@ func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shi
 	trigger_redraw()
 
 func _on_shifter_tile_toggled(clicked_coord: Vector2i):
+	clear_highlights()
+	
 	var clicked_cell = board_cells[clicked_coord]
 	
 	if clicked_cell.state != 3:
@@ -134,8 +139,8 @@ func _on_shifter_tile_toggled(clicked_coord: Vector2i):
 		
 	var partner_cell = board_cells[partner_coord]
 	
-	# --- MODIFIED COLLISION CHECK ---
 	if partner_cell.state == 3:
+		partner_cell.set_error_highlight()
 		invalid_move_attempted.emit("No space to move! The cell is occupied by another [color=#9c27b0]Purple[/color] tile.")
 		return
 	
@@ -215,6 +220,8 @@ func _draw_overlays():
 
 	var equals_color = Color(1.0, 1.0, 1.0, 0.9)
 	var diff_color = Color(1.0, 1.0, 1.0, 0.9) 
+	var outline_color = Color(0.0, 0.0, 0.0, 1.0)
+	
 	for pair in active_constraint_pairs:
 		var coord_a = pair["a"]
 		var coord_b = pair["b"]
@@ -232,6 +239,8 @@ func _draw_overlays():
 			var l1_e = midpoint + perp * 8.0 + dir * 10.0
 			var l2_s = midpoint - perp * 8.0 - dir * 10.0
 			var l2_e = midpoint - perp * 8.0 + dir * 10.0
+			overlay_drawer.draw_line(l1_s, l1_e, outline_color, 8.0)
+			overlay_drawer.draw_line(l2_s, l2_e, outline_color, 8.0)
 			overlay_drawer.draw_line(l1_s, l1_e, equals_color, 4.0)
 			overlay_drawer.draw_line(l2_s, l2_e, equals_color, 4.0)
 		elif pair["type"] == "not_equals":
@@ -239,5 +248,7 @@ func _draw_overlays():
 			var l1_e = midpoint + dir * 12.0 + perp * 12.0
 			var l2_s = midpoint - dir * 12.0 + perp * 12.0
 			var l2_e = midpoint + dir * 12.0 - perp * 12.0
+			overlay_drawer.draw_line(l1_s, l1_e, outline_color, 8.0)
+			overlay_drawer.draw_line(l2_s, l2_e, outline_color, 8.0)
 			overlay_drawer.draw_line(l1_s, l1_e, diff_color, 4.0)
 			overlay_drawer.draw_line(l2_s, l2_e, diff_color, 4.0)

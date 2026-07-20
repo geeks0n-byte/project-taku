@@ -4,27 +4,7 @@ signal cell_clicked(coord: Vector2i)
 signal shifter_toggled(coord: Vector2i)
 
 var coord: Vector2i
-
-# Tracks if the cell is currently loaded within the level editor scene template
-var is_in_game_editor: bool = false:
-	set(value):
-		is_in_game_editor = value
-		if is_inside_tree():
-			update_visuals()
-
-# Tracks if the level editor has launched its interactive play-test sub-mode
-var is_test_mode: bool = false:
-	set(value):
-		is_test_mode = value
-		if is_inside_tree():
-			update_visuals()
-
-var state: int = -1:
-	set(value):
-		state = value
-		if is_inside_tree():
-			update_visuals()
-
+var state: int = -1
 var is_playable: bool = true
 var is_locked: bool = false
 var is_linked_pair: bool = false
@@ -32,10 +12,9 @@ var link_partner: Vector2i
 var shifter_direction: Vector2i = Vector2i.ZERO
 var allowed_cycle_tiles: Array[int] = [0, 1, 2] 
 
-# Preload the old dark gray editor version locally
-const TEX_EMPTY_EDITOR = preload("res://icons/tiles/tile_empty_editor.svg")
+@export var tex_empty: Texture2D
+@export var tex_empty_editor: Texture2D # NEW: Differentiates editor brush from actual gameplay empty
 
-@export var tex_empty: Texture2D  # Holds your new cosmic layout tile_empty.svg
 @export var tex_wall: Texture2D
 @export var tex_zero: Texture2D = preload("res://icons/tiles/tile_yellow.svg")
 @export var tex_one: Texture2D = preload("res://icons/tiles/tile_blue.svg")
@@ -54,16 +33,10 @@ const TEX_EMPTY_EDITOR = preload("res://icons/tiles/tile_empty_editor.svg")
 @onready var chevron_icon = get_node_or_null("ChevronIcon")
 
 const CLICK_MARGIN = 5.0
+var is_editor_mode: bool = false
 
 func _ready():
 	custom_minimum_size = Vector2(120, 120)
-	
-	# AUTOMATIC SCENE DETECTION
-	if get_tree() and get_tree().current_scene:
-		var scene_path = get_tree().current_scene.scene_file_path.to_lower()
-		var scene_name = get_tree().current_scene.name.to_lower()
-		if "editor" in scene_path or "editor" in scene_name:
-			is_in_game_editor = true
 	
 	_stretch_node_to_parent(error_highlight, 0.0) 
 	_stretch_node_to_parent(link_highlight, 0.0)
@@ -80,12 +53,9 @@ func _ready():
 		error_highlight.z_index = 100
 		if "color" in error_highlight:
 			error_highlight.color = Color(0, 0, 0, 0)
-		if not error_highlight.draw.is_connected(_draw_error_border):
-			error_highlight.draw.connect(_draw_error_border)
+		error_highlight.draw.connect(_draw_error_border)
 		
 	if tile_icon: tile_icon.z_index = 3
-	
-	update_visuals()
 
 func _draw_error_border():
 	if error_highlight:
@@ -172,12 +142,7 @@ func update_visuals():
 		
 	match state:
 		-2: tile_icon.texture = tex_wall
-		-1: 
-			# ONLY use the dark grid layout if in editor mode AND not currently run-testing
-			if is_in_game_editor and not is_test_mode:
-				tile_icon.texture = TEX_EMPTY_EDITOR
-			else:
-				tile_icon.texture = tex_empty
+		-1: tile_icon.texture = tex_empty_editor if is_editor_mode else tex_empty
 		0: tile_icon.texture = tex_zero
 		1: tile_icon.texture = tex_one
 		2: tile_icon.texture = tex_joker

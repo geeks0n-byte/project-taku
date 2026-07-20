@@ -1,7 +1,7 @@
 class_name PuzzleValidator
 extends RefCounted
 
-static func validate_board(board_cells: Dictionary, cached_lines: Array, constraint_pairs: Array) -> Dictionary:
+static func validate_board(board_cells: Dictionary, cached_lines: Array, constraint_pairs: Array, max_jokers: int = -1) -> Dictionary:
 	var errors = []
 	var is_valid = true
 
@@ -145,5 +145,23 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 					# Walls (-2) are explicitly skipped from being highlighted
 					if cell.state != -2 and cell.has_method("set_error_highlight"):
 						cell.set_error_highlight()
+						
+	# 3. Global Joker Limit Check
+	if max_jokers > 0:
+		var placed_jokers = 0
+		for coord in board_cells:
+			var cell = board_cells[coord]
+			if cell.state == 2 and not cell.is_locked:
+				placed_jokers += 1
+				
+		if placed_jokers > max_jokers:
+			is_valid = false
+			var msg = "Too many [color=#4DFF4D]Green[/color] tiles placed."
+			if not errors.has(msg):
+				errors.append(msg)
+			for coord in board_cells:
+				var cell = board_cells[coord]
+				if cell.state == 2 and not cell.is_locked and cell.has_method("set_error_highlight"):
+					cell.set_error_highlight()
 
 	return {"valid": is_valid, "errors": errors}

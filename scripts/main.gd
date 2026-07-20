@@ -297,6 +297,10 @@ func _record_game_action():
 	_is_recording_action = false
 	var new_state = _create_game_snapshot()
 	undo_stack.append(current_game_state)
+	
+	if undo_stack.size() > 5:
+		undo_stack.pop_front()
+		
 	redo_stack.clear()
 	current_game_state = new_state
 	ui_manager.update_undo_redo_buttons(undo_stack.size() > 0, false)
@@ -312,6 +316,10 @@ func _on_undo_requested():
 func _on_redo_requested():
 	if not is_game_active or is_paused or redo_stack.is_empty(): return
 	undo_stack.append(current_game_state)
+	
+	if undo_stack.size() > 5:
+		undo_stack.pop_front()
+		
 	var next_state = redo_stack.pop_back()
 	_apply_game_snapshot(next_state)
 	current_game_state = next_state
@@ -414,7 +422,8 @@ func _on_shifter_move_made():
 
 func _run_validation_pass():
 	board_manager.clear_highlights()
-	var results = PuzzleValidator.validate_board(board_manager.board_cells, board_manager.cached_lines, board_manager.active_constraint_pairs)
+	
+	var results = PuzzleValidator.validate_board(board_manager.board_cells, board_manager.cached_lines, board_manager.active_constraint_pairs, required_jokers)
 	
 	ui_manager.set_hint_button_disabled(_get_usable_hints_count() == 0)
 	ui_manager.update_undo_redo_buttons(undo_stack.size() > 0, redo_stack.size() > 0)
@@ -480,6 +489,7 @@ func _on_resume():
 	board_manager.process_mode = Node.PROCESS_MODE_INHERIT
 	ui_manager.set_hud_buttons_disabled(false)
 	ui_manager.update_undo_redo_buttons(undo_stack.size() > 0, redo_stack.size() > 0)
+	ui_manager.set_hint_button_disabled(_get_usable_hints_count() == 0)
 	pause_menu.hide() 
 
 func _on_reset():

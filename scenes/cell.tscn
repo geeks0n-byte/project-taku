@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://d25rxch5oti18" path="res://scripts/cell.gd" id="1_k6tqi"]
 [ext_resource type="Texture2D" uid="uid://ci71ltxqka6f8" path="res://icons/tiles/tile_empty.svg" id="2_4kve2"]
+[ext_resource type="Texture2D" uid="uid://ch8eeuoduxhwt" path="res://icons/tiles/tile_empty_editor.svg" id="3_ely81"]
 [ext_resource type="Texture2D" uid="uid://j7fscbkdrsrm" path="res://icons/tiles/tile_lock.svg" id="4_ds1sf"]
 [ext_resource type="Texture2D" uid="uid://ctsesksrgylyq" path="res://icons/tiles/tile_purple_up.svg" id="4_k4tsc"]
 [ext_resource type="Texture2D" uid="uid://55btbus68rqs" path="res://icons/tiles/tile_purple_down.svg" id="5_ely81"]
@@ -25,6 +26,7 @@ ignore_texture_size = true
 stretch_mode = 0
 script = ExtResource("1_k6tqi")
 tex_empty = ExtResource("2_4kve2")
+tex_empty_editor = ExtResource("3_ely81")
 tex_wall = ExtResource("6_v4toj")
 tex_chevron_up = ExtResource("4_k4tsc")
 tex_chevron_down = ExtResource("5_ely81")
