@@ -5,7 +5,6 @@ const DEV_LEVELS_DIR = "user://levels/"
 
 @onready var ui_manager: EditorUIManager = $EditorUIManager
 @onready var canvas_manager: EditorCanvasManager = $EditorCanvasManager
-@onready var core_levels_container = find_child("CoreLevelsContainer", true, false)
 
 var current_brush_state: int = -1 
 var is_playtesting: bool = false
@@ -41,7 +40,6 @@ func _ready():
 	ui_manager.setup_ui(canvas_manager.grid_width, canvas_manager.grid_height, canvas_manager.CELL_SIZE)
 	canvas_manager.generate_blank_canvas(canvas_manager.grid_width, canvas_manager.grid_height)
 	_recenter_editor_layout(canvas_manager.grid_width, canvas_manager.grid_height)
-	_populate_core_levels_container()
 	
 	_update_editor_joker_counter_display()
 	
@@ -71,92 +69,6 @@ func _recenter_editor_layout(width: int, height: int) -> void:
 	
 	if ui_manager.has_method("update_dynamic_editor_layout"):
 		ui_manager.update_dynamic_editor_layout(centered_board_y, board_pixel_height)
-
-func _populate_core_levels_container():
-	if not core_levels_container: return
-		
-	for child in core_levels_container.get_children():
-		if child.name != "MainMenuButton":
-			child.queue_free()
-		
-	var title_lbl = Label.new()
-	title_lbl.text = "CORE LEVELS:"
-	title_lbl.add_theme_font_size_override("font_size", 22)
-	title_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	title_lbl.modulate = Color(0.4, 1.0, 0.4)
-	core_levels_container.add_child(title_lbl)
-	
-	var raw_paths = _scan_directory(CAMPAIGN_DIR)
-	raw_paths.sort_custom(func(a, b):
-		var num_a = int(a.get_file().get_basename().replace("level_", ""))
-		var num_b = int(b.get_file().get_basename().replace("level_", ""))
-		return num_a < num_b
-	)
-	
-	var valid_count = 0
-	for path in raw_paths:
-		var res = load(path) as LevelData
-		if res and not _is_layout_empty(res.layout):
-			valid_count += 1
-			var btn = Button.new()
-			btn.text = str(res.level_number)
-			btn.custom_minimum_size = Vector2(70, 70)
-			btn.add_theme_font_size_override("font_size", 28)
-			btn.pressed.connect(func(): _load_core_level(res))
-			core_levels_container.add_child(btn)
-			
-	if valid_count == 0:
-		var empty_lbl = Label.new()
-		empty_lbl.text = "NO PLAYABLE CORE LEVELS FOUND."
-		core_levels_container.add_child(empty_lbl)
-
-	var dynamic_spacer = Control.new()
-	dynamic_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	core_levels_container.add_child(dynamic_spacer)
-
-func _load_core_level(res: LevelData):
-	if is_playtesting: return
-	link_first_selection = null
-	
-	var actual_w = 3
-	var actual_h = 3
-	if res.layout.size() > 0:
-		var max_x = 0
-		var max_y = 0
-		for coord in res.layout.keys():
-			if coord.x > max_x: max_x = coord.x
-			if coord.y > max_y: max_y = coord.y
-		actual_w = max_x + 1
-		actual_h = max_y + 1
-	elif "width" in res and "height" in res:
-		actual_w = res.width
-		actual_h = res.height
-	
-	var s_pairs = []
-	if "shifter_pairs" in res: s_pairs = res.shifter_pairs
-	elif "red_pairs" in res: s_pairs = res.red_pairs
-	
-	var c_pairs = res.constraint_pairs if "constraint_pairs" in res else []
-	current_level_required_jokers = res.get("required_jokers") if "required_jokers" in res else -1
-	
-	canvas_manager.generate_blank_canvas(actual_w, actual_h)
-	canvas_manager.load_layout(actual_w, actual_h, res.layout, s_pairs, c_pairs)
-	
-	_recenter_editor_layout(actual_w, actual_h)
-	
-	if "time_limit" in res:
-		ui_manager.set_time_limit(res.time_limit)
-	
-	var raw_tiles = res.available_tiles if "available_tiles" in res and res.available_tiles.size() > 0 else [0, 1, 2]
-	var sanitized_tiles: Array = []
-	for tile in raw_tiles:
-		sanitized_tiles.append(int(tile))
-		
-	ui_manager.set_allowed_tiles(sanitized_tiles)
-	ui_manager.sync_size_displays(actual_w, actual_h)
-	ui_manager.update_status("CORE LEVEL " + str(res.level_number) + " IMPORTED SUCCESSFULLY.", Color(0.4, 1.0, 0.4))
-	_update_editor_joker_counter_display()
-	_record_editor_change()
 
 func _bind_signals():
 	ui_manager.brush_changed.connect(_on_brush_changed)
@@ -593,31 +505,6 @@ func _on_clear_board():
 	_update_editor_joker_counter_display()
 	_record_editor_change()
 
-func _is_layout_empty(layout: Dictionary) -> bool:
-	for coord in layout:
-		if layout[coord] != -1:
-			return false
-	return true
-
-func _scan_directory(path_to_scan: String) -> Array:
-	var found_files = []
-	if not DirAccess.dir_exists_absolute(path_to_scan):
-		return found_files
-		
-	var dir = DirAccess.open(path_to_scan)
-	if dir:
-		dir.list_dir_begin()
-		var file_name = dir.get_next()
-		while file_name != "":
-			if not dir.current_is_dir():
-				if file_name.ends_with(".tres"):
-					found_files.append(path_to_scan + file_name)
-				elif file_name.ends_with(".tres.remap"):
-					found_files.append(path_to_scan + file_name.replace(".remap", ""))
-			file_name = dir.get_next()
-		dir.list_dir_end()
-	return found_files
-
 func _create_playtest_snapshot() -> Dictionary:
 	var snap = {}
 	for coord in canvas_manager.board_cells:
@@ -711,9 +598,6 @@ func _on_test_mode_entered():
 			game_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			game_bg.global_position = Vector2.ZERO
 			game_bg.size = get_viewport_rect().size
-	
-	if core_levels_container:
-		core_levels_container.visible = false 
 	
 	var prefilled_jokers = 0
 	
@@ -914,9 +798,6 @@ func _on_test_mode_exited():
 	if editor_bg: editor_bg.visible = true
 	if game_bg: game_bg.visible = false
 	
-	if core_levels_container:
-		core_levels_container.visible = true 
-	
 	for coord in canvas_manager.board_cells:
 		var cell = canvas_manager.board_cells[coord]
 		cell.clear_highlight()
@@ -972,6 +853,12 @@ func _trigger_playtest_defeat():
 
 func _on_save_level():
 	if is_playtesting: return
+	
+	var is_custom = ui_manager.is_custom_track_active()
+	if not is_custom:
+		ui_manager.update_status("ERROR: CANNOT OVERWRITE CORE LEVELS.", Color(1.0, 0.4, 0.4))
+		return
+		
 	var level_num = ui_manager.get_level_number()
 	var dev_path = DEV_LEVELS_DIR + "level_%d.tres" % level_num
 	
@@ -1040,7 +927,16 @@ func _execute_save():
 func _on_load_level():
 	if is_playtesting: return
 	var level_num = ui_manager.get_level_number()
-	var target_load_path = DEV_LEVELS_DIR + "level_%d.tres" % level_num
+	var is_custom = ui_manager.is_custom_track_active()
+	var target_load_path = ""
+	var track_name = ""
+	
+	if is_custom:
+		target_load_path = DEV_LEVELS_DIR + "level_%d.tres" % level_num
+		track_name = "CUSTOM"
+	else:
+		target_load_path = CAMPAIGN_DIR + "level_%d.tres" % level_num
+		track_name = "CORE"
 
 	if ResourceLoader.exists(target_load_path):
 		var loaded_level = load(target_load_path) as LevelData
@@ -1083,13 +979,13 @@ func _on_load_level():
 				
 			ui_manager.set_allowed_tiles(sanitized_tiles)
 			ui_manager.sync_size_displays(actual_w, actual_h)
-			ui_manager.update_status("CUSTOM LEVEL " + str(level_num) + " LOADED SUCCESSFULLY.", Color(0.4, 1.0, 0.4))
+			ui_manager.update_status(track_name + " LEVEL " + str(level_num) + " LOADED SUCCESSFULLY.", Color(0.4, 1.0, 0.4))
 			_update_editor_joker_counter_display()
 			_record_editor_change()
 		else:
-			ui_manager.update_status("ERROR: FAILED TO READ CUSTOM LEVEL " + str(level_num) + " DATA.", Color(1.0, 0.4, 0.4))
+			ui_manager.update_status("ERROR: FAILED TO READ " + track_name + " LEVEL " + str(level_num) + " DATA.", Color(1.0, 0.4, 0.4))
 	else:
-		ui_manager.update_status("NO SAVED DATA FOUND FOR CUSTOM LEVEL " + str(level_num) + ".", Color(1.0, 0.8, 0.2))
+		ui_manager.update_status("NO SAVED DATA FOUND FOR " + track_name + " LEVEL " + str(level_num) + ".", Color(1.0, 0.8, 0.2))
 
 func _on_main_menu():
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
