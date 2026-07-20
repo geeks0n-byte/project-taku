@@ -85,6 +85,7 @@ func _bind_signals():
 	
 	ui_manager.editor_hint_toggled.connect(_on_editor_hint_toggled)
 	ui_manager.editor_undo_requested.connect(_on_editor_undo_requested)
+	ui_manager.editor_redo_requested.connect(_on_editor_undo_requested)
 	ui_manager.editor_redo_requested.connect(_on_editor_redo_requested)
 	
 	ui_manager.playtest_reset_requested.connect(_on_playtest_reset_requested)
@@ -895,9 +896,7 @@ func _execute_save():
 	
 	var processed_pairs: Array = []
 	for pair in canvas_manager.loaded_shifter_pairs:
-		var active_pos = pair["a"]
-		if canvas_manager.board_cells.has(pair["b"]) and canvas_manager.board_cells[pair["b"]].state == 3:
-			active_pos = pair["b"]
+		var active_pos = pair.get("active", pair["a"])
 		processed_pairs.append({"a": pair["a"], "b": pair["b"], "active": active_pos})
 	
 	if "shifter_pairs" in new_level_resource:
