@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128" shape-rendering="crispEdges">
+  <!-- STOP (White) -->
+  <g transform="translate(1, 1)">
+    <g fill="#1d2b53" transform="translate(0, 1)">
+      <rect x="3" y="3" width="8" height="8"/>
+    </g>
+    <g fill="#ffffff">
+      <rect x="3" y="3" width="8" height="8"/>
+    </g>
+  </g>
+</svg>

@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://bea1srhxq5xh2"]
 
 [ext_resource type="Script" uid="uid://vq06fy81b0wh" path="res://scripts/level_editor.gd" id="1_5u7ie"]
-[ext_resource type="Texture2D" uid="uid://cbth8fmjnwqf3" path="res://icons/bg_cosmos.svg" id="2_4ohjn"]
+[ext_resource type="PackedScene" uid="uid://bjs0g2pap4nsi" path="res://scenes/space_background.tscn" id="2_4ohjn"]
 [ext_resource type="Script" uid="uid://h58ihw84sbgu" path="res://scripts/editor_canvas_manager.gd" id="2_nh68x"]
 [ext_resource type="Script" uid="uid://dp2q4jgxwyjal" path="res://scripts/editor_ui_manager.gd" id="3_eovuc"]
 [ext_resource type="Texture2D" uid="uid://dsdeejtglrqx3" path="res://icons/tiles/tile_wall.svg" id="4_2rodj"]
@@ -23,15 +23,8 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.3019608, 0.3019608, 0.3019608, 1)
 
-[node name="GameBackground" type="TextureRect" parent="." unique_id=1295673848]
+[node name="GameBackground" parent="." unique_id=2028332427 instance=ExtResource("2_4ohjn")]
 visible = false
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("2_4ohjn")
 
 [node name="EditorCanvasManager" type="Node2D" parent="." unique_id=2117784922]
 position = Vector2(120, 180)

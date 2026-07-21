@@ -43,50 +43,149 @@ var undo_button: Button
 var redo_button: Button
 
 var _is_last_level_completed: bool = false
+var custom_font: Font
 
 # --- SCALING HELPERS ---
 func _s(val: float) -> float: return val * ui_scale
 func _sv(x: float, y: float) -> Vector2: return Vector2(x * ui_scale, y * ui_scale)
 func _si(val: int) -> int: return int(val * ui_scale)
 
+# --- TEXT & OUTLINE HELPERS ---
+func _apply_text_outline(node: Control, outline_size: int = 6):
+	if not node: return
+	node.add_theme_color_override("font_outline_color", Color.BLACK)
+	node.add_theme_constant_override("outline_size", _si(outline_size))
+
+func _set_text_color(node: Control, color: Color):
+	if not node: return
+	node.modulate = Color.WHITE 
+	if node is RichTextLabel:
+		node.add_theme_color_override("default_color", color)
+	elif node is Label or node is Button:
+		node.add_theme_color_override("font_color", color)
+
+func _create_scalable_button_style(texture_path: String, color_modulate: Color = Color.WHITE) -> StyleBoxTexture:
+	var style = StyleBoxTexture.new()
+	var tex = load(texture_path)
+	if tex:
+		style.texture = tex
+		var margin = 16.0 
+		style.texture_margin_left = margin
+		style.texture_margin_right = margin
+		style.texture_margin_top = margin
+		style.texture_margin_bottom = margin
+		
+		# Offset the content up to counteract the 3D bottom bevel
+		style.content_margin_left = _si(8)
+		style.content_margin_right = _si(8)
+		style.content_margin_top = _si(2)
+		style.content_margin_bottom = _si(16)
+		
+		style.modulate_color = color_modulate
+	return style
+
+func _apply_scalable_theme(btn: Button, base_font_size: int):
+	if not btn: return
+	var svg_path = "res://icons/buttons/button_tile_gray_dark.svg"
+	
+	btn.add_theme_stylebox_override("normal", _create_scalable_button_style(svg_path, Color(1.0, 1.0, 1.0)))
+	btn.add_theme_stylebox_override("hover", _create_scalable_button_style(svg_path, Color(1.2, 1.2, 1.2)))
+	btn.add_theme_stylebox_override("pressed", _create_scalable_button_style(svg_path, Color(0.8, 0.8, 0.8)))
+	btn.add_theme_stylebox_override("disabled", _create_scalable_button_style(svg_path, Color(0.5, 0.5, 0.5)))
+	
+	if custom_font:
+		btn.add_theme_font_override("font", custom_font)
+	
+	btn.add_theme_font_size_override("font_size", _si(base_font_size))
+	_apply_text_outline(btn, 7)
+
+# --- ICON-ONLY BUTTON INJECTION HELPER ---
+func _set_icon_only_button(btn: Button, icon_file: String, icon_size: int):
+	if not btn: return
+	
+	btn.text = ""
+	
+	for child in btn.get_children():
+		if child.name == "CustomIconText":
+			child.queue_free()
+			
+	var tex = load("res://icons/buttons/" + icon_file)
+	if tex:
+		var hbox = HBoxContainer.new()
+		hbox.name = "CustomIconText"
+		hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+		hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		
+		# Shift layout box slightly up to respect visual centering 
+		hbox.offset_top = -_si(4)
+		hbox.offset_bottom = -_si(4)
+		hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		
+		var tex_rect = TextureRect.new()
+		tex_rect.texture = tex
+		tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tex_rect.custom_minimum_size = Vector2(_si(icon_size), _si(icon_size))
+		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_child(tex_rect)
+		
+		btn.add_child(hbox)
+		
+	_apply_scalable_theme(btn, 14)
+
 func setup_ui(_show_debug_tools: bool, _cell_size: float):
+	custom_font = load("res://fonts/PressStart2P-vaV7.ttf")
+	
 	var screen_width = get_viewport().get_visible_rect().size.x
 	var root_parent = get_parent()
 	
-	# --- TOP BUTTON ROW ---
+	# --- UNIFIED TOP BAR DIMENSIONS ---
+	var btn_size = 135
+	var icon_size = 90
+	var start_y = 20
+	
+	var left_1 = 25
+	var left_2 = 175
+	var left_3 = 325
+	
+	var right_3 = screen_width - 460
+	var right_2 = screen_width - 310
+	var right_1 = screen_width - 160
+	
+	# --- TOP BUTTON ROW (Square Icons) ---
 	if pause_button:
-		pause_button.text = "⏸️ PAUSE"
-		pause_button.add_theme_font_size_override("font_size", _si(28))
-		pause_button.global_position = _sv(30, 40) 
-		pause_button.size = _sv(130, 60)
+		_set_icon_only_button(pause_button, "icon_pause.svg", icon_size)
+		pause_button.global_position = _sv(left_1, start_y) 
+		pause_button.size = _sv(btn_size, btn_size)
 
 	if reset_button:
-		reset_button.text = "🔄 RESET"
-		reset_button.add_theme_font_size_override("font_size", _si(28))
-		reset_button.global_position = _sv(170, 40)
-		reset_button.size = _sv(130, 60)
+		_set_icon_only_button(reset_button, "icon_reset.svg", icon_size)
+		reset_button.global_position = _sv(left_2, start_y)
+		reset_button.size = _sv(btn_size, btn_size)
 		
 	if how_to_play_button:
-		how_to_play_button.text = "📖 RULES" 
-		how_to_play_button.add_theme_font_size_override("font_size", _si(28))
-		how_to_play_button.global_position = _sv(310, 40)
-		how_to_play_button.size = _sv(130, 60) 
+		_set_icon_only_button(how_to_play_button, "icon_rules.svg", icon_size)
+		how_to_play_button.global_position = _sv(left_3, start_y)
+		how_to_play_button.size = _sv(btn_size, btn_size) 
 
 	if level_label:
 		if level_label.get_parent() != root_parent:
 			level_label.get_parent().remove_child(level_label)
 			root_parent.add_child(level_label)
-		level_label.modulate = Color(1.0, 0.9, 0.4) 
-		level_label.global_position = Vector2((screen_width - _s(200)) / 2.0, _s(40)) 
-		level_label.size = _sv(200, 60)
+		_set_text_color(level_label, Color(1.0, 0.9, 0.4)) 
+		level_label.global_position = Vector2((screen_width - _s(300)) / 2.0, _s(start_y)) 
+		level_label.size = _sv(300, btn_size)
 		level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if level_label is RichTextLabel: 
 			level_label.bbcode_enabled = true
-			level_label.add_theme_font_size_override("normal_font_size", _si(32))
+			if custom_font: level_label.add_theme_font_override("normal_font", custom_font)
+			level_label.add_theme_font_size_override("normal_font_size", _si(36))
 		else:
 			level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-			level_label.add_theme_font_size_override("font_size", _si(32))
+			if custom_font: level_label.add_theme_font_override("font", custom_font)
+			level_label.add_theme_font_size_override("font_size", _si(36))
+		_apply_text_outline(level_label, 8)
 
 	hint_button = root_parent.get_node_or_null("HintButton")
 	if not hint_button:
@@ -94,10 +193,9 @@ func setup_ui(_show_debug_tools: bool, _cell_size: float):
 		hint_button.name = "HintButton"
 		root_parent.add_child(hint_button)
 		
-	hint_button.text = "💡 HINT"
-	hint_button.add_theme_font_size_override("font_size", _si(28))
-	hint_button.global_position = _sv(630, 40) 
-	hint_button.size = _sv(140, 60) 
+	_set_icon_only_button(hint_button, "icon_hint.svg", icon_size)
+	hint_button.global_position = Vector2(right_3, _s(start_y)) 
+	hint_button.size = _sv(btn_size, btn_size) 
 	hint_button.disabled = true
 	
 	undo_button = root_parent.get_node_or_null("UndoButton")
@@ -106,10 +204,9 @@ func setup_ui(_show_debug_tools: bool, _cell_size: float):
 		undo_button.name = "UndoButton"
 		root_parent.add_child(undo_button)
 	
-	undo_button.text = "↩️ UNDO"
-	undo_button.add_theme_font_size_override("font_size", _si(28)) 
-	undo_button.global_position = _sv(780, 40) 
-	undo_button.size = _sv(130, 60)
+	_set_icon_only_button(undo_button, "icon_undo.svg", icon_size)
+	undo_button.global_position = Vector2(right_2, _s(start_y)) 
+	undo_button.size = _sv(btn_size, btn_size)
 	undo_button.disabled = true
 	
 	redo_button = root_parent.get_node_or_null("RedoButton")
@@ -118,29 +215,34 @@ func setup_ui(_show_debug_tools: bool, _cell_size: float):
 		redo_button.name = "RedoButton"
 		root_parent.add_child(redo_button)
 		
-	redo_button.text = "↪️ REDO"
-	redo_button.add_theme_font_size_override("font_size", _si(28)) 
-	redo_button.global_position = _sv(920, 40) 
-	redo_button.size = _sv(130, 60)
+	_set_icon_only_button(redo_button, "icon_redo.svg", icon_size)
+	redo_button.global_position = Vector2(right_1, _s(start_y)) 
+	redo_button.size = _sv(btn_size, btn_size)
 	redo_button.disabled = true
 	
 	var old_top_hud = root_parent.get_node_or_null("TopHUDContainer")
 	if old_top_hud:
 		old_top_hud.queue_free()
 
+	# --- SCALED COUNTERS (Pushed down to clear huge top bar) ---
+	var counters_y = 180
+	
 	if timer_label:
 		if timer_label.get_parent() != root_parent:
 			timer_label.get_parent().remove_child(timer_label)
 			root_parent.add_child(timer_label)
 		timer_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		timer_label.global_position = _sv(30, 115)
-		timer_label.size = _sv(280, 80)
+		_set_text_color(timer_label, Color(0.9, 0.9, 0.9))
+		timer_label.global_position = _sv(30, counters_y)
+		timer_label.size = _sv(300, 80)
 		if timer_label is RichTextLabel:
 			timer_label.bbcode_enabled = true
 			timer_label.fit_content = false
 			timer_label.scroll_active = false
 			timer_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-			timer_label.add_theme_font_size_override("normal_font_size", _si(32))
+			if custom_font: timer_label.add_theme_font_override("normal_font", custom_font)
+			timer_label.add_theme_font_size_override("normal_font_size", _si(24))
+		_apply_text_outline(timer_label, 6)
 
 	var old_joker = root_parent.get_node_or_null("JokerCounterLabel")
 	if old_joker:
@@ -156,14 +258,16 @@ func setup_ui(_show_debug_tools: bool, _cell_size: float):
 		root_parent.add_child(joker_counter_label)
 		
 	joker_counter_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	joker_counter_label.global_position = Vector2((screen_width - _s(280)) / 2.0, _s(115))
-	joker_counter_label.size = _sv(280, 80)
+	joker_counter_label.global_position = Vector2((screen_width - _s(300)) / 2.0, _s(counters_y))
+	joker_counter_label.size = _sv(300, 80)
 	joker_counter_label.bbcode_enabled = true
 	joker_counter_label.fit_content = false
 	joker_counter_label.scroll_active = false
 	joker_counter_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	joker_counter_label.add_theme_font_size_override("normal_font_size", _si(32))
-	joker_counter_label.modulate = Color(0.4, 1.0, 0.4, 1.0) 
+	if custom_font: joker_counter_label.add_theme_font_override("normal_font", custom_font)
+	joker_counter_label.add_theme_font_size_override("normal_font_size", _si(24))
+	_set_text_color(joker_counter_label, Color(0.4, 1.0, 0.4, 1.0))
+	_apply_text_outline(joker_counter_label, 6)
 
 	var old_move = root_parent.get_node_or_null("MoveCounterLabel")
 	if old_move:
@@ -179,35 +283,39 @@ func setup_ui(_show_debug_tools: bool, _cell_size: float):
 		root_parent.add_child(move_counter_label)
 		
 	move_counter_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	move_counter_label.global_position = Vector2(screen_width - _s(310), _s(115))
-	move_counter_label.size = _sv(280, 80)
+	move_counter_label.global_position = Vector2(screen_width - _s(330), _s(counters_y))
+	move_counter_label.size = _sv(300, 80)
 	move_counter_label.bbcode_enabled = true
 	move_counter_label.fit_content = false
 	move_counter_label.scroll_active = false
 	move_counter_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	move_counter_label.add_theme_font_size_override("normal_font_size", _si(32))
-	move_counter_label.modulate = Color(0.75, 0.55, 1.0, 1.0) 
+	if custom_font: move_counter_label.add_theme_font_override("normal_font", custom_font)
+	move_counter_label.add_theme_font_size_override("normal_font_size", _si(24))
+	_set_text_color(move_counter_label, Color(0.75, 0.55, 1.0, 1.0))
+	_apply_text_outline(move_counter_label, 6)
 
 	if status_label:
 		status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		status_label.global_position.x = _s(20)
 		status_label.size = Vector2(screen_width - _s(40), _s(250))
+		_set_text_color(status_label, Color.WHITE)
 		if status_label is RichTextLabel:
 			status_label.bbcode_enabled = true
 			status_label.fit_content = true 
-			status_label.add_theme_font_size_override("normal_font_size", _si(48))
+			status_label.add_theme_font_size_override("normal_font_size", _si(48)) 
 			status_label.text = "[center]Fill the empty spaces on the board.[/center]"
 		else:
-			status_label.add_theme_font_size_override("font_size", _si(48))
+			status_label.add_theme_font_size_override("font_size", _si(48)) 
 			status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			status_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 			status_label.text = "Fill the empty spaces on the board."
+		_apply_text_outline(status_label, 6)
 
-	var square_panel_size = _sv(400, 450)
-	var panel_pos = _sv(340, 300)
-	var menu_button_size = _sv(300, 60)
+	var square_panel_size = _sv(460, 500)
+	var panel_pos = _sv(310, 300)
+	var menu_button_size = _sv(340, 75)
 	var button_center_x = (square_panel_size.x - menu_button_size.x) / 2 
-	var spacing_y = _s(80) 
+	var spacing_y = _s(90) 
 
 	if victory_panel:
 		victory_panel.custom_minimum_size = square_panel_size
@@ -231,36 +339,42 @@ func setup_ui(_show_debug_tools: bool, _cell_size: float):
 		if defeat_restart_button: defeat_restart_button.text = "TRY AGAIN"
 
 	if win_label:
-		win_label.add_theme_font_size_override("font_size", _si(32)) 
-		win_label.modulate = Color(1.0, 0.84, 0.0)
+		if custom_font: win_label.add_theme_font_override("font", custom_font)
+		win_label.add_theme_font_size_override("font_size", _si(18)) 
+		_set_text_color(win_label, Color(1.0, 0.84, 0.0))
 		win_label.size = Vector2(square_panel_size.x, _s(70)) 
 		win_label.position = _sv(0, 20)
 		win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER 
 		win_label.autowrap_mode = TextServer.AUTOWRAP_WORD 
+		_apply_text_outline(win_label, 7)
 		
 	if defeat_label:
-		defeat_label.add_theme_font_size_override("font_size", _si(32))
-		defeat_label.modulate = Color(1.0, 0.3, 0.3) 
+		if custom_font: defeat_label.add_theme_font_override("font", custom_font)
+		defeat_label.add_theme_font_size_override("font_size", _si(18))
+		_set_text_color(defeat_label, Color(1.0, 0.3, 0.3)) 
 		defeat_label.size = Vector2(square_panel_size.x, _s(70))
 		defeat_label.position = _sv(0, 20)
 		defeat_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		defeat_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+		_apply_text_outline(defeat_label, 7)
 		
 	if time_result_label:
-		time_result_label.add_theme_font_size_override("font_size", _si(24))
-		time_result_label.modulate = Color(0.9, 0.9, 0.9)
+		if custom_font: time_result_label.add_theme_font_override("font", custom_font)
+		time_result_label.add_theme_font_size_override("font_size", _si(14))
+		_set_text_color(time_result_label, Color(0.9, 0.9, 0.9))
 		time_result_label.size = Vector2(square_panel_size.x, _s(40))
 		time_result_label.position = _sv(0, 115)
 		time_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER 
+		_apply_text_outline(time_result_label, 5)
 
-	var v_start_y = _s(210) 
+	var v_start_y = _s(190) 
 	
 	if restart_button:
-		restart_button.add_theme_font_size_override("font_size", _si(28))
+		_apply_scalable_theme(restart_button, 20)
 		restart_button.position = Vector2(button_center_x, v_start_y)
 		restart_button.size = menu_button_size
 	if defeat_restart_button:
-		defeat_restart_button.add_theme_font_size_override("font_size", _si(28))
+		_apply_scalable_theme(defeat_restart_button, 20)
 		defeat_restart_button.position = Vector2(button_center_x, v_start_y)
 		defeat_restart_button.size = menu_button_size
 		
@@ -268,12 +382,12 @@ func setup_ui(_show_debug_tools: bool, _cell_size: float):
 
 	if main_menu_button:
 		main_menu_button.text = "MAIN MENU"
-		main_menu_button.add_theme_font_size_override("font_size", _si(28))
+		_apply_scalable_theme(main_menu_button, 20)
 		main_menu_button.position = Vector2(button_center_x, v_start_y)
 		main_menu_button.size = menu_button_size
 	if defeat_main_menu_button:
 		defeat_main_menu_button.text = "MAIN MENU"
-		defeat_main_menu_button.add_theme_font_size_override("font_size", _si(28))
+		_apply_scalable_theme(defeat_main_menu_button, 20)
 		defeat_main_menu_button.position = Vector2(button_center_x, v_start_y)
 		defeat_main_menu_button.size = menu_button_size
 
@@ -288,16 +402,23 @@ func setup_ui(_show_debug_tools: bool, _cell_size: float):
 			how_to_play_container.visible = false
 		
 	if rules_label:
+		if rules_label is RichTextLabel:
+			rules_label.add_theme_font_size_override("normal_font_size", _si(24))
+		else:
+			rules_label.add_theme_font_size_override("font_size", _si(24))
 		rules_label.position = _sv(30, 30)
 		rules_label.size = _sv(790, 1090) 
+		_apply_text_outline(rules_label, 4)
 		
 	if tutorial_back_button:
-		var btn_size = _sv(140, 50)
-		tutorial_back_button.size = btn_size
-		var btn_x = (tutorial_size.x - btn_size.x) / 2
-		var btn_y = tutorial_size.y - btn_size.y - _s(30)
+		_apply_scalable_theme(tutorial_back_button, 18)
+		var t_btn_size = _sv(160, 60)
+		tutorial_back_button.size = t_btn_size
+		var btn_x = (tutorial_size.x - t_btn_size.x) / 2
+		var btn_y = tutorial_size.y - t_btn_size.y - _s(30)
 		tutorial_back_button.position = Vector2(btn_x, btn_y)
-		tutorial_back_button.show()
+		if not tutorial_back_button.pressed.is_connected(_on_tutorial_back_pressed):
+			tutorial_back_button.pressed.connect(_on_tutorial_back_pressed)
 
 	_connect_signals()
 
@@ -307,7 +428,7 @@ func update_undo_redo_buttons(can_undo: bool, can_redo: bool):
 
 func update_joker_counter(current: int, required: int):
 	if joker_counter_label:
-		joker_counter_label.text = "[center][img width=%d height=%d region=0,-12,128,128]res://icons/tiles/tile_green.svg[/img] USED: %d/%d[/center]" % [_si(28), _si(28), current, required]
+		joker_counter_label.text = "[center][img width=%d height=%d region=0,-12,128,128]res://icons/tiles/tile_green.svg[/img] USED: %d/%d[/center]" % [_si(32), _si(32), current, required]
 
 func set_joker_counter_visibility(is_visible: bool):
 	if joker_counter_label:
@@ -318,7 +439,7 @@ func set_joker_counter_visibility(is_visible: bool):
 
 func update_move_counter(moves: int):
 	if move_counter_label: 
-		move_counter_label.text = "[center][img width=%d height=%d region=0,-12,128,128]res://icons/tiles/tile_purple.svg[/img] MOVES: %d[/center]" % [_si(28), _si(28), moves]
+		move_counter_label.text = "[center][img width=%d height=%d region=0,-12,128,128]res://icons/tiles/tile_purple.svg[/img] MOVES: %d[/center]" % [_si(32), _si(32), moves]
 
 func set_move_counter_visibility(is_visible: bool):
 	if move_counter_label:
@@ -391,7 +512,8 @@ func update_timer(formatted_time: String):
 	if timer_label: 
 		if formatted_time == "∞":
 			if timer_label is RichTextLabel:
-				timer_label.text = "[center]TIME: ∞[/center]"
+				var inf_size = _si(46) 
+				timer_label.text = "[center]TIME: [img width=%d height=%d]res://icons/buttons/icon_infinity.svg[/img][/center]" % [inf_size, inf_size]
 			else:
 				timer_label.text = "TIME: ∞"
 		else:
@@ -402,14 +524,15 @@ func update_timer(formatted_time: String):
 
 func display_level(num: int, is_custom: bool = false):
 	if level_label: 
+		var txt = "CUSTOM\n%d" if is_custom else "LVL\n%d"
 		if level_label is RichTextLabel:
-			level_label.text = "[center]" + ("CUSTOM %d" if is_custom else "LEVEL %d") % num + "[/center]"
+			level_label.text = "[center]" + (txt % num) + "[/center]"
 		else:
-			level_label.text = ("CUSTOM %d" if is_custom else "LEVEL %d") % num
+			level_label.text = txt % num
 
 func show_status_valid():
 	if status_label:
-		status_label.modulate = Color.WHITE
+		_set_text_color(status_label, Color.WHITE)
 		if status_label is RichTextLabel:
 			status_label.text = "[center]Fill the empty spaces on the board.[/center]"
 		else:
@@ -417,11 +540,10 @@ func show_status_valid():
 
 func show_status_errors(errors: Array):
 	if status_label:
-		status_label.modulate = Color.WHITE
+		_set_text_color(status_label, Color.WHITE)
 		if status_label is RichTextLabel:
 			status_label.text = "[center]" + "\n".join(errors) + "[/center]"
 		else:
-			status_label.modulate = Color(1.0, 0.3, 0.3)
 			status_label.text = "\n".join(errors).replace("[color=#FFD700]", "").replace("[color=#4DA6FF]", "").replace("[color=#4DFF4D]", "").replace("[color=#BF8BFF]", "").replace("[/color]", "")
 
 func set_overlays_hidden():
@@ -440,7 +562,7 @@ func show_victory(display_num: int, is_last_level: bool, formatted_time: String,
 	set_hud_buttons_disabled(true)
 	
 	if status_label:
-		status_label.modulate = Color(1.0, 0.84, 0.0)
+		_set_text_color(status_label, Color(1.0, 0.84, 0.0))
 		if status_label is RichTextLabel:
 			status_label.text = "[center]Puzzle solved![/center]"
 		else:
@@ -457,7 +579,7 @@ func show_victory(display_num: int, is_last_level: bool, formatted_time: String,
 func show_defeat():
 	set_hud_buttons_disabled(true)
 	if status_label:
-		status_label.modulate = Color(1.0, 0.3, 0.3)
+		_set_text_color(status_label, Color(1.0, 0.3, 0.3))
 		if status_label is RichTextLabel:
 			status_label.text = "[center]Time's up! The puzzle remains unsolved.[/center]"
 		else:

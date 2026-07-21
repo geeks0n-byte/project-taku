@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128" shape-rendering="crispEdges">
+  <!-- HINT (Yellow Lightbulb - Shifted Down 1px) -->
+  <g transform="translate(1, 2)">
+    <!-- Drop Shadow -->
+    <g fill="#1d2b53" transform="translate(0, 1)">
+      <rect x="5" y="1" width="4" height="1" />
+      <rect x="3" y="2" width="8" height="2" />
+      <rect x="2" y="4" width="10" height="3" />
+      <rect x="3" y="7" width="8" height="1" />
+      <rect x="4" y="8" width="6" height="1" />
+      <rect x="5" y="9" width="4" height="2" />
+      <rect x="6" y="11" width="2" height="1" />
+    </g>
+    <!-- Yellow Bulb -->
+    <rect x="5" y="1" width="4" height="1" fill="#ffcc00"/>
+    <rect x="3" y="2" width="8" height="2" fill="#ffcc00"/>
+    <rect x="2" y="4" width="10" height="3" fill="#ffcc00"/>
+    <rect x="3" y="7" width="8" height="1" fill="#ffcc00"/>
+    <rect x="4" y="8" width="6" height="1" fill="#ffcc00"/>
+    <!-- Glass Highlight -->
+    <rect x="4" y="3" width="2" height="2" fill="#ffffff"/>
+    <!-- Gray Base -->
+    <rect x="5" y="9" width="4" height="2" fill="#c2c3c7"/>
+    <rect x="6" y="11" width="2" height="1" fill="#7d7d7d"/>
+  </g>
+</svg>

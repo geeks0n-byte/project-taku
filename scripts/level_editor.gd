@@ -1,6 +1,5 @@
 extends Node2D
 
-const CAMPAIGN_DIR = "res://levels/"
 const DEV_LEVELS_DIR = "user://levels/"
 
 @onready var ui_manager: EditorUIManager = $EditorUIManager
@@ -17,7 +16,8 @@ var playtest_time_remaining: int = 0
 var playtest_shifter_moves: int = 0
 
 var playtest_hidden_constraints: Array = []
-var playtest_pending_hints: Array = []
+var solved_solution_reference: Dictionary = {}
+
 var playtest_required_jokers: int = 0 
 var current_level_required_jokers: int = -1 
 
@@ -42,6 +42,7 @@ func _ready():
 	_recenter_editor_layout(canvas_manager.grid_width, canvas_manager.grid_height)
 	
 	_update_editor_joker_counter_display()
+	solved_solution_reference.clear()
 	
 	editor_current_state = _create_editor_snapshot()
 	ui_manager.update_editor_undo_redo_buttons(false, false)
@@ -99,6 +100,8 @@ func _bind_signals():
 func _on_editor_hint_toggled(is_on: bool):
 	if is_playtesting: return
 	canvas_manager.show_editor_hints = is_on
+	if is_on:
+		_rebuild_editor_hidden_hints()
 	canvas_manager.trigger_redraw()
 
 func _create_editor_snapshot() -> Dictionary:
@@ -116,6 +119,7 @@ func _create_editor_snapshot() -> Dictionary:
 		"cells": snap,
 		"shifters": canvas_manager.loaded_shifter_pairs.duplicate(true),
 		"constraints": canvas_manager.loaded_constraint_pairs.duplicate(true),
+		"hidden_constraints": canvas_manager.hidden_constraint_pairs.duplicate(true),
 		"jokers": current_level_required_jokers
 	}
 
@@ -132,12 +136,17 @@ func _apply_editor_snapshot(snap: Dictionary):
 
 	canvas_manager.loaded_shifter_pairs = snap["shifters"].duplicate(true)
 	canvas_manager.loaded_constraint_pairs = snap["constraints"].duplicate(true)
+	canvas_manager.hidden_constraint_pairs = snap.get("hidden_constraints", []).duplicate(true)
 	current_level_required_jokers = snap["jokers"]
 
 	canvas_manager.trigger_redraw()
 	_update_editor_joker_counter_display()
 
 func _record_editor_change():
+	if canvas_manager.show_editor_hints:
+		_rebuild_editor_hidden_hints()
+		canvas_manager.trigger_redraw()
+		
 	editor_undo_stack.append(editor_current_state)
 	editor_redo_stack.clear()
 	editor_current_state = _create_editor_snapshot()
@@ -200,6 +209,8 @@ func _on_random_board_requested():
 	canvas_manager.generate_blank_canvas(target_w, target_h)
 	canvas_manager.load_layout(target_w, target_h, generated["layout"], generated["shifters"], generated["constraints"])
 	
+	canvas_manager.hidden_constraint_pairs = generated.get("hidden_hints", []).duplicate(true)
+	
 	_recenter_editor_layout(target_w, target_h)
 	ui_manager.update_status("", Color.WHITE)
 	_update_editor_joker_counter_display()
@@ -209,6 +220,8 @@ func _on_grid_size_changed(new_width: int, new_height: int):
 	if is_playtesting: return
 	link_first_selection = null
 	current_level_required_jokers = -1
+	solved_solution_reference.clear()
+	canvas_manager.hidden_constraint_pairs.clear()
 	
 	canvas_manager.generate_blank_canvas(new_width, new_height)
 	_recenter_editor_layout(new_width, new_height)
@@ -479,8 +492,10 @@ func _on_clear_board():
 	if is_playtesting: return
 	canvas_manager.loaded_shifter_pairs.clear()
 	canvas_manager.loaded_constraint_pairs.clear() 
+	canvas_manager.hidden_constraint_pairs.clear()
 	link_first_selection = null
 	current_level_required_jokers = -1
+	solved_solution_reference.clear()
 	
 	var keep_walls = false
 	if ui_manager.has_method("is_keep_walls_requested"):
@@ -562,27 +577,49 @@ func _update_playtest_joker_count():
 	ui_manager.update_playtest_joker_counter(count, playtest_required_jokers)
 
 func _get_usable_hints_count() -> int:
+	if solved_solution_reference.is_empty(): return 0
 	var count = 0
-	for candidate in playtest_pending_hints:
-		var coord_a = candidate["a"]
-		var coord_b = candidate["b"]
-		var type = candidate["type"]
-		
-		var overlap = false
-		for active in canvas_manager.loaded_constraint_pairs:
-			if active["a"] == coord_a or active["b"] == coord_a or active["a"] == coord_b or active["b"] == coord_b:
-				overlap = true; break
-		if overlap: continue
-		
-		var current_a = canvas_manager.board_cells[coord_a].state if canvas_manager.board_cells.has(coord_a) else -1
-		var current_b = canvas_manager.board_cells[coord_b].state if canvas_manager.board_cells.has(coord_b) else -1
-		
-		if current_a != -1 and current_b != -1:
-			if type == "equals" and current_a == current_b: continue
-			if type == "not_equals" and current_a != current_b: continue
+	
+	var actual_w = canvas_manager.grid_width
+	var actual_h = canvas_manager.grid_height
+	
+	for y in range(actual_h):
+		for x in range(actual_w):
+			var c = Vector2i(x, y)
+			var right = c + Vector2i(1, 0)
+			var down = c + Vector2i(0, 1)
 			
-		count += 1
+			if _is_hint_usable(c, right): count += 1
+			if _is_hint_usable(c, down): count += 1
+			
 	return count
+
+func _is_hint_usable(coord_a: Vector2i, coord_b: Vector2i) -> bool:
+	if not solved_solution_reference.has(coord_a) or not solved_solution_reference.has(coord_b): return false
+	
+	var sol_a = solved_solution_reference[coord_a]
+	var sol_b = solved_solution_reference[coord_b]
+	
+	if not (sol_a in [0, 1] and sol_b in [0, 1]): return false
+	
+	for active in canvas_manager.loaded_constraint_pairs:
+		if (active["a"] == coord_a and active["b"] == coord_b) or (active["a"] == coord_b and active["b"] == coord_a):
+			return false
+			
+	var state_a = canvas_manager.board_cells[coord_a].state
+	var state_b = canvas_manager.board_cells[coord_b].state
+	
+	var a_filled = (state_a == 0 or state_a == 1)
+	var b_filled = (state_b == 0 or state_b == 1)
+	
+	if a_filled and b_filled:
+		var type = "equals" if sol_a == sol_b else "not_equals"
+		var is_satisfied = false
+		if type == "equals" and state_a == state_b: is_satisfied = true
+		elif type == "not_equals" and state_a != state_b: is_satisfied = true
+		if is_satisfied: return false
+		
+	return true
 
 func _on_test_mode_entered():
 	is_playtesting = true
@@ -595,10 +632,11 @@ func _on_test_mode_entered():
 	if editor_bg: editor_bg.visible = false
 	if game_bg: 
 		game_bg.visible = true
-		if game_bg is TextureRect:
-			game_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		if game_bg is Control:
 			game_bg.global_position = Vector2.ZERO
 			game_bg.size = get_viewport_rect().size
+			if game_bg is TextureRect:
+				game_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	
 	var prefilled_jokers = 0
 	
@@ -625,11 +663,28 @@ func _on_test_mode_entered():
 		cell.is_editor_mode = false
 		cell.update_visuals()
 	
-	playtest_hidden_constraints = canvas_manager.loaded_constraint_pairs.duplicate()
-	canvas_manager.loaded_constraint_pairs.clear()
+	playtest_hidden_constraints = canvas_manager.loaded_constraint_pairs.duplicate(true)
 	
-	playtest_pending_hints = playtest_hidden_constraints.duplicate()
-	playtest_pending_hints.shuffle()
+	var solve_layout = {}
+	var empty_cells = []
+	for c in canvas_manager.board_cells:
+		var cell = canvas_manager.board_cells[c]
+		if cell.state == 3:
+			solve_layout[c] = -1
+			empty_cells.append(c)
+		else:
+			solve_layout[c] = cell.state
+			if cell.state == -1:
+				empty_cells.append(c)
+				
+	var tiles_list = ui_manager.get_allowed_tiles()
+	var test_layout = solve_layout.duplicate()
+	var test_empty = empty_cells.duplicate()
+	
+	if PuzzleGenerator._solve(test_layout, test_empty, canvas_manager.grid_width, canvas_manager.grid_height, tiles_list, canvas_manager.loaded_constraint_pairs, {"count": 0}):
+		solved_solution_reference = test_layout
+	else:
+		solved_solution_reference = {} 
 		
 	playtest_time_remaining = ui_manager.get_time_limit()
 	playtest_shifter_moves = 0
@@ -688,9 +743,7 @@ func _on_playtest_reset_requested():
 		cell.is_editor_mode = false
 		cell.update_visuals()
 		
-	canvas_manager.loaded_constraint_pairs.clear()
-	playtest_pending_hints = playtest_hidden_constraints.duplicate()
-	playtest_pending_hints.shuffle()
+	canvas_manager.loaded_constraint_pairs = playtest_hidden_constraints.duplicate(true)
 	
 	playtest_time_remaining = ui_manager.get_time_limit()
 	playtest_shifter_moves = 0
@@ -724,50 +777,77 @@ func _on_resume_from_tutorial():
 
 func _on_playtest_hint_requested():
 	if not is_playtesting: return
+	if solved_solution_reference.is_empty(): return
 	
-	var selected_hint = null
-	var skipped_hints = []
+	var priority_1 = []
+	var priority_2 = []
+	var priority_3 = []
 	
-	while playtest_pending_hints.size() > 0:
-		var candidate = playtest_pending_hints.pop_back()
-		var coord_a = candidate["a"]
-		var coord_b = candidate["b"]
-		var type = candidate["type"]
-		
-		var cell_already_has_hint = false
-		for active_hint in canvas_manager.loaded_constraint_pairs:
-			if active_hint["a"] == coord_a or active_hint["b"] == coord_a or active_hint["a"] == coord_b or active_hint["b"] == coord_b:
-				cell_already_has_hint = true
-				break
-				
-		if cell_already_has_hint:
-			skipped_hints.append(candidate)
-			continue
-		
-		var current_a = canvas_manager.board_cells[coord_a].state if canvas_manager.board_cells.has(coord_a) else -1
-		var current_b = canvas_manager.board_cells[coord_b].state if canvas_manager.board_cells.has(coord_b) else -1
-		
-		var is_satisfied = false
-		if current_a != -1 and current_b != -1:
-			if type == "equals" and current_a == current_b:
-				is_satisfied = true
-			elif type == "not_equals" and current_a != current_b:
-				is_satisfied = true
-				
-		if is_satisfied:
-			skipped_hints.append(candidate) 
-			continue
+	var actual_w = canvas_manager.grid_width
+	var actual_h = canvas_manager.grid_height
+	
+	for y in range(actual_h):
+		for x in range(actual_w):
+			var c = Vector2i(x, y)
+			var right = c + Vector2i(1, 0)
+			var down = c + Vector2i(0, 1)
 			
-		selected_hint = candidate
-		break
+			_evaluate_hint_candidate(c, right, priority_1, priority_2, priority_3)
+			_evaluate_hint_candidate(c, down, priority_1, priority_2, priority_3)
+			
+	var selected_hint = null
+	if priority_1.size() > 0:
+		selected_hint = priority_1.pick_random()
+	elif priority_2.size() > 0:
+		selected_hint = priority_2.pick_random()
+	elif priority_3.size() > 0:
+		selected_hint = priority_3.pick_random()
 		
-	playtest_pending_hints.append_array(skipped_hints)
-	playtest_pending_hints.shuffle()
-	
 	if selected_hint != null:
 		canvas_manager.loaded_constraint_pairs.append(selected_hint)
 		canvas_manager.trigger_redraw()
+		
+		# We do NOT push a state to the undo stack here, so hints are permanent.
 		_run_playtest_validation_pass()
+
+func _evaluate_hint_candidate(coord_a: Vector2i, coord_b: Vector2i, p1: Array, p2: Array, p3: Array):
+	if not solved_solution_reference.has(coord_a) or not solved_solution_reference.has(coord_b): return
+	
+	var sol_a = solved_solution_reference[coord_a]
+	var sol_b = solved_solution_reference[coord_b]
+	
+	if not (sol_a in [0, 1] and sol_b in [0, 1]): return
+	
+	for active in canvas_manager.loaded_constraint_pairs:
+		if (active["a"] == coord_a and active["b"] == coord_b) or (active["a"] == coord_b and active["b"] == coord_a):
+			return 
+			
+	var type = "equals" if sol_a == sol_b else "not_equals"
+	var candidate = {"a": coord_a, "b": coord_b, "type": type}
+	
+	var state_a = canvas_manager.board_cells[coord_a].state
+	var state_b = canvas_manager.board_cells[coord_b].state
+	
+	var a_filled = (state_a == 0 or state_a == 1)
+	var b_filled = (state_b == 0 or state_b == 1)
+	var a_empty = (state_a == -1)
+	var b_empty = (state_b == -1)
+	
+	if (state_a != -1 and not a_filled) or (state_b != -1 and not b_filled):
+		p3.append(candidate)
+		return
+		
+	if (a_filled and b_empty) or (b_filled and a_empty):
+		p1.append(candidate)
+	elif a_empty and b_empty:
+		p2.append(candidate)
+	elif a_filled and b_filled:
+		var is_satisfied = false
+		if type == "equals" and state_a == state_b: is_satisfied = true
+		elif type == "not_equals" and state_a != state_b: is_satisfied = true
+		
+		if not is_satisfied:
+			p3.append(candidate)
 
 func _on_playtest_timer_timeout():
 	if is_playtesting:
@@ -819,7 +899,7 @@ func _on_test_mode_exited():
 		cell.is_editor_mode = true
 		cell.update_visuals()
 		
-	canvas_manager.loaded_constraint_pairs = playtest_hidden_constraints.duplicate()
+	canvas_manager.loaded_constraint_pairs = playtest_hidden_constraints.duplicate(true)
 		
 	canvas_manager.trigger_redraw()
 	ui_manager.toggle_playtest_visibility(false)
@@ -855,11 +935,6 @@ func _trigger_playtest_defeat():
 func _on_save_level():
 	if is_playtesting: return
 	
-	var is_custom = ui_manager.is_custom_track_active()
-	if not is_custom:
-		ui_manager.update_status("ERROR: CANNOT OVERWRITE CORE LEVELS.", Color(1.0, 0.4, 0.4))
-		return
-		
 	var level_num = ui_manager.get_level_number()
 	var dev_path = DEV_LEVELS_DIR + "level_%d.tres" % level_num
 	
@@ -905,9 +980,9 @@ func _execute_save():
 		new_level_resource.set("red_pairs", processed_pairs)
 	
 	if "constraint_pairs" in new_level_resource:
-		new_level_resource.constraint_pairs = canvas_manager.loaded_constraint_pairs.duplicate() 
+		new_level_resource.constraint_pairs = canvas_manager.loaded_constraint_pairs.duplicate(true) 
 	else:
-		new_level_resource.set("constraint_pairs", canvas_manager.loaded_constraint_pairs.duplicate())
+		new_level_resource.set("constraint_pairs", canvas_manager.loaded_constraint_pairs.duplicate(true))
 	
 	new_level_resource.time_limit = ui_manager.get_time_limit()
 	new_level_resource.available_tiles = ui_manager.get_allowed_tiles()
@@ -926,16 +1001,7 @@ func _execute_save():
 func _on_load_level():
 	if is_playtesting: return
 	var level_num = ui_manager.get_level_number()
-	var is_custom = ui_manager.is_custom_track_active()
-	var target_load_path = ""
-	var track_name = ""
-	
-	if is_custom:
-		target_load_path = DEV_LEVELS_DIR + "level_%d.tres" % level_num
-		track_name = "CUSTOM"
-	else:
-		target_load_path = CAMPAIGN_DIR + "level_%d.tres" % level_num
-		track_name = "CORE"
+	var target_load_path = DEV_LEVELS_DIR + "level_%d.tres" % level_num
 
 	if ResourceLoader.exists(target_load_path):
 		var loaded_level = load(target_load_path) as LevelData
@@ -978,13 +1044,60 @@ func _on_load_level():
 				
 			ui_manager.set_allowed_tiles(sanitized_tiles)
 			ui_manager.sync_size_displays(actual_w, actual_h)
-			ui_manager.update_status(track_name + " LEVEL " + str(level_num) + " LOADED SUCCESSFULLY.", Color(0.4, 1.0, 0.4))
+			ui_manager.update_status("CUSTOM LEVEL " + str(level_num) + " LOADED SUCCESSFULLY.", Color(0.4, 1.0, 0.4))
 			_update_editor_joker_counter_display()
+			
+			_rebuild_editor_hidden_hints()
 			_record_editor_change()
 		else:
-			ui_manager.update_status("ERROR: FAILED TO READ " + track_name + " LEVEL " + str(level_num) + " DATA.", Color(1.0, 0.4, 0.4))
+			ui_manager.update_status("ERROR: FAILED TO READ CUSTOM LEVEL " + str(level_num) + " DATA.", Color(1.0, 0.4, 0.4))
 	else:
-		ui_manager.update_status("NO SAVED DATA FOUND FOR " + track_name + " LEVEL " + str(level_num) + ".", Color(1.0, 0.8, 0.2))
+		ui_manager.update_status("NO SAVED DATA FOUND FOR CUSTOM LEVEL " + str(level_num) + ".", Color(1.0, 0.8, 0.2))
 
 func _on_main_menu():
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+
+func _rebuild_editor_hidden_hints():
+	var solve_layout = {}
+	var empty_cells = []
+	for c in canvas_manager.board_cells:
+		var cell = canvas_manager.board_cells[c]
+		if cell.state == 3:
+			solve_layout[c] = -1
+			empty_cells.append(c)
+		else:
+			solve_layout[c] = cell.state
+			if cell.state == -1:
+				empty_cells.append(c)
+				
+	var test_layout = solve_layout.duplicate()
+	var test_empty = empty_cells.duplicate()
+	var tiles_list = ui_manager.get_allowed_tiles()
+	
+	if PuzzleGenerator._solve(test_layout, test_empty, canvas_manager.grid_width, canvas_manager.grid_height, tiles_list, canvas_manager.loaded_constraint_pairs, {"count": 0}):
+		var rebuilt_hidden = []
+		for y in range(canvas_manager.grid_height):
+			for x in range(canvas_manager.grid_width):
+				var c = Vector2i(x, y)
+				if test_layout.has(c) and test_layout[c] in [0, 1]:
+					var right = c + Vector2i(1, 0)
+					var down = c + Vector2i(0, 1)
+					
+					if test_layout.has(right) and test_layout[right] in [0, 1]:
+						var t = "equals" if test_layout[c] == test_layout[right] else "not_equals"
+						if not _is_constraint_in_list(c, right, canvas_manager.loaded_constraint_pairs):
+							rebuilt_hidden.append({"a": c, "b": right, "type": t})
+							
+					if test_layout.has(down) and test_layout[down] in [0, 1]:
+						var t = "equals" if test_layout[c] == test_layout[down] else "not_equals"
+						if not _is_constraint_in_list(c, down, canvas_manager.loaded_constraint_pairs):
+							rebuilt_hidden.append({"a": c, "b": down, "type": t})
+		canvas_manager.hidden_constraint_pairs = rebuilt_hidden
+	else:
+		canvas_manager.hidden_constraint_pairs.clear()
+
+func _is_constraint_in_list(a: Vector2i, b: Vector2i, list: Array) -> bool:
+	for p in list:
+		if (p["a"] == a and p["b"] == b) or (p["a"] == b and p["b"] == a):
+			return true
+	return false

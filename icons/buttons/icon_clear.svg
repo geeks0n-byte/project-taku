@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128" shape-rendering="crispEdges">
+  <!-- CLEAR (Trash can - Moved 1px Down) -->
+  <g transform="translate(2, 2)">
+    <!-- Drop Shadow Layer -->
+    <g fill="#1d2b53" transform="translate(0, 1)">
+      <!-- Lid Handle -->
+      <rect x="4" y="0" width="4" height="1"/>
+      <!-- Lid -->
+      <rect x="3" y="1" width="6" height="1"/>
+      <rect x="1" y="2" width="10" height="2"/>
+      <!-- Body -->
+      <rect x="2" y="4" width="8" height="8"/>
+    </g>
+    
+    <!-- Red Lid Handle -->
+    <rect x="4" y="0" width="4" height="1" fill="#ff3333"/>
+    <!-- Gray Lid -->
+    <rect x="3" y="1" width="6" height="1" fill="#c2c3c7"/>
+    <rect x="1" y="2" width="10" height="2" fill="#7d7d7d"/>
+    <!-- Can Body (Gray) -->
+    <rect x="2" y="4" width="8" height="8" fill="#c2c3c7"/>
+    <!-- Body Details -->
+    <rect x="4" y="5" width="1" height="6" fill="#7d7d7d"/>
+    <rect x="7" y="5" width="1" height="6" fill="#7d7d7d"/>
+  </g>
+</svg>

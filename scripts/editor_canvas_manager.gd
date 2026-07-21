@@ -15,6 +15,7 @@ var cached_lines: Array = []
 
 var loaded_shifter_pairs: Array = []
 var loaded_constraint_pairs: Array = [] 
+var hidden_constraint_pairs: Array = [] # Stores redundant hints for the toggle button
 
 var grid_drawer: Node2D
 var constraint_drawer: Node2D
@@ -24,12 +25,12 @@ var show_editor_hints: bool = false
 
 func _ready():
 	grid_drawer = Node2D.new()
-	grid_drawer.z_index = 10 # Keeps grid walls under the highlight
+	grid_drawer.z_index = 10 
 	grid_drawer.draw.connect(_draw_grid)
 	add_child(grid_drawer)
 	
 	constraint_drawer = Node2D.new()
-	constraint_drawer.z_index = 4096 # Forces constraints over the highlight
+	constraint_drawer.z_index = 4096 
 	constraint_drawer.draw.connect(_draw_constraints)
 	add_child(constraint_drawer)
 
@@ -46,6 +47,7 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 	board_cells.clear()
 	loaded_shifter_pairs.clear()
 	loaded_constraint_pairs.clear()
+	hidden_constraint_pairs.clear()
 	
 	var pool_index = 0
 	var margin = 5.0
@@ -110,6 +112,7 @@ func load_layout(new_width: int, new_height: int, layout_data: Dictionary, shift
 	generate_blank_canvas(new_width, new_height)
 	loaded_shifter_pairs = shifter_pairs.duplicate()
 	loaded_constraint_pairs = constraint_pairs.duplicate()
+	hidden_constraint_pairs.clear()
 	
 	for coord in layout_data:
 		if board_cells.has(coord):
@@ -219,43 +222,46 @@ func _draw_constraints():
 	var diff_color = Color(1.0, 1.0, 1.0, 0.9) 
 	var outline_color = Color(0.0, 0.0, 0.0, 1.0)
 	
-	if is_playtesting or show_editor_hints:
-		for pair in loaded_constraint_pairs:
-			var coord_a = pair["a"]
-			var coord_b = pair["b"]
-			if not (board_cells.has(coord_a) and board_cells.has(coord_b)): continue
-				
-			var pos_a = Vector2(coord_a.x * CELL_SIZE + CELL_SIZE/2.0, coord_a.y * CELL_SIZE + CELL_SIZE/2.0)
-			var pos_b = Vector2(coord_b.x * CELL_SIZE + CELL_SIZE/2.0, coord_b.y * CELL_SIZE + CELL_SIZE/2.0)
+	var pairs_to_draw = loaded_constraint_pairs.duplicate()
+	if not is_playtesting and show_editor_hints:
+		pairs_to_draw.append_array(hidden_constraint_pairs)
+	
+	for pair in pairs_to_draw:
+		var coord_a = pair["a"]
+		var coord_b = pair["b"]
+		if not (board_cells.has(coord_a) and board_cells.has(coord_b)): continue
 			
-			var midpoint = (pos_a + pos_b) / 2.0
-			var dir = (pos_b - pos_a).normalized()
-			var perp = dir.orthogonal()
+		var pos_a = Vector2(coord_a.x * CELL_SIZE + CELL_SIZE/2.0, coord_a.y * CELL_SIZE + CELL_SIZE/2.0)
+		var pos_b = Vector2(coord_b.x * CELL_SIZE + CELL_SIZE/2.0, coord_b.y * CELL_SIZE + CELL_SIZE/2.0)
+		
+		var midpoint = (pos_a + pos_b) / 2.0
+		var dir = (pos_b - pos_a).normalized()
+		var perp = dir.orthogonal()
+		
+		if pair["type"] == "equals":
+			var l1_s = midpoint + perp * 8.0 - dir * 16.0
+			var l1_e = midpoint + perp * 8.0 + dir * 16.0
+			var l2_s = midpoint - perp * 8.0 - dir * 16.0
+			var l2_e = midpoint - perp * 8.0 + dir * 16.0
 			
-			if pair["type"] == "equals":
-				var l1_s = midpoint + perp * 8.0 - dir * 16.0
-				var l1_e = midpoint + perp * 8.0 + dir * 16.0
-				var l2_s = midpoint - perp * 8.0 - dir * 16.0
-				var l2_e = midpoint - perp * 8.0 + dir * 16.0
-				
-				constraint_drawer.draw_line(l1_s, l1_e, outline_color, 8.0, true)
-				constraint_drawer.draw_line(l2_s, l2_e, outline_color, 8.0, true)
-				
-				var shrink = dir * 2.0
-				constraint_drawer.draw_line(l1_s + shrink, l1_e - shrink, equals_color, 4.0, true)
-				constraint_drawer.draw_line(l2_s + shrink, l2_e - shrink, equals_color, 4.0, true)
-				
-			elif pair["type"] == "not_equals":
-				var l1_s = midpoint - dir * 12.0 - perp * 12.0
-				var l1_e = midpoint + dir * 12.0 + perp * 12.0
-				var l2_s = midpoint - dir * 12.0 + perp * 12.0
-				var l2_e = midpoint + dir * 12.0 - perp * 12.0
-				
-				constraint_drawer.draw_line(l1_s, l1_e, outline_color, 8.0, true)
-				constraint_drawer.draw_line(l2_s, l2_e, outline_color, 8.0, true)
-				
-				var shrink1 = (l1_e - l1_s).normalized() * 2.0
-				var shrink2 = (l2_e - l2_s).normalized() * 2.0
-				
-				constraint_drawer.draw_line(l1_s + shrink1, l1_e - shrink1, diff_color, 4.0, true)
-				constraint_drawer.draw_line(l2_s + shrink2, l2_e - shrink2, diff_color, 4.0, true)
+			constraint_drawer.draw_line(l1_s, l1_e, outline_color, 8.0, true)
+			constraint_drawer.draw_line(l2_s, l2_e, outline_color, 8.0, true)
+			
+			var shrink = dir * 2.0
+			constraint_drawer.draw_line(l1_s + shrink, l1_e - shrink, equals_color, 4.0, true)
+			constraint_drawer.draw_line(l2_s + shrink, l2_e - shrink, equals_color, 4.0, true)
+			
+		elif pair["type"] == "not_equals":
+			var l1_s = midpoint - dir * 12.0 - perp * 12.0
+			var l1_e = midpoint + dir * 12.0 + perp * 12.0
+			var l2_s = midpoint - dir * 12.0 + perp * 12.0
+			var l2_e = midpoint + dir * 12.0 - perp * 12.0
+			
+			constraint_drawer.draw_line(l1_s, l1_e, outline_color, 8.0, true)
+			constraint_drawer.draw_line(l2_s, l2_e, outline_color, 8.0, true)
+			
+			var shrink1 = (l1_e - l1_s).normalized() * 2.0
+			var shrink2 = (l2_e - l2_s).normalized() * 2.0
+			
+			constraint_drawer.draw_line(l1_s + shrink1, l1_e - shrink1, diff_color, 4.0, true)
+			constraint_drawer.draw_line(l2_s + shrink2, l2_e - shrink2, diff_color, 4.0, true)

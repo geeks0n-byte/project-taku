@@ -104,9 +104,6 @@ var pt_status_label: RichTextLabel
 var pt_title_label: Label 
 var editor_title_label: Label 
 
-var track_core_button: Button
-var track_custom_button: Button
-
 var random_button: Button 
 var unique_solution_toggle: CheckButton
 var keep_walls_toggle: CheckButton
@@ -125,12 +122,144 @@ var pt_redo_button: Button
 var how_to_play_container: Control
 var tutorial_back_button: Button 
 
+var custom_font: Font
+
 # --- SCALING HELPERS ---
 func _s(val: float) -> float: return val * ui_scale
 func _sv(x: float, y: float) -> Vector2: return Vector2(x * ui_scale, y * ui_scale)
 func _si(val: int) -> int: return int(val * ui_scale)
 
+# --- TEXT & OUTLINE HELPERS ---
+func _apply_text_outline(node: Control, outline_size: int = 6):
+	if not node: return
+	node.add_theme_color_override("font_outline_color", Color.BLACK)
+	node.add_theme_constant_override("outline_size", _si(outline_size))
+
+func _set_text_color(node: Control, color: Color):
+	if not node: return
+	node.modulate = Color.WHITE 
+	if node is RichTextLabel:
+		node.add_theme_color_override("default_color", color)
+	elif node is Label or node is Button:
+		node.add_theme_color_override("font_color", color)
+
+func _create_scalable_button_style(texture_path: String, color_modulate: Color = Color.WHITE) -> StyleBoxTexture:
+	var style = StyleBoxTexture.new()
+	var tex = load(texture_path)
+	if tex:
+		style.texture = tex
+		var margin = 16.0 
+		style.texture_margin_left = margin
+		style.texture_margin_right = margin
+		style.texture_margin_top = margin
+		style.texture_margin_bottom = margin
+		
+		# Offset the content up to counteract the 3D bottom bevel
+		style.content_margin_left = _si(8)
+		style.content_margin_right = _si(8)
+		style.content_margin_top = _si(2)
+		style.content_margin_bottom = _si(16)
+		
+		style.modulate_color = color_modulate
+	return style
+
+func _apply_scalable_theme(btn: Button, base_font_size: int):
+	if not btn: return
+	var svg_path = "res://icons/buttons/button_tile_gray_dark.svg"
+	
+	btn.add_theme_stylebox_override("normal", _create_scalable_button_style(svg_path, Color(1.0, 1.0, 1.0)))
+	btn.add_theme_stylebox_override("hover", _create_scalable_button_style(svg_path, Color(1.2, 1.2, 1.2)))
+	btn.add_theme_stylebox_override("pressed", _create_scalable_button_style(svg_path, Color(0.8, 0.8, 0.8)))
+	btn.add_theme_stylebox_override("disabled", _create_scalable_button_style(svg_path, Color(0.5, 0.5, 0.5)))
+	
+	if custom_font:
+		btn.add_theme_font_override("font", custom_font)
+	
+	btn.add_theme_font_size_override("font_size", _si(base_font_size))
+	_apply_text_outline(btn, 7)
+
+# --- INJECTION HELPERS ---
+func _set_button_with_icon(btn: Button, text: String, icon_file: String, base_font_size: int):
+	if not btn: return
+	
+	btn.text = "     " + text + "     "
+	btn.add_theme_color_override("font_color", Color(0,0,0,0))
+	btn.add_theme_color_override("font_hover_color", Color(0,0,0,0))
+	btn.add_theme_color_override("font_pressed_color", Color(0,0,0,0))
+	btn.add_theme_color_override("font_focus_color", Color(0,0,0,0))
+	btn.add_theme_color_override("font_disabled_color", Color(0,0,0,0))
+	
+	btn.icon = null
+	for child in btn.get_children():
+		if child.name == "CustomIconText":
+			child.queue_free()
+			
+	var hbox = HBoxContainer.new()
+	hbox.name = "CustomIconText"
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hbox.offset_top = -_si(4)
+	hbox.offset_bottom = -_si(4)
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_theme_constant_override("separation", _si(8))
+	
+	var tex = load("res://icons/buttons/" + icon_file)
+	if tex:
+		var tex_rect = TextureRect.new()
+		tex_rect.texture = tex
+		tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		var icon_size = _si(base_font_size + 8)
+		tex_rect.custom_minimum_size = Vector2(icon_size, icon_size)
+		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_child(tex_rect)
+		
+	var lbl = Label.new()
+	lbl.text = text
+	if custom_font: lbl.add_theme_font_override("font", custom_font)
+	lbl.add_theme_font_size_override("font_size", _si(base_font_size))
+	lbl.add_theme_color_override("font_color", Color.WHITE)
+	_apply_text_outline(lbl, 7)
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(lbl)
+	
+	btn.add_child(hbox)
+	_apply_scalable_theme(btn, base_font_size)
+
+func _set_icon_only_button(btn: Button, icon_file: String, icon_size: int):
+	if not btn: return
+	
+	btn.text = ""
+	
+	for child in btn.get_children():
+		if child.name == "CustomIconText":
+			child.queue_free()
+			
+	var tex = load("res://icons/buttons/" + icon_file)
+	if tex:
+		var hbox = HBoxContainer.new()
+		hbox.name = "CustomIconText"
+		hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+		hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		hbox.offset_top = -_si(4)
+		hbox.offset_bottom = -_si(4)
+		hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		
+		var tex_rect = TextureRect.new()
+		tex_rect.texture = tex
+		tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tex_rect.custom_minimum_size = Vector2(_si(icon_size), _si(icon_size))
+		tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_child(tex_rect)
+		
+		btn.add_child(hbox)
+		
+	_apply_scalable_theme(btn, 18)
+
 func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
+	custom_font = load("res://fonts/PressStart2P-vaV7.ttf")
 	editor_width = grid_width
 	editor_height = grid_height
 	editor_cell_size = _cell_size
@@ -138,11 +267,143 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 	var root_parent = get_parent()
 	var screen_width = get_viewport().get_visible_rect().size.x
 	
+	# --- UNIFIED TOP BAR DIMENSIONS ---
+	var btn_size = 135
+	var icon_size = 90
+	var start_y = 20
+	
+	var left_1 = 25
+	var left_2 = 175
+	var left_3 = 325
+	
+	var right_3 = screen_width - 460
+	var right_2 = screen_width - 310
+	var right_1 = screen_width - 160
+	
+	# --- EDITOR TOP BUTTON ROW (Enlarged Square Icons) ---
+	if main_menu_button:
+		if main_menu_button.get_parent() != root_parent:
+			main_menu_button.get_parent().remove_child(main_menu_button)
+			root_parent.add_child(main_menu_button)
+		_set_icon_only_button(main_menu_button, "icon_exit.svg", icon_size)
+		main_menu_button.global_position = _sv(left_1, start_y)
+		main_menu_button.size = _sv(btn_size, btn_size)
+		
+	if test_button:
+		if test_button.get_parent() != root_parent:
+			test_button.get_parent().remove_child(test_button)
+			root_parent.add_child(test_button)
+		_set_icon_only_button(test_button, "icon_play.svg", icon_size)
+		test_button.global_position = _sv(left_2, start_y)
+		test_button.size = _sv(btn_size, btn_size)
+
+	if clear_button:
+		if clear_button.get_parent() != root_parent:
+			clear_button.get_parent().remove_child(clear_button)
+			root_parent.add_child(clear_button)
+		_set_icon_only_button(clear_button, "icon_clear.svg", icon_size)
+		clear_button.global_position = _sv(left_3, start_y)
+		clear_button.size = _sv(btn_size, btn_size) 
+
+	if not editor_title_label: 
+		editor_title_label = Label.new()
+		editor_title_label.name = "EditorTitleLabel"
+		root_parent.add_child(editor_title_label)
+		
+	editor_title_label.text = "EDIT\nMODE"
+	editor_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	editor_title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	editor_title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	editor_title_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	if custom_font: editor_title_label.add_theme_font_override("font", custom_font)
+	editor_title_label.add_theme_font_size_override("font_size", _si(36))
+	_apply_text_outline(editor_title_label, 8)
+	_set_text_color(editor_title_label, Color(1.0, 0.9, 0.4))
+	editor_title_label.global_position = Vector2((screen_width - _s(300)) / 2.0, _s(start_y))
+	editor_title_label.size = _sv(300, btn_size)
+
+	if not editor_hint_button: editor_hint_button = Button.new(); editor_hint_button.name = "EditorHintButton"; root_parent.add_child(editor_hint_button)
+	_set_icon_only_button(editor_hint_button, "icon_hint.svg", icon_size)
+	editor_hint_button.toggle_mode = true
+	editor_hint_button.button_pressed = false
+	editor_hint_button.global_position = Vector2(right_3, _s(start_y))
+	editor_hint_button.size = _sv(btn_size, btn_size)
+	if not editor_hint_button.toggled.is_connected(func(on): editor_hint_toggled.emit(on)):
+		editor_hint_button.toggled.connect(func(on): editor_hint_toggled.emit(on))
+		
+	if not editor_undo_button: editor_undo_button = Button.new(); editor_undo_button.name = "EditorUndoButton"; root_parent.add_child(editor_undo_button)
+	_set_icon_only_button(editor_undo_button, "icon_undo.svg", icon_size)
+	editor_undo_button.global_position = Vector2(right_2, _s(start_y))
+	editor_undo_button.size = _sv(btn_size, btn_size)
+	editor_undo_button.disabled = true
+	if not editor_undo_button.pressed.is_connected(func(): editor_undo_requested.emit()):
+		editor_undo_button.pressed.connect(func(): editor_undo_requested.emit())
+		
+	if not editor_redo_button: editor_redo_button = Button.new(); editor_redo_button.name = "EditorRedoButton"; root_parent.add_child(editor_redo_button)
+	_set_icon_only_button(editor_redo_button, "icon_redo.svg", icon_size)
+	editor_redo_button.global_position = Vector2(right_1, _s(start_y))
+	editor_redo_button.size = _sv(btn_size, btn_size)
+	editor_redo_button.disabled = true
+	if not editor_redo_button.pressed.is_connected(func(): editor_redo_requested.emit()):
+		editor_redo_button.pressed.connect(func(): editor_redo_requested.emit())
+
+	# --- PLAYTEST TOP BUTTON ROW (Enlarged Square Icons) ---
+	if not pt_exit_button: pt_exit_button = Button.new(); pt_exit_button.name = "PTExitButton"; root_parent.add_child(pt_exit_button)
+	_set_icon_only_button(pt_exit_button, "icon_stop.svg", icon_size)
+	pt_exit_button.global_position = _sv(left_1, start_y)
+	pt_exit_button.size = _sv(btn_size, btn_size)
+	pt_exit_button.visible = false
+	if not pt_exit_button.pressed.is_connected(func(): test_mode_exited.emit()):
+		pt_exit_button.pressed.connect(func(): test_mode_exited.emit())
+	
+	if not pt_reset_button: pt_reset_button = Button.new(); pt_reset_button.name = "PTResetButton"; root_parent.add_child(pt_reset_button)
+	_set_icon_only_button(pt_reset_button, "icon_reset.svg", icon_size)
+	pt_reset_button.global_position = _sv(left_2, start_y)
+	pt_reset_button.size = _sv(btn_size, btn_size)
+	pt_reset_button.visible = false
+	if not pt_reset_button.pressed.is_connected(func(): playtest_reset_requested.emit()):
+		pt_reset_button.pressed.connect(func(): playtest_reset_requested.emit())
+		
+	if not pt_rules_button: pt_rules_button = Button.new(); pt_rules_button.name = "PTRulesButton"; root_parent.add_child(pt_rules_button)
+	_set_icon_only_button(pt_rules_button, "icon_rules.svg", icon_size)
+	pt_rules_button.global_position = _sv(left_3, start_y)
+	pt_rules_button.size = _sv(btn_size, btn_size) 
+	pt_rules_button.visible = false
+	if not pt_rules_button.pressed.is_connected(func(): playtest_rules_requested.emit()):
+		pt_rules_button.pressed.connect(func(): playtest_rules_requested.emit())
+		
+	if not pt_hint_button: pt_hint_button = Button.new(); pt_hint_button.name = "PTHintButton"; root_parent.add_child(pt_hint_button)
+	_set_icon_only_button(pt_hint_button, "icon_hint.svg", icon_size)
+	pt_hint_button.global_position = Vector2(right_3, _s(start_y)) 
+	pt_hint_button.size = _sv(btn_size, btn_size)
+	pt_hint_button.visible = false
+	pt_hint_button.disabled = true
+	if not pt_hint_button.pressed.is_connected(func(): playtest_hint_requested.emit()):
+		pt_hint_button.pressed.connect(func(): playtest_hint_requested.emit())
+		
+	if not pt_undo_button: pt_undo_button = Button.new(); pt_undo_button.name = "PTUndoButton"; root_parent.add_child(pt_undo_button)
+	_set_icon_only_button(pt_undo_button, "icon_undo.svg", icon_size)
+	pt_undo_button.global_position = Vector2(right_2, _s(start_y)) 
+	pt_undo_button.size = _sv(btn_size, btn_size)
+	pt_undo_button.visible = false
+	pt_undo_button.disabled = true
+	if not pt_undo_button.pressed.is_connected(func(): playtest_undo_requested.emit()):
+		pt_undo_button.pressed.connect(func(): playtest_undo_requested.emit())
+		
+	if not pt_redo_button: pt_redo_button = Button.new(); pt_redo_button.name = "PTRedoButton"; root_parent.add_child(pt_redo_button)
+	_set_icon_only_button(pt_redo_button, "icon_redo.svg", icon_size)
+	pt_redo_button.global_position = Vector2(right_1, _s(start_y)) 
+	pt_redo_button.size = _sv(btn_size, btn_size)
+	pt_redo_button.visible = false
+	pt_redo_button.disabled = true
+	if not pt_redo_button.pressed.is_connected(func(): playtest_redo_requested.emit()):
+		pt_redo_button.pressed.connect(func(): playtest_redo_requested.emit())
+
+	# --- CONFIG PANELS ---
 	if grid_size_container:
 		if not random_button:
 			random_button = Button.new()
-			random_button.text = "🎲 RANDOM"
-			random_button.add_theme_font_size_override("font_size", _si(28))
+			random_button.name = "RandomButton"
 			random_button.pressed.connect(func(): random_requested.emit())
 			grid_size_container.add_child(random_button)
 			
@@ -151,7 +412,9 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 			unique_solution_toggle.text = "UNIQUE\nSOLUTION"
 			unique_solution_toggle.alignment = HORIZONTAL_ALIGNMENT_CENTER
 			unique_solution_toggle.button_pressed = false 
-			unique_solution_toggle.add_theme_font_size_override("font_size", _si(24))
+			if custom_font: unique_solution_toggle.add_theme_font_override("font", custom_font)
+			unique_solution_toggle.add_theme_font_size_override("font_size", _si(14))
+			_apply_text_outline(unique_solution_toggle, 5)
 			grid_size_container.add_child(unique_solution_toggle)
 			
 		if not keep_walls_toggle:
@@ -159,7 +422,9 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 			keep_walls_toggle.text = "LOCK\nWALLS"
 			keep_walls_toggle.alignment = HORIZONTAL_ALIGNMENT_CENTER
 			keep_walls_toggle.button_pressed = true 
-			keep_walls_toggle.add_theme_font_size_override("font_size", _si(24))
+			if custom_font: keep_walls_toggle.add_theme_font_override("font", custom_font)
+			keep_walls_toggle.add_theme_font_size_override("font_size", _si(14))
+			_apply_text_outline(keep_walls_toggle, 5)
 			grid_size_container.add_child(keep_walls_toggle)
 			
 		var spacer1 = Control.new()
@@ -193,10 +458,12 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 			if not time_title_label:
 				time_title_label = Label.new()
 				time_title_label.name = "TimeTitleLabel"
-				time_title_label.text = "TIME LIMIT:"
 				level_settings_container.add_child(time_title_label)
-			else:
-				time_title_label.text = "TIME LIMIT:"
+			
+			time_title_label.text = "TIME LIMIT:"
+			if custom_font: time_title_label.add_theme_font_override("font", custom_font)
+			time_title_label.add_theme_font_size_override("font_size", _si(14))
+			_apply_text_outline(time_title_label, 5)
 				
 		var allowed_label = editor_ui_root.find_child("AllowedLabel", true, false)
 		if not allowed_label:
@@ -207,6 +474,9 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		if allowed_label:
 			allowed_label.text = "ALLOWED:"
 			allowed_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			if custom_font: allowed_label.add_theme_font_override("font", custom_font)
+			allowed_label.add_theme_font_size_override("font_size", _si(14))
+			_apply_text_outline(allowed_label, 5)
 			
 		var spacer_time = Control.new()
 		spacer_time.custom_minimum_size = _sv(40, 0)
@@ -216,108 +486,9 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		for i in range(lvl_children.size()):
 			if lvl_children[i] and lvl_children[i].get_parent() == level_settings_container:
 				level_settings_container.move_child(lvl_children[i], i)
-				
-	# --- EDITOR TOP BUTTONS ---
-	if main_menu_button:
-		if main_menu_button.get_parent() != root_parent:
-			main_menu_button.get_parent().remove_child(main_menu_button)
-			root_parent.add_child(main_menu_button)
-		main_menu_button.text = "🚪 EXIT"
-		main_menu_button.add_theme_font_size_override("font_size", _si(28))
-		main_menu_button.global_position = _sv(30, 40)
-		main_menu_button.size = _sv(130, 60)
-		
-	if test_button:
-		if test_button.get_parent() != root_parent:
-			test_button.get_parent().remove_child(test_button)
-			root_parent.add_child(test_button)
-		test_button.text = "▶️ TEST"
-		test_button.add_theme_font_size_override("font_size", _si(28))
-		test_button.global_position = _sv(170, 40)
-		test_button.size = _sv(130, 60)
-
-	if clear_button:
-		if clear_button.get_parent() != root_parent:
-			clear_button.get_parent().remove_child(clear_button)
-			root_parent.add_child(clear_button)
-		clear_button.text = "🗑️ CLEAR"
-		clear_button.global_position = _sv(310, 40)
-		clear_button.size = _sv(140, 60) 
-		clear_button.add_theme_font_size_override("font_size", _si(28))
-
-	if not editor_title_label: 
-		editor_title_label = Label.new()
-		editor_title_label.name = "EditorTitleLabel"
-		root_parent.add_child(editor_title_label)
-		
-	editor_title_label.text = "EDITOR"
-	editor_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	editor_title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	editor_title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	editor_title_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	editor_title_label.add_theme_font_size_override("font_size", _si(28))
-	editor_title_label.modulate = Color(1.0, 0.9, 0.4) 
-	editor_title_label.global_position = Vector2((screen_width - _s(200)) / 2.0, _s(40))
-	editor_title_label.size = _sv(200, 60)
-
-	if not editor_hint_button: editor_hint_button = Button.new(); editor_hint_button.name = "EditorHintButton"; root_parent.add_child(editor_hint_button)
-	editor_hint_button.text = "💡 HINT"
-	editor_hint_button.toggle_mode = true
-	editor_hint_button.button_pressed = false
-	editor_hint_button.add_theme_font_size_override("font_size", _si(28))
-	editor_hint_button.global_position = _sv(630, 40)
-	editor_hint_button.size = _sv(140, 60)
-	if not editor_hint_button.toggled.is_connected(func(on): editor_hint_toggled.emit(on)):
-		editor_hint_button.toggled.connect(func(on): editor_hint_toggled.emit(on))
-		
-	if not editor_undo_button: editor_undo_button = Button.new(); editor_undo_button.name = "EditorUndoButton"; root_parent.add_child(editor_undo_button)
-	editor_undo_button.text = "↩️ UNDO"
-	editor_undo_button.add_theme_font_size_override("font_size", _si(28))
-	editor_undo_button.global_position = _sv(780, 40)
-	editor_undo_button.size = _sv(130, 60)
-	editor_undo_button.disabled = true
-	if not editor_undo_button.pressed.is_connected(func(): editor_undo_requested.emit()):
-		editor_undo_button.pressed.connect(func(): editor_undo_requested.emit())
-		
-	if not editor_redo_button: editor_redo_button = Button.new(); editor_redo_button.name = "EditorRedoButton"; root_parent.add_child(editor_redo_button)
-	editor_redo_button.text = "↪️ REDO"
-	editor_redo_button.add_theme_font_size_override("font_size", _si(28))
-	editor_redo_button.global_position = _sv(920, 40)
-	editor_redo_button.size = _sv(130, 60)
-	editor_redo_button.disabled = true
-	if not editor_redo_button.pressed.is_connected(func(): editor_redo_requested.emit()):
-		editor_redo_button.pressed.connect(func(): editor_redo_requested.emit())
 
 	var config_container = editor_ui_root.find_child("ConfigContainer", true, false)
 	if config_container:
-		var track_bg = ButtonGroup.new()
-		
-		if not track_core_button:
-			track_core_button = Button.new()
-			track_core_button.text = "CORE"
-			track_core_button.toggle_mode = true
-			track_core_button.button_group = track_bg
-			track_core_button.add_theme_font_size_override("font_size", _si(28))
-			track_core_button.toggled.connect(_on_track_toggled)
-			config_container.add_child(track_core_button)
-		
-		if not track_custom_button:
-			track_custom_button = Button.new()
-			track_custom_button.text = "CUSTOM"
-			track_custom_button.toggle_mode = true
-			track_custom_button.button_pressed = true
-			track_custom_button.button_group = track_bg
-			track_custom_button.add_theme_font_size_override("font_size", _si(28))
-			track_custom_button.toggled.connect(_on_track_toggled)
-			config_container.add_child(track_custom_button)
-
-		var spacer_track = config_container.get_node_or_null("SpacerTrack")
-		if not spacer_track:
-			spacer_track = Control.new()
-			spacer_track.name = "SpacerTrack"
-			spacer_track.custom_minimum_size = _sv(40, 0)
-			config_container.add_child(spacer_track)
-			
 		var idx = 0
 		if save_button and save_button.get_parent() == config_container:
 			config_container.move_child(save_button, idx)
@@ -325,13 +496,6 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		if load_button and load_button.get_parent() == config_container:
 			config_container.move_child(load_button, idx)
 			idx += 1
-			
-		config_container.move_child(spacer_track, idx)
-		idx += 1
-		config_container.move_child(track_core_button, idx)
-		idx += 1
-		config_container.move_child(track_custom_button, idx)
-		idx += 1
 		
 		if level_minus and level_minus.get_parent() == config_container:
 			config_container.move_child(level_minus, idx)
@@ -341,64 +505,6 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 			idx += 1
 		if level_plus and level_plus.get_parent() == config_container:
 			config_container.move_child(level_plus, idx)
-
-	# --- PLAYTEST TOP BUTTONS ---
-	if not pt_exit_button: pt_exit_button = Button.new(); pt_exit_button.name = "PTExitButton"; root_parent.add_child(pt_exit_button)
-	pt_exit_button.text = "⏹️ STOP"
-	pt_exit_button.add_theme_font_size_override("font_size", _si(28))
-	pt_exit_button.global_position = _sv(30, 40)
-	pt_exit_button.size = _sv(130, 60)
-	pt_exit_button.visible = false
-	if not pt_exit_button.pressed.is_connected(func(): test_mode_exited.emit()):
-		pt_exit_button.pressed.connect(func(): test_mode_exited.emit())
-	
-	if not pt_reset_button: pt_reset_button = Button.new(); pt_reset_button.name = "PTResetButton"; root_parent.add_child(pt_reset_button)
-	pt_reset_button.text = "🔄 RESET"
-	pt_reset_button.add_theme_font_size_override("font_size", _si(28))
-	pt_reset_button.global_position = _sv(170, 40)
-	pt_reset_button.size = _sv(130, 60)
-	pt_reset_button.visible = false
-	if not pt_reset_button.pressed.is_connected(func(): playtest_reset_requested.emit()):
-		pt_reset_button.pressed.connect(func(): playtest_reset_requested.emit())
-		
-	if not pt_rules_button: pt_rules_button = Button.new(); pt_rules_button.name = "PTRulesButton"; root_parent.add_child(pt_rules_button)
-	pt_rules_button.text = "📖 RULES"
-	pt_rules_button.add_theme_font_size_override("font_size", _si(28))
-	pt_rules_button.global_position = _sv(310, 40)
-	pt_rules_button.size = _sv(130, 60) 
-	pt_rules_button.visible = false
-	if not pt_rules_button.pressed.is_connected(func(): playtest_rules_requested.emit()):
-		pt_rules_button.pressed.connect(func(): playtest_rules_requested.emit())
-		
-	if not pt_hint_button: pt_hint_button = Button.new(); pt_hint_button.name = "PTHintButton"; root_parent.add_child(pt_hint_button)
-	pt_hint_button.text = "💡 HINT"
-	pt_hint_button.add_theme_font_size_override("font_size", _si(28))
-	pt_hint_button.global_position = _sv(630, 40) 
-	pt_hint_button.size = _sv(140, 60)
-	pt_hint_button.visible = false
-	pt_hint_button.disabled = true
-	if not pt_hint_button.pressed.is_connected(func(): playtest_hint_requested.emit()):
-		pt_hint_button.pressed.connect(func(): playtest_hint_requested.emit())
-		
-	if not pt_undo_button: pt_undo_button = Button.new(); pt_undo_button.name = "PTUndoButton"; root_parent.add_child(pt_undo_button)
-	pt_undo_button.text = "↩️ UNDO"
-	pt_undo_button.add_theme_font_size_override("font_size", _si(28))
-	pt_undo_button.global_position = _sv(780, 40) 
-	pt_undo_button.size = _sv(130, 60)
-	pt_undo_button.visible = false
-	pt_undo_button.disabled = true
-	if not pt_undo_button.pressed.is_connected(func(): playtest_undo_requested.emit()):
-		pt_undo_button.pressed.connect(func(): playtest_undo_requested.emit())
-		
-	if not pt_redo_button: pt_redo_button = Button.new(); pt_redo_button.name = "PTRedoButton"; root_parent.add_child(pt_redo_button)
-	pt_redo_button.text = "↪️ REDO"
-	pt_redo_button.add_theme_font_size_override("font_size", _si(28))
-	pt_redo_button.global_position = _sv(920, 40) 
-	pt_redo_button.size = _sv(130, 60)
-	pt_redo_button.visible = false
-	pt_redo_button.disabled = true
-	if not pt_redo_button.pressed.is_connected(func(): playtest_redo_requested.emit()):
-		pt_redo_button.pressed.connect(func(): playtest_redo_requested.emit())
 	
 	_setup_brush_toggles()
 	_setup_tree_checkbox_icons()
@@ -419,12 +525,14 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		victory_message_label.position = _sv(20, 20)
 		victory_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		victory_message_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		victory_message_label.add_theme_font_size_override("font_size", _si(36))
+		if custom_font: victory_message_label.add_theme_font_override("font", custom_font)
+		victory_message_label.add_theme_font_size_override("font_size", _si(16))
+		_apply_text_outline(victory_message_label, 6)
 		
 	if return_button:
+		_apply_scalable_theme(return_button, 20)
 		return_button.position = _sv(100, 360)
 		return_button.set_deferred("size", _sv(300, 60))
-		return_button.add_theme_font_size_override("font_size", _si(28))
 		if not return_button.pressed.is_connected(_on_return_pressed):
 			return_button.pressed.connect(_on_return_pressed)
 		
@@ -439,18 +547,20 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		warning_label.position = _sv(20, 20)
 		warning_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		warning_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		warning_label.add_theme_font_size_override("font_size", _si(38))
+		if custom_font: warning_label.add_theme_font_override("font", custom_font)
+		warning_label.add_theme_font_size_override("font_size", _si(16))
+		_apply_text_outline(warning_label, 6)
+		_set_text_color(warning_label, Color(1.0, 0.4, 0.4))
 		warning_label.autowrap_mode = TextServer.AUTOWRAP_WORD
-		warning_label.modulate = Color(1.0, 0.4, 0.4)
 		
 	if confirm_button:
-		confirm_button.add_theme_font_size_override("font_size", _si(32))
+		_apply_scalable_theme(confirm_button, 20)
 		confirm_button.custom_minimum_size = _sv(200, 80)
 		if not confirm_button.pressed.is_connected(_on_confirm_overwrite):
 			confirm_button.pressed.connect(_on_confirm_overwrite)
 		
 	if cancel_button:
-		cancel_button.add_theme_font_size_override("font_size", _si(32))
+		_apply_scalable_theme(cancel_button, 20)
 		cancel_button.custom_minimum_size = _sv(200, 80)
 		if not cancel_button.pressed.is_connected(_on_cancel_overwrite):
 			cancel_button.pressed.connect(_on_cancel_overwrite)
@@ -476,14 +586,20 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 			how_to_play_container.visible = false
 		
 	if rules_label:
+		if rules_label is RichTextLabel:
+			rules_label.add_theme_font_size_override("normal_font_size", _si(24))
+		else:
+			rules_label.add_theme_font_size_override("font_size", _si(24))
 		rules_label.position = _sv(30, 30)
 		rules_label.size = _sv(790, 1090) 
+		_apply_text_outline(rules_label, 4)
 			
 	if tutorial_back_button:
-		var btn_size = _sv(140, 50)
-		tutorial_back_button.size = btn_size
-		var btn_x = (tutorial_size.x - btn_size.x) / 2
-		var btn_y = tutorial_size.y - btn_size.y - _s(30)
+		_apply_scalable_theme(tutorial_back_button, 18)
+		var t_btn_size = _sv(160, 60)
+		tutorial_back_button.size = t_btn_size
+		var btn_x = (tutorial_size.x - t_btn_size.x) / 2
+		var btn_y = tutorial_size.y - t_btn_size.y - _s(30)
 		tutorial_back_button.position = Vector2(btn_x, btn_y)
 		if not tutorial_back_button.pressed.is_connected(_on_tutorial_back_pressed):
 			tutorial_back_button.pressed.connect(_on_tutorial_back_pressed)
@@ -493,9 +609,10 @@ func setup_ui(grid_width: int, grid_height: int, _cell_size: float):
 		if status_label is RichTextLabel: 
 			status_label.bbcode_enabled = true
 			status_label.fit_content = true
-			status_label.add_theme_font_size_override("normal_font_size", _si(32))
+			status_label.add_theme_font_size_override("normal_font_size", _si(48))
 		else:
-			status_label.add_theme_font_size_override("font_size", _si(32))
+			status_label.add_theme_font_size_override("font_size", _si(48))
+		_apply_text_outline(status_label, 6)
 	
 	_set_button_labels()
 	_connect_ui_signals()
@@ -520,16 +637,20 @@ func _build_playtest_hud():
 	pt_title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	pt_title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pt_title_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	pt_title_label.add_theme_font_size_override("font_size", _si(28))
-	pt_title_label.modulate = Color(1.0, 0.2, 0.2) 
-	pt_title_label.global_position = Vector2((screen_width - _s(200)) / 2.0, _s(40))
-	pt_title_label.size = _sv(200, 60)
-	pt_title_label.text = "TEST MODE"
+	if custom_font: pt_title_label.add_theme_font_override("font", custom_font)
+	pt_title_label.add_theme_font_size_override("font_size", _si(36))
+	_apply_text_outline(pt_title_label, 8)
+	_set_text_color(pt_title_label, Color(1.0, 0.2, 0.2))
+	pt_title_label.global_position = Vector2((screen_width - _s(300)) / 2.0, _s(20))
+	pt_title_label.size = _sv(300, 135)
+	pt_title_label.text = "TEST\nMODE"
 	playtest_hud_container.add_child(pt_title_label)
 	
 	var pulse_tween = create_tween().set_loops()
 	pulse_tween.tween_property(pt_title_label, "modulate:a", 0.2, 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	pulse_tween.tween_property(pt_title_label, "modulate:a", 1.0, 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	
+	var counters_y = 180
 	
 	pt_timer_label = RichTextLabel.new()
 	pt_timer_label.bbcode_enabled = true
@@ -537,10 +658,12 @@ func _build_playtest_hud():
 	pt_timer_label.fit_content = false
 	pt_timer_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pt_timer_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	pt_timer_label.add_theme_font_size_override("normal_font_size", _si(32))
-	pt_timer_label.modulate = Color(0.9, 0.9, 0.9)
-	pt_timer_label.global_position = _sv(30, 115)
-	pt_timer_label.size = _sv(280, 80)
+	if custom_font: pt_timer_label.add_theme_font_override("normal_font", custom_font)
+	pt_timer_label.add_theme_font_size_override("normal_font_size", _si(24))
+	_apply_text_outline(pt_timer_label, 6)
+	_set_text_color(pt_timer_label, Color(0.9, 0.9, 0.9))
+	pt_timer_label.global_position = _sv(30, counters_y)
+	pt_timer_label.size = _sv(300, 80)
 	playtest_hud_container.add_child(pt_timer_label)
 	
 	pt_jokers_label = RichTextLabel.new()
@@ -549,10 +672,12 @@ func _build_playtest_hud():
 	pt_jokers_label.fit_content = false
 	pt_jokers_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pt_jokers_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	pt_jokers_label.add_theme_font_size_override("normal_font_size", _si(32))
-	pt_jokers_label.modulate = Color(0.4, 1.0, 0.4, 1.0) 
-	pt_jokers_label.global_position = Vector2((screen_width - _s(280)) / 2.0, _s(115))
-	pt_jokers_label.size = _sv(280, 80)
+	if custom_font: pt_jokers_label.add_theme_font_override("normal_font", custom_font)
+	pt_jokers_label.add_theme_font_size_override("normal_font_size", _si(24))
+	_apply_text_outline(pt_jokers_label, 6)
+	_set_text_color(pt_jokers_label, Color(0.4, 1.0, 0.4, 1.0))
+	pt_jokers_label.global_position = Vector2((screen_width - _s(300)) / 2.0, _s(counters_y))
+	pt_jokers_label.size = _sv(300, 80)
 	editor_ui_root.add_child(pt_jokers_label)
 	
 	pt_moves_label = RichTextLabel.new()
@@ -561,10 +686,12 @@ func _build_playtest_hud():
 	pt_moves_label.fit_content = false
 	pt_moves_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pt_moves_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	pt_moves_label.add_theme_font_size_override("normal_font_size", _si(32))
-	pt_moves_label.modulate = Color(0.75, 0.55, 1.0, 1.0) 
-	pt_moves_label.global_position = Vector2(screen_width - _s(310), _s(115))
-	pt_moves_label.size = _sv(280, 80)
+	if custom_font: pt_moves_label.add_theme_font_override("normal_font", custom_font)
+	pt_moves_label.add_theme_font_size_override("normal_font_size", _si(24))
+	_apply_text_outline(pt_moves_label, 6)
+	_set_text_color(pt_moves_label, Color(0.75, 0.55, 1.0, 1.0))
+	pt_moves_label.global_position = Vector2(screen_width - _s(330), _s(counters_y))
+	pt_moves_label.size = _sv(300, 80)
 	playtest_hud_container.add_child(pt_moves_label)
 
 	pt_status_label = RichTextLabel.new()
@@ -573,6 +700,8 @@ func _build_playtest_hud():
 	pt_status_label.fit_content = true
 	pt_status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pt_status_label.add_theme_font_size_override("normal_font_size", _si(48))
+	_apply_text_outline(pt_status_label, 6) 
+	_set_text_color(pt_status_label, Color.WHITE)
 	pt_status_label.global_position.x = _s(20)
 	pt_status_label.size = Vector2(screen_width - _s(40), _s(250))
 	editor_ui_root.add_child(pt_status_label)
@@ -581,14 +710,15 @@ func _build_playtest_hud():
 func update_playtest_hud(time_remaining: int, moves: int):
 	if pt_timer_label:
 		if editor_time_limit == 0:
-			pt_timer_label.text = "[center]TIME: ∞[/center]"
+			var inf_size = _si(46)
+			pt_timer_label.text = "[center]TIME: [img width=%d height=%d]res://icons/buttons/icon_infinity.svg[/img][/center]" % [inf_size, inf_size]
 		else:
 			var minutes = max(0, int(time_remaining / 60.0))
 			var seconds = max(0, time_remaining % 60)
 			pt_timer_label.text = "[center]TIME: %02d:%02d[/center]" % [minutes, seconds]
 			
 	if pt_moves_label:
-		pt_moves_label.text = "[center][img width=%d height=%d region=0,-12,128,128]res://icons/tiles/tile_purple.svg[/img] MOVES: %d[/center]" % [_si(28), _si(28), moves]
+		pt_moves_label.text = "[center][img width=%d height=%d region=0,-12,128,128]res://icons/tiles/tile_purple.svg[/img] MOVES: %d[/center]" % [_si(32), _si(32), moves]
 
 func _setup_tree_checkbox_icons():
 	var tex_zero_file = load("res://icons/tiles/tile_yellow.svg")
@@ -601,7 +731,8 @@ func _setup_tree_checkbox_icons():
 		if tex_zero_file: allow_zero.icon = tex_zero_file
 		elif icon_zero: allow_zero.icon = icon_zero
 		allow_zero.expand_icon = true
-		allow_zero.add_theme_constant_override("icon_max_width", _si(48))
+		allow_zero.add_theme_constant_override("icon_max_width", _si(64))
+		_apply_scalable_theme(allow_zero as Button, 20)
 		
 	if allow_one:
 		allow_one.toggle_mode = true
@@ -609,7 +740,8 @@ func _setup_tree_checkbox_icons():
 		if tex_one_file: allow_one.icon = tex_one_file
 		elif icon_one: allow_one.icon = icon_one
 		allow_one.expand_icon = true
-		allow_one.add_theme_constant_override("icon_max_width", _si(48))
+		allow_one.add_theme_constant_override("icon_max_width", _si(64))
+		_apply_scalable_theme(allow_one as Button, 20)
 		
 	if allow_joker:
 		allow_joker.toggle_mode = true
@@ -617,7 +749,8 @@ func _setup_tree_checkbox_icons():
 		if tex_joker_file: allow_joker.icon = tex_joker_file
 		elif icon_joker: allow_joker.icon = icon_joker
 		allow_joker.expand_icon = true
-		allow_joker.add_theme_constant_override("icon_max_width", _si(48))
+		allow_joker.add_theme_constant_override("icon_max_width", _si(64))
+		_apply_scalable_theme(allow_joker as Button, 20)
 
 func get_allowed_tiles() -> Array:
 	var tiles: Array = []
@@ -643,12 +776,12 @@ func _update_panel_layout(_grid_width: int, _grid_height: int):
 	var screen_height = get_viewport().get_visible_rect().size.y
 	
 	var panel_width = screen_width
-	var panel_height = _s(680.0)
+	var panel_height = _s(760.0) 
 	var panel_x = 0.0
 	
 	var control_panel_y = screen_height - panel_height + (editor_cell_size * 0.66)
 	
-	var _square_btns = [width_minus, width_plus, height_minus, height_plus, level_minus, level_plus, time_minus, time_plus]
+	var _square_btns = [width_minus, width_plus, height_minus, height_plus, level_minus, level_plus, time_minus, time_plus, random_button, allow_zero, allow_one, allow_joker]
 	
 	var control_panel = editor_ui_root.find_child("ControlPanel", true, false)
 	if control_panel:
@@ -657,79 +790,72 @@ func _update_panel_layout(_grid_width: int, _grid_height: int):
 		
 	if grid_size_container:
 		grid_size_container.position = _sv(40, 20)
-		grid_size_container.set_deferred("size", Vector2(panel_width - _s(80), _s(80)))
+		grid_size_container.set_deferred("size", Vector2(panel_width - _s(80), _s(110)))
 		for child in grid_size_container.get_children():
 			if child is Control:
 				if child in _square_btns:
 					child.size_flags_horizontal = 0
-					child.custom_minimum_size = _sv(80, 80)
+					child.custom_minimum_size = _sv(110, 110)
 				else:
 					child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-					child.custom_minimum_size = _sv(0, 80)
-				if child is Button or child is Label:
-					if not child.has_theme_font_size_override("font_size"):
-						child.add_theme_font_size_override("font_size", _si(28))
+					child.custom_minimum_size = _sv(0, 110)
 				if child is Label:
 					child.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 					child.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	
 	if brush_container:
-		brush_container.position = _sv(40, 110)
-		brush_container.set_deferred("size", Vector2(panel_width - _s(80), _s(80)))
+		brush_container.alignment = BoxContainer.ALIGNMENT_CENTER
+		brush_container.position = _sv(40, 140)
+		brush_container.set_deferred("size", Vector2(panel_width - _s(80), _s(110)))
 		for btn in brush_container.get_children():
 			if btn is Button:
-				btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				btn.custom_minimum_size = _sv(0, 80) 
+				btn.size_flags_horizontal = 0
+				btn.custom_minimum_size = _sv(110, 110) 
 				btn.expand_icon = true
-				btn.add_theme_constant_override("icon_max_width", _si(56))
+				btn.add_theme_constant_override("icon_max_width", _si(75))
 				btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-				if not btn.has_theme_font_size_override("font_size"):
-					btn.add_theme_font_size_override("font_size", _si(28))
 					
 	if level_settings_container:
-		level_settings_container.position = _sv(40, 200)
-		level_settings_container.set_deferred("size", Vector2(panel_width - _s(80), _s(80)))
+		level_settings_container.position = _sv(40, 260)
+		level_settings_container.set_deferred("size", Vector2(panel_width - _s(80), _s(110)))
 		for child in level_settings_container.get_children():
 			if child is Control:
 				if child in _square_btns:
 					child.size_flags_horizontal = 0
-					child.custom_minimum_size = _sv(80, 80)
+					child.custom_minimum_size = _sv(110, 110)
 				else:
 					child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-					child.custom_minimum_size = _sv(0, 80)
-				if child is Button or child is CheckBox or child is Label:
-					if not child.has_theme_font_size_override("font_size") and child != time_label:
-						child.add_theme_font_size_override("font_size", _si(28))
+					child.custom_minimum_size = _sv(0, 110)
 				if child is Label:
 					child.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 					child.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 					
 	var config_container = editor_ui_root.find_child("ConfigContainer", true, false)
 	if config_container:
-		config_container.position = _sv(40, 290)
-		config_container.set_deferred("size", Vector2(panel_width - _s(80), _s(80)))
+		if config_container.has_method("set_alignment"):
+			config_container.alignment = BoxContainer.ALIGNMENT_CENTER
+		config_container.position = _sv(40, 380)
+		config_container.set_deferred("size", Vector2(panel_width - _s(80), _s(110)))
 		for child in config_container.get_children():
 			if child is Control:
+				child.size_flags_horizontal = 0
 				if child in _square_btns:
-					child.size_flags_horizontal = 0
-					child.custom_minimum_size = _sv(80, 80)
-				else:
-					child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-					child.custom_minimum_size = _sv(0, 80)
-				if child is Button or child is Label:
-					if not child.has_theme_font_size_override("font_size") and child != level_label:
-						child.add_theme_font_size_override("font_size", _si(28))
+					child.custom_minimum_size = _sv(110, 110)
+				elif child == save_button or child == load_button:
+					child.custom_minimum_size = _sv(0, 110)
+				elif child == level_label:
+					child.custom_minimum_size = _sv(180, 110)
 				if child is Label:
 					child.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 					child.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 					
 	var button_row = editor_ui_root.find_child("ButtonRow", true, false)
 	if button_row:
-		button_row.position = _sv(50, 380)
-		button_row.set_deferred("size", _sv(500, 80))
+		button_row.position = _sv(50, 500)
+		button_row.set_deferred("size", _sv(500, 110))
 
 	if status_label and not is_playtesting_mode:
-		status_label.position = _sv(40, 470)
+		status_label.position = _sv(40, 620)
 		status_label.set_deferred("size", Vector2(panel_width - _s(80), _s(60)))
 
 func sync_size_displays(new_w: int, new_h: int):
@@ -739,18 +865,34 @@ func sync_size_displays(new_w: int, new_h: int):
 	_update_panel_layout(editor_width, editor_height)
 
 func _update_number_labels():
-	if width_label: width_label.text = "X: " + str(editor_width)
-	if height_label: height_label.text = "Y: " + str(editor_height)
+	if width_label: 
+		width_label.text = "X: " + str(editor_width)
+		if custom_font: width_label.add_theme_font_override("font", custom_font)
+		width_label.add_theme_font_size_override("font_size", _si(18))
+		_apply_text_outline(width_label, 5)
+		_set_text_color(width_label, Color.WHITE)
+		
+	if height_label: 
+		height_label.text = "Y: " + str(editor_height)
+		if custom_font: height_label.add_theme_font_override("font", custom_font)
+		height_label.add_theme_font_size_override("font_size", _si(18))
+		_apply_text_outline(height_label, 5)
+		_set_text_color(height_label, Color.WHITE)
 	
 	if time_label:
 		if time_label is RichTextLabel:
-			time_label.add_theme_font_size_override("normal_font_size", _si(28))
+			if custom_font: time_label.add_theme_font_override("normal_font", custom_font)
+			time_label.add_theme_font_size_override("normal_font_size", _si(18))
 		else:
-			time_label.add_theme_font_size_override("font_size", _si(28))
+			if custom_font: time_label.add_theme_font_override("font", custom_font)
+			time_label.add_theme_font_size_override("font_size", _si(18))
+		_apply_text_outline(time_label, 5)
+		_set_text_color(time_label, Color.WHITE)
 			
 		if editor_time_limit == 0:
 			if time_label is RichTextLabel:
-				time_label.text = "[center]∞[/center]"
+				var inf_size = _si(26)
+				time_label.text = "[center][img width=%d height=%d]res://icons/buttons/icon_infinity.svg[/img][/center]" % [inf_size, inf_size]
 			else:
 				time_label.text = "∞"
 		else:
@@ -762,11 +904,14 @@ func _update_number_labels():
 	if level_label: 
 		if level_label is RichTextLabel:
 			level_label.bbcode_enabled = true
-			level_label.add_theme_font_size_override("normal_font_size", _si(32))
+			if custom_font: level_label.add_theme_font_override("normal_font", custom_font)
+			level_label.add_theme_font_size_override("normal_font_size", _si(22))
 			level_label.text = "[center]LEVEL " + str(editor_level) + "[/center]"
 		else:
-			level_label.add_theme_font_size_override("font_size", _si(32))
+			if custom_font: level_label.add_theme_font_override("font", custom_font)
+			level_label.add_theme_font_size_override("font_size", _si(22))
 			level_label.text = "LEVEL " + str(editor_level)
+		_apply_text_outline(level_label, 6)
 
 func update_dynamic_editor_layout(_board_y: float, _board_height: float) -> void:
 	_update_panel_layout(editor_width, editor_height)
@@ -777,45 +922,67 @@ func _set_button_labels():
 	if wall_button: 
 		wall_button.text = ""
 		if icon_wall: wall_button.icon = icon_wall
+		_apply_scalable_theme(wall_button, 22)
 	if empty_button: 
 		empty_button.text = ""
 		if icon_empty: empty_button.icon = icon_empty
+		_apply_scalable_theme(empty_button, 22)
 	if zero_button: 
 		zero_button.text = ""
 		if icon_zero: zero_button.icon = icon_zero
+		_apply_scalable_theme(zero_button, 22)
 	if one_button: 
 		one_button.text = ""
 		if icon_one: one_button.icon = icon_one
+		_apply_scalable_theme(one_button, 22)
 	if joker_button: 
 		joker_button.text = ""
 		if icon_joker: joker_button.icon = icon_joker
+		_apply_scalable_theme(joker_button, 22)
 	if shifter_button:
 		shifter_button.text = ""
 		var tex_shifter_icon = load("res://icons/tiles/tile_purple.svg")
 		if tex_shifter_icon: shifter_button.icon = tex_shifter_icon
+		_apply_scalable_theme(shifter_button, 22)
 		
 	if equals_button:
 		equals_button.text = "  =  "
-		equals_button.add_theme_font_size_override("font_size", _si(44))
-		equals_button.add_theme_color_override("font_outline_color", Color.BLACK)
-		equals_button.add_theme_constant_override("outline_size", _si(8))
+		_apply_scalable_theme(equals_button, 32)
 	if not_equals_button:
 		not_equals_button.text = "  ×  "
-		not_equals_button.add_theme_font_size_override("font_size", _si(44))
-		not_equals_button.add_theme_color_override("font_outline_color", Color.BLACK)
-		not_equals_button.add_theme_constant_override("outline_size", _si(8))
+		_apply_scalable_theme(not_equals_button, 32)
 	
-	if save_button: save_button.text = "💾 SAVE" 
-	if load_button: load_button.text = "📂 LOAD"
+	if random_button:
+		_set_icon_only_button(random_button, "icon_random.svg", 70)
+	if save_button: 
+		_set_button_with_icon(save_button, "SAVE", "icon_save.svg", 20)
+	if load_button: 
+		_set_button_with_icon(load_button, "LOAD", "icon_load.svg", 20)
 	
-	if width_minus: width_minus.text = "-"
-	if width_plus: width_plus.text = "+"
-	if height_minus: height_minus.text = "-"
-	if height_plus: height_plus.text = "+"
-	if level_minus: level_minus.text = "-"
-	if level_plus: level_plus.text = "+"
-	if time_minus: time_minus.text = "-"
-	if time_plus: time_plus.text = "+"
+	if width_minus: 
+		width_minus.text = "-"
+		_apply_scalable_theme(width_minus, 26)
+	if width_plus: 
+		width_plus.text = "+"
+		_apply_scalable_theme(width_plus, 26)
+	if height_minus: 
+		height_minus.text = "-"
+		_apply_scalable_theme(height_minus, 26)
+	if height_plus: 
+		height_plus.text = "+"
+		_apply_scalable_theme(height_plus, 26)
+	if level_minus: 
+		level_minus.text = "-"
+		_apply_scalable_theme(level_minus, 26)
+	if level_plus: 
+		level_plus.text = "+"
+		_apply_scalable_theme(level_plus, 26)
+	if time_minus: 
+		time_minus.text = "-"
+		_apply_scalable_theme(time_minus, 26)
+	if time_plus: 
+		time_plus.text = "+"
+		_apply_scalable_theme(time_plus, 26)
 
 func _connect_ui_signals():
 	if clear_button: clear_button.pressed.connect(func(): clear_requested.emit()) 
@@ -877,15 +1044,15 @@ func _adjust_value(target: String, amount: int):
 
 func update_status(msg: String, text_color: Color):
 	if status_label:
+		_set_text_color(status_label, text_color)
 		if status_label is RichTextLabel:
-			status_label.text = "[center][color=#" + text_color.to_html() + "]" + msg.replace("[center]", "").replace("[/center]", "") + "[/color][/center]"
+			status_label.text = "[center]" + msg.replace("[center]", "").replace("[/center]", "") + "[/center]"
 		else:
 			status_label.text = msg.replace("[center]", "").replace("[/center]", "")
-			status_label.modulate = text_color
 
 func update_playtest_status(msg: String, text_color: Color):
 	if pt_status_label:
-		pt_status_label.modulate = text_color
+		_set_text_color(pt_status_label, text_color)
 		pt_status_label.text = "[center]" + msg.replace("[center]", "").replace("[/center]", "") + "[/center]"
 
 func toggle_playtest_visibility(is_playtesting: bool):
@@ -941,9 +1108,9 @@ func display_victory_overlay(compiled_text: String):
 	if victory_message_label:
 		victory_message_label.text = compiled_text
 		if "DEFEAT" in compiled_text:
-			victory_message_label.modulate = Color(1.0, 0.3, 0.3) 
+			_set_text_color(victory_message_label, Color(1.0, 0.3, 0.3))
 		else:
-			victory_message_label.modulate = Color(0.4, 1.0, 0.4) 
+			_set_text_color(victory_message_label, Color(0.4, 1.0, 0.4))
 	if playtest_victory_panel:
 		playtest_victory_panel.visible = true
 
@@ -953,14 +1120,7 @@ func hide_victory_overlay():
 func get_level_number() -> int: return editor_level
 
 func is_custom_track_active() -> bool:
-	if track_custom_button: return track_custom_button.button_pressed
-	return true
-
-func _on_track_toggled(_on: bool):
-	if save_button:
-		save_button.disabled = track_core_button.button_pressed
-	if not is_playtesting_mode:
-		update_status("", Color.WHITE)
+	return true 
 
 func _on_return_pressed():
 	hide_victory_overlay()
@@ -1015,7 +1175,7 @@ func set_editor_hint_toggle(is_on: bool):
 
 func update_playtest_joker_counter(current: int, required: int):
 	if pt_jokers_label:
-		pt_jokers_label.text = "[center][img width=%d height=%d region=0,-12,128,128]res://icons/tiles/tile_green.svg[/img] USED: %d/%d[/center]" % [_si(28), _si(28), current, required]
+		pt_jokers_label.text = "[center][img width=%d height=%d region=0,-12,128,128]res://icons/tiles/tile_green.svg[/img] USED: %d/%d[/center]" % [_si(32), _si(32), current, required]
 
 func set_playtest_joker_counter_visibility(is_visible: bool):
 	if pt_jokers_label:

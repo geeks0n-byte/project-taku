@@ -132,7 +132,10 @@ func update_visuals():
 			chevron_icon.visible = false
 			
 	if state == -2:
-		modulate = Color(1.0, 1.0, 1.0, 0.0) 
+		if is_editor_mode:
+			modulate = Color(1.0, 1.0, 1.0, 1.0) 
+		else:
+			modulate = Color(1.0, 1.0, 1.0, 0.0) 
 	elif state == -1:
 		modulate = Color(1.0, 1.0, 1.0, 0.85) 
 	else:

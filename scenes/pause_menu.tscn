@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://b63k7kkhmvpc7" path="res://scripts/pause_menu.gd" id="1_n87rw"]
 [ext_resource type="Texture2D" uid="uid://ds4khbnemdfjp" path="res://icons/buttons/Big@2x.png" id="2_myx47"]
-[ext_resource type="Texture2D" uid="uid://f783gmenppba" path="res://icons/buttons/button_tile_gray.svg" id="3_kukqi"]
+[ext_resource type="Texture2D" uid="uid://f783gmenppba" path="res://icons/buttons/button_tile_gray_dark.svg" id="3_kukqi"]
 
 [node name="PauseMenu" type="Control" unique_id=1796595449]
 layout_mode = 3

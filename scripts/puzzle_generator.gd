@@ -9,7 +9,6 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 	if not (0 in solver_tiles): solver_tiles.append(0)
 	if not (1 in solver_tiles): solver_tiles.append(1)
 	
-	# Massive window to generate randomized walls and dynamic shifters securely
 	while attempt < 2500: 
 		attempt += 1
 		var force_no_walls = (attempt > 2000)
@@ -69,9 +68,6 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		var base_shifter_pairs = int(round((total_playable * 0.20) / 2.0))
 		var target_shifter_pairs = base_shifter_pairs
 		
-		# --- DYNAMIC SHIFTER ESCALATOR ---
-		# Every 75 attempts, inject 1 more pair of Purples to resolve parity imbalances (e.g. 3x6 grids)
-		# Fixed warning: Divided by 75.0 before casting to int
 		target_shifter_pairs += int(attempt / 75.0)
 		
 		if target_shifter_pairs <= 1 and total_playable >= 4:
@@ -79,8 +75,6 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		elif target_shifter_pairs < 1 and total_playable >= 2:
 			target_shifter_pairs = 1
 			
-		# Caps injection mathematically so it doesn't try to cram 8 pairs into a 3x3 board
-		# Fixed warning: Divided by 2.0 before casting to int
 		target_shifter_pairs = min(target_shifter_pairs, int(total_playable / 2.0))
 		
 		var pairs_placed = 0
@@ -139,7 +133,6 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		if r_sum != c_sum:
 			continue 
 
-		# Solve the rest of the board with Yellow, Blue, Green (0, 1, 2)
 		var iter_tracker = {"count": 0}
 		var success = _solve(layout, empty_cells.duplicate(), width, height, solver_tiles, [], iter_tracker)
 		if not success: continue 
@@ -152,9 +145,9 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 				total_jokers_generated += 1
 
 		# ==========================================
-		# STEP 3: Create as much hints as possible
+		# STEP 3: Identify ALL Possible Constraints
 		# ==========================================
-		var constraints = []
+		var all_possible_constraints = []
 		for y in range(height):
 			for x in range(width):
 				var c = Vector2i(x, y)
@@ -164,11 +157,11 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 					
 					if solved_layout.has(right) and solved_layout[right] in [0, 1]:
 						var type = "equals" if solved_layout[c] == solved_layout[right] else "not_equals"
-						constraints.append({"a": c, "b": right, "type": type})
+						all_possible_constraints.append({"a": c, "b": right, "type": type})
 							
 					if solved_layout.has(down) and solved_layout[down] in [0, 1]:
 						var type = "equals" if solved_layout[c] == solved_layout[down] else "not_equals"
-						constraints.append({"a": c, "b": down, "type": type})
+						all_possible_constraints.append({"a": c, "b": down, "type": type})
 
 		# ==========================================
 		# STEP 4: Smart Hole Punching
@@ -219,7 +212,8 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		var cleared_count = 0
 		
 		for c in clearable_cells:
-			if not require_unique and cleared_count >= target_to_clear:
+			# FIX: Always stop when we reach the target clear count!
+			if cleared_count >= target_to_clear:
 				break 
 				
 			var original_val = layout[c]
@@ -227,7 +221,7 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 			current_empty.append(c)
 			
 			if require_unique:
-				var sols = _count_solutions(layout, current_empty, width, height, solver_tiles, constraints, {"count": 0})
+				var sols = _count_solutions(layout, current_empty, width, height, solver_tiles, all_possible_constraints, {"count": 0})
 				
 				if sols != 1:
 					layout[c] = original_val
@@ -236,6 +230,30 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 					cleared_count += 1
 			else:
 				cleared_count += 1
+
+		# ==========================================
+		# STEP 5: Constraint Minimizer
+		# ==========================================
+		var final_constraints = []
+		var hidden_hints = []
+		
+		if require_unique:
+			var current_constraints = all_possible_constraints.duplicate()
+			current_constraints.shuffle()
+			
+			for i in range(current_constraints.size() - 1, -1, -1):
+				var test_constraint = current_constraints[i]
+				current_constraints.remove_at(i)
+				
+				var sols = _count_solutions(layout, current_empty, width, height, solver_tiles, current_constraints, {"count": 0})
+				if sols != 1:
+					current_constraints.insert(i, test_constraint)
+				else:
+					hidden_hints.append(test_constraint)
+					
+			final_constraints = current_constraints
+		else:
+			hidden_hints = all_possible_constraints.duplicate()
 
 		for pair in shifters:
 			layout[pair.a] = -1
@@ -249,7 +267,8 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		return {
 			"layout": layout,
 			"shifters": shifters,
-			"constraints": constraints,
+			"constraints": final_constraints,
+			"hidden_hints": hidden_hints,
 			"total_jokers": total_jokers_generated
 		}
 		
@@ -259,7 +278,8 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 static func _solve(layout: Dictionary, empty_cells: Array, w: int, h: int, allowed: Array, constraints: Array, iter: Dictionary) -> bool:
 	if empty_cells.size() == 0: return true
 	iter.count += 1
-	if iter.count > 10000: return false 
+	# FIX: Massively increased safety timeout to prevent false negatives
+	if iter.count > 60000: return false 
 	
 	var best_idx = -1
 	var min_opts = 999
@@ -297,7 +317,8 @@ static func _solve(layout: Dictionary, empty_cells: Array, w: int, h: int, allow
 static func _count_solutions(layout: Dictionary, empty_cells: Array, w: int, h: int, allowed: Array, constraints: Array, iter: Dictionary) -> int:
 	if empty_cells.size() == 0: return 1
 	iter.count += 1
-	if iter.count > 5000: return 2 
+	# FIX: Massively increased safety timeout to ensure holes are punched fully
+	if iter.count > 40000: return 2 
 	
 	var best_idx = -1
 	var min_opts = 999

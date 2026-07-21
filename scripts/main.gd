@@ -21,7 +21,6 @@ var is_game_active: bool = true
 var is_paused: bool = false 
 var current_level_index: int = 0
 
-var pending_hints: Array = [] 
 var solved_solution_reference: Dictionary = {}
 
 var required_jokers: int = 0 
@@ -208,36 +207,109 @@ func generate_board():
 	elif "red_pairs" in current_level_resource:
 		s_pairs = current_level_resource.red_pairs
 		
-	ui_manager.set_move_counter_visibility(s_pairs.size() > 0)
-	
-	var prefilled_jokers = 0
-	for coord in current_level_resource.layout:
-		if current_level_resource.layout[coord] == 2:
-			prefilled_jokers += 1
-			
-	var saved_req_jokers = current_level_resource.get("required_jokers") if "required_jokers" in current_level_resource else -1
-	
-	if saved_req_jokers == -1:
-		required_jokers = min(actual_w, actual_h)
-	else:
-		required_jokers = saved_req_jokers
-		
-	required_jokers = max(0, required_jokers - prefilled_jokers)
-	
-	var has_jokers = (required_jokers > 0)
-	ui_manager.set_joker_counter_visibility(has_jokers)
-		
 	var c_pairs: Array = []
 	if "constraint_pairs" in current_level_resource:
-		c_pairs = current_level_resource.constraint_pairs.duplicate()
+		c_pairs = current_level_resource.constraint_pairs.duplicate(true)
 		
-	solved_solution_reference = current_level_resource.layout.duplicate()
-	
-	pending_hints = c_pairs.duplicate()
-	pending_hints.shuffle()
+	# --- SMART DETECTION: TUTORIAL VS TEMPLATE ---
+	var is_tutorial_level = false
+	for coord in current_level_resource.layout:
+		# If any cell has a preset color/state (0, 1, 2, or 3), it's handcrafted.
+		if current_level_resource.layout[coord] >= 0:
+			is_tutorial_level = true
+			break
+			
+	# If any links were manually saved, it's handcrafted.
+	if s_pairs.size() > 0 or c_pairs.size() > 0:
+		is_tutorial_level = true
+		
+	var fresh_layout = {}
+	var final_s_pairs = []
+	var final_c_pairs = []
+
+	if is_tutorial_level:
+		# ==== TUTORIAL MODE (Load Exactly As Saved) ====
+		fresh_layout = current_level_resource.layout.duplicate()
+		final_s_pairs = s_pairs.duplicate()
+		final_c_pairs = c_pairs.duplicate()
+		
+		ui_manager.set_move_counter_visibility(final_s_pairs.size() > 0)
+		
+		var prefilled_jokers = 0
+		for coord in fresh_layout:
+			if fresh_layout[coord] == 2:
+				prefilled_jokers += 1
+				
+		var saved_req_jokers = current_level_resource.get("required_jokers") if "required_jokers" in current_level_resource else -1
+		if saved_req_jokers == -1:
+			required_jokers = min(actual_w, actual_h)
+		else:
+			required_jokers = saved_req_jokers
+			
+		required_jokers = max(0, required_jokers - prefilled_jokers)
+		
+		var solve_layout = fresh_layout.duplicate()
+		var empty_cells = []
+		for c in solve_layout:
+			if solve_layout[c] == -1:
+				empty_cells.append(c)
+				
+		var test_layout = solve_layout.duplicate()
+		var test_empty = empty_cells.duplicate()
+		if PuzzleGenerator._solve(test_layout, test_empty, actual_w, actual_h, tiles_list, final_c_pairs, {"count": 0}):
+			solved_solution_reference = test_layout
+		else:
+			solved_solution_reference = {}
+			
+	else:
+		# ==== NORMAL MODE (Procedural Generation Template) ====
+		var generated = {}
+		for attempt in range(5):
+			generated = PuzzleGenerator.generate_random_layout(actual_w, actual_h, tiles_list, current_level_resource.layout, true, true)
+			if not generated.is_empty():
+				break
+				
+		if generated.is_empty():
+			is_game_active = false
+			if timer_node: timer_node.stop()
+			ui_manager.show_status_errors(["ERROR: This level's shape cannot mathematically generate a valid puzzle."])
+			return
+			
+		fresh_layout = generated["layout"]
+		final_s_pairs = generated["shifters"]
+		final_c_pairs = generated["constraints"]
+		
+		ui_manager.set_move_counter_visibility(final_s_pairs.size() > 0)
+		
+		var generated_jokers = generated["total_jokers"]
+		var prefilled_jokers = 0
+		for coord in fresh_layout:
+			if fresh_layout[coord] == 2:
+				prefilled_jokers += 1
+				
+		required_jokers = max(0, generated_jokers - prefilled_jokers)
+		
+		var solve_layout = fresh_layout.duplicate()
+		var empty_cells = []
+		for c in solve_layout:
+			if solve_layout[c] == -1:
+				empty_cells.append(c)
+				
+		var test_layout = solve_layout.duplicate()
+		var test_empty = empty_cells.duplicate()
+		if PuzzleGenerator._solve(test_layout, test_empty, actual_w, actual_h, tiles_list, final_c_pairs, {"count": 0}):
+			solved_solution_reference = test_layout
+		else:
+			solved_solution_reference = {}
+
+	# Update the UI Joker Counter visibility
+	var has_jokers = (2 in tiles_list) and (required_jokers > 0)
+	ui_manager.set_joker_counter_visibility(has_jokers)
 	
 	ui_manager.display_level(current_level_resource.level_number, is_custom)
-	board_manager.build_grid(current_level_resource.layout, tiles_list, s_pairs, [])
+	
+	# Build the finalized board!
+	board_manager.build_grid(fresh_layout, tiles_list, final_s_pairs, final_c_pairs)
 	
 	_update_joker_count()
 	
@@ -274,6 +346,7 @@ func _create_game_snapshot() -> Dictionary:
 		}
 	return {
 		"cells": snap,
+		"constraints": board_manager.active_constraint_pairs.duplicate(true),
 		"moves": shifter_move_count
 	}
 
@@ -287,6 +360,8 @@ func _apply_game_snapshot(snap: Dictionary):
 		cell.state = cells[coord]["state"]
 		cell.shifter_direction = cells[coord]["shifter_direction"]
 		cell.update_visuals()
+		
+	board_manager.active_constraint_pairs = snap.get("constraints", []).duplicate(true)
 		
 	_update_joker_count()
 	if board_manager.has_method("trigger_redraw"):
@@ -333,74 +408,127 @@ func _update_joker_count():
 	ui_manager.update_joker_counter(current_jokers, required_jokers)
 
 func _get_usable_hints_count() -> int:
+	if solved_solution_reference.is_empty(): return 0
 	var count = 0
-	for candidate in pending_hints:
-		var coord_a = candidate["a"]
-		var coord_b = candidate["b"]
-		var type = candidate["type"]
-		
-		var overlap = false
-		for active in board_manager.active_constraint_pairs:
-			if active["a"] == coord_a or active["b"] == coord_a or active["a"] == coord_b or active["b"] == coord_b:
-				overlap = true; break
-		if overlap: continue
-		
-		var current_a = board_manager.board_cells[coord_a].state if board_manager.board_cells.has(coord_a) else -1
-		var current_b = board_manager.board_cells[coord_b].state if board_manager.board_cells.has(coord_b) else -1
-		
-		if current_a != -1 and current_b != -1:
-			if type == "equals" and current_a == current_b: continue
-			if type == "not_equals" and current_a != current_b: continue
+	
+	var actual_w = 0; var actual_h = 0
+	for c in solved_solution_reference.keys():
+		if c.x > actual_w: actual_w = c.x
+		if c.y > actual_h: actual_h = c.y
+	actual_w += 1; actual_h += 1
+	
+	for y in range(actual_h):
+		for x in range(actual_w):
+			var c = Vector2i(x, y)
+			var right = c + Vector2i(1, 0)
+			var down = c + Vector2i(0, 1)
 			
-		count += 1
+			if _is_hint_usable(c, right): count += 1
+			if _is_hint_usable(c, down): count += 1
+			
 	return count
+
+func _is_hint_usable(coord_a: Vector2i, coord_b: Vector2i) -> bool:
+	if not solved_solution_reference.has(coord_a) or not solved_solution_reference.has(coord_b): return false
+	
+	var sol_a = solved_solution_reference[coord_a]
+	var sol_b = solved_solution_reference[coord_b]
+	
+	if not (sol_a in [0, 1] and sol_b in [0, 1]): return false
+	
+	for active in board_manager.active_constraint_pairs:
+		if (active["a"] == coord_a and active["b"] == coord_b) or (active["a"] == coord_b and active["b"] == coord_a):
+			return false
+			
+	var state_a = board_manager.board_cells[coord_a].state
+	var state_b = board_manager.board_cells[coord_b].state
+	
+	var a_filled = (state_a == 0 or state_a == 1)
+	var b_filled = (state_b == 0 or state_b == 1)
+	
+	if a_filled and b_filled:
+		var type = "equals" if sol_a == sol_b else "not_equals"
+		var is_satisfied = false
+		if type == "equals" and state_a == state_b: is_satisfied = true
+		elif type == "not_equals" and state_a != state_b: is_satisfied = true
+		if is_satisfied: return false
+		
+	return true
 
 func _on_hint_requested():
 	if not is_game_active or is_paused: return
+	if solved_solution_reference.is_empty(): return
 	
-	var selected_hint = null
-	var skipped_hints = []
+	var priority_1 = [] 
+	var priority_2 = [] 
+	var priority_3 = [] 
 	
-	while pending_hints.size() > 0:
-		var candidate = pending_hints.pop_back()
-		var coord_a = candidate["a"]
-		var coord_b = candidate["b"]
-		var type = candidate["type"]
-		
-		var cell_already_has_hint = false
-		for active_hint in board_manager.active_constraint_pairs:
-			if active_hint["a"] == coord_a or active_hint["b"] == coord_a or active_hint["a"] == coord_b or active_hint["b"] == coord_b:
-				cell_already_has_hint = true
-				break
-				
-		if cell_already_has_hint:
-			skipped_hints.append(candidate)
-			continue
-		
-		var current_a = board_manager.board_cells[coord_a].state if board_manager.board_cells.has(coord_a) else -1
-		var current_b = board_manager.board_cells[coord_b].state if board_manager.board_cells.has(coord_b) else -1
-		
-		var is_satisfied = false
-		if current_a != -1 and current_b != -1:
-			if type == "equals" and current_a == current_b:
-				is_satisfied = true
-			elif type == "not_equals" and current_a != current_b:
-				is_satisfied = true
-				
-		if is_satisfied:
-			skipped_hints.append(candidate) 
-			continue
+	var actual_w = 0; var actual_h = 0
+	for c in solved_solution_reference.keys():
+		if c.x > actual_w: actual_w = c.x
+		if c.y > actual_h: actual_h = c.y
+	actual_w += 1; actual_h += 1
+	
+	for y in range(actual_h):
+		for x in range(actual_w):
+			var c = Vector2i(x, y)
+			var right = c + Vector2i(1, 0)
+			var down = c + Vector2i(0, 1)
 			
-		selected_hint = candidate
-		break
+			_evaluate_hint_candidate(c, right, priority_1, priority_2, priority_3)
+			_evaluate_hint_candidate(c, down, priority_1, priority_2, priority_3)
+			
+	var selected_hint = null
+	if priority_1.size() > 0:
+		selected_hint = priority_1.pick_random()
+	elif priority_2.size() > 0:
+		selected_hint = priority_2.pick_random()
+	elif priority_3.size() > 0:
+		selected_hint = priority_3.pick_random()
 		
-	pending_hints.append_array(skipped_hints)
-	pending_hints.shuffle()
-	
 	if selected_hint != null:
 		board_manager.active_constraint_pairs.append(selected_hint)
 		board_manager.trigger_redraw()
 		_run_validation_pass()
+
+func _evaluate_hint_candidate(coord_a: Vector2i, coord_b: Vector2i, p1: Array, p2: Array, p3: Array):
+	if not solved_solution_reference.has(coord_a) or not solved_solution_reference.has(coord_b): return
+	
+	var sol_a = solved_solution_reference[coord_a]
+	var sol_b = solved_solution_reference[coord_b]
+	
+	if not (sol_a in [0, 1] and sol_b in [0, 1]): return
+	
+	for active in board_manager.active_constraint_pairs:
+		if (active["a"] == coord_a and active["b"] == coord_b) or (active["a"] == coord_b and active["b"] == coord_a):
+			return 
+			
+	var type = "equals" if sol_a == sol_b else "not_equals"
+	var candidate = {"a": coord_a, "b": coord_b, "type": type}
+	
+	var state_a = board_manager.board_cells[coord_a].state
+	var state_b = board_manager.board_cells[coord_b].state
+	
+	var a_filled = (state_a == 0 or state_a == 1)
+	var b_filled = (state_b == 0 or state_b == 1)
+	var a_empty = (state_a == -1)
+	var b_empty = (state_b == -1)
+	
+	if (state_a != -1 and not a_filled) or (state_b != -1 and not b_filled):
+		p3.append(candidate)
+		return
+		
+	if (a_filled and b_empty) or (b_filled and a_empty):
+		p1.append(candidate)
+	elif a_empty and b_empty:
+		p2.append(candidate)
+	elif a_filled and b_filled:
+		var is_satisfied = false
+		if type == "equals" and state_a == state_b: is_satisfied = true
+		elif type == "not_equals" and state_a != state_b: is_satisfied = true
+		
+		if not is_satisfied:
+			p3.append(candidate)
 
 func _on_cell_changed(_coord: Vector2i):
 	if not is_game_active or is_paused: return

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128" shape-rendering="crispEdges">
+  <!-- RESET (White 'Back to Start' Rewind Symbol - Moved 1px Left) -->
+  <g transform="translate(0, 0)">
+    <!-- Drop Shadow -->
+    <g fill="#1d2b53" transform="translate(0, 1)">
+      <!-- Vertical Bar -->
+      <rect x="2" y="3" width="2" height="9" />
+      <!-- Left-pointing triangle -->
+      <rect x="5" y="7" width="2" height="1" />
+      <rect x="7" y="6" width="2" height="3" />
+      <rect x="9" y="5" width="2" height="5" />
+      <rect x="11" y="4" width="3" height="7" />
+    </g>
+    <!-- Main White Graphic -->
+    <g fill="#ffffff">
+      <!-- Vertical Bar -->
+      <rect x="2" y="3" width="2" height="9" />
+      <!-- Left-pointing triangle -->
+      <rect x="5" y="7" width="2" height="1" />
+      <rect x="7" y="6" width="2" height="3" />
+      <rect x="9" y="5" width="2" height="5" />
+      <rect x="11" y="4" width="3" height="7" />
+    </g>
+  </g>
+</svg>

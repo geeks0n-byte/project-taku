@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128" shape-rendering="crispEdges">
+  <!-- Infinity symbol path (∞), Redesigned for color (White), with shadow -->
+  <g transform="translate(1, 4)">
+    <!-- Drop Shadow (Dark blue, shifted down by 1 pixel) -->
+    <!-- Shape path is symmetric and pixel-perfect, replicated for shadow -->
+    <g fill="#1d2b53" transform="translate(0, 1)">
+      <rect x="2" y="0" width="3" height="1" />
+      <rect x="9" y="0" width="3" height="1" />
+      <rect x="1" y="1" width="1" height="1" />
+      <rect x="5" y="1" width="1" height="1" />
+      <rect x="8" y="1" width="1" height="1" />
+      <rect x="12" y="1" width="1" height="1" />
+      <rect x="1" y="2" width="1" height="1" />
+      <rect x="6" y="2" width="2" height="1" />
+      <rect x="12" y="2" width="1" height="1" />
+      <rect x="1" y="3" width="1" height="1" />
+      <rect x="5" y="3" width="1" height="1" />
+      <rect x="8" y="3" width="1" height="1" />
+      <rect x="12" y="3" width="1" height="1" />
+      <rect x="2" y="4" width="3" height="1" />
+      <rect x="9" y="4" width="3" height="1" />
+    </g>
+    <!-- Main Redesigned Color (White, to match other functional tools) -->
+    <!-- Same perfectly symmetrical pixel path ∞ -->
+    <g fill="#ffffff">
+      <rect x="2" y="0" width="3" height="1" />
+      <rect x="9" y="0" width="3" height="1" />
+      <rect x="1" y="1" width="1" height="1" />
+      <rect x="5" y="1" width="1" height="1" />
+      <rect x="8" y="1" width="1" height="1" />
+      <rect x="12" y="1" width="1" height="1" />
+      <rect x="1" y="2" width="1" height="1" />
+      <rect x="6" y="2" width="2" height="1" />
+      <rect x="12" y="2" width="1" height="1" />
+      <rect x="1" y="3" width="1" height="1" />
+      <rect x="5" y="3" width="1" height="1" />
+      <rect x="8" y="3" width="1" height="1" />
+      <rect x="12" y="3" width="1" height="1" />
+      <rect x="2" y="4" width="3" height="1" />
+      <rect x="9" y="4" width="3" height="1" />
+    </g>
+  </g>
+</svg>
