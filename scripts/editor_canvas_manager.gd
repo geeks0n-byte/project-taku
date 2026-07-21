@@ -15,21 +15,30 @@ var cached_lines: Array = []
 
 var loaded_shifter_pairs: Array = []
 var loaded_constraint_pairs: Array = [] 
-var overlay_drawer: Node2D
+
+var grid_drawer: Node2D
+var constraint_drawer: Node2D
 
 var is_playtesting: bool = false 
 var show_editor_hints: bool = false 
 
 func _ready():
-	overlay_drawer = Node2D.new()
-	overlay_drawer.z_index = 10 
-	overlay_drawer.draw.connect(_draw_overlays)
-	add_child(overlay_drawer)
+	grid_drawer = Node2D.new()
+	grid_drawer.z_index = 10 # Keeps grid walls under the highlight
+	grid_drawer.draw.connect(_draw_grid)
+	add_child(grid_drawer)
+	
+	constraint_drawer = Node2D.new()
+	constraint_drawer.z_index = 4096 # Forces constraints over the highlight
+	constraint_drawer.draw.connect(_draw_constraints)
+	add_child(constraint_drawer)
 
 func trigger_redraw():
 	queue_redraw()
-	if overlay_drawer:
-		overlay_drawer.queue_redraw()
+	if grid_drawer:
+		grid_drawer.queue_redraw()
+	if constraint_drawer:
+		constraint_drawer.queue_redraw()
 
 func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 	grid_width = new_width
@@ -91,6 +100,9 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 		cell_pool[i]["cell"].visible = false
 		cell_pool[i]["interceptor"].visible = false
 		
+	move_child(grid_drawer, -1)
+	move_child(constraint_drawer, -1)
+	
 	_cache_board_lines()
 	trigger_redraw()
 
@@ -127,6 +139,9 @@ func load_layout(new_width: int, new_height: int, layout_data: Dictionary, shift
 	for coord in board_cells:
 		board_cells[coord].update_visuals()
 
+	move_child(grid_drawer, -1)
+	move_child(constraint_drawer, -1)
+	
 	trigger_redraw()
 
 func _cache_board_lines():
@@ -157,7 +172,7 @@ func is_board_full() -> bool:
 			return false
 	return true
 
-func _draw_overlays():
+func _draw_grid():
 	var line_color = Color.BLACK
 	var line_width = 4.0 
 	
@@ -194,11 +209,12 @@ func _draw_overlays():
 			draw_top = not board_cells.has(coord + Vector2i(0, -1))
 			draw_left = not board_cells.has(coord + Vector2i(-1, 0))
 			
-		if draw_right: overlay_drawer.draw_line(pos_tr, pos_br, line_color, line_width)
-		if draw_bottom: overlay_drawer.draw_line(pos_bl, pos_br, line_color, line_width)
-		if draw_top: overlay_drawer.draw_line(pos_tl, pos_tr, line_color, line_width)
-		if draw_left: overlay_drawer.draw_line(pos_tl, pos_bl, line_color, line_width)
+		if draw_right: grid_drawer.draw_line(pos_tr, pos_br, line_color, line_width)
+		if draw_bottom: grid_drawer.draw_line(pos_bl, pos_br, line_color, line_width)
+		if draw_top: grid_drawer.draw_line(pos_tl, pos_tr, line_color, line_width)
+		if draw_left: grid_drawer.draw_line(pos_tl, pos_bl, line_color, line_width)
 
+func _draw_constraints():
 	var equals_color = Color(1.0, 1.0, 1.0, 0.9)
 	var diff_color = Color(1.0, 1.0, 1.0, 0.9) 
 	var outline_color = Color(0.0, 0.0, 0.0, 1.0)
@@ -217,17 +233,17 @@ func _draw_overlays():
 			var perp = dir.orthogonal()
 			
 			if pair["type"] == "equals":
-				var l1_s = midpoint + perp * 8.0 - dir * 10.0
-				var l1_e = midpoint + perp * 8.0 + dir * 10.0
-				var l2_s = midpoint - perp * 8.0 - dir * 10.0
-				var l2_e = midpoint - perp * 8.0 + dir * 10.0
+				var l1_s = midpoint + perp * 8.0 - dir * 16.0
+				var l1_e = midpoint + perp * 8.0 + dir * 16.0
+				var l2_s = midpoint - perp * 8.0 - dir * 16.0
+				var l2_e = midpoint - perp * 8.0 + dir * 16.0
 				
-				var ext = dir * 2.0 # Extends outline endpoints past the inner white line
+				constraint_drawer.draw_line(l1_s, l1_e, outline_color, 8.0, true)
+				constraint_drawer.draw_line(l2_s, l2_e, outline_color, 8.0, true)
 				
-				overlay_drawer.draw_line(l1_s - ext, l1_e + ext, outline_color, 8.0)
-				overlay_drawer.draw_line(l2_s - ext, l2_e + ext, outline_color, 8.0)
-				overlay_drawer.draw_line(l1_s, l1_e, equals_color, 4.0)
-				overlay_drawer.draw_line(l2_s, l2_e, equals_color, 4.0)
+				var shrink = dir * 2.0
+				constraint_drawer.draw_line(l1_s + shrink, l1_e - shrink, equals_color, 4.0, true)
+				constraint_drawer.draw_line(l2_s + shrink, l2_e - shrink, equals_color, 4.0, true)
 				
 			elif pair["type"] == "not_equals":
 				var l1_s = midpoint - dir * 12.0 - perp * 12.0
@@ -235,10 +251,11 @@ func _draw_overlays():
 				var l2_s = midpoint - dir * 12.0 + perp * 12.0
 				var l2_e = midpoint + dir * 12.0 - perp * 12.0
 				
-				var ext1 = (l1_e - l1_s).normalized() * 2.0 # Extends outline endpoints past the inner white line
-				var ext2 = (l2_e - l2_s).normalized() * 2.0
+				constraint_drawer.draw_line(l1_s, l1_e, outline_color, 8.0, true)
+				constraint_drawer.draw_line(l2_s, l2_e, outline_color, 8.0, true)
 				
-				overlay_drawer.draw_line(l1_s - ext1, l1_e + ext1, outline_color, 8.0)
-				overlay_drawer.draw_line(l2_s - ext2, l2_e + ext2, outline_color, 8.0)
-				overlay_drawer.draw_line(l1_s, l1_e, diff_color, 4.0)
-				overlay_drawer.draw_line(l2_s, l2_e, diff_color, 4.0)
+				var shrink1 = (l1_e - l1_s).normalized() * 2.0
+				var shrink2 = (l2_e - l2_s).normalized() * 2.0
+				
+				constraint_drawer.draw_line(l1_s + shrink1, l1_e - shrink1, diff_color, 4.0, true)
+				constraint_drawer.draw_line(l2_s + shrink2, l2_e - shrink2, diff_color, 4.0, true)

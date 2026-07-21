@@ -40,14 +40,14 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 
 			if pair["type"] == "equals" and not can_be_equal:
 				is_valid = false
-				var msg = "Tiles connected by an equals (=) link must be the same color."
+				var msg = "Tiles connected by [outline_size=6][outline_color=black] = [/outline_color][/outline_size] link must be the same color."
 				if not errors.has(msg):
 					errors.append(msg)
 				if cell_a.has_method("set_error_highlight"): cell_a.set_error_highlight()
 				if cell_b.has_method("set_error_highlight"): cell_b.set_error_highlight()
 			elif pair["type"] == "not_equals" and not can_be_not_equal:
 				is_valid = false
-				var msg = "Tiles connected by a not-equals (×) link must be different colors."
+				var msg = "Tiles connected by [outline_size=6][outline_color=black] × [/outline_color][/outline_size] link must be different colors."
 				if not errors.has(msg):
 					errors.append(msg)
 				if cell_a.has_method("set_error_highlight"): cell_a.set_error_highlight()
