@@ -6,26 +6,25 @@ signal shifter_move_made
 signal invalid_move_attempted(message: String)
 
 @export var cell_scene: PackedScene = preload("res://scenes/cell.tscn")
-const CELL_SIZE = 120 
 
 var board_cells = {}
 var cell_pool: Array = []
 var cached_lines: Array = []
 
 var active_shifter_pairs: Array = []
-var active_constraint_pairs: Array = [] 
+var active_constraint_pairs: Array = []
 
 var grid_drawer: Node2D
 var constraint_drawer: Node2D
 
 func _ready():
 	grid_drawer = Node2D.new()
-	grid_drawer.z_index = 10 # Keeps grid walls under the highlight
+	grid_drawer.z_index = 10
 	grid_drawer.draw.connect(_draw_grid)
 	add_child(grid_drawer)
-	
+
 	constraint_drawer = Node2D.new()
-	constraint_drawer.z_index = 4096 # Forces constraints over the highlight
+	constraint_drawer.z_index = 4096
 	constraint_drawer.draw.connect(_draw_constraints)
 	add_child(constraint_drawer)
 
@@ -39,13 +38,14 @@ func trigger_redraw():
 func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shifter_pairs: Array = [], constraint_pairs: Array = []):
 	board_cells.clear()
 	var pool_index = 0
-	
-	var allowed_tiles = available_tiles if available_tiles.size() > 0 else [0, 1, 2] 
+
+	var allowed_tiles = available_tiles if available_tiles.size() > 0 else [0, 1, 2]
 	var max_x = 0
 	for coord in layout_data:
-		if coord.x > max_x: max_x = coord.x
-		
-	var board_pixel_width = (max_x + 1) * CELL_SIZE
+		if coord.x > max_x:
+			max_x = coord.x
+
+	var board_pixel_width = (max_x + 1) * GameConstants.CELL_SIZE
 	var screen_width = get_viewport_rect().size.x
 	position = Vector2((screen_width - board_pixel_width) / 2.0, get_viewport_rect().size.y / 3.0)
 
@@ -57,220 +57,124 @@ func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shi
 			cell.visible = true
 		else:
 			cell = cell_scene.instantiate()
-			cell.cell_clicked.connect(func(c): 
+			cell.cell_clicked.connect(func(c):
 				clear_highlights()
 				cell_changed.emit(c)
 			)
 			add_child(cell)
 			cell_pool.append(cell)
-			
+
 		cell.coord = coord
-		cell.position = Vector2(float(coord.x * CELL_SIZE), float(coord.y * CELL_SIZE))
-		
+		cell.position = Vector2(float(coord.x * GameConstants.CELL_SIZE), float(coord.y * GameConstants.CELL_SIZE))
+
 		var int_allowed_tiles: Array[int] = []
 		for tile in allowed_tiles:
 			int_allowed_tiles.append(int(tile))
 		cell.allowed_cycle_tiles = int_allowed_tiles
-		
+
 		cell.is_linked_pair = false
-		cell.shifter_direction = Vector2i.ZERO 
-		
+		cell.shifter_direction = Vector2i.ZERO
+
 		if cell.shifter_toggled.is_connected(_on_shifter_tile_toggled):
 			cell.shifter_toggled.disconnect(_on_shifter_tile_toggled)
-		
+
 		cell.state = int(starting_state)
-		if starting_state == -2:
+		if starting_state == GameConstants.TileState.WALL:
 			cell.is_playable = false
 			cell.is_locked = true
-		elif starting_state != -1:
+		elif starting_state != GameConstants.TileState.EMPTY:
 			cell.is_playable = true
 			cell.is_locked = true
 		else:
 			cell.is_playable = true
 			cell.is_locked = false
-			
+
 		board_cells[coord] = cell
 		cell.update_visuals()
 		pool_index += 1
-		
+
 	for i in range(pool_index, cell_pool.size()):
 		cell_pool[i].visible = false
 		cell_pool[i].is_playable = false
-		
+
 	active_shifter_pairs = shifter_pairs.duplicate()
-	active_constraint_pairs = constraint_pairs.duplicate() 
-	
+	active_constraint_pairs = constraint_pairs.duplicate()
+
 	for pair in active_shifter_pairs:
 		var a = pair["a"]
 		var b = pair["b"]
 		var active = pair["active"]
-		
+
 		if board_cells.has(a) and board_cells.has(b):
 			var cell_a = board_cells[a]
 			var cell_b = board_cells[b]
-			
+
 			cell_a.is_linked_pair = true
 			if not cell_a.shifter_toggled.is_connected(_on_shifter_tile_toggled):
 				cell_a.shifter_toggled.connect(_on_shifter_tile_toggled)
-			
+
 			cell_b.is_linked_pair = true
 			if not cell_b.shifter_toggled.is_connected(_on_shifter_tile_toggled):
 				cell_b.shifter_toggled.connect(_on_shifter_tile_toggled)
-			
-			if active == a: 
-				cell_a.state = 3
-				cell_a.shifter_direction = b - a 
-				if cell_b.state != 3: 
+
+			if active == a:
+				cell_a.state = GameConstants.TileState.SHIFTER
+				cell_a.shifter_direction = b - a
+				if cell_b.state != GameConstants.TileState.SHIFTER:
 					cell_b.shifter_direction = Vector2i.ZERO
-			else: 
-				cell_b.state = 3
-				cell_b.shifter_direction = a - b 
-				if cell_a.state != 3:
+			else:
+				cell_b.state = GameConstants.TileState.SHIFTER
+				cell_b.shifter_direction = a - b
+				if cell_a.state != GameConstants.TileState.SHIFTER:
 					cell_a.shifter_direction = Vector2i.ZERO
-			
+
 			cell_a.update_visuals()
 			cell_b.update_visuals()
-		
+
 	move_child(grid_drawer, -1)
 	move_child(constraint_drawer, -1)
-	
-	_cache_board_lines()
+
+	cached_lines = BoardRenderer.cache_board_lines(board_cells)
 	trigger_redraw()
 
 func _on_shifter_tile_toggled(clicked_coord: Vector2i):
 	clear_highlights()
-	
+
 	var clicked_cell = board_cells[clicked_coord]
-	
-	if clicked_cell.state != 3:
+	if clicked_cell.state != GameConstants.TileState.SHIFTER:
 		return
-		
+
 	var partner_coord = clicked_coord + clicked_cell.shifter_direction
 	if not board_cells.has(partner_coord):
 		return
-		
+
 	var partner_cell = board_cells[partner_coord]
-	
-	if partner_cell.state == 3:
+	if partner_cell.state == GameConstants.TileState.SHIFTER:
 		partner_cell.set_error_highlight()
 		invalid_move_attempted.emit("No space to move! The cell is occupied by another [color=#9c27b0]Purple[/color] tile.")
 		return
-	
-	clicked_cell.state = -1 
+
+	clicked_cell.state = GameConstants.TileState.EMPTY
 	clicked_cell.shifter_direction = Vector2i.ZERO
-	
-	partner_cell.state = 3
+
+	partner_cell.state = GameConstants.TileState.SHIFTER
 	partner_cell.shifter_direction = clicked_coord - partner_coord
-	
+
 	clicked_cell.update_visuals()
 	partner_cell.update_visuals()
-	
-	shifter_move_made.emit() 
-	cell_changed.emit(clicked_coord)
-	trigger_redraw() 
 
-func _cache_board_lines():
-	cached_lines.clear()
-	var rows = {}
-	var cols = {}
-	for coord in board_cells:
-		if not rows.has(coord.y): rows[coord.y] = []
-		if not cols.has(coord.x): cols[coord.x] = []
-		rows[coord.y].append(coord)
-		cols[coord.x].append(coord)
-	for r in rows:
-		var row = rows[r]
-		row.sort_custom(func(a, b): return a.x < b.x)
-		cached_lines.append({"coords": row, "is_horizontal": true, "index": r})
-	for c in cols:
-		var col = cols[c]
-		col.sort_custom(func(a, b): return a.y < b.y)
-		cached_lines.append({"coords": col, "is_horizontal": false, "index": c})
+	shifter_move_made.emit()
+	cell_changed.emit(clicked_coord)
+	trigger_redraw()
 
 func clear_highlights():
-	for coord in board_cells:
-		board_cells[coord].clear_highlight()
+	BoardRenderer.clear_highlights(board_cells)
 
 func is_board_full() -> bool:
-	for coord in board_cells:
-		if board_cells[coord].is_playable and board_cells[coord].state == -1:
-			return false
-	return true
+	return BoardRenderer.is_board_full(board_cells)
 
 func _draw_grid():
-	var line_color = Color.BLACK
-	var line_width = 4.0 
-	
-	for coord in board_cells:
-		var cell = board_cells[coord]
-		var is_playable = cell.state != -2
-		
-		var pos_tl = Vector2(coord.x * CELL_SIZE, coord.y * CELL_SIZE)
-		var pos_tr = Vector2((coord.x + 1) * CELL_SIZE, coord.y * CELL_SIZE)
-		var pos_bl = Vector2(coord.x * CELL_SIZE, (coord.y + 1) * CELL_SIZE)
-		var pos_br = Vector2((coord.x + 1) * CELL_SIZE, (coord.y + 1) * CELL_SIZE)
-		
-		var right_playable = false
-		if board_cells.has(coord + Vector2i(1, 0)): 
-			right_playable = board_cells[coord + Vector2i(1, 0)].state != -2
-		if is_playable or right_playable:
-			grid_drawer.draw_line(pos_tr, pos_br, line_color, line_width)
-			
-		var bot_playable = false
-		if board_cells.has(coord + Vector2i(0, 1)): 
-			bot_playable = board_cells[coord + Vector2i(0, 1)].state != -2
-		if is_playable or bot_playable:
-			grid_drawer.draw_line(pos_bl, pos_br, line_color, line_width)
-
-		if not board_cells.has(coord + Vector2i(0, -1)):
-			if is_playable:
-				grid_drawer.draw_line(pos_tl, pos_tr, line_color, line_width)
-				
-		if not board_cells.has(coord + Vector2i(-1, 0)):
-			if is_playable:
-				grid_drawer.draw_line(pos_tl, pos_bl, line_color, line_width)
+	BoardRenderer.draw_grid(grid_drawer, board_cells, GameConstants.CELL_SIZE, true)
 
 func _draw_constraints():
-	var equals_color = Color(1.0, 1.0, 1.0, 0.9)
-	var diff_color = Color(1.0, 1.0, 1.0, 0.9) 
-	var outline_color = Color(0.0, 0.0, 0.0, 1.0)
-	
-	for pair in active_constraint_pairs:
-		var coord_a = pair["a"]
-		var coord_b = pair["b"]
-		if not (board_cells.has(coord_a) and board_cells.has(coord_b)): continue
-			
-		var pos_a = Vector2(coord_a.x * CELL_SIZE + CELL_SIZE/2.0, coord_a.y * CELL_SIZE + CELL_SIZE/2.0)
-		var pos_b = Vector2(coord_b.x * CELL_SIZE + CELL_SIZE/2.0, coord_b.y * CELL_SIZE + CELL_SIZE/2.0)
-		
-		var midpoint = (pos_a + pos_b) / 2.0
-		var dir = (pos_b - pos_a).normalized()
-		var perp = dir.orthogonal()
-		
-		if pair["type"] == "equals":
-			var l1_s = midpoint + perp * 8.0 - dir * 16.0
-			var l1_e = midpoint + perp * 8.0 + dir * 16.0
-			var l2_s = midpoint - perp * 8.0 - dir * 16.0
-			var l2_e = midpoint - perp * 8.0 + dir * 16.0
-			
-			constraint_drawer.draw_line(l1_s, l1_e, outline_color, 8.0, true)
-			constraint_drawer.draw_line(l2_s, l2_e, outline_color, 8.0, true)
-			
-			var shrink = dir * 2.0
-			constraint_drawer.draw_line(l1_s + shrink, l1_e - shrink, equals_color, 4.0, true)
-			constraint_drawer.draw_line(l2_s + shrink, l2_e - shrink, equals_color, 4.0, true)
-			
-		elif pair["type"] == "not_equals":
-			var l1_s = midpoint - dir * 12.0 - perp * 12.0
-			var l1_e = midpoint + dir * 12.0 + perp * 12.0
-			var l2_s = midpoint - dir * 12.0 + perp * 12.0
-			var l2_e = midpoint + dir * 12.0 - perp * 12.0
-			
-			constraint_drawer.draw_line(l1_s, l1_e, outline_color, 8.0, true)
-			constraint_drawer.draw_line(l2_s, l2_e, outline_color, 8.0, true)
-			
-			var shrink1 = (l1_e - l1_s).normalized() * 2.0
-			var shrink2 = (l2_e - l2_s).normalized() * 2.0
-			
-			constraint_drawer.draw_line(l1_s + shrink1, l1_e - shrink1, diff_color, 4.0, true)
-			constraint_drawer.draw_line(l2_s + shrink2, l2_e - shrink2, diff_color, 4.0, true)
+	BoardRenderer.draw_constraints(constraint_drawer, board_cells, active_constraint_pairs, GameConstants.CELL_SIZE)

@@ -1,0 +1,142 @@
+class_name BoardRenderer
+extends RefCounted
+
+static func cache_board_lines(board_cells: Dictionary) -> Array:
+	var cached_lines: Array = []
+	var rows := {}
+	var cols := {}
+	for coord in board_cells:
+		if not rows.has(coord.y):
+			rows[coord.y] = []
+		if not cols.has(coord.x):
+			cols[coord.x] = []
+		rows[coord.y].append(coord)
+		cols[coord.x].append(coord)
+	for r in rows:
+		var row: Array = rows[r]
+		row.sort_custom(func(a, b): return a.x < b.x)
+		cached_lines.append({"coords": row, "is_horizontal": true, "index": r})
+	for c in cols:
+		var col: Array = cols[c]
+		col.sort_custom(func(a, b): return a.y < b.y)
+		cached_lines.append({"coords": col, "is_horizontal": false, "index": c})
+	return cached_lines
+
+static func clear_highlights(board_cells: Dictionary) -> void:
+	for coord in board_cells:
+		board_cells[coord].clear_highlight()
+
+static func is_board_full(board_cells: Dictionary) -> bool:
+	for coord in board_cells:
+		var cell = board_cells[coord]
+		if cell.is_playable and cell.state == GameConstants.TileState.EMPTY:
+			return false
+	return true
+
+static func draw_grid(
+	canvas: CanvasItem,
+	board_cells: Dictionary,
+	cell_size: float,
+	use_playtest_walls: bool = true
+) -> void:
+	var line_color := Color.BLACK
+	var line_width := 4.0
+
+	for coord in board_cells:
+		var cell = board_cells[coord]
+		var is_playable := cell.state != GameConstants.TileState.WALL
+
+		var pos_tl := Vector2(coord.x * cell_size, coord.y * cell_size)
+		var pos_tr := Vector2((coord.x + 1) * cell_size, coord.y * cell_size)
+		var pos_bl := Vector2(coord.x * cell_size, (coord.y + 1) * cell_size)
+		var pos_br := Vector2((coord.x + 1) * cell_size, (coord.y + 1) * cell_size)
+
+		var draw_right := false
+		var draw_bottom := false
+		var draw_top := false
+		var draw_left := false
+
+		if use_playtest_walls:
+			var right_playable := false
+			if board_cells.has(coord + Vector2i(1, 0)):
+				right_playable = board_cells[coord + Vector2i(1, 0)].state != GameConstants.TileState.WALL
+			draw_right = is_playable or right_playable
+
+			var bot_playable := false
+			if board_cells.has(coord + Vector2i(0, 1)):
+				bot_playable = board_cells[coord + Vector2i(0, 1)].state != GameConstants.TileState.WALL
+			draw_bottom = is_playable or bot_playable
+
+			draw_top = is_playable and not board_cells.has(coord + Vector2i(0, -1))
+			draw_left = is_playable and not board_cells.has(coord + Vector2i(-1, 0))
+		else:
+			draw_right = true
+			draw_bottom = true
+			draw_top = not board_cells.has(coord + Vector2i(0, -1))
+			draw_left = not board_cells.has(coord + Vector2i(-1, 0))
+
+		if draw_right:
+			canvas.draw_line(pos_tr, pos_br, line_color, line_width)
+		if draw_bottom:
+			canvas.draw_line(pos_bl, pos_br, line_color, line_width)
+		if draw_top:
+			canvas.draw_line(pos_tl, pos_tr, line_color, line_width)
+		if draw_left:
+			canvas.draw_line(pos_tl, pos_bl, line_color, line_width)
+
+static func draw_constraints(
+	canvas: CanvasItem,
+	board_cells: Dictionary,
+	constraint_pairs: Array,
+	cell_size: float
+) -> void:
+	var equals_color := Color(1.0, 1.0, 1.0, 0.9)
+	var diff_color := Color(1.0, 1.0, 1.0, 0.9)
+	var outline_color := Color(0.0, 0.0, 0.0, 1.0)
+
+	for pair in constraint_pairs:
+		var coord_a: Vector2i = pair["a"]
+		var coord_b: Vector2i = pair["b"]
+		if not (board_cells.has(coord_a) and board_cells.has(coord_b)):
+			continue
+
+		var pos_a := Vector2(
+			coord_a.x * cell_size + cell_size / 2.0,
+			coord_a.y * cell_size + cell_size / 2.0
+		)
+		var pos_b := Vector2(
+			coord_b.x * cell_size + cell_size / 2.0,
+			coord_b.y * cell_size + cell_size / 2.0
+		)
+
+		var midpoint := (pos_a + pos_b) / 2.0
+		var dir := (pos_b - pos_a).normalized()
+		var perp := dir.orthogonal()
+
+		if pair["type"] == "equals":
+			var l1_s := midpoint + perp * 8.0 - dir * 16.0
+			var l1_e := midpoint + perp * 8.0 + dir * 16.0
+			var l2_s := midpoint - perp * 8.0 - dir * 16.0
+			var l2_e := midpoint - perp * 8.0 + dir * 16.0
+
+			canvas.draw_line(l1_s, l1_e, outline_color, 8.0, true)
+			canvas.draw_line(l2_s, l2_e, outline_color, 8.0, true)
+
+			var shrink := dir * 2.0
+			canvas.draw_line(l1_s + shrink, l1_e - shrink, equals_color, 4.0, true)
+			canvas.draw_line(l2_s + shrink, l2_e - shrink, equals_color, 4.0, true)
+
+		elif pair["type"] == "not_equals":
+			var l1_s := midpoint - dir * 12.0 - perp * 12.0
+			var l1_e := midpoint + dir * 12.0 + perp * 12.0
+			var l2_s := midpoint - dir * 12.0 + perp * 12.0
+			var l2_e := midpoint + dir * 12.0 - perp * 12.0
+
+			canvas.draw_line(l1_s, l1_e, outline_color, 8.0, true)
+			canvas.draw_line(l2_s, l2_e, outline_color, 8.0, true)
+
+			var shrink1 := (l1_e - l1_s).normalized() * 2.0
+			var shrink2 := (l2_e - l2_s).normalized() * 2.0
+
+			canvas.draw_line(l1_s + shrink1, l1_e - shrink1, diff_color, 4.0, true)
+			canvas.draw_line(l2_s + shrink2, l2_e - shrink2, diff_color, 4.0, true)

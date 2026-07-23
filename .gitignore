@@ -27,4 +27,4 @@ desktop.ini
 
 # Godot logs or temporary data
 *.log
-project.godot
+*.tscn*.tmp
