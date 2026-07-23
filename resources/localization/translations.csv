@@ -6,6 +6,8 @@ UI_OPTIONS,OPTIONS,OPCIONES,OPTIONEN,OPTIONS,OPCJE,პარამეტრე�
 UI_CREDITS,CREDITS,CRÉDITOS,CREDITS,CRÉDITS,TWÓRCY,ტიტრები,ТИТРИ
 UI_EDITOR,EDITOR,EDITOR,EDITOR,ÉDITEUR,EDYTOR,რედაქტორი,РЕДАКТОР
 UI_CLOSE,CLOSE,CERRAR,SCHLIESSEN,FERMER,ZAMKNIJ,დახურვა,ЗАКРИТИ
+UI_PREVIOUS,PREVIOUS,ANTERIOR,ZURÜCK,PRÉCÉDENT,WSTECZ,წინა,НАЗАД
+UI_NEXT,NEXT,SIGUIENTE,WEITER,SUIVANT,DALEJ,შემდეგი,ДАЛІ
 UI_BACK_TO_MENU,BACK TO MENU,VOLVER AL MENÚ,ZUM MENÜ,RETOUR AU MENU,WRÓĆ DO MENU,მენიუში დაბრუნება,В ГОЛОВНЕ МЕНЮ
 UI_MAIN_MENU,MAIN MENU,MENÚ PRINCIPAL,HAUPTMENÜ,MENU PRINCIPAL,MENU GŁÓWNE,მთავარი მენიუ,ГОЛОВНЕ МЕНЮ
 UI_RESUME,RESUME,REANUDAR,FORTSETZEN,REPRENDRE,WZNÓW,გაგრძელება,ПРОДОВЖИТИ
@@ -15,22 +17,52 @@ UI_YES,YES,SÍ,JA,OUI,TAK,დიახ,ТАК
 UI_NO,NO,NO,NEIN,NON,NIE,არა,НІ
 UI_SAVE,SAVE,GUARDAR,SPEICHERN,SAUVEGARDER,ZAPISZ,შენახვა,ЗБЕРЕГТИ
 UI_LOAD,LOAD,CARGAR,LADEN,CHARGER,WCZYTAJ,ჩატვირთვა,ЗАВАНТАЖИТИ
+UI_LOADING,LOADING...,CARGANDO...,LADEN...,CHARGEMENT...,ŁADOWANIE...,იტვირთება...,ЗАВАНТАЖЕННЯ...
 UI_RESET_PROGRESS,RESET PROGRESS,RESTABLECER PROGRESO,FORTSCHRITT ZURÜCKSETZEN,RÉINITIALISER LA PROGRESSION,ZRESETUJ POSTĘP,პროგრესის განულება,СКИНУТИ ПРОГРЕС
+CONFIRM_RESET_PROGRESS,RESET ALL PROGRESS TO LEVEL 1?,¿RESTABLECER TODO EL PROGRESO AL NIVEL 1?,FORTSCHRITT AUF LEVEL 1 ZURÜCKSETZEN?,RÉINITIALISER TOUTE LA PROGRESSION AU NIVEAU 1 ?,ZRESETOWAĆ CAŁY POSTĘP DO POZIOMU 1?,გსურთ პროგრესის განულება პირველ დონემდე?,СКИНУТИ ВЕСЬ ПРОГРЕС ДО 1 РІВНЯ?
+CONFIRM_DELETE_CUSTOM,DELETE ALL CUSTOM LEVELS FROM THIS DEVICE?,¿BORRAR TODOS LOS NIVELES PERSONALIZADOS DE ESTE DISPOSITIVO?,ALLE BENUTZERDEFINIERTEN LEVEL VON DIESEM GERÄT LÖSCHEN?,SUPPRIMER TOUS LES NIVEAUX PERSONNALISÉS DE CET APPAREIL ?,USUNĄĆ WSZYSTKIE WŁASNE POZIOMY Z TEGO URZĄDZENIA?,გსურთ ყველა საკუთარი დონის წაშლა ამ მოწყობილობიდან?,ВИДАЛИТИ ВСІ КОРИСТУВАЦЬКІ РІВНІ З ЦЬОГО ПРИСТРОЮ?
 UI_DELETE_CUSTOM,DELETE CUSTOM LEVELS,BORRAR NIVELES PERSONALIZADOS,BENUTZERDEFINIERTE LEVEL LÖSCHEN,SUPPRIMER NIVEAUX PERSONNALISÉS,USUŃ WŁASNE POZIOMY,საკუთარი დონეების წაშლა,ВИДАЛИТИ КОРИСТУВАЦЬКІ РІВНІ
+UI_BG_DYNAMIC,BACKGROUND: DYNAMIC,FONDO: DINÁMICO,HINTERGRUND: DYNAMISCH,FOND : DYNAMIQUE,TŁO: DYNAMICZNE,ფონი: დინამიკური,ФОН: ДИНАМІЧНИЙ
+UI_BG_STATIC,BACKGROUND: STATIC,FONDO: ESTÁTICO,HINTERGRUND: STATISCH,FOND : STATIQUE,TŁO: STATYCZNE,ფონი: სტატიკური,ФОН: СТАТИЧНИЙ
 SAVE_DELETED,SAVE DELETED! PROGRESS RESET TO LEVEL 1.,¡PARTIDA BORRADA! PROGRESO RESTABLECIDO AL NIVEL 1.,SPIELSTAND GELÖSCHT! FORTSCHRITT AUF LEVEL 1 ZURÜCKGESETZT.,SAUVEGARDE SUPPRIMÉE ! PROGRESSION RÉINITIALISÉE AU NIVEAU 1.,ZAPIS USUNIĘTY! POSTĘP ZRESETOWANY DO POZIOMU 1.,შენახვა წაიშალა! პროგრესი დაბრუნდა პირველ დონეზე.,ЗБЕРЕЖЕННЯ ВИДАЛЕНО! ПРОГРЕС СКИНУТО ДО 1 РІВНЯ.
 CUSTOM_DELETED,ALL CUSTOM LEVELS DELETED FROM DEVICE!,¡TODOS LOS NIVELES PERSONALIZADOS BORRADOS DEL DISPOSITIVO!,ALLE BENUTZERDEFINIERTEN LEVEL VOM GERÄT GELÖSCHT!,TOUS LES NIVEAUX PERSONNALISÉS ONT ÉTÉ SUPPRIMÉS DE L'APPAREIL !,WSZYSTKIE WŁASNE POZIOMY USUNIĘTE Z URZĄDZENIA!,ყველა საკუთარი დონე წაიშალა მოწყობილობიდან!,ВСІ КОРИСТУВАЦЬКІ РІВНІ ВИДАЛЕНО З ПРИСТРОЮ!
 UI_SELECT_LEVEL,SELECT LEVEL,SELECCIONAR NIVEL,LEVEL AUSWÄHLEN,CHOISIR LE NIVEAU,WYBIERZ POZIOM,დონის არჩევა,ВИБІР РІВНЯ
 UI_CORE,CORE,PRINCIPAL,HAUPT,PRINCIPAL,GŁÓWNE,მთავარი,ОСНОВНІ
 UI_CUSTOM,CUSTOM,PERSONALIZADO,BENUTZERDEFINIERT,PERSONNALISÉ,WŁASNE,საკუთარი,КОРИСТУВАЦЬКІ
+DIFF_TUTORIALS,TUTORIALS,TUTORIALES,TUTORIALS,TUTORIELS,SAMOUCZEK,გაკვეთილები,НАВЧАННЯ
+DIFF_EASY,EASY,FÁCIL,LEICHT,FACILE,ŁATWY,მარტივი,ЛЕГКИЙ
+DIFF_MEDIUM,MEDIUM,MEDIO,MITTEL,MOYEN,ŚREDNI,საშუალო,СЕРЕДНІЙ
+DIFF_HARD,HARD,DIFÍCIL,SCHWER,DIFFICILE,TRUDNY,რთული,ВАЖКИЙ
 CUSTOM_LVL,CUSTOM LVL,NIVEL PERSONALIZADO,EIGENER LVL,NIV PERSO,WŁASNY POZ.,საკ. დონე,КОР. РІВЕНЬ
 LEVEL,LEVEL,NIVEL,LEVEL,NIVEAU,POZIOM,დონე,РІВЕНЬ
 LOCKED,LOCKED,BLOQUEADO,GESPERRT,VERROUILLÉ,ZABLOKOWANE,დაბლოკილია,ЗАБЛОКОВАНО
 NO_PLAYABLE_LEVELS,NO PLAYABLE LEVELS FOUND!,¡NO SE ENCONTRARON NIVELES JUGABLES!,KEINE SPIELBAREN LEVEL GEFUNDEN!,AUCUN NIVEAU JOUABLE TROUVÉ !,BRAK POZIOMÓW DO GRY!,სათამაშო დონეები არ მოიძებნა!,ІГРОВІ РІВНІ НЕ ЗНАЙДЕНО!
 TIME,TIME,TIEMPO,ZEIT,TEMPS,CZAS,დრო,ЧАС
 MOVES,MOVES,MOVIMIENTOS,ZÜGE,COUPS,RUCHY,სვლები,ХОДИ
+COUNTER_GREEN,GREEN,VERDE,GRÜN,VERT,ZIELONE,მწვანე,ЗЕЛЕНІ
+STAT_TIME_LEFT,TIME LEFT: %s,TIEMPO RESTANTE: %s,VERBLEIBENDE ZEIT: %s,TEMPS RESTANT : %s,POZOSTAŁY CZAS: %s,დარჩენილი დრო: %s,ЗАЛИШОК ЧАСУ: %s
+STAT_GREEN_TILES,GREEN TILES: %d/%d,FICHAS VERDES: %d/%d,GRÜNE FELDER: %d/%d,TUILES VERTES : %d/%d,ZIELONE PŁYTKI: %d/%d,მწვანე ფილები: %d/%d,ЗЕЛЕНІ ПЛИТКИ: %d/%d
+STAT_SHIFTER_MOVES,SHIFTER MOVES: %d/%d,MOVIMIENTOS DESLIZANTES: %d/%d,SCHIEBER-ZÜGE: %d/%d,COUPS DÉPLAÇABLES : %d/%d,RUCHY PRZESUWNYCH: %d/%d,გადამტანი სვლები: %d/%d,ЗСУВНІ ХОДИ: %d/%d
+TIMES_UP,TIME'S UP!,¡TIEMPO AGOTADO!,ZEIT ABGELAUFEN!,TEMPS ÉCOULÉ !,CZAS MINĄŁ!,დრო ამოიწურა!,ЧАС ВИЙШОВ!
+TUT1_INTRO,Welcome! Locked tiles can't be changed. Empty tiles are yours to fill.,Bienvenido. Las fichas bloqueadas no cambian. Las vacías son tuyas.,Willkommen! Gesperrte Felder sind fest. Leere Felder füllst du.,Bienvenue ! Les tuiles verrouillées sont fixes. Remplissez les cases vides.,Witaj! Zablokowane płytki są stałe. Puste pola wypełniasz ty.,მოგესალმებით! დაბლოკილი ფილები უცვლელია. ცარიელი ფილები თქვენია.,Ласкаво просимо! Заблоковані плитки не змінюються. Порожні — ваші.
+TUT1_CYCLE,Tap an empty tile to cycle colors. You have Yellow and Blue.,Toca una casilla vacía para cambiar de color. Tienes Amarillo y Azul.,Tippe ein leeres Feld an um die Farbe zu wechseln. Du hast Gelb und Blau.,Touchez une case vide pour changer de couleur. Vous avez Jaune et Bleu.,Dotknij pustego pola aby zmienić kolor. Masz Żółty i Niebieski.,შეეხეთ ცარიელ ფილას ფერის შესაცვლელად. გაქვთ ყვითელი და ლურჯი.,Торкніться порожньої плитки щоб змінити колір. Є Жовтий і Синій.
+TUT1_PLACE_BLUE,Place a Blue tile here. Three Yellows in a row are not allowed!,Pon una ficha Azul aquí. ¡No se permiten tres Amarillas seguidas!,Setze hier ein Blaues Feld. Drei Gelbe in Folge sind verboten!,Placez une tuile Bleue ici. Trois Jaunes d'affilée sont interdites !,Postaw tu Niebieską płytkę. Trzy Żółte pod rząd są zabronione!,აქ დადეთ ლურჯი ფილა. სამი ყვითელი ზედიზედ არ შეიძლება!,Поставте тут Синю плитку. Три Жовті підряд заборонені!
+TUT1_RULE_OF_TWO,Rule of Two: never make three of the same color in a row or column.,Regla de Dos: nunca tres del mismo color en fila o columna.,Regel der Zwei: nie drei gleiche Farben in Reihe oder Spalte.,Règle de Deux : jamais trois mêmes couleurs en ligne ou colonne.,Zasada Dwóch: nigdy trzech tego samego koloru w rzędzie lub kolumnie.,ორიანობის წესი: ერთ ხაზზე სამი ერთნაირი ფერი არ შეიძლება.,Правило двох: ніколи три однакові кольори в рядку чи стовпці.
+TUT1_PLACE_YELLOW,Now place a Yellow tile to finish the column.,Ahora pon una ficha Amarilla para completar la columna.,Setze jetzt ein Gelbes Feld um die Spalte zu vollenden.,Placez maintenant une tuile Jaune pour finir la colonne.,Teraz postaw Żółtą płytkę aby dokończyć kolumnę.,ახლა დადეთ ყვითელი ფილა სვეტის შესავსებად.,Тепер поставте Жовту плитку щоб завершити стовпець.
+TUT1_BALANCE,Equal Balance: each finished row and column needs the same number of Yellow and Blue tiles.,Equilibrio: cada fila y columna completa necesita igual número de Amarillas y Azules.,Gleichgewicht: jede volle Zeile/Spalte braucht gleich viele Gelbe und Blaue.,Équilibre : chaque ligne/colonne remplie doit avoir autant de Jaunes que de Bleues.,Równowaga: każdy pełny wiersz/kolumna musi mieć tyle samo Żółtych i Niebieskich.,ბალანსი: დასრულებულ ხაზებში ყვითელი და ლურჯი თანაბარი უნდა იყოს.,Баланс: у кожному заповненому рядку/стовпці Жовтих і Синіх порівну.
+TUT2_INTRO,Green tiles are special. They count as both Yellow and Blue for the Rule of Two.,Las fichas Verdes son especiales. Cuentan como Amarillo y Azul para la Regla de Dos.,Grüne Felder sind besonders. Für die Regel der Zwei zählen sie als Gelb und Blau.,Les tuiles Vertes sont spéciales. Pour la Règle de Deux elles comptent comme Jaune et Bleu.,Zielone płytki są wyjątkowe. Dla Zasady Dwóch liczą się jako Żółte i Niebieskie.,მწვანე ფილები განსაკუთრებულია. ორიანობის წესში ითვლება ყვითლადაც და ლურჯადაც.,Зелені плитки особливі. Для правила двох вони рахуються і як Жовті і як Сині.
+TUT2_GREEN_RULE,Each row and column may have at most one Green. The counter shows how many Greens the puzzle needs.,Cada fila/columna puede tener como máximo una Verde. El contador muestra cuántas Verdes necesita el puzle.,Pro Zeile/Spalte höchstens ein Grün. Der Zähler zeigt wie viele Grüne das Rätsel braucht.,Chaque ligne/colonne peut avoir au plus une Verte. Le compteur indique combien de Vertes sont requises.,W każdym wierszu/kolumnie co najwyżej jedna Zielona. Licznik pokazuje ile Zielonych trzeba.,თითო ხაზზე მაქსიმუმ ერთი მწვანე. მთვლელი აჩვენებს რამდენი მწვანეა საჭირო.,У кожному рядку/стовпці щонайбільше одна Зелена. Лічильник показує скільки Зелених потрібно.
+TUT2_PLACE_GREEN,The green counter needs one more Green. Place it in the highlighted center cell.,El contador de verdes necesita una Verde más. Ponla en la casilla central marcada.,Der Grün-Zähler braucht noch ein Grün. Setze es in die markierte Mitte.,Le compteur vert a besoin d'une Verte de plus. Placez-la au centre surligné.,Licznik zielonych potrzebuje jeszcze jednej Zielonej. Postaw ją na środku.,მწვანეების მთვლელს კიდევ ერთი მწვანე სჭირდება. დადეთ ცენტრში.,Лічильнику зелених потрібна ще одна Зелена. Поставте її в центр.
+TUT2_LOCKS,Padlocks mark fixed clue tiles. Use them as anchors while you solve.,Los candados marcan pistas fijas. Úsalas como anclas al resolver.,Vorhängeschlösser markieren feste Hinweise. Nutze sie als Anker.,Les cadenas marquent les indices fixes. Utilisez-les comme repères.,Kłódki oznaczają stałe wskazówki. Traktuj je jak kotwice.,ჩაკეტვები აღნიშნავს ფიქსირებულ მინიშნებებს. გამოიყენეთ როგორც საყრდენი.,Замки позначають фіксовані підказки. Використовуйте їх як орієнтири.
+TUT3_INTRO,Purple Shifter tiles slide between two linked cells when tapped.,Las fichas Deslizantes moradas se mueven entre dos celdas enlazadas al tocarlas.,Lila Schieber-Felder gleiten beim Tippen zwischen zwei verbundenen Feldern.,Les tuiles Déplaçables violettes glissent entre deux cases liées quand on les touche.,Fioletowe Przesuwane płytki przesuwają się między dwoma połączonymi polami po dotknięciu.,იასამნისფერი გადამტანი ფილები შეხებისას ორ დაკავშირებულ უჯრას შორის მოძრაობს.,Фіолетові Зсувні плитки ковзають між двома зв'язаними клітинками після дотику.
+TUT3_MOVE_SHIFTER,Tap the highlighted Shifter to slide it into place.,Toca el Deslizante marcado para moverlo a su sitio.,Tippe den markierten Schieber an um ihn zu verschieben.,Touchez le Déplaçable surligné pour le faire glisser.,Dotknij podświetlonej Przesuwanej aby ją przesunąć.,შეეხეთ მონიშნულ გადამტანს მის გადასაადგილებლად.,Торкніться підсвіченої Зсувної щоб зрушити її.
+TUT3_SHIFTER_DONE,Great! The arrow shows which way a Shifter will move next.,¡Bien! La flecha muestra hacia dónde se moverá el Deslizante.,Gut! Der Pfeil zeigt wohin der Schieber als Nächstes gleitet.,Bien ! La flèche indique la prochaine direction du Déplaçable.,Świetnie! Strzałka pokazuje dokąd Przesuwana pójdzie dalej.,შესანიშნავი! ისარი აჩვენებს გადამტანის შემდეგ მიმართულებას.,Чудово! Стрілка показує наступний напрямок Зсувної.
+TUT3_PLACE_GREEN,Fill the empty cell with Green to finish the puzzle.,Rellena la casilla vacía con Verde para terminar.,Fülle das leere Feld mit Grün um zu gewinnen.,Remplissez la case vide avec du Vert pour finir.,Wypełnij puste pole Zieloną aby ukończyć.,შეავსეთ ცარიელი უჯრა მწვანით თავსატეხის დასასრულებლად.,Заповніть порожню клітинку Зеленою щоб завершити.
+TUT3_CONSTRAINTS,× links mean neighboring tiles must be different colors. Open How to Play anytime for the full rules.,Los enlaces × exigen colores distintos. Abre Cómo jugar para todas las reglas.,×-Verbindungen verlangen unterschiedliche Farben. Öffne die Anleitung für alle Regeln.,Les liens × exigent des couleurs différentes. Ouvrez Comment jouer pour toutes les règles.,Łącza × wymagają różnych kolorów. Otwórz Jak grać by zobaczyć wszystkie zasady.,× კავშირი სხვადასხვა ფერებს მოითხოვს. სრული წესები — „როგორ ვითამაშოთ“.,Зв'язки × вимагають різних кольорів. Відкрийте Як грати для повних правил.
+TUT_COMPLETE,Tutorial step complete! Finish the board to continue.,¡Paso del tutorial completo! Termina el tablero para seguir.,Tutorial-Schritt fertig! Schließe das Brett ab um weiterzumachen.,Étape du tutoriel terminée ! Finissez le plateau pour continuer.,Krok samouczka ukończony! Dokończ planszę aby kontynuować.,სასწავლო ნაბიჯი დასრულდა! დაასრულეთ დაფა გასაგრძელებლად.,Крок навчання завершено! Завершіть дошку щоб продовжити.
 USED,USED,USADO,BENUTZT,UTILISÉ,UŻYTO,გამოყენებული,ВИКОРИСТАНО
-LVL,LVL,NIV,LVL,NIV,POZ,დონე,РІВ
-DEV,DEV,DESARROLLO,DEV,DÉV,DEV,დევ.,РОЗР
+LVL,LEVEL,NIVEL,LEVEL,NIVEAU,POZIOM,დონე,РІВЕНЬ
+DEV,CUSTOM,PERSONALIZADO,CUSTOM,PERSO,WŁASNY,საკუთარი,КОРИСТ.
 UNLIMITED,Unlimited,Ilimitado,Unbegrenzt,Illimité,Nielimitowany,შეუზღუდავი,Безліміт
 PAUSED,PAUSED,EN PAUSA,PAUSIERT,EN PAUSE,PAUZA,პაუზა,ПАУЗА
 PUZZLE_SOLVED,PUZZLE SOLVED!,¡PUZLE RESUELTO!,RÄTSEL GELÖST!,PUZZLE RÉSOLU !,ZAGADKA ROZWIĄZANA!,თავსატეხი ამოხსნილია!,ГОЛОВОЛОМКУ ВИРІШЕНО!
@@ -42,9 +74,38 @@ PLAY_AGAIN,PLAY AGAIN,JUGAR OTRA VEZ,NOCHMAL SPIELEN,REJOUER,ZAGRAJ PONOWNIE,თ
 NEXT_LEVEL,NEXT LEVEL,SIGUIENTE NIVEL,NÄCHSTES LEVEL,NIVEAU SUIVANT,NASTĘPNY POZIOM,შემდეგი დონე,НАСТУПНИЙ РІВЕНЬ
 COMPLETION_TIME,COMPLETION TIME: %s,TIEMPO DE COMPLETADO: %s,ABSCHLUSSZEIT: %s,TEMPS DE RÉSOLUTION : %s,CZAS UKOŃCZENIA: %s,დასრულების დრო: %s,ЧАС ПРОХОДЖЕННЯ: %s
 TIMES_UP_UNSOLVED,TIME'S UP! The puzzle remains unsolved.,¡TIEMPO AGOTADO! El puzle sigue sin resolverse.,ZEIT ABGELAUFEN! Das Rätsel bleibt ungelöst.,TEMPS ÉCOULÉ ! Le puzzle reste non résolu.,CZAS MINĄŁ! Zagadka pozostała nierozwiązana.,დრო ამოიწურა! თავსატეხი ამოუხსნელია.,ЧАС ВИЙШОВ! Головоломка не вирішена.
-MSG_FILL_EMPTY,Fill the empty spaces on the board.,Rellena los espacios vacíos en el tablero.,Fülle die leeren Felder auf dem Brett.,Remplissez les espaces vides sur le plateau.,Wypełnij puste miejsca na planszy.,შეავსეთ ცარიელი ადგილები დაფაზე.,Заповніть порожні місця на дошці.
+MSG_FILL_EMPTY,Fill empty spaces.,Rellena los vacíos.,Leere Felder füllen.,Remplissez les cases vides.,Wypełnij puste pola.,შეავსეთ ცარიელი ადგილები.,Заповніть порожні клітинки.
+ERR_CONSTRAINT_EQUALS,[outline_size=6][outline_color=black] = [/outline_color][/outline_size] tiles must be the same color.,Fichas [outline_size=6][outline_color=black] = [/outline_color][/outline_size] deben ser del mismo color.,[outline_size=6][outline_color=black] = [/outline_color][/outline_size] Felder müssen dieselbe Farbe haben.,Tuiles [outline_size=6][outline_color=black] = [/outline_color][/outline_size] : même couleur.,Płytki [outline_size=6][outline_color=black] = [/outline_color][/outline_size] muszą mieć ten sam kolor.,[outline_size=6][outline_color=black] = [/outline_color][/outline_size] ფილები ერთი ფერის უნდა იყოს.,Плитки [outline_size=6][outline_color=black] = [/outline_color][/outline_size] мають бути одного кольору.
+ERR_CONSTRAINT_NOT_EQUALS,[outline_size=6][outline_color=black] × [/outline_color][/outline_size] tiles must be different colors.,Fichas [outline_size=6][outline_color=black] × [/outline_color][/outline_size] deben ser de colores distintos.,[outline_size=6][outline_color=black] × [/outline_color][/outline_size] Felder müssen unterschiedliche Farben haben.,Tuiles [outline_size=6][outline_color=black] × [/outline_color][/outline_size] : couleurs différentes.,Płytki [outline_size=6][outline_color=black] × [/outline_color][/outline_size] muszą mieć różne kolory.,[outline_size=6][outline_color=black] × [/outline_color][/outline_size] ფილები განსხვავებული ფერის უნდა იყოს.,Плитки [outline_size=6][outline_color=black] × [/outline_color][/outline_size] мають бути різного кольору.
+ERR_MAX_GREEN_PER_LINE,Max 1 [color=#4DFF4D]Green[/color] tile per line.,Máx. 1 ficha [color=#4DFF4D]Verde[/color] por línea.,Max. 1 [color=#4DFF4D]Grünes[/color] Feld pro Linie.,Max. 1 tuile [color=#4DFF4D]Verte[/color] par ligne.,Maks. 1 [color=#4DFF4D]Zielona[/color] na linię.,ხაზზე მაქს. 1 [color=#4DFF4D]მწვანე[/color].,Макс. 1 [color=#4DFF4D]зелена[/color] на лінію.
+ERR_GREEN_THREE_YELLOW,[color=#4DFF4D]Green[/color] tile makes 3 [color=#FFD700]Yellow[/color] in a row.,[color=#4DFF4D]Verde[/color] crea 3 [color=#FFD700]Amarillas[/color] seguidas.,[color=#4DFF4D]Grün[/color] erzeugt 3 [color=#FFD700]Gelbe[/color] hintereinander.,[color=#4DFF4D]Vert[/color] : 3 [color=#FFD700]Jaunes[/color] d'affilée.,[color=#4DFF4D]Zielona[/color] tworzy 3 [color=#FFD700]Żółte[/color] z rzędu.,[color=#4DFF4D]მწვანე[/color] ქმნის 3 [color=#FFD700]ყვითელს[/color] ზედიზედ.,[color=#4DFF4D]Зелена[/color] дає 3 [color=#FFD700]Жовті[/color] підряд.
+ERR_THREE_YELLOW,3 [color=#FFD700]Yellow[/color] tiles in a row.,3 [color=#FFD700]Amarillas[/color] seguidas.,3 [color=#FFD700]Gelbe[/color] hintereinander.,3 [color=#FFD700]Jaunes[/color] d'affilée.,3 [color=#FFD700]Żółte[/color] z rzędu.,3 [color=#FFD700]ყვითელი[/color] ზედიზედ.,3 [color=#FFD700]Жовті[/color] підряд.
+ERR_GREEN_THREE_BLUE,[color=#4DFF4D]Green[/color] tile makes 3 [color=#4DA6FF]Blue[/color] in a row.,[color=#4DFF4D]Verde[/color] crea 3 [color=#4DA6FF]Azules[/color] seguidas.,[color=#4DFF4D]Grün[/color] erzeugt 3 [color=#4DA6FF]Blaue[/color] hintereinander.,[color=#4DFF4D]Vert[/color] : 3 [color=#4DA6FF]Bleues[/color] d'affilée.,[color=#4DFF4D]Zielona[/color] tworzy 3 [color=#4DA6FF]Niebieskie[/color] z rzędu.,[color=#4DFF4D]მწვანე[/color] ქმნის 3 [color=#4DA6FF]ლურჯს[/color] ზედიზედ.,[color=#4DFF4D]Зелена[/color] дає 3 [color=#4DA6FF]Сині[/color] підряд.
+ERR_THREE_BLUE,3 [color=#4DA6FF]Blue[/color] tiles in a row.,3 [color=#4DA6FF]Azules[/color] seguidas.,3 [color=#4DA6FF]Blaue[/color] hintereinander.,3 [color=#4DA6FF]Bleues[/color] d'affilée.,3 [color=#4DA6FF]Niebieskie[/color] z rzędu.,3 [color=#4DA6FF]ლურჯი[/color] ზედიზედ.,3 [color=#4DA6FF]Сині[/color] підряд.
+ERR_UNEQUAL_LINE,Unequal [color=#FFD700]Yellow[/color] and [color=#4DA6FF]Blue[/color] in a line.,[color=#FFD700]Amarillas[/color] y [color=#4DA6FF]Azules[/color] desiguales en la línea.,Ungleiche [color=#FFD700]Gelbe[/color] und [color=#4DA6FF]Blaue[/color] in der Linie.,[color=#FFD700]Jaunes[/color] et [color=#4DA6FF]Bleues[/color] inégales sur la ligne.,Nierówne [color=#FFD700]Żółte[/color] i [color=#4DA6FF]Niebieskie[/color] w linii.,ხაზში არათანაბარი [color=#FFD700]ყვითელი[/color]/[color=#4DA6FF]ლურჯი[/color].,Нерівні [color=#FFD700]Жовті[/color] і [color=#4DA6FF]Сині[/color] в лінії.
+ERR_TOO_MANY_GREEN,Too many [color=#4DFF4D]Green[/color] tiles.,Demasiadas [color=#4DFF4D]Verdes[/color].,Zu viele [color=#4DFF4D]Grüne[/color].,Trop de [color=#4DFF4D]Vertes[/color].,Za dużo [color=#4DFF4D]Zielonych[/color].,ძალიან ბევრი [color=#4DFF4D]მწვანე[/color].,Забагато [color=#4DFF4D]Зелених[/color].
+ERR_TOO_FEW_GREEN,Not enough [color=#4DFF4D]Green[/color] tiles.,Faltan [color=#4DFF4D]Verdes[/color].,Zu wenige [color=#4DFF4D]Grüne[/color].,Pas assez de [color=#4DFF4D]Vertes[/color].,Za mało [color=#4DFF4D]Zielonych[/color].,არასაკმარისი [color=#4DFF4D]მწვანე[/color].,Замало [color=#4DFF4D]Зелених[/color].
+ERR_SHIFTER_BLOCKED,No space! Blocked by another [color=#9c27b0]Shifter[/color].,¡Sin espacio! Bloqueado por otro [color=#9c27b0]Deslizante[/color].,Kein Platz! Blockiert von anderem [color=#9c27b0]Schieber[/color].,Pas de place ! Bloqué par un autre [color=#9c27b0]Déplaçable[/color].,Brak miejsca! Blokuje inny [color=#9c27b0]Przesuwany[/color].,ადგილი არაა! ბლოკავს სხვა [color=#9c27b0]გადამტანი[/color].,Немає місця! Блокує інша [color=#9c27b0]Зсувна[/color].
+ERR_GEN_WALLS,GENERATION FAILED: THE LOCKED WALLS MAKE A VALID SOLUTION IMPOSSIBLE.,GENERACIÓN FALLIDA: LOS MUROS BLOQUEADOS IMPIDEN UNA SOLUCIÓN VÁLIDA.,GENERIERUNG FEHLGESCHLAGEN: GESPERRTE WÄNDE VERHINDERN EINE LÖSUNG.,ÉCHEC DE GÉNÉRATION : LES MURS VERROUILLÉS RENDENT LA SOLUTION IMPOSSIBLE.,GENEROWANIE NIEUDANE: ZABLOKOWANE ŚCIANY UNIEMOŻLIWIAJĄ ROZWIĄZANIE.,გენერაცია ვერ მოხერხდა: დაბლოკილი კედლები ხელს უშლის გადაწყვეტას.,ГЕНЕРАЦІЮ НЕ ВДАЛОСЯ: ЗАФІКСОВАНІ СТІНИ РОБЛЯТЬ РІШЕННЯ НЕМОЖЛИВИМ.
+ERR_GEN_CONSTRAINTS,GENERATION FAILED: THE CONSTRAINTS ARE TOO RESTRICTIVE FOR THIS GRID SIZE.,GENERACIÓN FALLIDA: LAS RESTRICCIONES SON DEMASIADO ESTRICTAS PARA ESTE TAMAÑO.,GENERIERUNG FEHLGESCHLAGEN: DIE BESCHRÄNKUNGEN SIND ZU STRENG FÜR DIESE GRÖSSE.,ÉCHEC DE GÉNÉRATION : LES CONTRAINTES SONT TROP RESTRICTIVES POUR CETTE TAILLE.,GENEROWANIE NIEUDANE: OGRANICZENIA SĄ ZBYT RESTRYKCYJNE DLA TEGO ROZMIARU.,გენერაცია ვერ მოხერხდა: შეზღუდვები ძალიან მკაცრია ამ ზომისთვის.,ГЕНЕРАЦІЮ НЕ ВДАЛОСЯ: ОБМЕЖЕННЯ ЗАНАДТО СУВОРІ ДЛЯ ЦЬОГО РОЗМІРУ.
+ERR_PLACEMENT_ABORTED,PLACEMENT ABORTED.,COLOCACIÓN CANCELADA.,PLATZIERUNG ABGEBROCHEN.,PLACEMENT ANNULÉ.,UMIESZCZANIE ANULOWANE.,განთავსება გაუქმდა.,РОЗМІЩЕННЯ СКАСОВАНО.
+ERR_CELLS_NOT_ADJACENT,PLACEMENT ABORTED: CELLS MUST BE ADJACENT.,COLOCACIÓN CANCELADA: LAS CELDAS DEBEN SER ADYACENTES.,PLATZIERUNG ABGEBROCHEN: FELDER MÜSSEN BENACHBART SEIN.,PLACEMENT ANNULÉ : LES CASES DOIVENT ÊTRE ADJACENTES.,UMIESZCZANIE ANULOWANE: POLA MUSZĄ SĄSIADOWAĆ.,განთავსება გაუქმდა: უჯრები უნდა იყოს მეზობელში.,РОЗМІЩЕННЯ СКАСОВАНО: КЛІТИНКИ ПОВИННІ БУТИ СУСІДНІМИ.
+ED_HINT_SELECT_SHIFTER,SELECT A NEIGHBORING CELL TO PLACE THE SECOND [color=#9c27b0]SHIFTER[/color] TILE.,SELECCIONA UNA CELDA VECINA PARA COLOCAR LA SEGUNDA FICHA [color=#9c27b0]DESLIZANTE[/color].,WÄHLE EIN BENACHBARTES FELD FÜR DIE ZWEITE [color=#9c27b0]SCHIEBER[/color] MARKIERUNG.,SÉLECTIONNEZ UNE CASE VOISINE POUR PLACER LA DEUXIÈME TUILE [color=#9c27b0]DÉPLAÇABLE[/color].,WYBIERZ SĄSIEDNIE POLE DLA DRUGIEJ [color=#9c27b0]PRZESUWANEJ[/color] PŁYTKI.,აირჩიეთ მეზობელი უჯრა მეორე [color=#9c27b0]გადამტანი[/color] ფილისთვის.,ОБЕРІТЬ СУСІДНЮ КЛІТИНКУ ДЛЯ ДРУГОЇ [color=#9c27b0]ЗСУВНОЇ[/color] ПЛИТКИ.
+ED_HINT_SELECT_EQUALS,SELECT A NEIGHBORING CELL TO PLACE THE EQUALS (=) LINK.,SELECCIONA UNA CELDA VECINA PARA EL ENLACE IGUAL (=).,WÄHLE EIN BENACHBARTES FELD FÜR DIE GLEICH (=) VERBINDUNG.,SÉLECTIONNEZ UNE CASE VOISINE POUR LE LIEN ÉGAL (=).,WYBIERZ SĄSIEDNIE POLE DLA POŁĄCZENIA RÓWNOŚCI (=).,აირჩიეთ მეზობელი უჯრა ტოლობის (=) კავშირისთვის.,ОБЕРІТЬ СУСІДНЮ КЛІТИНКУ ДЛЯ ЗВ'ЯЗКУ ДОРІВНЮЄ (=).
+ED_HINT_SELECT_NOT_EQUALS,SELECT A NEIGHBORING CELL TO PLACE THE NOT-EQUALS (×) LINK.,SELECCIONA UNA CELDA VECINA PARA EL ENLACE DISTINTO (×).,WÄHLE EIN BENACHBARTES FELD FÜR DIE UNGLEICH (×) VERBINDUNG.,SÉLECTIONNEZ UNE CASE VOISINE POUR LE LIEN DIFFÉRENT (×).,WYBIERZ SĄSIEDNIE POLE DLA POŁĄCZENIA RÓŻNOŚCI (×).,აირჩიეთ მეზობელი უჯრა უტოლობის (×) კავშირისთვის.,ОБЕРІТЬ СУСІДНЮ КЛІТИНКУ ДЛЯ ЗВ'ЯЗКУ НЕ ДОРІВНЮЄ (×).
+ED_MSG_SHIFTER_PLACED,[color=#9c27b0]SHIFTER[/color] TILE PAIR PLACED SUCCESSFULLY.,PAR [color=#9c27b0]DESLIZANTE[/color] COLOCADO CON ÉXITO.,[color=#9c27b0]SCHIEBER[/color] PAAR ERFOLGREICH PLATZIERT.,PAIRE [color=#9c27b0]DÉPLAÇABLE[/color] PLACÉE AVEC SUCCÈS.,Para [color=#9c27b0]PRZESUWANYCH[/color] płytek umieszczono pomyślnie.,[color=#9c27b0]გადამტანი[/color] წყვილი წარმატებით განთავსდა.,Пару [color=#9c27b0]ЗСУВНИХ[/color] плиток успішно розміщено.
+ED_MSG_EQUALS_PLACED,EQUALS (=) LINK PLACED SUCCESSFULLY.,ENLACE IGUAL (=) COLOCADO CON ÉXITO.,GLEICH (=) VERBINDUNG ERFOLGREICH PLATZIERT.,LIEN ÉGAL (=) PLACÉ AVEC SUCCÈS.,Połączenie RÓWNOŚCI (=) umieszczono pomyślnie.,ტოლობის (=) კავშირი წარმატებით განთავსდა.,Зв'язок ДОРІВНЮЄ (=) успішно розміщено.
+ED_MSG_NOT_EQUALS_PLACED,NOT-EQUALS (×) LINK PLACED SUCCESSFULLY.,ENLACE DISTINTO (×) COLOCADO CON ÉXITO.,UNGLEICH (×) VERBINDUNG ERFOLGREICH PLATZIERT.,LIEN DIFFÉRENT (×) PLACÉ AVEC SUCCÈS.,Połączenie RÓŻNOŚCI (×) umieszczono pomyślnie.,უტოლობის (×) კავშირი წარმატებით განთავსდა.,Зв'язок НЕ ДОРІВНЮЄ (×) успішно розміщено.
+ED_MSG_LEVEL_SAVED,CUSTOM LEVEL %d SAVED SUCCESSFULLY.,NIVEL PERSONALIZADO %d GUARDADO CON ÉXITO.,BENUTZERDEFINIERTES LEVEL %d GESPEICHERT.,NIVEAU PERSONNALISÉ %d SAUVEGARDÉ.,WŁASNY POZIOM %d ZAPISANY.,საკუთარი დონე %d შენახულია.,КОРИСТУВАЦЬКИЙ РІВЕНЬ %d ЗБЕРЕЖЕНО.
+ED_MSG_LEVEL_SAVE_FAILED,ERROR: CUSTOM LEVEL %d SAVE FAILED (%s).,ERROR: FALLO AL GUARDAR NIVEL %d (%s).,FEHLER: LEVEL %d KONNTE NICHT GESPEICHERT WERDEN (%s).,ERREUR : ÉCHEC DE SAUVEGARDE DU NIVEAU %d (%s).,BŁĄD: NIE UDAŁO SIĘ ZAPISAĆ POZIOMU %d (%s).,შეცდომა: დონე %d ვერ შეინახა (%s).,ПОМИЛКА: НЕ ВДАЛОСЯ ЗБЕРЕГТИ РІВЕНЬ %d (%s).
+ED_MSG_LEVEL_NOT_FOUND,NO SAVED DATA FOUND FOR CUSTOM LEVEL %d.,NO SE ENCONTRARON DATOS PARA EL NIVEL %d.,KEINE DATEN FÜR LEVEL %d GEFUNDEN.,AUCUNE DONNÉE TROUVÉE POUR LE NIVEAU %d.,BRAK DANYCH DLA POZIOMU %d.,დონე %d-ის მონაცემები ვერ მოიძებნა.,ДАНІ ДЛЯ РІВНЯ %d НЕ ЗНАЙДЕНО.
+ED_MSG_LEVEL_READ_FAILED,ERROR: FAILED TO READ CUSTOM LEVEL %d DATA.,ERROR: FALLO AL LEER DATOS DEL NIVEL %d.,FEHLER: LEVEL %d DATEN KONNTEN NICHT GELESEN WERDEN.,ERREUR : ÉCHEC DE LECTURE DU NIVEAU %d.,BŁĄD: NIE UDAŁO SIĘ ODCZYTAĆ POZIOMU %d.,შეცდომა: დონე %d-ის მონაცემები ვერ წაიკითხა.,ПОМИЛКА: НЕ ВДАЛОСЯ ПРОЧИТАТИ РІВЕНЬ %d.
+ED_MSG_LEVEL_LOADED,CUSTOM LEVEL %d LOADED SUCCESSFULLY.,NIVEL PERSONALIZADO %d CARGADO CON ÉXITO.,BENUTZERDEFINIERTES LEVEL %d GELADEN.,NIVEAU PERSONNALISÉ %d CHARGÉ.,WŁASNY POZIOM %d WCZYTANY.,საკუთარი დონე %d ჩაიტვირთა.,КОРИСТУВАЦЬКИЙ РІВЕНЬ %d ЗАВАНТАЖЕНО.
+ED_VICTORY_SOLVABLE,GOOD JOB!\nLEVEL IS SOLVABLE,¡BIEN HECHO!\nEL NIVEL TIENE SOLUCIÓN,GUT GEMACHT!\nLEVEL IST LÖSBAR,BON TRAVAIL !\nLE NIVEAU EST RÉSOLUBLE,DOBRA ROBOTA!\nPOZIOM JEST MOŻLIWY,კარგი სამუშაო!\nდონე ამოხსნადია,МОЛОДЕЦЬ!\nРІВЕНЬ МОЖНА ПРОЙТИ
+ED_DEFEAT_TIME,DEFEAT!\nTIME RAN OUT,¡DERROTA!\nTIEMPO AGOTADO,NIEDERLAGE!\nZEIT ABGELAUFEN,DÉFAITE !\nTEMPS ÉCOULÉ,PORAŻKA!\nCZAS MINĄŁ,მარცხი!\nდრო ამოიწურა,ПОРАЗКА!\nЧАС ВИЙШОВ
+MSG_PUZZLE_SOLVED_SHORT,Puzzle solved!,¡Puzle resuelto!,Rätsel gelöst!,Puzzle résolu !,Zagadka rozwiązana!,თავსატეხი ამოხსნილია!,Головоломку вирішено!
 ERROR_INVALID_SHAPE,ERROR: This level's shape cannot mathematically generate a valid puzzle.,ERROR: La forma de este nivel no puede generar matemáticamente un puzle válido.,FEHLER: Die Form dieses Levels kann mathematisch kein gültiges Rätsel generieren.,ERREUR : La forme de ce niveau ne peut pas générer mathématiquement un puzzle valide.,BŁĄD: Kształt tego poziomu nie może matematycznie wygenerować poprawnej zagadki.,შეცდომა: ამ დონის ფორმა ვერ შექმნის ვალიდურ თავსატეხს.,ПОМИЛКА: Форма цього рівня математично не може згенерувати правильну головоломку.
-ERROR_NO_HINTS,No valid hints found. Check your board for errors!,No se encontraron pistas válidas. ¡Revisa tu tablero en busca de errores!,Keine gültigen Hinweise gefunden. Überprüfe dein Brett auf Fehler!,Aucun indice valide trouvé. Vérifiez votre plateau pour des erreurs !,Nie znaleziono poprawnych podpowiedzi. Sprawdź planszę pod kątem błędów!,ვერ მოიძებნა ვალიდური მინიშნება. შეამოწმეთ დაფა შეცდომებზე!,Доступних підказок не знайдено. Перевірте дошку на наявність помилок!
+ERROR_NO_HINTS,No hints available. Check the board!,Sin pistas. ¡Revisa el tablero!,Keine Hinweise. Brett prüfen!,Aucun indice. Vérifiez le plateau !,Brak podpowiedzi. Sprawdź planszę!,მინიშნება არაა. შეამოწმეთ დაფა!,Немає підказок. Перевірте дошку!
 EDIT_MODE,EDIT MODE,MODO EDICIÓN,BEARBEITEN,MODE ÉDITION,TRYB EDYCJI,რედაქტირების რეჟიმი,РЕЖИМ РЕДАКТОРА
 TEST_MODE,TEST MODE,MODO PRUEBA,TESTMODUS,MODE TEST,TRYB TESTOWANIA,ტესტირების რეჟიმი,РЕЖИМ ТЕСТУ
 LOCK_WALLS,LOCK WALLS,BLOQUEAR MUROS,WÄNDE SPERREN,VERR. MURS,ZABLOKUJ ŚCIANY,კედლების ჩაკეტვა,ЗАФІКСУВАТИ СТІНИ
@@ -57,73 +118,99 @@ Wall,Wall,Muro,Wand,Mur,Ściana,კედელი,Стіна
 Empty (Clear),Empty (Clear),Vacío (Borrar),Leer (Löschen),Vide (Effacer),Puste (Wyczyść),ცარიელი (წაშლა),Порожньо (Очистити)
 Yellow Tile,Yellow Tile,Ficha Amarilla,Gelbes Feld,Tuile Jaune,Żółta płytka,ყვითელი ფილა,Жовта плитка
 Blue Tile,Blue Tile,Ficha Azul,Blaues Feld,Tuile Bleue,Niebieska płytka,ლურჯი ფილა,Синя плитка
-Combined Tile,Combined Tile,Ficha Combinada,Kombiniertes Feld,Tuile Combinée,Połączona płytka,კომბინირებული ფილა,Комбінована плитка
+Joker Tile,Joker Tile,Ficha Comodín,Joker-Feld,Tuile Joker,Płytka Joker,ჯოკერი ფილა,Плитка Джокер
 Shifter Tile Link Tool,Shifter Tile Link Tool,Herramienta de Enlace de Ficha Deslizante,Schieber-Feld Verbindungswerkzeug,Outil de Lien Tuile Déplaçable,Narzędzie Łączenia Przesuwanej Płytki,გადამტანი ფილის დასაკავშირებელი,Інструмент зв'язку рухомої плитки
 Equals (=) Link Tool,Equals (=) Link Tool,Herramienta de Enlace Igual (=),Gleich (=) Verbindungswerkzeug,Outil de Lien Égal (=),Narzędzie Łączenia Znak Równości (=),ტოლობის (=) დასაკავშირებელი,Інструмент зв'язку Дорівнює (=)
 Not Equals (×) Link Tool,Not Equals (×) Link Tool,Herramienta de Enlace Distinto (×),Ungleich (×) Verbindungswerkzeug,Outil de Lien Différent (×),Narzędzie Łączenia Znak Różności (×),უტოლობის (×) დასაკავშირებელი,Інструмент зв'язку Не дорівнює (×)
 CREDITS_TEXT,"[center]
+[font_size=34][color=#ffd700][b]GAME DESIGN & CODE[/b][/color][/font_size]
 
-Game Design & Programming
-Giga Sichinava
+[font_size=26]Giga """"gix0n"""" Sichinava[/font_size]
 
-Art & Assets
-Giga Sichinava
+[font_size=34][color=#ffd700][b]ART & ASSETS[/b][/color][/font_size]
 
-Created with Godot Engine
+[font_size=26]Giga """"gix0n"""" Sichinava[/font_size]
+
+[font_size=22][color=#aaaaaa]Created with Godot Engine[/color][/font_size]
 [/center]","[center]
+[font_size=34][color=#ffd700][b]DISEÑO Y PROGRAMACIÓN[/b][/color][/font_size]
 
-Diseño de Juego y Programación
-Giga Sichinava
+[font_size=26]Giga """"gix0n"""" Sichinava[/font_size]
 
-Arte y Activos
-Giga Sichinava
+[font_size=34][color=#ffd700][b]ARTE Y RECURSOS[/b][/color][/font_size]
 
-Creado con Godot Engine
+[font_size=26]Giga """"gix0n"""" Sichinava[/font_size]
+
+[font_size=22][color=#aaaaaa]Creado con Godot Engine[/color][/font_size]
 [/center]","[center]
+[font_size=34][color=#ffd700][b]DESIGN & PROGRAMMIERUNG[/b][/color][/font_size]
 
-Spieldesign & Programmierung
-Giga Sichinava
+[font_size=26]Giga """"gix0n"""" Sichinava[/font_size]
 
-Grafik & Assets
-Giga Sichinava
+[font_size=34][color=#ffd700][b]GRAFIK & ASSETS[/b][/color][/font_size]
 
-Erstellt mit Godot Engine
+[font_size=26]Giga """"gix0n"""" Sichinava[/font_size]
+
+[font_size=22][color=#aaaaaa]Erstellt mit Godot Engine[/color][/font_size]
 [/center]","[center]
+[font_size=34][color=#ffd700][b]CONCEPTION & CODE[/b][/color][/font_size]
 
-Conception du jeu & Programmation
-Giga Sichinava
+[font_size=26]Giga """"gix0n"""" Sichinava[/font_size]
 
-Graphismes & Ressources
-Giga Sichinava
+[font_size=34][color=#ffd700][b]GRAPHISMES[/b][/color][/font_size]
 
-Créé avec Godot Engine
+[font_size=26]Giga """"gix0n"""" Sichinava[/font_size]
+
+[font_size=22][color=#aaaaaa]Créé avec Godot Engine[/color][/font_size]
 [/center]","[center]
+[font_size=34][color=#ffd700][b]PROJEKT I PROGRAMOWANIE[/b][/color][/font_size]
 
-Projekt gry i programowanie
-Giga Sichinava
+[font_size=26]Giga """"gix0n"""" Sichinava[/font_size]
 
-Grafika i zasoby
-Giga Sichinava
+[font_size=34][color=#ffd700][b]GRAFIKA I ZASOBY[/b][/color][/font_size]
 
-Stworzono w Godot Engine
+[font_size=26]Giga """"gix0n"""" Sichinava[/font_size]
+
+[font_size=22][color=#aaaaaa]Stworzono w Godot Engine[/color][/font_size]
 [/center]","[center]
+[font_size=34][color=#ffd700][b]დიზაინი და პროგრამირება[/b][/color][/font_size]
 
-თამაშის დიზაინი და პროგრამირება
-გიგა სიჭინავა
+[font_size=26]Giga """"gix0n"""" Sichinava[/font_size]
 
-არტი და ვიზუალი
-გიგა სიჭინავა
+[font_size=34][color=#ffd700][b]არტი და ვიზუალი[/b][/color][/font_size]
 
-შექმნილია Godot Engine-ით
+[font_size=26]Giga """"gix0n"""" Sichinava[/font_size]
+
+[font_size=22][color=#aaaaaa]შექმნილია Godot Engine-ით[/color][/font_size]
 [/center]","[center]
+[font_size=34][color=#ffd700][b]ДИЗАЙН І КОД[/b][/color][/font_size]
 
-Геймдизайн та програмування
-Giga Sichinava
+[font_size=26]Giga """"gix0n"""" Sichinava[/font_size]
 
-Арт та ресурси
-Giga Sichinava
+[font_size=34][color=#ffd700][b]АРТ І РЕСУРСИ[/b][/color][/font_size]
 
-Створено на Godot Engine
+[font_size=26]Giga """"gix0n"""" Sichinava[/font_size]
+
+[font_size=22][color=#aaaaaa]Створено на Godot Engine[/color][/font_size]
 [/center]"
+HTP_TITLE,HOW TO PLAY,CÓMO JUGAR,SPIELANLEITUNG,COMMENT JOUER,JAK GRAĆ,როგორ ვითამაშოთ,ЯК ГРАТИ
+HTP_EXAMPLE_THREE_YELLOWS,(Three [color=#ffeb3b]Yellows[/color]),(Tres [color=#ffeb3b]Amarillas[/color]),(Drei [color=#ffeb3b]Gelbe[/color]),(Trois [color=#ffeb3b]Jaunes[/color]),(Trzy [color=#ffeb3b]Żółte[/color]),(სამი [color=#ffeb3b]ყვითელი[/color]),(Три [color=#ffeb3b]Жовті[/color])
+HTP_EXAMPLE_THREE_BLUES,(Three [color=#2196f3]Blues[/color]),(Tres [color=#2196f3]Azules[/color]),(Drei [color=#2196f3]Blaue[/color]),(Trois [color=#2196f3]Bleues[/color]),(Trzy [color=#2196f3]Niebieskie[/color]),(სამი [color=#2196f3]ლურჯი[/color]),(Три [color=#2196f3]Сині[/color])
+HTP_EXAMPLE_VALID_MIX,(Valid Mix),(Mezcla válida),(Gültige Mischung),(Mélange valide),(Poprawna kombinacja),(სწორი კომბინაცია),(Правильна комбінація)
+HTP_TILE_TYPES_TITLE,TILE TYPES,TIPOS DE FICHAS,FELDTYPEN,TYPES DE TUILES,RODZAJE PŁYTEK,ფილების ტიპები,ТИПИ ПЛИТОК
+HTP_SPECIALS_TITLE,SPECIAL RULES,REGLAS ESPECIALES,SPEZIALREGELN,RÈGLES SPÉCIALES,SPECJALNE ZASADY,სპეციალური წესები,СПЕЦІАЛЬНІ ПРАВИЛА
+HTP_BASIC_TILES_LABEL,Basic Tiles:,Fichas básicas:,Basisfelder:,Tuiles de base:,Podstawowe płytki:,ძირითადი ფილები:,Базові плитки:
+HTP_BASIC_TILES_DESC,%s [color=#ffeb3b]Yellow[/color] and %s [color=#2196f3]Blue[/color] tiles. Use these to fill the empty spaces on the board.,Las fichas %s [color=#ffeb3b]Amarillas[/color] y %s [color=#2196f3]Azules[/color]. Úsalas para rellenar los espacios vacíos.,Die Felder %s [color=#ffeb3b]Gelb[/color] und %s [color=#2196f3]Blau[/color]. Fülle damit die leeren Plätze.,Les tuiles %s [color=#ffeb3b]Jaunes[/color] et %s [color=#2196f3]Bleues[/color]. Utilisez-les pour remplir les espaces vides.,Płytki %s [color=#ffeb3b]Żółte[/color] i %s [color=#2196f3]Niebieskie[/color]. Użyj ich do wypełnienia pustych pól.,%s [color=#ffeb3b]ყვითელი[/color] და %s [color=#2196f3]ლურჯი[/color] ფილები. გამოიყენეთ ცარიელი ადგილების შესავსებად.,Плитки %s [color=#ffeb3b]Жовті[/color] та %s [color=#2196f3]Сині[/color]. Використовуйте їх для заповнення порожніх клітинок.
+HTP_GREEN_TILES_HEADER,[color=#4caf50][b]Green Tiles:[/b][/color],[color=#4caf50][b]Fichas Verdes:[/b][/color],[color=#4caf50][b]Grüne Felder:[/b][/color],[color=#4caf50][b]Tuiles Vertes :[/b][/color],[color=#4caf50][b]Zielone Płytki:[/b][/color],[color=#4caf50][b]მწვანე ფილები:[/b][/color],[color=#4caf50][b]Зелені Плитки:[/b][/color]
+HTP_GREEN_TILES_DESC,Since [color=#4caf50]green[/color] is a combination of [color=#ffeb3b]yellow[/color] and [color=#2196f3]blue[/color], this combined tile acts as both of those colors. Each row and column can contain a maximum of one [color=#4caf50]green[/color] tile.,Como el [color=#4caf50]verde[/color] combina [color=#ffeb3b]amarillo[/color] y [color=#2196f3]azul[/color], esta ficha cuenta como ambos colores. Cada fila y columna puede tener como máximo una ficha [color=#4caf50]verde[/color].,Da [color=#4caf50]Grün[/color] [color=#ffeb3b]Gelb[/color] und [color=#2196f3]Blau[/color] kombiniert, zählt dieses Feld als beide Farben. Pro Zeile und Spalte ist maximal ein [color=#4caf50]grünes[/color] Feld erlaubt.,Comme le [color=#4caf50]vert[/color] combine [color=#ffeb3b]jaune[/color] et [color=#2196f3]bleu[/color], cette tuile compte pour les deux couleurs. Chaque ligne et colonne peut contenir au maximum une tuile [color=#4caf50]verte[/color].,Ponieważ [color=#4caf50]zielony[/color] łączy [color=#ffeb3b]żółty[/color] i [color=#2196f3]niebieski[/color], ta płytka działa jak oba kolory. W każdym rzędzie i kolumnie może być maksymalnie jedna [color=#4caf50]zielona[/color] płytka.,რადგან [color=#4caf50]მწვანე[/color] არის [color=#ffeb3b]ყვითელი[/color] და [color=#2196f3]ლურჯი[/color] კომბინაცია, ეს ფილი ორივე ფერს წარმოადგენს. თითო რიგსა და სვეტში მაქსიმუმ ერთი [color=#4caf50]მწვანე[/color] ფილია.,Оскільки [color=#4caf50]зелений[/color] поєднує [color=#ffeb3b]жовтий[/color] і [color=#2196f3]синій[/color], ця плитка рахується як обидва кольори. У кожному рядку та стовпці може бути максимум одна [color=#4caf50]зелена[/color] плитка.
+HTP_GREEN_EXAMPLE_INVALID_1,(Two [color=#2196f3]Blues[/color] + [color=#4caf50]Green[/color]),(Dos [color=#2196f3]Azules[/color] + [color=#4caf50]Verde[/color]),(Zwei [color=#2196f3]Blaue[/color] + [color=#4caf50]Grün[/color]),(Deux [color=#2196f3]Bleues[/color] + [color=#4caf50]Vert[/color]),(Dwie [color=#2196f3]Niebieskie[/color] + [color=#4caf50]Zielona[/color]),(ორი [color=#2196f3]ლურჯი[/color] + [color=#4caf50]მწვანე[/color]),(Два [color=#2196f3]Сині[/color] + [color=#4caf50]Зелена[/color])
+HTP_GREEN_EXAMPLE_INVALID_2,([color=#ffeb3b]Yellow[/color] + [color=#4caf50]Green[/color] + [color=#ffeb3b]Yellow[/color]),([color=#ffeb3b]Amarillo[/color] + [color=#4caf50]Verde[/color] + [color=#ffeb3b]Amarillo[/color]),([color=#ffeb3b]Gelb[/color] + [color=#4caf50]Grün[/color] + [color=#ffeb3b]Gelb[/color]),([color=#ffeb3b]Jaune[/color] + [color=#4caf50]Vert[/color] + [color=#ffeb3b]Jaune[/color]),([color=#ffeb3b]Żółty[/color] + [color=#4caf50]Zielony[/color] + [color=#ffeb3b]Żółty[/color]),([color=#ffeb3b]ყვითელი[/color] + [color=#4caf50]მწვანე[/color] + [color=#ffeb3b]ყვითელი[/color]),([color=#ffeb3b]Жовтий[/color] + [color=#4caf50]Зелений[/color] + [color=#ffeb3b]Жовтий[/color])
+HTP_GREEN_EXAMPLE_VALID,(Valid Mix),(Mezcla válida),(Gültige Mischung),(Mélange valide),(Poprawna kombinacja),(სწორი კომბინაცია),(Правильна комбінація)
+HTP_SHIFTER_TILES_HEADER,[color=#9c27b0][b]Shifter Tiles:[/b][/color],[color=#9c27b0][b]Fichas Deslizantes:[/b][/color],[color=#9c27b0][b]Schieber-Felder:[/b][/color],[color=#9c27b0][b]Tuiles Déplaçables :[/b][/color],[color=#9c27b0][b]Przesuwane Płytki:[/b][/color],[color=#9c27b0][b]გადამტანი ფილები:[/b][/color],[color=#9c27b0][b]Зсувні Плитки:[/b][/color]
+HTP_SHIFTER_TILES_DESC,These shifter tiles must be moved to their correct positions to solve the puzzle. When clicked, a [color=#9c27b0]shifter[/color] tile moves between two neighboring cells. The arrow indicates the direction of its next move (%s).,Estas fichas desplazables deben moverse a su posición correcta. Al pulsar, una ficha [color=#9c27b0]deslizante[/color] se mueve entre dos celdas vecinas. La flecha indica la dirección del siguiente movimiento (%s).,Diese Verschieber-Felder müssen an die richtige Position. Beim Klick bewegt sich ein [color=#9c27b0]Schieber[/color] Feld zwischen zwei Nachbarzellen. Der Pfeil zeigt die nächste Richtung (%s).,Ces tuiles déplaçables doivent être déplacées à la bonne position. Un clic déplace une tuile [color=#9c27b0]déplaçable[/color] entre deux cases voisines. La flèche indique la prochaine direction (%s).,Te przesuwane płytki muszą trafić na właściwe miejsca. Po kliknięciu [color=#9c27b0]przesuwana[/color] płytka przesuwa się między sąsiednie pola. Strzałka wskazuje kierunek następnego ruchu (%s).,ეს გადაადგილებადი ფილები სწორ ადგილებზე უნდა მოხვდეს. დაჭერისას [color=#9c27b0]გადამტანი[/color] ფილი მეზობელ უჯრებს შორის გადაადგილდება. ისარი მომდევნო მოძრაობის მიმართულებას აჩვენებს (%s).,Ці зсувні плитки потрібно перемістити на правильні місця. Після натискання [color=#9c27b0]зсувна[/color] плитка рухається між сусідніми клітинками. Стрілка показує напрямок наступного ходу (%s).
+HTP_LOCKS_LABEL,Locks:,Cerraduras:,Schlösser:,Verrous :,Kłódki:,ჩაკეტილები:,Замки:
+HTP_LOCKS_DESC,Any tile displaying a padlock icon is permanently fixed to the board.,Cualquier ficha con un candado está fijada permanentemente al tablero.,Jedes Feld mit Schloss-Symbol ist dauerhaft fixiert.,Toute tuile avec un cadenas est fixée définitivement.,Każda płytka z kłódką jest na stałe przypięta do planszy.,ყველა ფილი ჩაკეტილის ხატით მუდმივად მიბმულია დაფაზე.,Будь-яка плитка із замком назавжди закріплена на дошці.
+HTP_EQUALS_RULE,An [b]=[/b] symbol between two cells means they must be the [i]same[/i] color.,Un símbolo [b]=[/b] entre dos celdas significa que deben ser del [i]mismo[/i] color.,Ein [b]=[/b]-Symbol zwischen zwei Feldern bedeutet [i]gleiche[/i] Farbe.,Un symbole [b]=[/b] entre deux cases signifie la [i]même[/i] couleur.,Symbol [b]=[/b] między polami oznacza [i]ten sam[/i] kolor.,ორი უჯრის შორის [b]=[/b] ნიშანი ნიშნავს [i]ერთი[/i] ფერის უნდა იყვნენ.,Символ [b]=[/b] між клітинками означає [i]однаковий[/i] колір.
+HTP_NOT_EQUALS_RULE,A [b]×[/b] symbol between two cells means they must be [i]different[/i] colors.,Un símbolo [b]×[/b] entre dos celdas significa que deben ser de colores [i]distintos[/i].,Ein [b]×[/b]-Symbol zwischen zwei Feldern bedeutet [i]unterschiedliche[/i] Farben.,Un symbole [b]×[/b] entre deux cases signifie des couleurs [i]différentes[/i].,Symbol [b]×[/b] między polami oznacza [i]różne[/i] kolory.,ორი უჯრის შორის [b]×[/b] ნიშანი ნიშნავს [i]განსხვავებული[/i] ფერის უნდა იყვნენ.,Символ [b]×[/b] між клітинками означає [i]різний[/i] колір.
 HTP_EQUAL_BALANCE,Equal Balance: Every row and column must contain an equal number of Yellow and Blue tiles.,Equilibrio: Cada fila y columna debe contener el mismo número de fichas amarillas y azules.,Gleichgewicht: Jede Zeile und Spalte muss gleich viele gelbe und blaue Felder enthalten.,Équilibre : Chaque ligne et colonne doit contenir un nombre égal de tuiles jaunes et bleues.,Zasada Balansu: W każdym rzędzie i kolumnie musi znajdować się taka sama liczba żółtych i niebieskich płytek.,ბალანსი: ყოველ რიგში და სვეტში უნდა იყოს ყვითელი და ლურჯი ფილების თანაბარი რაოდენობა.,Баланс: У кожному рядку та стовпці має бути однакова кількість жовтих та синіх плиток.
 HTP_RULE_OF_TWO,The Rule of Two: No more than two tiles of the same color may be placed next to each other in any row or column.,La Regla de Dos: No se pueden colocar más de dos fichas del mismo color juntas en ninguna fila o columna.,Die Zweier-Regel: In keiner Zeile oder Spalte dürfen mehr als zwei gleichfarbige Felder nebeneinander liegen.,Règle de Deux : Pas plus de deux tuiles de la même couleur ne peuvent être placées côte à côte dans une ligne ou colonne.,Zasada Dwóch: W żadnym rzędzie ani kolumnie nie mogą leżeć obok siebie więcej niż dwie płytki tego samego koloru.,ორიანის წესი: არცერთ რიგსა თუ სვეტში არ შეიძლება ორი ერთნაირი ფერის ფილის გვერდიგვერდ მოთავსება.,Правило двох: У рядку чи стовпці не може бути більше двох плиток одного кольору поспіль.

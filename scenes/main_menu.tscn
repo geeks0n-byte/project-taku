@@ -41,10 +41,10 @@ texture_margin_bottom = 16.0
 modulate_color = Color(1.2, 1.2, 1.2, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_overlay"]
-bg_color = Color(0, 0, 0, 0.7)
+bg_color = Color(0, 0, 0, 0)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dark"]
-bg_color = Color(0.12, 0.12, 0.12, 1)
+bg_color = Color(0, 0, 0, 0)
 
 [node name="MainMenu" type="Control" unique_id=1615137946]
 layout_mode = 3
@@ -54,6 +54,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
+show_debug_tools = true
 
 [node name="UILayer" type="CanvasLayer" parent="." unique_id=116812140]
 
@@ -137,6 +138,8 @@ theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 text = "UI_CREDITS"
 
 [node name="EditorButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=1125842215]
+auto_translate_mode = 2
+visible = false
 custom_minimum_size = Vector2(600, 120)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -147,9 +150,94 @@ theme_override_font_sizes/font_size = 36
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-text = "UI_EDITOR"
+text = "EDITOR"
 
 [node name="OptionsMenu" parent="UILayer" unique_id=262705338 instance=ExtResource("5_options")]
+
+[node name="DebugBar" type="HBoxContainer" parent="UILayer" unique_id=1125842300]
+visible = false
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -70.0
+offset_right = -12.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="DebugStarButton" type="Button" parent="UILayer/DebugBar" unique_id=1125842216]
+auto_translate_mode = 2
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "STAR"
+
+[node name="DebugCometButton" type="Button" parent="UILayer/DebugBar" unique_id=1125842217]
+auto_translate_mode = 2
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "COMET"
+
+[node name="DebugAsteroidButton" type="Button" parent="UILayer/DebugBar" unique_id=1125842218]
+auto_translate_mode = 2
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "AST"
+
+[node name="DebugAsteroidCloudButton" type="Button" parent="UILayer/DebugBar" unique_id=1125842219]
+auto_translate_mode = 2
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "CLOUD"
+
+[node name="DebugCometShowerButton" type="Button" parent="UILayer/DebugBar" unique_id=1125842220]
+auto_translate_mode = 2
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "SHOWER"
 
 [node name="OverlayBlocker" type="Panel" parent="UILayer" unique_id=1317697056]
 visible = false
@@ -162,17 +250,17 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_overlay")
 
 [node name="CreditsPanel" type="Panel" parent="UILayer/OverlayBlocker" unique_id=2062593968]
 visible = false
-custom_minimum_size = Vector2(700, 650)
+custom_minimum_size = Vector2(780, 720)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -350.0
-offset_top = -325.0
-offset_right = 350.0
-offset_bottom = 325.0
+offset_left = -390.0
+offset_top = -360.0
+offset_right = 390.0
+offset_bottom = 360.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
@@ -193,11 +281,11 @@ alignment = 1
 
 [node name="CreditsTitle" type="Label" parent="UILayer/OverlayBlocker/CreditsPanel/VBoxContainer" unique_id=1679827605]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 10
+theme_override_constants/outline_size = 12
 theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 48
+theme_override_font_sizes/font_size = 64
 text = "UI_CREDITS"
 horizontal_alignment = 1
 
@@ -205,14 +293,19 @@ horizontal_alignment = 1
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
+theme_override_constants/outline_size = 6
 theme_override_fonts/normal_font = ExtResource("3_font")
-theme_override_font_sizes/normal_font_size = 22
+theme_override_fonts/bold_font = ExtResource("3_font")
+theme_override_fonts/bold_italics_font = ExtResource("3_font")
+theme_override_fonts/italics_font = ExtResource("3_font")
+theme_override_fonts/mono_font = ExtResource("3_font")
+theme_override_font_sizes/normal_font_size = 34
+theme_override_font_sizes/bold_font_size = 34
 bbcode_enabled = true
 text = "CREDITS_TEXT"
 
 [node name="CloseCreditsButton" type="Button" parent="UILayer/OverlayBlocker/CreditsPanel/VBoxContainer" unique_id=1268894059]
-custom_minimum_size = Vector2(500, 100)
+custom_minimum_size = Vector2(240, 90)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)

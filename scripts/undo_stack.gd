@@ -13,8 +13,7 @@ func reset(initial_state: Dictionary) -> void:
 
 func record(new_state: Dictionary) -> void:
 	_undo.append(current)
-	if _undo.size() > max_size:
-		_undo.pop_front()
+	_trim_undo_if_needed()
 	_redo.clear()
 	current = new_state
 
@@ -29,10 +28,16 @@ func redo() -> Dictionary:
 	if _redo.is_empty():
 		return {}
 	_undo.append(current)
-	if _undo.size() > max_size:
-		_undo.pop_front()
+	_trim_undo_if_needed()
 	current = _redo.pop_back()
 	return current
+
+func _trim_undo_if_needed() -> void:
+	# max_size <= 0 means unlimited history.
+	if max_size <= 0:
+		return
+	while _undo.size() > max_size:
+		_undo.pop_front()
 
 func can_undo() -> bool:
 	return not _undo.is_empty()

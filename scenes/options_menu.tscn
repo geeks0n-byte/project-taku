@@ -5,10 +5,10 @@
 [ext_resource type="Texture2D" uid="uid://d2ql5f4tsvnk8" path="res://resources/buttons/button_tile_gray_dark.svg" id="3_tex"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_overlay"]
-bg_color = Color(0, 0, 0, 0.7)
+bg_color = Color(0, 0, 0, 0)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dark"]
-bg_color = Color(0.12, 0.12, 0.12, 1)
+bg_color = Color(0, 0, 0, 0)
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_normal"]
 texture = ExtResource("3_tex")
@@ -46,6 +46,7 @@ content_margin_bottom = 8.0
 modulate_color = Color(0.8, 0.8, 0.8, 1)
 
 [node name="OptionsMenu" type="CanvasLayer"]
+visible = false
 layer = 20
 script = ExtResource("1_script")
 
@@ -65,7 +66,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="OptionsPanel" type="Panel" parent="CenterContainer"]
-custom_minimum_size = Vector2(700, 600)
+custom_minimum_size = Vector2(700, 720)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
 
@@ -83,9 +84,20 @@ grow_vertical = 2
 theme_override_constants/separation = 30
 alignment = 1
 
-[node name="LanguageContainer" type="HBoxContainer" parent="CenterContainer/OptionsPanel/VBoxContainer"]
-custom_minimum_size = Vector2(0, 100)
+[node name="TitleLabel" type="Label" parent="CenterContainer/OptionsPanel/VBoxContainer"]
 layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 12
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 48
+text = "UI_OPTIONS"
+horizontal_alignment = 1
+
+[node name="LanguageContainer" type="HBoxContainer" parent="CenterContainer/OptionsPanel/VBoxContainer"]
+custom_minimum_size = Vector2(620, 100)
+layout_mode = 2
+size_flags_horizontal = 4
 theme_override_constants/separation = 20
 alignment = 1
 
@@ -102,8 +114,9 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 text = "<"
 
 [node name="LanguageLabel" type="Label" parent="CenterContainer/OptionsPanel/VBoxContainer/LanguageContainer"]
+custom_minimum_size = Vector2(380, 100)
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
 theme_override_fonts/font = ExtResource("2_font")
@@ -111,6 +124,7 @@ theme_override_font_sizes/font_size = 28
 text = "ENGLISH"
 horizontal_alignment = 1
 vertical_alignment = 1
+clip_text = true
 
 [node name="NextLangButton" type="Button" parent="CenterContainer/OptionsPanel/VBoxContainer/LanguageContainer"]
 custom_minimum_size = Vector2(100, 100)
@@ -124,8 +138,8 @@ theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 text = ">"
 
-[node name="DeleteSaveButton" type="Button" parent="CenterContainer/OptionsPanel/VBoxContainer"]
-custom_minimum_size = Vector2(500, 100)
+[node name="BackgroundButton" type="Button" parent="CenterContainer/OptionsPanel/VBoxContainer"]
+custom_minimum_size = Vector2(560, 100)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -135,10 +149,26 @@ theme_override_font_sizes/font_size = 24
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+autowrap_mode = 3
+text = "UI_BG_DYNAMIC"
+
+[node name="DeleteSaveButton" type="Button" parent="CenterContainer/OptionsPanel/VBoxContainer"]
+custom_minimum_size = Vector2(560, 100)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+autowrap_mode = 3
 text = "UI_RESET_PROGRESS"
 
 [node name="DeleteCustomButton" type="Button" parent="CenterContainer/OptionsPanel/VBoxContainer"]
-custom_minimum_size = Vector2(500, 100)
+visible = false
+custom_minimum_size = Vector2(560, 100)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -148,10 +178,12 @@ theme_override_font_sizes/font_size = 24
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+auto_translate_mode = 1
+autowrap_mode = 3
 text = "UI_DELETE_CUSTOM"
 
 [node name="CloseOptionsButton" type="Button" parent="CenterContainer/OptionsPanel/VBoxContainer"]
-custom_minimum_size = Vector2(500, 100)
+custom_minimum_size = Vector2(280, 90)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)

@@ -1,6 +1,11 @@
 class_name PuzzleGenerator
 extends RefCounted
 
+## Solution-count result when the solver hits its iteration budget (unknown, not multi).
+const SOLUTIONS_UNKNOWN := -1
+const SOLVE_ITER_BUDGET := 60000
+const COUNT_ITER_BUDGET := 80000
+
 static func generate_random_layout(width: int, height: int, allowed_tiles: Array, current_layout: Dictionary = {}, require_unique: bool = true, lock_walls: bool = false) -> Dictionary:
 	var attempt = 0
 	
@@ -119,7 +124,7 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 				var st = layout.get(Vector2i(xx, yy), -1)
 				if st != -2:
 					p += 1
-					if st == 3: s += 1
+					if st == GameConstants.TileState.SHIFTER: s += 1
 			r_sum += (p + s) % 2
 		for xx in range(width):
 			var p = 0; var s = 0
@@ -127,7 +132,7 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 				var st = layout.get(Vector2i(xx, yy), -1)
 				if st != -2:
 					p += 1
-					if st == 3: s += 1
+					if st == GameConstants.TileState.SHIFTER: s += 1
 			c_sum += (p + s) % 2
 
 		if r_sum != c_sum:
@@ -139,29 +144,35 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 			
 		var solved_layout = layout.duplicate()
 		
+		# Greens on the solved board. Shifter home cells hold a shifter (not a green),
+		# so any green that would have occupied those cells is already excluded —
+		# i.e. "solved greens minus greens converted into shifter tiles".
 		var total_jokers_generated = 0
 		for c in solved_layout.keys():
-			if solved_layout[c] == 2:
+			if solved_layout[c] == GameConstants.TileState.JOKER:
 				total_jokers_generated += 1
 
 		# ==========================================
 		# STEP 3: Identify ALL Possible Constraints
 		# ==========================================
+		# Contractions across Y/B/G/P per rules:
+		# Y=Y Y=G B=B B=G G=G P=P | YxB YxG YxP BxG BxP GxP
 		var all_possible_constraints = []
 		for y in range(height):
 			for x in range(width):
 				var c = Vector2i(x, y)
-				if solved_layout[c] in [0, 1]:
-					var right = c + Vector2i(1, 0)
-					var down = c + Vector2i(0, 1)
-					
-					if solved_layout.has(right) and solved_layout[right] in [0, 1]:
-						var type = "equals" if solved_layout[c] == solved_layout[right] else "not_equals"
-						all_possible_constraints.append({"a": c, "b": right, "type": type})
-							
-					if solved_layout.has(down) and solved_layout[down] in [0, 1]:
-						var type = "equals" if solved_layout[c] == solved_layout[down] else "not_equals"
-						all_possible_constraints.append({"a": c, "b": down, "type": type})
+				if not GameConstants.is_hintable_tile(solved_layout[c]):
+					continue
+				var right = c + Vector2i(1, 0)
+				var down = c + Vector2i(0, 1)
+
+				if solved_layout.has(right) and GameConstants.is_hintable_tile(solved_layout[right]):
+					var type_r = "equals" if solved_layout[c] == solved_layout[right] else "not_equals"
+					all_possible_constraints.append({"a": c, "b": right, "type": type_r})
+
+				if solved_layout.has(down) and GameConstants.is_hintable_tile(solved_layout[down]):
+					var type_d = "equals" if solved_layout[c] == solved_layout[down] else "not_equals"
+					all_possible_constraints.append({"a": c, "b": down, "type": type_d})
 
 		# ==========================================
 		# STEP 4: Smart Hole Punching
@@ -210,9 +221,9 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 			if layout[c] == -1: current_empty.append(c)
 			
 		var cleared_count = 0
+		var count_budget_exhausted := false
 		
 		for c in clearable_cells:
-			# FIX: Always stop when we reach the target clear count!
 			if cleared_count >= target_to_clear:
 				break 
 				
@@ -222,7 +233,12 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 			
 			if require_unique:
 				var sols = _count_solutions(layout, current_empty, width, height, solver_tiles, all_possible_constraints, {"count": 0})
-				
+				if sols == SOLUTIONS_UNKNOWN:
+					# Uniqueness unknown — keep the cell filled and retry another board.
+					layout[c] = original_val
+					current_empty.erase(c)
+					count_budget_exhausted = true
+					break
 				if sols != 1:
 					layout[c] = original_val
 					current_empty.erase(c)
@@ -230,6 +246,12 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 					cleared_count += 1
 			else:
 				cleared_count += 1
+
+		if count_budget_exhausted:
+			continue
+		# Reject nearly-full unique boards that never reached the clear target.
+		if require_unique and min_clear_count > 0 and cleared_count < min_clear_count:
+			continue
 
 		# ==========================================
 		# STEP 5: Constraint Minimizer
@@ -246,7 +268,8 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 				current_constraints.remove_at(i)
 				
 				var sols = _count_solutions(layout, current_empty, width, height, solver_tiles, current_constraints, {"count": 0})
-				if sols != 1:
+				if sols == SOLUTIONS_UNKNOWN or sols != 1:
+					# Keep constraint if removing it breaks uniqueness or is inconclusive.
 					current_constraints.insert(i, test_constraint)
 				else:
 					hidden_hints.append(test_constraint)
@@ -255,21 +278,27 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		else:
 			hidden_hints = all_possible_constraints.duplicate()
 
+		var required_shifter_moves := 0
 		for pair in shifters:
+			# Home = resting cell in the solved layout (shifter sat here while colors filled).
+			pair["home"] = pair.active
 			layout[pair.a] = -1
 			layout[pair.b] = -1
-			
+			# Scramble starting side so some pairs need a move to reach home.
 			if randi() % 2 == 0:
 				var temp = pair.active
 				pair.active = pair.inactive
 				pair.inactive = temp
+			if pair.active != pair.home:
+				required_shifter_moves += 1
 
 		return {
 			"layout": layout,
 			"shifters": shifters,
 			"constraints": final_constraints,
 			"hidden_hints": hidden_hints,
-			"total_jokers": total_jokers_generated
+			"total_jokers": total_jokers_generated,
+			"required_shifter_moves": required_shifter_moves
 		}
 		
 	push_error("Generator failed: Generated walls may be mathematically impossible with the strict parity rules.")
@@ -278,8 +307,7 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 static func _solve(layout: Dictionary, empty_cells: Array, w: int, h: int, allowed: Array, constraints: Array, iter: Dictionary) -> bool:
 	if empty_cells.size() == 0: return true
 	iter.count += 1
-	# FIX: Massively increased safety timeout to prevent false negatives
-	if iter.count > 60000: return false 
+	if iter.count > SOLVE_ITER_BUDGET: return false 
 	
 	var best_idx = -1
 	var min_opts = 999
@@ -314,11 +342,11 @@ static func _solve(layout: Dictionary, empty_cells: Array, w: int, h: int, allow
 	empty_cells.insert(best_idx, best_coord) 
 	return false
 
+## Returns 0, 1, 2+ (capped once >1), or SOLUTIONS_UNKNOWN on iteration timeout.
 static func _count_solutions(layout: Dictionary, empty_cells: Array, w: int, h: int, allowed: Array, constraints: Array, iter: Dictionary) -> int:
 	if empty_cells.size() == 0: return 1
 	iter.count += 1
-	# FIX: Massively increased safety timeout to ensure holes are punched fully
-	if iter.count > 40000: return 2 
+	if iter.count > COUNT_ITER_BUDGET: return SOLUTIONS_UNKNOWN
 	
 	var best_idx = -1
 	var min_opts = 999
@@ -346,8 +374,12 @@ static func _count_solutions(layout: Dictionary, empty_cells: Array, w: int, h: 
 	var total_sols = 0
 	for val in best_valid_vals:
 		layout[best_coord] = val
-		total_sols += _count_solutions(layout, empty_cells, w, h, allowed, constraints, iter)
+		var branch = _count_solutions(layout, empty_cells, w, h, allowed, constraints, iter)
 		layout[best_coord] = -1 
+		if branch == SOLUTIONS_UNKNOWN:
+			empty_cells.insert(best_idx, best_coord)
+			return SOLUTIONS_UNKNOWN
+		total_sols += branch
 		if total_sols > 1: break
 			
 	empty_cells.insert(best_idx, best_coord) 
@@ -385,7 +417,7 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 		if st != -2:
 			p_row += 1
 			if st == -1: empty_row += 1
-			elif st == 3: s_row += 1
+			elif st == GameConstants.TileState.SHIFTER: s_row += 1
 			elif st == 2: j_row += 1
 			elif st == 0: b0_row += 1
 			elif st == 1: b1_row += 1
@@ -404,7 +436,7 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 		if st != -2:
 			p_col += 1
 			if st == -1: empty_col += 1
-			elif st == 3: s_col += 1
+			elif st == GameConstants.TileState.SHIFTER: s_col += 1
 			elif st == 2: j_col += 1
 			elif st == 0: b0_col += 1
 			elif st == 1: b1_col += 1
@@ -421,9 +453,17 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 		if c.a == coord or c.b == coord:
 			var other_coord = c.b if c.a == coord else c.a
 			var other_val = layout.get(other_coord, -1)
-			if val in [0, 1] and other_val in [0, 1]:
-				if c.type == "equals" and val != other_val: layout[coord] = -1; return false
-				if c.type == "not_equals" and val == other_val: layout[coord] = -1; return false
+			if other_val < 0:
+				continue
+			# Green is wild for both equals and not-equals.
+			if val == GameConstants.TileState.JOKER or other_val == GameConstants.TileState.JOKER:
+				continue
+			if c.type == "equals" and val != other_val:
+				layout[coord] = -1
+				return false
+			if c.type == "not_equals" and val == other_val:
+				layout[coord] = -1
+				return false
 
 	layout[coord] = -1 
 	return true

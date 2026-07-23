@@ -8,13 +8,13 @@
 [ext_resource type="Texture2D" uid="uid://dsu5bgexlaa44" path="res://resources/tiles/tile_yellow.svg" id="5_l4hv8"]
 [ext_resource type="Texture2D" uid="uid://dkilaw7wyetxk" path="res://resources/tiles/tile_blue.svg" id="6_3fkon"]
 [ext_resource type="Texture2D" uid="uid://bnmamps4et8l4" path="res://resources/tiles/tile_green.svg" id="7_wkaig"]
-[ext_resource type="Texture2D" uid="uid://2oyf1pe6n184" path="res://resources/tiles/tile_purple.svg" id="8_2rodj"]
+[ext_resource type="Texture2D" uid="uid://2oyf1pe6n184" path="res://resources/tiles/tile_shifter.svg" id="8_2rodj"]
 [ext_resource type="FontFile" uid="uid://ckwxng7tlmws7" path="res://resources/fonts/PressStart2P-vaV7.ttf" id="font_ps2p"]
 [ext_resource type="Script" uid="uid://8ei7vk8jguhe" path="res://scripts/playtest_ui_manager.gd" id="pt_ui_mgr"]
 [ext_resource type="Texture2D" uid="uid://d2ql5f4tsvnk8" path="res://resources/buttons/button_tile_gray_dark.svg" id="tex_btn_bg"]
 [ext_resource type="Texture2D" uid="uid://c0nty0okk7axl" path="res://resources/icons/icon_clear.svg" id="tex_clear"]
 [ext_resource type="Texture2D" uid="uid://dwk0b06y7msdk" path="res://resources/icons/icon_exit.svg" id="tex_exit"]
-[ext_resource type="Texture2D" uid="uid://duph5sjcrwtwc" path="res://resources/icons/icon_hint.svg" id="tex_hint"]
+[ext_resource type="Texture2D" uid="uid://duph5sjcrwtwc" path="res://resources/icons/icon_hint_on.svg" id="tex_hint"]
 [ext_resource type="Texture2D" uid="uid://kp3p578iul1y" path="res://resources/icons/icon_load.svg" id="tex_load"]
 [ext_resource type="Texture2D" uid="uid://b3yf4ubfj5e5e" path="res://resources/icons/icon_play.svg" id="tex_play"]
 [ext_resource type="Texture2D" uid="uid://da6jovgg77ml0" path="res://resources/icons/icon_random.svg" id="tex_random"]
@@ -24,6 +24,8 @@
 [ext_resource type="Texture2D" uid="uid://bfcy2pkt6kw64" path="res://resources/icons/icon_save.svg" id="tex_save"]
 [ext_resource type="Texture2D" uid="uid://cnip7xhvxn4ky" path="res://resources/icons/icon_stop.svg" id="tex_stop"]
 [ext_resource type="Texture2D" uid="uid://dwj0omtseqty7" path="res://resources/icons/icon_undo.svg" id="tex_undo"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_brush"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_normal"]
 content_margin_left = 8.0
@@ -75,21 +77,12 @@ modulate_color = Color(0.5, 0.5, 0.5, 1)
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dark"]
 bg_color = Color(0.12, 0.12, 0.12, 1)
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_htp"]
+bg_color = Color(0, 0, 0, 0)
+
 [node name="LevelEditor" type="Node2D" unique_id=742747983]
+auto_translate_mode = 2
 script = ExtResource("1_5u7ie")
-
-[node name="EditorBackground" type="ColorRect" parent="." unique_id=1493736825]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(0.25, 0.25, 0.25, 1)
-
-[node name="EditorCanvasManager" type="Node2D" parent="." unique_id=1172533290]
-position = Vector2(120, 180)
-script = ExtResource("2_nh68x")
 
 [node name="EditorUIManager" type="Node2D" parent="." unique_id=2105132823]
 script = ExtResource("3_eovuc")
@@ -99,30 +92,51 @@ script = ExtResource("pt_ui_mgr")
 
 [node name="EditorUI" type="CanvasLayer" parent="." unique_id=495483212]
 
+[node name="EditorBackground" type="ColorRect" parent="EditorUI" unique_id=1493736825]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.305882, 0.305882, 0.305882, 1)
+
+[node name="EditorCanvasManager" type="Node2D" parent="EditorUI" unique_id=1172533290]
+position = Vector2(120, 180)
+script = ExtResource("2_nh68x")
+
 [node name="TopHUD" type="MarginContainer" parent="EditorUI" unique_id=1137842385]
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 160.0
+offset_bottom = 144.0
 grow_horizontal = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
 
-[node name="LeftButtons" type="HBoxContainer" parent="EditorUI/TopHUD" unique_id=1187871857]
+[node name="TopBarRow" type="HBoxContainer" parent="EditorUI/TopHUD" unique_id=1187871856]
+custom_minimum_size = Vector2(0, 140)
 layout_mode = 2
-size_flags_horizontal = 0
-theme_override_constants/separation = 20
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+alignment = 1
 
-[node name="MainMenuButton" type="Button" parent="EditorUI/TopHUD/LeftButtons" unique_id=1711955161]
-custom_minimum_size = Vector2(135, 135)
+[node name="LeftButtons" type="HBoxContainer" parent="EditorUI/TopHUD/TopBarRow" unique_id=1187871857]
 layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
+theme_override_constants/separation = 4
+
+[node name="MainMenuButton" type="Button" parent="EditorUI/TopHUD/TopBarRow/LeftButtons" unique_id=1711955161]
+custom_minimum_size = Vector2(140, 140)
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="IconContainer" type="MarginContainer" parent="EditorUI/TopHUD/LeftButtons/MainMenuButton" unique_id=19674838]
+[node name="IconContainer" type="MarginContainer" parent="EditorUI/TopHUD/TopBarRow/LeftButtons/MainMenuButton" unique_id=19674838]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -131,8 +145,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/TopHUD/LeftButtons/MainMenuButton/IconContainer" unique_id=2138409732]
-custom_minimum_size = Vector2(90, 90)
+[node name="Icon" type="TextureRect" parent="EditorUI/TopHUD/TopBarRow/LeftButtons/MainMenuButton/IconContainer" unique_id=2138409732]
+custom_minimum_size = Vector2(83, 83)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -141,15 +155,17 @@ texture = ExtResource("tex_exit")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="TestButton" type="Button" parent="EditorUI/TopHUD/LeftButtons" unique_id=1295800641]
-custom_minimum_size = Vector2(135, 135)
+[node name="TestButton" type="Button" parent="EditorUI/TopHUD/TopBarRow/LeftButtons" unique_id=1295800641]
+custom_minimum_size = Vector2(140, 140)
 layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="IconContainer" type="MarginContainer" parent="EditorUI/TopHUD/LeftButtons/TestButton" unique_id=622828528]
+[node name="IconContainer" type="MarginContainer" parent="EditorUI/TopHUD/TopBarRow/LeftButtons/TestButton" unique_id=622828528]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -158,8 +174,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/TopHUD/LeftButtons/TestButton/IconContainer" unique_id=795162030]
-custom_minimum_size = Vector2(90, 90)
+[node name="Icon" type="TextureRect" parent="EditorUI/TopHUD/TopBarRow/LeftButtons/TestButton/IconContainer" unique_id=795162030]
+custom_minimum_size = Vector2(83, 83)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -168,15 +184,17 @@ texture = ExtResource("tex_play")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="ClearButton" type="Button" parent="EditorUI/TopHUD/LeftButtons" unique_id=1061375847]
-custom_minimum_size = Vector2(135, 135)
+[node name="ClearButton" type="Button" parent="EditorUI/TopHUD/TopBarRow/LeftButtons" unique_id=1061375847]
+custom_minimum_size = Vector2(140, 140)
 layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="IconContainer" type="MarginContainer" parent="EditorUI/TopHUD/LeftButtons/ClearButton" unique_id=244920010]
+[node name="IconContainer" type="MarginContainer" parent="EditorUI/TopHUD/TopBarRow/LeftButtons/ClearButton" unique_id=244920010]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -185,8 +203,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/TopHUD/LeftButtons/ClearButton/IconContainer" unique_id=416524772]
-custom_minimum_size = Vector2(90, 90)
+[node name="Icon" type="TextureRect" parent="EditorUI/TopHUD/TopBarRow/LeftButtons/ClearButton/IconContainer" unique_id=416524772]
+custom_minimum_size = Vector2(83, 83)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -195,34 +213,62 @@ texture = ExtResource("tex_clear")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="EditorTitleLabel" type="Label" parent="EditorUI/TopHUD" unique_id=678270223]
+[node name="LeftSpacer" type="Control" parent="EditorUI/TopHUD/TopBarRow" unique_id=1187871862]
+custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 size_flags_horizontal = 4
-theme_override_colors/font_color = Color(1, 0.9, 0.4, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 12
-theme_override_fonts/font = ExtResource("font_ps2p")
-theme_override_font_sizes/font_size = 48
-text = "EDIT
-MODE"
-horizontal_alignment = 1
-vertical_alignment = 1
 
-[node name="RightButtons" type="HBoxContainer" parent="EditorUI/TopHUD" unique_id=517478761]
+[node name="EditorModeLabelWrap" type="CenterContainer" parent="EditorUI/TopHUD/TopBarRow" unique_id=1187871864]
+custom_minimum_size = Vector2(220, 140)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="EditorModeLabelInset" type="MarginContainer" parent="EditorUI/TopHUD/TopBarRow/EditorModeLabelWrap" unique_id=1187871865]
+layout_mode = 2
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_bottom = 4
+
+[node name="EditorModeLabel" type="RichTextLabel" parent="EditorUI/TopHUD/TopBarRow/EditorModeLabelWrap/EditorModeLabelInset" unique_id=1187871858]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_colors/default_color = Color(1, 0.9, 0.4, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 13
+theme_override_fonts/normal_font = ExtResource("font_ps2p")
+theme_override_font_sizes/normal_font_size = 35
+bbcode_enabled = true
+text = "[center]EDIT
+MODE[/center]"
+scroll_active = false
+fit_content = true
+
+[node name="RightSpacer" type="Control" parent="EditorUI/TopHUD/TopBarRow" unique_id=1187871863]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="RightButtons" type="HBoxContainer" parent="EditorUI/TopHUD/TopBarRow" unique_id=1187871861]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
+theme_override_constants/separation = 4
+
+[node name="EditorHintButton" type="Button" parent="EditorUI/TopHUD/TopBarRow/RightButtons" unique_id=827994585]
+custom_minimum_size = Vector2(140, 140)
 layout_mode = 2
 size_flags_horizontal = 8
-theme_override_constants/separation = 20
-
-[node name="EditorHintButton" type="Button" parent="EditorUI/TopHUD/RightButtons" unique_id=827994585]
-custom_minimum_size = Vector2(135, 135)
-layout_mode = 2
+size_flags_vertical = 8
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 toggle_mode = true
 
-[node name="IconContainer" type="MarginContainer" parent="EditorUI/TopHUD/RightButtons/EditorHintButton" unique_id=1318201818]
+[node name="IconContainer" type="MarginContainer" parent="EditorUI/TopHUD/TopBarRow/RightButtons/EditorHintButton" unique_id=1318201818]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -231,8 +277,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/TopHUD/RightButtons/EditorHintButton/IconContainer" unique_id=1329909136]
-custom_minimum_size = Vector2(90, 90)
+[node name="Icon" type="TextureRect" parent="EditorUI/TopHUD/TopBarRow/RightButtons/EditorHintButton/IconContainer" unique_id=1329909136]
+custom_minimum_size = Vector2(83, 83)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -241,15 +287,18 @@ texture = ExtResource("tex_hint")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="EditorUndoButton" type="Button" parent="EditorUI/TopHUD/RightButtons" unique_id=21033591]
-custom_minimum_size = Vector2(135, 135)
+[node name="EditorUndoButton" type="Button" parent="EditorUI/TopHUD/TopBarRow/RightButtons" unique_id=21033591]
+custom_minimum_size = Vector2(140, 140)
 layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
+disabled = true
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="IconContainer" type="MarginContainer" parent="EditorUI/TopHUD/RightButtons/EditorUndoButton" unique_id=561935027]
+[node name="IconContainer" type="MarginContainer" parent="EditorUI/TopHUD/TopBarRow/RightButtons/EditorUndoButton" unique_id=561935027]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -258,8 +307,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/TopHUD/RightButtons/EditorUndoButton/IconContainer" unique_id=861405682]
-custom_minimum_size = Vector2(90, 90)
+[node name="Icon" type="TextureRect" parent="EditorUI/TopHUD/TopBarRow/RightButtons/EditorUndoButton/IconContainer" unique_id=861405682]
+custom_minimum_size = Vector2(83, 83)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -268,15 +317,18 @@ texture = ExtResource("tex_undo")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="EditorRedoButton" type="Button" parent="EditorUI/TopHUD/RightButtons" unique_id=1088188214]
-custom_minimum_size = Vector2(135, 135)
+[node name="EditorRedoButton" type="Button" parent="EditorUI/TopHUD/TopBarRow/RightButtons" unique_id=1088188214]
+custom_minimum_size = Vector2(140, 140)
 layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
+disabled = true
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="IconContainer" type="MarginContainer" parent="EditorUI/TopHUD/RightButtons/EditorRedoButton" unique_id=1410147700]
+[node name="IconContainer" type="MarginContainer" parent="EditorUI/TopHUD/TopBarRow/RightButtons/EditorRedoButton" unique_id=1410147700]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -285,8 +337,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/TopHUD/RightButtons/EditorRedoButton/IconContainer" unique_id=146575682]
-custom_minimum_size = Vector2(90, 90)
+[node name="Icon" type="TextureRect" parent="EditorUI/TopHUD/TopBarRow/RightButtons/EditorRedoButton/IconContainer" unique_id=146575682]
+custom_minimum_size = Vector2(83, 83)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -299,27 +351,35 @@ stretch_mode = 5
 visible = false
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 160.0
+offset_bottom = 144.0
 grow_horizontal = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
 
-[node name="LeftButtons" type="HBoxContainer" parent="EditorUI/PlaytestHUD" unique_id=1084505879]
+[node name="TopBarRow" type="HBoxContainer" parent="EditorUI/PlaytestHUD" unique_id=1084505878]
+custom_minimum_size = Vector2(0, 140)
 layout_mode = 2
-size_flags_horizontal = 0
-theme_override_constants/separation = 20
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+alignment = 1
 
-[node name="PTExitButton" type="Button" parent="EditorUI/PlaytestHUD/LeftButtons" unique_id=1364088205]
-custom_minimum_size = Vector2(135, 135)
+[node name="LeftButtons" type="HBoxContainer" parent="EditorUI/PlaytestHUD/TopBarRow" unique_id=1084505879]
 layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
+theme_override_constants/separation = 4
+
+[node name="ExitButton" type="Button" parent="EditorUI/PlaytestHUD/TopBarRow/LeftButtons" unique_id=1364088205]
+custom_minimum_size = Vector2(140, 140)
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="IconContainer" type="MarginContainer" parent="EditorUI/PlaytestHUD/LeftButtons/PTExitButton" unique_id=1715367640]
+[node name="IconContainer" type="MarginContainer" parent="EditorUI/PlaytestHUD/TopBarRow/LeftButtons/ExitButton" unique_id=1715367640]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -328,8 +388,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/PlaytestHUD/LeftButtons/PTExitButton/IconContainer" unique_id=838151614]
-custom_minimum_size = Vector2(90, 90)
+[node name="Icon" type="TextureRect" parent="EditorUI/PlaytestHUD/TopBarRow/LeftButtons/ExitButton/IconContainer" unique_id=838151614]
+custom_minimum_size = Vector2(83, 83)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -338,15 +398,17 @@ texture = ExtResource("tex_stop")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="PTResetButton" type="Button" parent="EditorUI/PlaytestHUD/LeftButtons" unique_id=436354391]
-custom_minimum_size = Vector2(135, 135)
+[node name="ResetButton" type="Button" parent="EditorUI/PlaytestHUD/TopBarRow/LeftButtons" unique_id=436354391]
+custom_minimum_size = Vector2(140, 140)
 layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="IconContainer" type="MarginContainer" parent="EditorUI/PlaytestHUD/LeftButtons/PTResetButton" unique_id=1834557674]
+[node name="IconContainer" type="MarginContainer" parent="EditorUI/PlaytestHUD/TopBarRow/LeftButtons/ResetButton" unique_id=1834557674]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -355,8 +417,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/PlaytestHUD/LeftButtons/PTResetButton/IconContainer" unique_id=2052573946]
-custom_minimum_size = Vector2(90, 90)
+[node name="Icon" type="TextureRect" parent="EditorUI/PlaytestHUD/TopBarRow/LeftButtons/ResetButton/IconContainer" unique_id=2052573946]
+custom_minimum_size = Vector2(83, 83)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -365,15 +427,17 @@ texture = ExtResource("tex_reset")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="PTRulesButton" type="Button" parent="EditorUI/PlaytestHUD/LeftButtons" unique_id=1194263685]
-custom_minimum_size = Vector2(135, 135)
+[node name="RulesButton" type="Button" parent="EditorUI/PlaytestHUD/TopBarRow/LeftButtons" unique_id=1194263685]
+custom_minimum_size = Vector2(140, 140)
 layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="IconContainer" type="MarginContainer" parent="EditorUI/PlaytestHUD/LeftButtons/PTRulesButton" unique_id=1979792404]
+[node name="IconContainer" type="MarginContainer" parent="EditorUI/PlaytestHUD/TopBarRow/LeftButtons/RulesButton" unique_id=1979792404]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -382,8 +446,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/PlaytestHUD/LeftButtons/PTRulesButton/IconContainer" unique_id=1895644775]
-custom_minimum_size = Vector2(90, 90)
+[node name="Icon" type="TextureRect" parent="EditorUI/PlaytestHUD/TopBarRow/LeftButtons/RulesButton/IconContainer" unique_id=1895644775]
+custom_minimum_size = Vector2(83, 83)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -392,35 +456,61 @@ texture = ExtResource("tex_rules")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="PTTitleLabel" type="Label" parent="EditorUI/PlaytestHUD" unique_id=1407291257]
-custom_minimum_size = Vector2(300, 80)
+[node name="LeftSpacer" type="Control" parent="EditorUI/PlaytestHUD/TopBarRow" unique_id=1084505884]
+custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 0
-theme_override_colors/font_color = Color(1, 0.2, 0.2, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 12
-theme_override_fonts/font = ExtResource("font_ps2p")
-theme_override_font_sizes/font_size = 48
-text = "TEST
-MODE"
-horizontal_alignment = 1
-vertical_alignment = 1
 
-[node name="RightButtons" type="HBoxContainer" parent="EditorUI/PlaytestHUD" unique_id=721481196]
+[node name="TestModeLabelWrap" type="CenterContainer" parent="EditorUI/PlaytestHUD/TopBarRow" unique_id=1084505886]
+custom_minimum_size = Vector2(220, 140)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="TestModeLabelInset" type="MarginContainer" parent="EditorUI/PlaytestHUD/TopBarRow/TestModeLabelWrap" unique_id=1084505887]
+layout_mode = 2
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_bottom = 4
+
+[node name="TestModeLabel" type="RichTextLabel" parent="EditorUI/PlaytestHUD/TopBarRow/TestModeLabelWrap/TestModeLabelInset" unique_id=1084505880]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_colors/default_color = Color(1, 0.3, 0.3, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 13
+theme_override_fonts/normal_font = ExtResource("font_ps2p")
+theme_override_font_sizes/normal_font_size = 35
+bbcode_enabled = true
+text = "[center]TEST
+MODE[/center]"
+scroll_active = false
+fit_content = true
+
+[node name="RightSpacer" type="Control" parent="EditorUI/PlaytestHUD/TopBarRow" unique_id=1084505885]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="RightButtons" type="HBoxContainer" parent="EditorUI/PlaytestHUD/TopBarRow" unique_id=1084505883]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
+theme_override_constants/separation = 4
+
+[node name="HintButton" type="Button" parent="EditorUI/PlaytestHUD/TopBarRow/RightButtons" unique_id=1197521849]
+custom_minimum_size = Vector2(140, 140)
 layout_mode = 2
 size_flags_horizontal = 8
-theme_override_constants/separation = 20
-
-[node name="PTHintButton" type="Button" parent="EditorUI/PlaytestHUD/RightButtons" unique_id=1197521849]
-custom_minimum_size = Vector2(135, 135)
-layout_mode = 2
+size_flags_vertical = 8
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="IconContainer" type="MarginContainer" parent="EditorUI/PlaytestHUD/RightButtons/PTHintButton" unique_id=121472755]
+[node name="IconContainer" type="MarginContainer" parent="EditorUI/PlaytestHUD/TopBarRow/RightButtons/HintButton" unique_id=121472755]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -429,8 +519,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/PlaytestHUD/RightButtons/PTHintButton/IconContainer" unique_id=1678322018]
-custom_minimum_size = Vector2(90, 90)
+[node name="Icon" type="TextureRect" parent="EditorUI/PlaytestHUD/TopBarRow/RightButtons/HintButton/IconContainer" unique_id=1678322018]
+custom_minimum_size = Vector2(83, 83)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -439,15 +529,17 @@ texture = ExtResource("tex_hint")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="PTUndoButton" type="Button" parent="EditorUI/PlaytestHUD/RightButtons" unique_id=868979077]
-custom_minimum_size = Vector2(135, 135)
+[node name="UndoButton" type="Button" parent="EditorUI/PlaytestHUD/TopBarRow/RightButtons" unique_id=868979077]
+custom_minimum_size = Vector2(140, 140)
 layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="IconContainer" type="MarginContainer" parent="EditorUI/PlaytestHUD/RightButtons/PTUndoButton" unique_id=993321100]
+[node name="IconContainer" type="MarginContainer" parent="EditorUI/PlaytestHUD/TopBarRow/RightButtons/UndoButton" unique_id=993321100]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -456,8 +548,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/PlaytestHUD/RightButtons/PTUndoButton/IconContainer" unique_id=228471838]
-custom_minimum_size = Vector2(90, 90)
+[node name="Icon" type="TextureRect" parent="EditorUI/PlaytestHUD/TopBarRow/RightButtons/UndoButton/IconContainer" unique_id=228471838]
+custom_minimum_size = Vector2(83, 83)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -466,15 +558,17 @@ texture = ExtResource("tex_undo")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="PTRedoButton" type="Button" parent="EditorUI/PlaytestHUD/RightButtons" unique_id=347166810]
-custom_minimum_size = Vector2(135, 135)
+[node name="RedoButton" type="Button" parent="EditorUI/PlaytestHUD/TopBarRow/RightButtons" unique_id=347166810]
+custom_minimum_size = Vector2(140, 140)
 layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="IconContainer" type="MarginContainer" parent="EditorUI/PlaytestHUD/RightButtons/PTRedoButton" unique_id=234184264]
+[node name="IconContainer" type="MarginContainer" parent="EditorUI/PlaytestHUD/TopBarRow/RightButtons/RedoButton" unique_id=234184264]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -483,8 +577,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/PlaytestHUD/RightButtons/PTRedoButton/IconContainer" unique_id=590182009]
-custom_minimum_size = Vector2(90, 90)
+[node name="Icon" type="TextureRect" parent="EditorUI/PlaytestHUD/TopBarRow/RightButtons/RedoButton/IconContainer" unique_id=590182009]
+custom_minimum_size = Vector2(83, 83)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -497,67 +591,123 @@ stretch_mode = 5
 visible = false
 anchors_preset = 10
 anchor_right = 1.0
-offset_top = 180.0
-offset_bottom = 240.0
+offset_left = 4.0
+offset_top = 156.0
+offset_right = -4.0
+offset_bottom = 228.0
 grow_horizontal = 2
 mouse_filter = 2
-theme_override_constants/separation = 40
-alignment = 1
+theme_override_constants/separation = 0
+alignment = 0
 
-[node name="PTTimerLabel" type="RichTextLabel" parent="EditorUI/CounterContainer" unique_id=999999992]
-custom_minimum_size = Vector2(300, 40)
+[node name="TimerSlot" type="Control" parent="EditorUI/CounterContainer" unique_id=999999998]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.0
+
+[node name="TimerLabel" type="RichTextLabel" parent="EditorUI/CounterContainer/TimerSlot" unique_id=999999992]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -34.0
+offset_right = 180.0
+offset_bottom = 34.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
-theme_override_colors/default_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_colors/default_color = Color(0.95, 0.95, 0.95, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
 theme_override_fonts/normal_font = ExtResource("font_ps2p")
 theme_override_font_sizes/normal_font_size = 28
 bbcode_enabled = true
-text = "[center]TIME: 00:00[/center]"
+text = "[center]TIME 00:00[/center]"
 scroll_active = false
+fit_content = false
+autowrap_mode = 0
 
-[node name="PTJokerCounterLabel" type="RichTextLabel" parent="EditorUI/CounterContainer" unique_id=999999993]
-custom_minimum_size = Vector2(300, 40)
+[node name="JokerSlot" type="Control" parent="EditorUI/CounterContainer" unique_id=999999999]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.0
+
+[node name="JokerCounterLabel" type="RichTextLabel" parent="EditorUI/CounterContainer/JokerSlot" unique_id=999999993]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -34.0
+offset_right = 180.0
+offset_bottom = 34.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
-theme_override_colors/default_color = Color(0.4, 1, 0.4, 1)
+theme_override_colors/default_color = Color(0.45, 1, 0.5, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
 theme_override_fonts/normal_font = ExtResource("font_ps2p")
 theme_override_font_sizes/normal_font_size = 28
 bbcode_enabled = true
-text = "[center]USED: 0/0[/center]"
+text = "[center]0/0[/center]"
 scroll_active = false
+fit_content = false
+autowrap_mode = 0
 
-[node name="PTMoveCounterLabel" type="RichTextLabel" parent="EditorUI/CounterContainer" unique_id=999999994]
-custom_minimum_size = Vector2(300, 40)
+[node name="MoveSlot" type="Control" parent="EditorUI/CounterContainer" unique_id=999999990]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.0
+
+[node name="MoveCounterLabel" type="RichTextLabel" parent="EditorUI/CounterContainer/MoveSlot" unique_id=999999994]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -34.0
+offset_right = 180.0
+offset_bottom = 34.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
-theme_override_colors/default_color = Color(0.75, 0.55, 1, 1)
+theme_override_colors/default_color = Color(0.82, 0.62, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
 theme_override_fonts/normal_font = ExtResource("font_ps2p")
 theme_override_font_sizes/normal_font_size = 28
 bbcode_enabled = true
-text = "[center]MOVES: 0[/center]"
+text = "[center]0/0[/center]"
 scroll_active = false
+fit_content = false
+autowrap_mode = 0
 
-[node name="PTStatusLabel" type="RichTextLabel" parent="EditorUI" unique_id=909219041]
+[node name="PlaytestStatusLabel" type="RichTextLabel" parent="EditorUI" unique_id=909219041]
 visible = false
+layout_mode = 0
 anchors_preset = 10
 anchor_right = 1.0
-offset_left = 20.0
-offset_top = 260.0
-offset_right = -20.0
-offset_bottom = 360.0
+offset_left = 24.0
+offset_top = 900.0
+offset_right = -24.0
+offset_bottom = 1080.0
 grow_horizontal = 2
 mouse_filter = 2
 theme_override_colors/default_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
-theme_override_fonts/normal_font = ExtResource("font_ps2p")
-theme_override_font_sizes/normal_font_size = 40
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/normal_font_size = 48
 bbcode_enabled = true
 text = "[center]Fill the empty spaces on the board.[/center]"
 fit_content = true
@@ -569,7 +719,7 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_top = -560.0
-offset_bottom = -80.0
+offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
@@ -582,9 +732,11 @@ anchor_bottom = 1.0
 offset_left = 20.0
 offset_top = 20.0
 offset_right = -20.0
-offset_bottom = -20.0
+offset_bottom = -90.0
 grow_horizontal = 2
 grow_vertical = 2
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 0
 
 [node name="VBox" type="VBoxContainer" parent="EditorUI/ControlPanel/ScrollContainer" unique_id=1432566809]
 layout_mode = 2
@@ -597,6 +749,7 @@ alignment = 1
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 theme_override_constants/separation = 10
+alignment = 1
 
 [node name="WidthMinus" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GridSizeContainer" unique_id=1614801254]
 custom_minimum_size = Vector2(90, 90)
@@ -753,14 +906,17 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="BrushContainer" type="HBoxContainer" parent="EditorUI/ControlPanel/ScrollContainer/VBox" unique_id=342982219]
-custom_minimum_size = Vector2(0, 100)
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
 [node name="WallButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer" unique_id=1109728394]
-custom_minimum_size = Vector2(100, 100)
+custom_minimum_size = Vector2(120, 120)
 layout_mode = 2
+toggle_mode = true
+button_pressed = true
+button_group = SubResource("ButtonGroup_brush")
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
@@ -776,7 +932,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/WallButton/IconContainer" unique_id=629602374]
-custom_minimum_size = Vector2(64, 64)
+custom_minimum_size = Vector2(68, 68)
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("4_2rodj")
@@ -784,8 +940,10 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="EmptyButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer" unique_id=721831570]
-custom_minimum_size = Vector2(100, 100)
+custom_minimum_size = Vector2(120, 120)
 layout_mode = 2
+toggle_mode = true
+button_group = SubResource("ButtonGroup_brush")
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
@@ -801,22 +959,24 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/EmptyButton/IconContainer" unique_id=1864229955]
-custom_minimum_size = Vector2(64, 64)
+custom_minimum_size = Vector2(68, 68)
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("5_4ohjn")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="ZeroButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer" unique_id=1868858584]
-custom_minimum_size = Vector2(100, 100)
+[node name="YellowButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer" unique_id=1868858584]
+custom_minimum_size = Vector2(120, 120)
 layout_mode = 2
+toggle_mode = true
+button_group = SubResource("ButtonGroup_brush")
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="IconContainer" type="CenterContainer" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/ZeroButton" unique_id=1728766840]
+[node name="IconContainer" type="CenterContainer" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/YellowButton" unique_id=1728766840]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -825,23 +985,25 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/ZeroButton/IconContainer" unique_id=176724946]
-custom_minimum_size = Vector2(64, 64)
+[node name="Icon" type="TextureRect" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/YellowButton/IconContainer" unique_id=176724946]
+custom_minimum_size = Vector2(78, 78)
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("5_l4hv8")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="OneButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer" unique_id=239024495]
-custom_minimum_size = Vector2(100, 100)
+[node name="BlueButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer" unique_id=239024495]
+custom_minimum_size = Vector2(120, 120)
 layout_mode = 2
+toggle_mode = true
+button_group = SubResource("ButtonGroup_brush")
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="IconContainer" type="CenterContainer" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/OneButton" unique_id=1625728024]
+[node name="IconContainer" type="CenterContainer" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/BlueButton" unique_id=1625728024]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -850,8 +1012,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/OneButton/IconContainer" unique_id=1563193232]
-custom_minimum_size = Vector2(64, 64)
+[node name="Icon" type="TextureRect" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/BlueButton/IconContainer" unique_id=1563193232]
+custom_minimum_size = Vector2(78, 78)
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("6_3fkon")
@@ -859,8 +1021,10 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="JokerButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer" unique_id=34758917]
-custom_minimum_size = Vector2(100, 100)
+custom_minimum_size = Vector2(120, 120)
 layout_mode = 2
+toggle_mode = true
+button_group = SubResource("ButtonGroup_brush")
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
@@ -876,7 +1040,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/JokerButton/IconContainer" unique_id=2053101927]
-custom_minimum_size = Vector2(64, 64)
+custom_minimum_size = Vector2(78, 78)
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("7_wkaig")
@@ -884,8 +1048,10 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="ShifterButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer" unique_id=757930612]
-custom_minimum_size = Vector2(100, 100)
+custom_minimum_size = Vector2(120, 120)
 layout_mode = 2
+toggle_mode = true
+button_group = SubResource("ButtonGroup_brush")
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
@@ -901,7 +1067,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/ShifterButton/IconContainer" unique_id=1605751661]
-custom_minimum_size = Vector2(64, 64)
+custom_minimum_size = Vector2(78, 78)
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("8_2rodj")
@@ -909,8 +1075,10 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="EqualsButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer" unique_id=1767013069]
-custom_minimum_size = Vector2(100, 100)
+custom_minimum_size = Vector2(120, 120)
 layout_mode = 2
+toggle_mode = true
+button_group = SubResource("ButtonGroup_brush")
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
@@ -934,8 +1102,10 @@ theme_override_font_sizes/font_size = 56
 text = "="
 
 [node name="NotEqualsButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer" unique_id=1726656227]
-custom_minimum_size = Vector2(100, 100)
+custom_minimum_size = Vector2(120, 120)
 layout_mode = 2
+toggle_mode = true
+button_group = SubResource("ButtonGroup_brush")
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
@@ -962,6 +1132,7 @@ text = "×"
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 theme_override_constants/separation = 10
+alignment = 1
 
 [node name="TimeTitleLabel" type="Label" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer" unique_id=297670096]
 custom_minimum_size = Vector2(0, 100)
@@ -973,7 +1144,13 @@ theme_override_font_sizes/font_size = 28
 text = "TIME:"
 vertical_alignment = 1
 
-[node name="TimeMinus" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer" unique_id=594708071]
+[node name="TimeSelector" type="HBoxContainer" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer" unique_id=594708070]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="TimeMinus" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/TimeSelector" unique_id=594708071]
 custom_minimum_size = Vector2(90, 90)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -987,18 +1164,22 @@ theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 text = "-"
 
-[node name="TimeLabel" type="RichTextLabel" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer" unique_id=1133979077]
-custom_minimum_size = Vector2(0, 100)
+[node name="TimeLabel" type="RichTextLabel" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/TimeSelector" unique_id=1133979077]
+custom_minimum_size = Vector2(140, 90)
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
+size_flags_vertical = 4
 theme_override_colors/default_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/normal_font_size = 28
 bbcode_enabled = true
-text = "[center]0s[/center]"
+text = "[center]0:00[/center]"
+fit_content = true
+scroll_active = false
+vertical_alignment = 1
 
-[node name="TimePlus" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer" unique_id=62589027]
+[node name="TimePlus" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/TimeSelector" unique_id=62589027]
 custom_minimum_size = Vector2(90, 90)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -1025,7 +1206,7 @@ theme_override_font_sizes/font_size = 28
 text = "ALLOW:"
 vertical_alignment = 1
 
-[node name="AllowZero" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer" unique_id=1103068957]
+[node name="AllowYellow" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer" unique_id=1103068957]
 custom_minimum_size = Vector2(100, 100)
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
@@ -1035,7 +1216,7 @@ theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 toggle_mode = true
 button_pressed = true
 
-[node name="IconContainer" type="CenterContainer" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/AllowZero" unique_id=1684931492]
+[node name="IconContainer" type="CenterContainer" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/AllowYellow" unique_id=1684931492]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -1044,7 +1225,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/AllowZero/IconContainer" unique_id=1211891831]
+[node name="Icon" type="TextureRect" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/AllowYellow/IconContainer" unique_id=1211891831]
 custom_minimum_size = Vector2(56, 56)
 layout_mode = 2
 mouse_filter = 2
@@ -1052,7 +1233,7 @@ texture = ExtResource("5_l4hv8")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="AllowOne" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer" unique_id=2131239176]
+[node name="AllowBlue" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer" unique_id=2131239176]
 custom_minimum_size = Vector2(100, 100)
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
@@ -1062,7 +1243,7 @@ theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 toggle_mode = true
 button_pressed = true
 
-[node name="IconContainer" type="CenterContainer" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/AllowOne" unique_id=867880439]
+[node name="IconContainer" type="CenterContainer" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/AllowBlue" unique_id=867880439]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -1071,7 +1252,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/AllowOne/IconContainer" unique_id=1249662933]
+[node name="Icon" type="TextureRect" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/AllowBlue/IconContainer" unique_id=1249662933]
 custom_minimum_size = Vector2(56, 56)
 layout_mode = 2
 mouse_filter = 2
@@ -1110,6 +1291,7 @@ stretch_mode = 5
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 theme_override_constants/separation = 10
+alignment = 1
 
 [node name="SaveButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/ConfigContainer" unique_id=971333878]
 custom_minimum_size = Vector2(0, 100)
@@ -1188,10 +1370,17 @@ text = "LOAD"
 vertical_alignment = 1
 
 [node name="Spacer" type="Control" parent="EditorUI/ControlPanel/ScrollContainer/VBox/ConfigContainer" unique_id=300197724]
-custom_minimum_size = Vector2(20, 0)
+custom_minimum_size = Vector2(12, 0)
 layout_mode = 2
 
-[node name="LevelMinus" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/ConfigContainer" unique_id=113394567]
+[node name="LevelSelector" type="HBoxContainer" parent="EditorUI/ControlPanel/ScrollContainer/VBox/ConfigContainer" unique_id=300197725]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="LevelMinus" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/ConfigContainer/LevelSelector" unique_id=113394567]
 custom_minimum_size = Vector2(90, 90)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -1205,18 +1394,22 @@ theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 text = "-"
 
-[node name="LevelLabel" type="RichTextLabel" parent="EditorUI/ControlPanel/ScrollContainer/VBox/ConfigContainer" unique_id=546411994]
-custom_minimum_size = Vector2(240, 100)
+[node name="LevelLabel" type="RichTextLabel" parent="EditorUI/ControlPanel/ScrollContainer/VBox/ConfigContainer/LevelSelector" unique_id=546411994]
+custom_minimum_size = Vector2(200, 90)
 layout_mode = 2
 size_flags_horizontal = 0
+size_flags_vertical = 4
 theme_override_colors/default_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/normal_font_size = 28
 bbcode_enabled = true
 text = "[center]LEVEL 1[/center]"
+fit_content = true
+scroll_active = false
+vertical_alignment = 1
 
-[node name="LevelPlus" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/ConfigContainer" unique_id=1140107429]
+[node name="LevelPlus" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/ConfigContainer/LevelSelector" unique_id=1140107429]
 custom_minimum_size = Vector2(90, 90)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -1231,21 +1424,22 @@ theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 text = "+"
 
 [node name="StatusLabel" type="RichTextLabel" parent="EditorUI" unique_id=975889308]
-custom_minimum_size = Vector2(0, 80)
+custom_minimum_size = Vector2(0, 72)
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 20.0
-offset_top = -80.0
-offset_right = -20.0
+offset_left = 4.0
+offset_top = -76.0
+offset_right = -4.0
+offset_bottom = -4.0
 grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
 theme_override_colors/default_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/normal_font_size = 22
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/normal_font_size = 34
 bbcode_enabled = true
 text = "[center][/center]"
 scroll_active = false
@@ -1253,6 +1447,7 @@ autowrap_mode = 2
 
 [node name="OverwritePanel" type="Panel" parent="EditorUI" unique_id=1336168823]
 visible = false
+z_index = 5000
 custom_minimum_size = Vector2(650, 400)
 anchors_preset = 8
 anchor_left = 0.5
@@ -1268,18 +1463,20 @@ grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
 
 [node name="WarningLabel" type="Label" parent="EditorUI/OverwritePanel" unique_id=1238171214]
-custom_maximum_size = Vector2(1, 1)
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_top = 30.0
-offset_bottom = 180.0
+offset_left = 40.0
+offset_top = 40.0
+offset_right = -40.0
+offset_bottom = 220.0
 grow_horizontal = 2
-theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+theme_override_colors/font_color = Color(1, 0.45, 0.45, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 24
-text = "LEVEL ALREADY EXISTS. OVERWRITE?"
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 36
+text = "Level already exists.
+Overwrite?"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
@@ -1325,6 +1522,7 @@ text = "NO"
 
 [node name="PlaytestVictoryPanel" type="Panel" parent="EditorUI" unique_id=788465914]
 visible = false
+z_index = 5000
 custom_minimum_size = Vector2(600, 400)
 anchors_preset = 8
 anchor_left = 0.5
@@ -1404,9 +1602,9 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="HowToPlayPanel" type="Panel" parent="HowToPlayLayer/CenterContainer" unique_id=937192312]
-custom_minimum_size = Vector2(950, 1400)
+custom_minimum_size = Vector2(950, 980)
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
+theme_override_styles/panel = SubResource("StyleBoxFlat_htp")
 
 [node name="RulesLabel" type="RichTextLabel" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=2066659259]
 layout_mode = 1
@@ -1414,51 +1612,69 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 40.0
-offset_top = 40.0
+offset_top = 36.0
 offset_right = -40.0
 offset_bottom = -160.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_colors/default_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
-theme_override_fonts/normal_font = ExtResource("font_ps2p")
-theme_override_font_sizes/normal_font_size = 28
 bbcode_enabled = true
-text = "[center][font_size=64][b]HOW TO PLAY[/b][/font_size][/center]"
+scroll_active = false
+fit_content = false
 
-[node name="BackButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=1284825961]
-custom_minimum_size = Vector2(400, 120)
+[node name="NavRow" type="HBoxContainer" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=1284825960]
 layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
+anchors_preset = 12
 anchor_top = 1.0
-anchor_right = 0.5
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -200.0
+offset_left = 40.0
 offset_top = -140.0
-offset_right = 200.0
+offset_right = -40.0
 offset_bottom = -20.0
 grow_horizontal = 2
 grow_vertical = 0
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="PrevButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow" unique_id=1284825962]
+custom_minimum_size = Vector2(220, 110)
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 24
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+disabled = true
+text = "UI_PREVIOUS"
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/BackButton" unique_id=844264243]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-mouse_filter = 2
-alignment = 1
-
-[node name="Label" type="Label" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/BackButton/HBoxContainer" unique_id=2137341597]
+[node name="BackButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow" unique_id=1284825961]
+custom_minimum_size = Vector2(260, 110)
 layout_mode = 2
-mouse_filter = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
 theme_override_fonts/font = ExtResource("font_ps2p")
-theme_override_font_sizes/font_size = 32
-text = "CLOSE"
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "UI_CLOSE"
+
+[node name="NextButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow" unique_id=1284825963]
+custom_minimum_size = Vector2(220, 110)
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "UI_NEXT"

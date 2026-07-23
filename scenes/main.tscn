@@ -4,10 +4,11 @@
 [ext_resource type="Script" uid="uid://cmilped3wai4n" path="res://scripts/board_manager.gd" id="12_y6deb"]
 [ext_resource type="Script" uid="uid://dcrkhyr8vhs3g" path="res://scripts/ui_manager.gd" id="13_og1vs"]
 [ext_resource type="PackedScene" uid="uid://cg2j384x0y4o8" path="res://scenes/pause_menu.tscn" id="14_a8y0u"]
+[ext_resource type="PackedScene" uid="uid://c8m3k2v1" path="res://scenes/options_menu.tscn" id="15_options"]
 [ext_resource type="FontFile" uid="uid://ckwxng7tlmws7" path="res://resources/fonts/PressStart2P-vaV7.ttf" id="font_ps2p"]
 [ext_resource type="Texture2D" uid="uid://d2ql5f4tsvnk8" path="res://resources/buttons/button_tile_gray_dark.svg" id="tex_btn_bg"]
 [ext_resource type="Texture2D" uid="uid://dwk0b06y7msdk" path="res://resources/icons/icon_exit.svg" id="tex_exit"]
-[ext_resource type="Texture2D" uid="uid://duph5sjcrwtwc" path="res://resources/icons/icon_hint.svg" id="tex_hint"]
+[ext_resource type="Texture2D" uid="uid://duph5sjcrwtwc" path="res://resources/icons/icon_hint_on.svg" id="tex_hint"]
 [ext_resource type="Texture2D" uid="uid://bh7sa76f3c8je" path="res://resources/icons/icon_pause.svg" id="tex_pause"]
 [ext_resource type="Texture2D" uid="uid://4oqca6cnuifh" path="res://resources/icons/icon_redo.svg" id="tex_redo"]
 [ext_resource type="Texture2D" uid="uid://blpwipbhfjhjb" path="res://resources/icons/icon_reset.svg" id="tex_reset"]
@@ -64,6 +65,9 @@ modulate_color = Color(0.5, 0.5, 0.5, 1)
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dark"]
 bg_color = Color(0.12, 0.12, 0.12, 1)
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_htp"]
+bg_color = Color(0, 0, 0, 0)
+
 [node name="Main" type="Node2D" unique_id=548679913]
 script = ExtResource("1_trceg")
 
@@ -88,28 +92,32 @@ mouse_filter = 2
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 220.0
+offset_bottom = 144.0
 grow_horizontal = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
 
 [node name="VBox" type="VBoxContainer" parent="HUDLayer/HUDControl/TopMargin" unique_id=2147026707]
 layout_mode = 2
-theme_override_constants/separation = 15
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
 
 [node name="TopBarRow" type="HBoxContainer" parent="HUDLayer/HUDControl/TopMargin/VBox" unique_id=271841012]
+custom_minimum_size = Vector2(0, 140)
 layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
 alignment = 1
 
 [node name="LeftButtons" type="HBoxContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow" unique_id=504211170]
 layout_mode = 2
-size_flags_horizontal = 0
-theme_override_constants/separation = 15
+size_flags_horizontal = 4
+size_flags_vertical = 8
+theme_override_constants/separation = 4
 
 [node name="PauseButton" type="Button" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LeftButtons" unique_id=293357871]
-custom_minimum_size = Vector2(135, 135)
+custom_minimum_size = Vector2(140, 140)
 layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
@@ -125,7 +133,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LeftButtons/PauseButton/IconContainer" unique_id=1866740471]
-custom_minimum_size = Vector2(90, 90)
+custom_minimum_size = Vector2(83, 83)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -135,8 +143,10 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="ResetButton" type="Button" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LeftButtons" unique_id=1594091490]
-custom_minimum_size = Vector2(135, 135)
+custom_minimum_size = Vector2(140, 140)
 layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
@@ -152,7 +162,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LeftButtons/ResetButton/IconContainer" unique_id=1447618678]
-custom_minimum_size = Vector2(90, 90)
+custom_minimum_size = Vector2(83, 83)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -162,8 +172,10 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="HowToPlayButton" type="Button" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LeftButtons" unique_id=1122262590]
-custom_minimum_size = Vector2(135, 135)
+custom_minimum_size = Vector2(140, 140)
 layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
@@ -179,7 +191,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LeftButtons/HowToPlayButton/IconContainer" unique_id=442391103]
-custom_minimum_size = Vector2(90, 90)
+custom_minimum_size = Vector2(83, 83)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -188,91 +200,56 @@ texture = ExtResource("tex_rules")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="SpacerLeft" type="Control" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow" unique_id=652059477]
+[node name="LeftSpacer" type="Control" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow" unique_id=694272132]
+custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 4
 
-[node name="LevelLabel" type="RichTextLabel" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow" unique_id=694272128]
-custom_minimum_size = Vector2(250, 100)
+[node name="LevelLabelWrap" type="CenterContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow" unique_id=694272134]
+custom_minimum_size = Vector2(220, 140)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="LevelLabelInset" type="MarginContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LevelLabelWrap" unique_id=694272135]
+layout_mode = 2
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_bottom = 4
+
+[node name="LevelLabel" type="RichTextLabel" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LevelLabelWrap/LevelLabelInset" unique_id=694272128]
+custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 mouse_filter = 2
-theme_override_colors/default_color = Color(1, 0.9, 0.4, 1)
+theme_override_colors/default_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
+theme_override_constants/outline_size = 13
 theme_override_fonts/normal_font = ExtResource("font_ps2p")
-theme_override_font_sizes/normal_font_size = 32
+theme_override_font_sizes/normal_font_size = 35
 bbcode_enabled = true
-text = "[center]LEVEL[/center]"
+text = "[center]LVL
+1[/center]"
 scroll_active = false
+fit_content = true
 
-[node name="SpacerRight" type="Control" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow" unique_id=288411348]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="RightButtons" type="HBoxContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow" unique_id=1205877497]
-layout_mode = 2
-size_flags_horizontal = 8
-theme_override_constants/separation = 15
-
-[node name="UndoButton" type="Button" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons" unique_id=2007916361]
-custom_minimum_size = Vector2(135, 135)
-layout_mode = 2
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
-
-[node name="IconContainer" type="MarginContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons/UndoButton" unique_id=2109249836]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="Icon" type="TextureRect" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons/UndoButton/IconContainer" unique_id=107140622]
-custom_minimum_size = Vector2(90, 90)
+[node name="RightSpacer" type="Control" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow" unique_id=694272133]
+custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 4
-mouse_filter = 2
-texture = ExtResource("tex_undo")
-expand_mode = 1
-stretch_mode = 5
 
-[node name="RedoButton" type="Button" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons" unique_id=1433621020]
-custom_minimum_size = Vector2(135, 135)
-layout_mode = 2
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
-
-[node name="IconContainer" type="MarginContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons/RedoButton" unique_id=194087113]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="Icon" type="TextureRect" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons/RedoButton/IconContainer" unique_id=113177556]
-custom_minimum_size = Vector2(90, 90)
+[node name="RightButtons" type="HBoxContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow" unique_id=694272131]
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 4
-mouse_filter = 2
-texture = ExtResource("tex_redo")
-expand_mode = 1
-stretch_mode = 5
+size_flags_vertical = 8
+theme_override_constants/separation = 4
 
 [node name="HintButton" type="Button" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons" unique_id=1719590708]
-custom_minimum_size = Vector2(135, 135)
+custom_minimum_size = Vector2(140, 140)
 layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
+disabled = true
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
@@ -288,7 +265,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons/HintButton/IconContainer" unique_id=1570824702]
-custom_minimum_size = Vector2(90, 90)
+custom_minimum_size = Vector2(83, 83)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -297,70 +274,184 @@ texture = ExtResource("tex_hint")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="CounterContainer" type="HBoxContainer" parent="HUDLayer/HUDControl" unique_id=999999991]
-anchors_preset = 10
-anchor_right = 1.0
-offset_top = 180.0
-offset_bottom = 240.0
-grow_horizontal = 2
-mouse_filter = 2
-theme_override_constants/separation = 40
-alignment = 1
-
-[node name="TimerLabel" type="RichTextLabel" parent="HUDLayer/HUDControl/CounterContainer" unique_id=1395314999]
-custom_minimum_size = Vector2(250, 40)
+[node name="UndoButton" type="Button" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons" unique_id=2007916361]
+custom_minimum_size = Vector2(140, 140)
 layout_mode = 2
-mouse_filter = 2
-theme_override_colors/default_color = Color(0.9, 0.9, 0.9, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
-theme_override_fonts/normal_font = ExtResource("font_ps2p")
-theme_override_font_sizes/normal_font_size = 22
-bbcode_enabled = true
-text = "[center]TIME: 00:00[/center]"
-scroll_active = false
+size_flags_horizontal = 8
+size_flags_vertical = 8
+disabled = true
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="JokerCounterLabel" type="RichTextLabel" parent="HUDLayer/HUDControl/CounterContainer" unique_id=1644815541]
-custom_minimum_size = Vector2(250, 40)
-layout_mode = 2
-mouse_filter = 2
-theme_override_colors/default_color = Color(0.4, 1, 0.4, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
-theme_override_fonts/normal_font = ExtResource("font_ps2p")
-theme_override_font_sizes/normal_font_size = 22
-bbcode_enabled = true
-text = "[center]USED: 0/0[/center]"
-scroll_active = false
-
-[node name="MoveCounterLabel" type="RichTextLabel" parent="HUDLayer/HUDControl/CounterContainer" unique_id=504871603]
-custom_minimum_size = Vector2(250, 40)
-layout_mode = 2
-mouse_filter = 2
-theme_override_colors/default_color = Color(0.75, 0.55, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
-theme_override_fonts/normal_font = ExtResource("font_ps2p")
-theme_override_font_sizes/normal_font_size = 22
-bbcode_enabled = true
-text = "[center]MOVES: 0[/center]"
-scroll_active = false
-
-[node name="StatusLabel" type="RichTextLabel" parent="HUDLayer/HUDControl" unique_id=803071151]
-anchors_preset = 12
-anchor_top = 1.0
+[node name="IconContainer" type="MarginContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons/UndoButton" unique_id=2109249836]
+layout_mode = 1
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 20.0
-offset_top = -80.0
-offset_right = -20.0
 grow_horizontal = 2
-grow_vertical = 0
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Icon" type="TextureRect" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons/UndoButton/IconContainer" unique_id=107140622]
+custom_minimum_size = Vector2(83, 83)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("tex_undo")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RedoButton" type="Button" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons" unique_id=1433621020]
+custom_minimum_size = Vector2(140, 140)
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
+disabled = true
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+
+[node name="IconContainer" type="MarginContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons/RedoButton" unique_id=194087113]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Icon" type="TextureRect" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons/RedoButton/IconContainer" unique_id=113177556]
+custom_minimum_size = Vector2(83, 83)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("tex_redo")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CounterContainer" type="HBoxContainer" parent="HUDLayer/HUDControl" unique_id=999999991]
+layout_mode = 0
+anchor_right = 1.0
+offset_left = 4.0
+offset_top = 156.0
+offset_right = -4.0
+offset_bottom = 228.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+alignment = 0
+
+[node name="TimerSlot" type="Control" parent="HUDLayer/HUDControl/CounterContainer" unique_id=999999995]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.0
+
+[node name="TimerLabel" type="RichTextLabel" parent="HUDLayer/HUDControl/CounterContainer/TimerSlot" unique_id=1395314999]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -34.0
+offset_right = 180.0
+offset_bottom = 34.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(0.95, 0.95, 0.95, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/normal_font = ExtResource("font_ps2p")
+theme_override_font_sizes/normal_font_size = 28
+bbcode_enabled = true
+text = "[center]TIME 00:00[/center]"
+scroll_active = false
+fit_content = false
+autowrap_mode = 0
+
+[node name="JokerSlot" type="Control" parent="HUDLayer/HUDControl/CounterContainer" unique_id=999999996]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.0
+
+[node name="JokerCounterLabel" type="RichTextLabel" parent="HUDLayer/HUDControl/CounterContainer/JokerSlot" unique_id=1644815541]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -34.0
+offset_right = 180.0
+offset_bottom = 34.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(0.45, 1, 0.5, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/normal_font = ExtResource("font_ps2p")
+theme_override_font_sizes/normal_font_size = 28
+bbcode_enabled = true
+text = "[center]0/0[/center]"
+scroll_active = false
+fit_content = false
+autowrap_mode = 0
+
+[node name="MoveSlot" type="Control" parent="HUDLayer/HUDControl/CounterContainer" unique_id=999999997]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.0
+
+[node name="MoveCounterLabel" type="RichTextLabel" parent="HUDLayer/HUDControl/CounterContainer/MoveSlot" unique_id=504871603]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -34.0
+offset_right = 180.0
+offset_bottom = 34.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(0.82, 0.62, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/normal_font = ExtResource("font_ps2p")
+theme_override_font_sizes/normal_font_size = 28
+bbcode_enabled = true
+text = "[center]0/0[/center]"
+scroll_active = false
+fit_content = false
+autowrap_mode = 0
+
+[node name="StatusLabel" type="RichTextLabel" parent="HUDLayer/HUDControl" unique_id=803071151]
+layout_mode = 0
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 900.0
+offset_right = -24.0
+offset_bottom = 1080.0
+grow_horizontal = 2
 mouse_filter = 2
 theme_override_colors/default_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/normal_font_size = 28
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/normal_font_size = 48
 bbcode_enabled = true
 text = "[center]Fill the empty spaces on the board.[/center]"
 fit_content = true
@@ -625,9 +716,9 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="HowToPlayPanel" type="Panel" parent="HowToPlayLayer/CenterContainer" unique_id=735210026]
-custom_minimum_size = Vector2(950, 1400)
+custom_minimum_size = Vector2(950, 980)
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
+theme_override_styles/panel = SubResource("StyleBoxFlat_htp")
 
 [node name="RulesLabel" type="RichTextLabel" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=2066659259]
 layout_mode = 1
@@ -635,54 +726,72 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 40.0
-offset_top = 40.0
+offset_top = 36.0
 offset_right = -40.0
 offset_bottom = -160.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_colors/default_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
-theme_override_fonts/normal_font = ExtResource("font_ps2p")
-theme_override_font_sizes/normal_font_size = 28
 bbcode_enabled = true
-text = "[center][font_size=64][b]HOW TO PLAY[/b][/font_size][/center]"
+scroll_active = false
+fit_content = false
 
-[node name="BackButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=1284825961]
-custom_minimum_size = Vector2(400, 120)
+[node name="NavRow" type="HBoxContainer" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=1284825960]
 layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
+anchors_preset = 12
 anchor_top = 1.0
-anchor_right = 0.5
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -200.0
+offset_left = 40.0
 offset_top = -140.0
-offset_right = 200.0
+offset_right = -40.0
 offset_bottom = -20.0
 grow_horizontal = 2
 grow_vertical = 0
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="PrevButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow" unique_id=1284825962]
+custom_minimum_size = Vector2(220, 110)
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 24
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+disabled = true
+text = "UI_PREVIOUS"
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/BackButton" unique_id=844264243]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-mouse_filter = 2
-alignment = 1
-
-[node name="Label" type="Label" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/BackButton/HBoxContainer" unique_id=2137341597]
+[node name="BackButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow" unique_id=1284825961]
+custom_minimum_size = Vector2(260, 110)
 layout_mode = 2
-mouse_filter = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
 theme_override_fonts/font = ExtResource("font_ps2p")
-theme_override_font_sizes/font_size = 32
-text = "CLOSE"
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "UI_CLOSE"
+
+[node name="NextButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow" unique_id=1284825963]
+custom_minimum_size = Vector2(220, 110)
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "UI_NEXT"
 
 [node name="UIManager" type="Control" parent="." unique_id=1914610177]
 layout_mode = 3
@@ -696,3 +805,6 @@ layer = 10
 
 [node name="PauseMenu" parent="PauseMenuLayer" unique_id=673510329 instance=ExtResource("14_a8y0u")]
 unique_name_in_owner = true
+
+[node name="OptionsMenu" parent="." instance=ExtResource("15_options")]
+visible = false

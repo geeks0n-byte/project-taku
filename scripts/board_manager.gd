@@ -74,6 +74,8 @@ func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shi
 
 		cell.is_linked_pair = false
 		cell.shifter_direction = Vector2i.ZERO
+		cell.tutorial_blocked = false
+		cell.guide_active = false
 
 		if cell.shifter_toggled.is_connected(_on_shifter_tile_toggled):
 			cell.shifter_toggled.disconnect(_on_shifter_tile_toggled)
@@ -151,7 +153,7 @@ func _on_shifter_tile_toggled(clicked_coord: Vector2i):
 	var partner_cell = board_cells[partner_coord]
 	if partner_cell.state == GameConstants.TileState.SHIFTER:
 		partner_cell.set_error_highlight()
-		invalid_move_attempted.emit("No space to move! The cell is occupied by another [color=#9c27b0]Purple[/color] tile.")
+		invalid_move_attempted.emit("ERR_SHIFTER_BLOCKED")
 		return
 
 	clicked_cell.state = GameConstants.TileState.EMPTY
@@ -170,11 +172,51 @@ func _on_shifter_tile_toggled(clicked_coord: Vector2i):
 func clear_highlights():
 	BoardRenderer.clear_highlights(board_cells)
 
+func set_click_whitelist(coords: Array) -> void:
+	var allowed := {}
+	for c in coords:
+		allowed[c] = true
+	for coord in board_cells:
+		var cell = board_cells[coord]
+		# Never block already-locked clue tiles from the whitelist logic;
+		# only gate playable interactions.
+		cell.tutorial_blocked = not allowed.has(coord)
+
+func clear_click_whitelist() -> void:
+	for coord in board_cells:
+		board_cells[coord].tutorial_blocked = false
+
+func set_guide_cells(coords: Array) -> void:
+	clear_guide_cells()
+	for c in coords:
+		if board_cells.has(c):
+			board_cells[c].set_guide_highlight(true)
+
+func clear_guide_cells() -> void:
+	for coord in board_cells:
+		if board_cells[coord].guide_active:
+			board_cells[coord].set_guide_highlight(false)
+
+func set_cell_cycle_tiles(coord: Vector2i, tiles: Array) -> void:
+	if not board_cells.has(coord):
+		return
+	var typed: Array[int] = []
+	for t in tiles:
+		typed.append(int(t))
+	board_cells[coord].allowed_cycle_tiles = typed
+
+func restore_cell_cycle_tiles(tiles: Array) -> void:
+	var typed: Array[int] = []
+	for t in tiles:
+		typed.append(int(t))
+	for coord in board_cells:
+		board_cells[coord].allowed_cycle_tiles = typed.duplicate()
+
 func is_board_full() -> bool:
 	return BoardRenderer.is_board_full(board_cells)
 
 func _draw_grid():
-	BoardRenderer.draw_grid(grid_drawer, board_cells, GameConstants.CELL_SIZE, true)
+	BoardRenderer.draw_grid(grid_drawer, board_cells, GameConstants.CELL_SIZE)
 
 func _draw_constraints():
 	BoardRenderer.draw_constraints(constraint_drawer, board_cells, active_constraint_pairs, GameConstants.CELL_SIZE)

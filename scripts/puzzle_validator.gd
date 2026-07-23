@@ -20,7 +20,7 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 			var can_be_equal = false
 			var can_be_not_equal = false
 
-			if state_a == 3 or state_b == 3:
+			if state_a == GameConstants.TileState.SHIFTER or state_b == GameConstants.TileState.SHIFTER:
 				if state_a == state_b:
 					can_be_equal = true
 					can_be_not_equal = false
@@ -40,14 +40,14 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 
 			if pair["type"] == "equals" and not can_be_equal:
 				is_valid = false
-				var msg = "Tiles connected by [outline_size=6][outline_color=black] = [/outline_color][/outline_size] link must be the same color."
+				var msg = "ERR_CONSTRAINT_EQUALS"
 				if not errors.has(msg):
 					errors.append(msg)
 				if cell_a.has_method("set_error_highlight"): cell_a.set_error_highlight()
 				if cell_b.has_method("set_error_highlight"): cell_b.set_error_highlight()
 			elif pair["type"] == "not_equals" and not can_be_not_equal:
 				is_valid = false
-				var msg = "Tiles connected by [outline_size=6][outline_color=black] × [/outline_color][/outline_size] link must be different colors."
+				var msg = "ERR_CONSTRAINT_NOT_EQUALS"
 				if not errors.has(msg):
 					errors.append(msg)
 				if cell_a.has_method("set_error_highlight"): cell_a.set_error_highlight()
@@ -74,7 +74,7 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 		# Max 1 Green Tile per row/column
 		if count_jokers > 1:
 			is_valid = false
-			var msg = "A maximum of 1 [color=#4DFF4D]Green[/color] tile is allowed per line."
+			var msg = "ERR_MAX_GREEN_PER_LINE"
 			if not errors.has(msg):
 				errors.append(msg)
 			for c in coords:
@@ -97,11 +97,7 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 				
 				if all_zeros:
 					is_valid = false
-					var msg = ""
-					if has_joker:
-						msg = "A [color=#4DFF4D]Green[/color] tile creates a sequence of 3 [color=#FFD700]Yellow[/color] tiles."
-					else:
-						msg = "3 [color=#FFD700]Yellow[/color] tiles are placed next to each other."
+					var msg = "ERR_GREEN_THREE_YELLOW" if has_joker else "ERR_THREE_YELLOW"
 					if not errors.has(msg):
 						errors.append(msg)
 					for j in range(3):
@@ -111,11 +107,7 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 							
 				if all_ones:
 					is_valid = false
-					var msg = ""
-					if has_joker:
-						msg = "A [color=#4DFF4D]Green[/color] tile creates a sequence of 3 [color=#4DA6FF]Blue[/color] tiles."
-					else:
-						msg = "3 [color=#4DA6FF]Blue[/color] tiles are placed next to each other."
+					var msg = "ERR_GREEN_THREE_BLUE" if has_joker else "ERR_THREE_BLUE"
 					if not errors.has(msg):
 						errors.append(msg)
 					for j in range(3):
@@ -137,7 +129,7 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 			# STRICT EQUALITY RULE: 0s and 1s must be exactly equal
 			if count_0 != count_1:
 				is_valid = false
-				var msg = "A completed line contains an unequal number of [color=#FFD700]Yellow[/color] and [color=#4DA6FF]Blue[/color] tiles."
+				var msg = "ERR_UNEQUAL_LINE"
 				if not errors.has(msg):
 					errors.append(msg)
 				for c in coords:
@@ -146,22 +138,27 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 					if cell.state != -2 and cell.has_method("set_error_highlight"):
 						cell.set_error_highlight()
 						
-	# 3. Global Joker Limit Check
-	if max_jokers > 0:
+	# 3. Global green quota (exact count on a finished board)
+	if max_jokers >= 0:
 		var placed_jokers = 0
 		for coord in board_cells:
-			var cell = board_cells[coord]
-			if cell.state == 2 and not cell.is_locked:
+			if board_cells[coord].state == GameConstants.TileState.JOKER:
 				placed_jokers += 1
-				
+		var board_full := BoardRenderer.is_board_full(board_cells)
+
 		if placed_jokers > max_jokers:
 			is_valid = false
-			var msg = "Too many [color=#4DFF4D]Green[/color] tiles placed."
+			var msg = "ERR_TOO_MANY_GREEN"
 			if not errors.has(msg):
 				errors.append(msg)
 			for coord in board_cells:
 				var cell = board_cells[coord]
-				if cell.state == 2 and not cell.is_locked and cell.has_method("set_error_highlight"):
+				if cell.state == GameConstants.TileState.JOKER and cell.has_method("set_error_highlight"):
 					cell.set_error_highlight()
+		elif board_full and max_jokers > 0 and placed_jokers < max_jokers:
+			is_valid = false
+			var msg = "ERR_TOO_FEW_GREEN"
+			if not errors.has(msg):
+				errors.append(msg)
 
 	return {"valid": is_valid, "errors": errors}

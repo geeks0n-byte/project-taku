@@ -57,7 +57,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.85)
+mouse_filter = 0
+color = Color(0, 0, 0, 0)
 
 [node name="CenterContainer" type="CenterContainer" parent="." unique_id=84648387]
 layout_mode = 1
@@ -113,6 +114,19 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 text = "UI_RESTART"
 
+[node name="SettingsButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=265163748]
+custom_minimum_size = Vector2(500, 120)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "UI_OPTIONS"
+
 [node name="AutoWinButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=510154542]
 visible = false
 custom_minimum_size = Vector2(500, 120)
@@ -125,7 +139,21 @@ theme_override_font_sizes/font_size = 32
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-text = "AUTO WIN"
+text = "DEBUG_AUTO_WIN"
+
+[node name="AutoLoseButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=510154543]
+visible = false
+custom_minimum_size = Vector2(500, 120)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "DEBUG_AUTO_LOSE"
 
 [node name="QuitButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=389499878]
 custom_minimum_size = Vector2(500, 120)

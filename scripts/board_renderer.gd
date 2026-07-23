@@ -37,26 +37,32 @@ static func draw_grid(
 	canvas: CanvasItem,
 	board_cells: Dictionary,
 	cell_size: float,
-	use_playtest_walls: bool = true
+	full_grid: bool = false
 ) -> void:
 	var line_color := Color.BLACK
 	var line_width := 4.0
 
 	for coord in board_cells:
 		var cell = board_cells[coord]
-		var is_playable := cell.state != GameConstants.TileState.WALL
+		var is_playable: bool = cell.state != GameConstants.TileState.WALL
 
 		var pos_tl := Vector2(coord.x * cell_size, coord.y * cell_size)
 		var pos_tr := Vector2((coord.x + 1) * cell_size, coord.y * cell_size)
 		var pos_bl := Vector2(coord.x * cell_size, (coord.y + 1) * cell_size)
 		var pos_br := Vector2((coord.x + 1) * cell_size, (coord.y + 1) * cell_size)
 
-		var draw_right := false
-		var draw_bottom := false
-		var draw_top := false
-		var draw_left := false
+		var draw_right: bool
+		var draw_bottom: bool
+		var draw_top: bool
+		var draw_left: bool
 
-		if use_playtest_walls:
+		if full_grid:
+			# Editor: outline every cell, including walls.
+			draw_right = true
+			draw_bottom = true
+			draw_top = not board_cells.has(coord + Vector2i(0, -1))
+			draw_left = not board_cells.has(coord + Vector2i(-1, 0))
+		else:
 			var right_playable := false
 			if board_cells.has(coord + Vector2i(1, 0)):
 				right_playable = board_cells[coord + Vector2i(1, 0)].state != GameConstants.TileState.WALL
@@ -69,11 +75,6 @@ static func draw_grid(
 
 			draw_top = is_playable and not board_cells.has(coord + Vector2i(0, -1))
 			draw_left = is_playable and not board_cells.has(coord + Vector2i(-1, 0))
-		else:
-			draw_right = true
-			draw_bottom = true
-			draw_top = not board_cells.has(coord + Vector2i(0, -1))
-			draw_left = not board_cells.has(coord + Vector2i(-1, 0))
 
 		if draw_right:
 			canvas.draw_line(pos_tr, pos_br, line_color, line_width)

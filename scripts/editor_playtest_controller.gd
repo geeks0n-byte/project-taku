@@ -1,17 +1,18 @@
 class_name EditorPlaytestController
 extends Node
 
-signal playtest_finished
-
 var canvas_manager: EditorCanvasManager
 var pt_ui: PlaytestUIManager
 var editor_ui: EditorUIManager
 
 var is_active: bool = false
 var playtest_snapshot: Dictionary = {}
-var playtest_hidden_constraints: Array = []
+var playtest_start_constraints: Array = []
+var playtest_hint_pool: Array = []
+var prefer_hidden_hints: bool = false
 var solved_solution_reference: Dictionary = {}
 var playtest_required_jokers: int = 0
+var playtest_required_shifter_moves: int = 0
 var playtest_time_remaining: int = 0
 var playtest_shifter_moves: int = 0
 
@@ -33,41 +34,89 @@ func enter(current_level_required_jokers: int) -> void:
 	canvas_manager.is_playtesting = true
 	playtest_snapshot.clear()
 
-	var prefilled_jokers := 0
 	for coord in canvas_manager.board_cells:
 		var cell = canvas_manager.board_cells[coord]
 		playtest_snapshot[coord] = {
 			"state": cell.state,
 			"shifter_direction": cell.shifter_direction
 		}
-		if cell.state == GameConstants.TileState.JOKER:
-			prefilled_jokers += 1
 		LevelUtils.apply_playtest_cell_locks(cell)
 		cell.is_editor_mode = false
 		cell.update_visuals()
 
-	playtest_hidden_constraints = canvas_manager.loaded_constraint_pairs.duplicate(true)
+	playtest_start_constraints = canvas_manager.loaded_constraint_pairs.duplicate(true)
+	prefer_hidden_hints = not editor_ui.is_unique_solution_required()
+	playtest_hint_pool = canvas_manager.hidden_constraint_pairs.duplicate(true)
 
 	var built := LevelUtils.build_solve_layout(canvas_manager.board_cells)
+	var tiles: Array = editor_ui.get_allowed_tiles()
+	var solve_constraints: Array = []
+
+	# Match main.gd hint wiring:
+	# - unique: show start constraints; hidden pool feeds fallbacks / rebuild if empty
+	# - non-unique: hide constraints and use them only as the hint pool
+	if prefer_hidden_hints:
+		if playtest_hint_pool.is_empty() and not playtest_start_constraints.is_empty():
+			playtest_hint_pool = playtest_start_constraints.duplicate(true)
+		canvas_manager.loaded_constraint_pairs.clear()
+		solve_constraints = playtest_hint_pool.duplicate(true)
+	else:
+		solve_constraints = playtest_start_constraints.duplicate(true)
+
 	solved_solution_reference = LevelUtils.solve_reference(
 		built["layout"],
 		built["empty_cells"],
 		canvas_manager.grid_width,
 		canvas_manager.grid_height,
-		editor_ui.get_allowed_tiles(),
-		canvas_manager.loaded_constraint_pairs
+		tiles,
+		solve_constraints
 	)
+
+	# Always ensure a hidden hint pool for unique / loaded boards.
+	if playtest_hint_pool.is_empty() and not solved_solution_reference.is_empty():
+		playtest_hint_pool = HintSystem.hidden_hints_from_solved(
+			solved_solution_reference,
+			canvas_manager.loaded_constraint_pairs if not prefer_hidden_hints else [],
+			canvas_manager.grid_width,
+			canvas_manager.grid_height
+		)
+	elif playtest_hint_pool.is_empty():
+		playtest_hint_pool = HintSystem.rebuild_hidden_hints(
+			canvas_manager.board_cells,
+			canvas_manager.loaded_constraint_pairs if not prefer_hidden_hints else [],
+			canvas_manager.grid_width,
+			canvas_manager.grid_height,
+			tiles
+		)
+
+	if not prefer_hidden_hints:
+		# Unique: solve with shown + hidden so the reference matches the intended unique board.
+		var full_constraints: Array = playtest_start_constraints.duplicate(true)
+		full_constraints.append_array(playtest_hint_pool)
+		var full_solved := LevelUtils.solve_reference(
+			built["layout"],
+			built["empty_cells"],
+			canvas_manager.grid_width,
+			canvas_manager.grid_height,
+			tiles,
+			full_constraints
+		)
+		if not full_solved.is_empty():
+			solved_solution_reference = full_solved
 
 	playtest_time_remaining = editor_ui.get_time_limit()
 	playtest_shifter_moves = 0
 	pt_ui.set_playtest_move_counter_visibility(canvas_manager.loaded_shifter_pairs.size() > 0)
+	playtest_required_shifter_moves = LevelUtils.compute_required_shifter_moves(
+		canvas_manager.loaded_shifter_pairs
+	)
 
 	var saved_required := current_level_required_jokers
-	if saved_required == -1:
+	if saved_required < 0:
 		saved_required = mini(canvas_manager.grid_width, canvas_manager.grid_height)
-	playtest_required_jokers = maxi(0, saved_required - prefilled_jokers)
+	playtest_required_jokers = maxi(0, saved_required)
 
-	var has_jokers := GameConstants.TileState.JOKER in editor_ui.get_allowed_tiles() and playtest_required_jokers > 0
+	var has_jokers: bool = GameConstants.TileState.JOKER in editor_ui.get_allowed_tiles() and playtest_required_jokers > 0
 	pt_ui.set_playtest_joker_counter_visibility(has_jokers)
 	_update_joker_count()
 
@@ -82,7 +131,7 @@ func exit() -> void:
 	is_active = false
 	canvas_manager.is_playtesting = false
 	_timer.stop()
-	pt_ui.hide_victory_overlay()
+	pt_ui.hide_end_overlays()
 
 	for coord in canvas_manager.board_cells:
 		var cell = canvas_manager.board_cells[coord]
@@ -94,17 +143,22 @@ func exit() -> void:
 		cell.is_editor_mode = true
 		cell.update_visuals()
 
-	canvas_manager.loaded_constraint_pairs = playtest_hidden_constraints.duplicate(true)
+	canvas_manager.loaded_constraint_pairs = playtest_start_constraints.duplicate(true)
+	# Keep grid/constraints above cell controls after playtest.
+	canvas_manager.move_child(canvas_manager.grid_drawer, -1)
+	canvas_manager.move_child(canvas_manager.constraint_drawer, -1)
 	canvas_manager.trigger_redraw()
 	pt_ui.toggle_playtest_visibility(false)
 
 func reset() -> void:
-	if not is_active:
+	# Allow restart from victory/defeat overlays (is_active is false there).
+	if not canvas_manager.is_playtesting:
 		return
+	is_active = true
 	_timer.stop()
-	pt_ui.hide_victory_overlay()
+	pt_ui.hide_end_overlays()
 	_restore_snapshot(playtest_snapshot)
-	canvas_manager.loaded_constraint_pairs = playtest_hidden_constraints.duplicate(true)
+	canvas_manager.loaded_constraint_pairs = playtest_start_constraints.duplicate(true)
 	playtest_time_remaining = editor_ui.get_time_limit()
 	playtest_shifter_moves = 0
 	pt_ui.set_playtest_move_counter_visibility(canvas_manager.loaded_shifter_pairs.size() > 0)
@@ -131,10 +185,7 @@ func handle_cell_click(coord: Vector2i) -> void:
 			var partner = canvas_manager.board_cells[partner_coord]
 			if partner.state == GameConstants.TileState.SHIFTER:
 				partner.set_error_highlight()
-				pt_ui.update_playtest_status(
-					"No space to move! The cell is occupied by another [color=#9c27b0]Purple[/color] tile.",
-					Color.WHITE
-				)
+				pt_ui.update_playtest_status("ERR_SHIFTER_BLOCKED", Color.WHITE)
 				return
 			cell.state = GameConstants.TileState.EMPTY
 			cell.shifter_direction = Vector2i.ZERO
@@ -173,20 +224,46 @@ func redo() -> void:
 	pt_ui.update_playtest_undo_redo_buttons(_undo_stack.can_undo(), _undo_stack.can_redo())
 
 func request_hint() -> void:
-	if not is_active or solved_solution_reference.is_empty():
+	if not is_active:
 		return
-	var hint = HintSystem.pick_hint(
+	var result = HintController.reveal_hint(
 		canvas_manager.board_cells,
 		canvas_manager.loaded_constraint_pairs,
 		solved_solution_reference,
-		[],
-		Vector2i(canvas_manager.grid_width, canvas_manager.grid_height),
-		false
+		playtest_hint_pool,
+		editor_ui.get_allowed_tiles(),
+		prefer_hidden_hints
 	)
+	solved_solution_reference = result["solved_reference"]
+	# Refresh pool once we have a newly solved reference.
+	if playtest_hint_pool.is_empty() and not solved_solution_reference.is_empty():
+		playtest_hint_pool = HintSystem.hidden_hints_from_solved(
+			solved_solution_reference,
+			canvas_manager.loaded_constraint_pairs if not prefer_hidden_hints else [],
+			canvas_manager.grid_width,
+			canvas_manager.grid_height
+		)
+		if result["hint"] == null:
+			result = HintController.reveal_hint(
+				canvas_manager.board_cells,
+				canvas_manager.loaded_constraint_pairs,
+				solved_solution_reference,
+				playtest_hint_pool,
+				editor_ui.get_allowed_tiles(),
+				prefer_hidden_hints
+			)
+	var hint = result["hint"]
 	if hint != null:
 		canvas_manager.loaded_constraint_pairs.append(hint)
+		# Revealed hints leave the hidden pool.
+		for i in range(playtest_hint_pool.size() - 1, -1, -1):
+			var pooled = playtest_hint_pool[i]
+			if (pooled["a"] == hint["a"] and pooled["b"] == hint["b"]) or (pooled["a"] == hint["b"] and pooled["b"] == hint["a"]):
+				playtest_hint_pool.remove_at(i)
 		canvas_manager.trigger_redraw()
 		_run_validation()
+	else:
+		pt_ui.set_playtest_hint_button_disabled(true)
 
 func pause_timer() -> void:
 	_timer.stop()
@@ -195,7 +272,14 @@ func resume_timer() -> void:
 	if is_active:
 		_timer.start()
 		pt_ui.update_playtest_undo_redo_buttons(_undo_stack.can_undo(), _undo_stack.can_redo())
-		pt_ui.set_playtest_hint_button_disabled(_get_usable_hints_count() == 0)
+		pt_ui.set_playtest_hint_button_disabled(not HintController.has_usable_hints(
+			canvas_manager.board_cells,
+			canvas_manager.loaded_constraint_pairs,
+			solved_solution_reference,
+			playtest_hint_pool,
+			Vector2i(canvas_manager.grid_width, canvas_manager.grid_height),
+			prefer_hidden_hints
+		))
 
 func _create_snapshot() -> Dictionary:
 	var snap := {}
@@ -228,20 +312,16 @@ func _restore_snapshot(cells_snapshot: Dictionary) -> void:
 
 func _update_joker_count() -> void:
 	pt_ui.update_playtest_joker_counter(
-		LevelUtils.count_unlocked_jokers(canvas_manager.board_cells),
+		LevelUtils.count_jokers_on_board(canvas_manager.board_cells),
 		playtest_required_jokers
 	)
 
 func _update_hud() -> void:
-	pt_ui.update_playtest_hud(playtest_time_remaining, playtest_shifter_moves, editor_ui.get_time_limit())
-
-func _get_usable_hints_count() -> int:
-	return HintSystem.count_usable_hints(
-		canvas_manager.board_cells,
-		canvas_manager.loaded_constraint_pairs,
-		solved_solution_reference,
-		[],
-		Vector2i(canvas_manager.grid_width, canvas_manager.grid_height)
+	pt_ui.update_playtest_hud(
+		playtest_time_remaining,
+		playtest_shifter_moves,
+		editor_ui.get_time_limit(),
+		playtest_required_shifter_moves
 	)
 
 func _run_validation() -> void:
@@ -252,26 +332,48 @@ func _run_validation() -> void:
 		canvas_manager.loaded_constraint_pairs,
 		playtest_required_jokers
 	)
-	pt_ui.set_playtest_hint_button_disabled(_get_usable_hints_count() == 0)
+	pt_ui.set_playtest_hint_button_disabled(not HintController.has_usable_hints(
+		canvas_manager.board_cells,
+		canvas_manager.loaded_constraint_pairs,
+		solved_solution_reference,
+		playtest_hint_pool,
+		Vector2i(canvas_manager.grid_width, canvas_manager.grid_height),
+		prefer_hidden_hints
+	))
 	pt_ui.update_playtest_undo_redo_buttons(_undo_stack.can_undo(), _undo_stack.can_redo())
 	if not results["valid"]:
 		pt_ui.update_playtest_status("\n".join(results["errors"]), Color.WHITE)
 	else:
-		pt_ui.update_playtest_status("Fill the empty spaces on the board.", Color.WHITE)
+		pt_ui.update_playtest_status("MSG_FILL_EMPTY", Color.WHITE)
 	if results["valid"] and canvas_manager.is_board_full():
 		_trigger_victory()
 
 func _trigger_victory() -> void:
 	is_active = false
 	_timer.stop()
-	pt_ui.update_playtest_status("Puzzle solved!", Color(1.0, 0.84, 0.0))
-	pt_ui.display_victory_overlay("GOOD JOB!\nLEVEL IS SOLVABLE")
+	pt_ui.show_victory_overlay(_build_end_stats())
 
 func _trigger_defeat() -> void:
 	is_active = false
 	_timer.stop()
-	pt_ui.update_playtest_status("Time's up! The puzzle remains unsolved.", Color(1.0, 0.3, 0.3))
-	pt_ui.display_victory_overlay("DEFEAT!\nTIME RAN OUT")
+	pt_ui.show_defeat_overlay(_build_end_stats())
+
+func _build_end_stats() -> Dictionary:
+	var time_limit := editor_ui.get_time_limit()
+	var time_text := tr("UNLIMITED")
+	if time_limit > 0:
+		var minutes := maxi(0, int(playtest_time_remaining / 60.0))
+		var seconds := maxi(0, playtest_time_remaining % 60)
+		time_text = "%02d:%02d" % [minutes, seconds]
+	return {
+		"time_text": time_text,
+		"green_current": LevelUtils.count_jokers_on_board(canvas_manager.board_cells),
+		"green_required": playtest_required_jokers,
+		"show_green": playtest_required_jokers > 0,
+		"moves": playtest_shifter_moves,
+		"moves_required": playtest_required_shifter_moves,
+		"show_moves": canvas_manager.loaded_shifter_pairs.size() > 0,
+	}
 
 func _on_timer_timeout() -> void:
 	if not is_active:

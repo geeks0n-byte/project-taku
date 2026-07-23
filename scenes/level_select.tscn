@@ -86,29 +86,74 @@ horizontal_alignment = 1
 
 [node name="TabContainer" type="HBoxContainer" parent="UILayer/CenterContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 40
+theme_override_constants/separation = 12
 alignment = 1
 
-[node name="CoreTabButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer/TabContainer"]
-custom_minimum_size = Vector2(350, 100)
+[node name="TutorialsTabButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer/TabContainer"]
+modulate = Color(0.55, 0.85, 1, 1)
+custom_minimum_size = Vector2(200, 90)
 layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
 theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
-text = "UI_CORE"
+text = "DIFF_TUTORIALS"
 
-[node name="CustomTabButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer/TabContainer"]
-custom_minimum_size = Vector2(350, 100)
+[node name="EasyTabButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer/TabContainer"]
+modulate = Color(0.45, 1, 0.45, 1)
+custom_minimum_size = Vector2(180, 90)
 layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
 theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "DIFF_EASY"
+
+[node name="MediumTabButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer/TabContainer"]
+modulate = Color(0.6, 0.6, 0.6, 1)
+custom_minimum_size = Vector2(180, 90)
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "DIFF_MEDIUM"
+
+[node name="HardTabButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer/TabContainer"]
+modulate = Color(0.6, 0.6, 0.6, 1)
+custom_minimum_size = Vector2(180, 90)
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "DIFF_HARD"
+
+[node name="CustomTabButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer/TabContainer"]
+visible = false
+modulate = Color(0.6, 0.6, 0.6, 1)
+custom_minimum_size = Vector2(220, 90)
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 26
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
@@ -143,13 +188,49 @@ columns = 3
 
 [node name="LevelButtonTemplate" type="Button" parent="UILayer/CenterContainer/VBoxContainer/ScrollContainer/LevelGrid"]
 visible = false
-custom_minimum_size = Vector2(240, 160)
+custom_minimum_size = Vector2(260, 240)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.4, 1, 0.4, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
 theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "LEVEL
+TEMPLATE"
+
+[node name="LevelButtonTemplateLocked" type="Button" parent="UILayer/CenterContainer/VBoxContainer/ScrollContainer/LevelGrid"]
+visible = false
+custom_minimum_size = Vector2(260, 240)
+layout_mode = 2
+size_flags_horizontal = 3
+disabled = true
+theme_override_colors/font_disabled_color = Color(0.8, 0.4, 0.4, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "LEVEL
+TEMPLATE"
+
+[node name="LevelButtonTemplateCustom" type="Button" parent="UILayer/CenterContainer/VBoxContainer/ScrollContainer/LevelGrid"]
+visible = false
+custom_minimum_size = Vector2(260, 240)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
