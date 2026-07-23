@@ -16,10 +16,10 @@ var allowed_cycle_tiles: Array[int] = [0, 1, 2]
 @export var tex_empty_editor: Texture2D # NEW: Differentiates editor brush from actual gameplay empty
 
 @export var tex_wall: Texture2D
-@export var tex_zero: Texture2D = preload("res://icons/tiles/tile_yellow.svg")
-@export var tex_one: Texture2D = preload("res://icons/tiles/tile_blue.svg")
-@export var tex_joker: Texture2D = preload("res://icons/tiles/tile_green.svg")
-@export var tex_shifter: Texture2D = preload("res://icons/tiles/tile_purple.svg")
+@export var tex_zero: Texture2D = preload("res://resources/tiles/tile_yellow.svg")
+@export var tex_one: Texture2D = preload("res://resources/tiles/tile_blue.svg")
+@export var tex_joker: Texture2D = preload("res://resources/tiles/tile_green.svg")
+@export var tex_shifter: Texture2D = preload("res://resources/tiles/tile_purple.svg")
 
 @export var tex_chevron_up: Texture2D
 @export var tex_chevron_down: Texture2D

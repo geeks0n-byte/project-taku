@@ -1,139 +1,141 @@
-[gd_scene format=3 uid="uid://qah3m84a46oi"]
+[gd_scene format=3 uid="uid://cg2j384x0y4o8"]
 
-[ext_resource type="Script" uid="uid://b63k7kkhmvpc7" path="res://scripts/pause_menu.gd" id="1_n87rw"]
-[ext_resource type="Texture2D" uid="uid://ds4khbnemdfjp" path="res://icons/buttons/Big@2x.png" id="2_myx47"]
-[ext_resource type="Texture2D" uid="uid://f783gmenppba" path="res://icons/buttons/button_tile_gray_dark.svg" id="3_kukqi"]
+[ext_resource type="Script" uid="uid://b63k7kkhmvpc7" path="res://scripts/pause_menu.gd" id="1_script"]
+[ext_resource type="FontFile" uid="uid://ckwxng7tlmws7" path="res://resources/fonts/PressStart2P-vaV7.ttf" id="2_font"]
+[ext_resource type="Texture2D" uid="uid://d2ql5f4tsvnk8" path="res://resources/buttons/button_tile_gray_dark.svg" id="3_tex"]
 
-[node name="PauseMenu" type="Control" unique_id=1796595449]
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_normal"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+texture = ExtResource("3_tex")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_pressed"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+texture = ExtResource("3_tex")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+modulate_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_hover"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+texture = ExtResource("3_tex")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+modulate_color = Color(1.2, 1.2, 1.2, 1)
+
+[node name="PauseMenu" type="Control" unique_id=2109747304]
+process_mode = 3
+visible = false
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_n87rw")
+script = ExtResource("1_script")
 
-[node name="PauseMenuLabel" type="Label" parent="." unique_id=1809398859]
-top_level = true
+[node name="BackgroundColor" type="ColorRect" parent="." unique_id=1800779460]
 layout_mode = 1
-anchors_preset = 14
-anchor_top = 0.5
+anchors_preset = 15
 anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = -10.0
-offset_top = -869.5
-offset_right = -10.0
-offset_bottom = -812.5
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_font_sizes/font_size = 41
-text = "Paused"
-horizontal_alignment = 1
-vertical_alignment = 2
+color = Color(0, 0, 0, 0.85)
 
-[node name="TextureRect" type="TextureRect" parent="." unique_id=202879118]
-layout_mode = 0
-offset_left = 219.0
-offset_top = 80.0
-offset_right = 825.0
-offset_bottom = 1128.0
-texture = ExtResource("2_myx47")
-expand_mode = 1
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=84648387]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="PauseMenuContainer" type="VBoxContainer" parent="." unique_id=586319455]
-layout_mode = 0
-offset_left = -1.0
-offset_top = -4.0
-offset_right = 39.0
-offset_bottom = 36.0
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer" unique_id=1882198617]
+layout_mode = 2
+theme_override_constants/separation = 40
+alignment = 1
 
-[node name="ResumeButton" type="TextureButton" parent="." unique_id=971723208]
-unique_name_in_owner = true
-layout_mode = 0
-offset_left = 390.0
-offset_top = 348.0
-offset_right = 829.0
-offset_bottom = 567.0
-scale = Vector2(0.6, 0.6)
-texture_normal = ExtResource("3_kukqi")
-stretch_mode = 0
-
-[node name="ResumeLabel" type="Label" parent="ResumeButton" unique_id=1253357902]
-layout_mode = 0
-offset_left = 89.999985
-offset_top = 54.999977
-offset_right = 365.0
-offset_bottom = 151.99997
-theme_override_font_sizes/font_size = 71
-text = "Resume"
+[node name="TitleLabel" type="Label" parent="CenterContainer/VBoxContainer" unique_id=2027110153]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 16
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 64
+text = "PAUSED"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="RestartButton" type="TextureButton" parent="." unique_id=1018793528]
-unique_name_in_owner = true
-layout_mode = 0
-offset_left = 393.0
-offset_top = 502.0
-offset_right = 832.0
-offset_bottom = 721.0
-scale = Vector2(0.6, 0.6)
-texture_normal = ExtResource("3_kukqi")
-stretch_mode = 4
+[node name="Spacer" type="Control" parent="CenterContainer/VBoxContainer" unique_id=2110258819]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
 
-[node name="RestartLabel" type="Label" parent="RestartButton" unique_id=626586763]
-top_level = true
-layout_mode = 0
-offset_left = 429.0
-offset_top = 535.0
-offset_right = 626.0
-offset_bottom = 592.0
-theme_override_font_sizes/font_size = 41
-text = "Restart"
-horizontal_alignment = 1
-vertical_alignment = 1
+[node name="ResumeButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=1602945635]
+custom_minimum_size = Vector2(500, 120)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "UI_RESUME"
 
-[node name="AutoWinButton" type="TextureButton" parent="." unique_id=926541327]
-unique_name_in_owner = true
-layout_mode = 0
-offset_left = 394.0
-offset_top = 647.0
-offset_right = 833.0
-offset_bottom = 866.0
-scale = Vector2(0.6, 0.6)
-texture_normal = ExtResource("3_kukqi")
-stretch_mode = 0
+[node name="RestartButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=265163747]
+custom_minimum_size = Vector2(500, 120)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "UI_RESTART"
 
-[node name="AutoWinLabel" type="Label" parent="AutoWinButton" unique_id=407596096]
-top_level = true
-layout_mode = 0
-offset_left = 429.0
-offset_top = 677.0
-offset_right = 626.0
-offset_bottom = 734.0
-theme_override_font_sizes/font_size = 41
-text = "AutoWin"
-horizontal_alignment = 1
-vertical_alignment = 1
+[node name="AutoWinButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=510154542]
+visible = false
+custom_minimum_size = Vector2(500, 120)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "AUTO WIN"
 
-[node name="QuitButton" type="TextureButton" parent="." unique_id=1450915775]
-unique_name_in_owner = true
-layout_mode = 0
-offset_left = 395.00003
-offset_top = 801.0
-offset_right = 834.0
-offset_bottom = 1020.0
-scale = Vector2(0.6, 0.6)
-texture_normal = ExtResource("3_kukqi")
-stretch_mode = 0
-
-[node name="QuitLabel" type="Label" parent="QuitButton" unique_id=1999363146]
-top_level = true
-layout_mode = 0
-offset_left = 427.0
-offset_top = 831.0
-offset_right = 624.0
-offset_bottom = 888.0
-theme_override_font_sizes/font_size = 41
-text = "Quit"
-horizontal_alignment = 1
-vertical_alignment = 1
+[node name="QuitButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=389499878]
+custom_minimum_size = Vector2(500, 120)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "UI_BACK_TO_MENU"

@@ -1,55 +1,176 @@
 [gd_scene format=3 uid="uid://cqf1g7xouf15q"]
 
-[ext_resource type="Script" uid="uid://bluo2lx5d6r50" path="res://scripts/level_select.gd" id="1_p0wlc"]
-[ext_resource type="Texture2D" uid="uid://ds4khbnemdfjp" path="res://icons/buttons/Big@2x.png" id="2_2epne"]
+[ext_resource type="Script" uid="uid://bluo2lx5d6r50" path="res://scripts/level_select.gd" id="1_script"]
+[ext_resource type="FontFile" uid="uid://ckwxng7tlmws7" path="res://resources/fonts/PressStart2P-vaV7.ttf" id="3_font"]
+[ext_resource type="Texture2D" uid="uid://d2ql5f4tsvnk8" path="res://resources/buttons/button_tile_gray_dark.svg" id="4_tex"]
 
-[node name="LevelSelect" type="Control" unique_id=12330982]
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_normal"]
+texture = ExtResource("4_tex")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_hover"]
+texture = ExtResource("4_tex")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+modulate_color = Color(1.2, 1.2, 1.2, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_pressed"]
+texture = ExtResource("4_tex")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+modulate_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_disabled"]
+texture = ExtResource("4_tex")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+modulate_color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="LevelSelect" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_p0wlc")
+script = ExtResource("1_script")
 
-[node name="ColorRect" type="TextureRect" parent="." unique_id=1302250542]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = ExtResource("2_2epne")
+[node name="UILayer" type="CanvasLayer" parent="."]
 
-[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1886838420]
-layout_mode = 1
+[node name="CenterContainer" type="CenterContainer" parent="UILayer"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=620755569]
+[node name="VBoxContainer" type="VBoxContainer" parent="UILayer/CenterContainer"]
 layout_mode = 2
+theme_override_constants/separation = 40
+alignment = 1
 
-[node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1056276356]
+[node name="TitleLabel" type="Label" parent="UILayer/CenterContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "SELECT A LEVEL"
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 12
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 64
+text = "UI_SELECT_LEVEL"
 horizontal_alignment = 1
 
-[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer" unique_id=24250700]
-custom_maximum_size = Vector2(-1, 400)
+[node name="TabContainer" type="HBoxContainer" parent="UILayer/CenterContainer/VBoxContainer"]
 layout_mode = 2
-size_flags_vertical = 3
+theme_override_constants/separation = 40
+alignment = 1
 
-[node name="LevelGrid" type="GridContainer" parent="MarginContainer/VBoxContainer/ScrollContainer" unique_id=1318859600]
+[node name="CoreTabButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer/TabContainer"]
+custom_minimum_size = Vector2(350, 100)
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "UI_CORE"
+
+[node name="CustomTabButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer/TabContainer"]
+custom_minimum_size = Vector2(350, 100)
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "UI_CUSTOM"
+
+[node name="EmptyStateLabel" type="Label" parent="UILayer/CenterContainer/VBoxContainer"]
+visible = false
+custom_minimum_size = Vector2(0, 600)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 32
+text = "NO_PLAYABLE_LEVELS"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="UILayer/CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 600)
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="LevelGrid" type="GridContainer" parent="UILayer/CenterContainer/VBoxContainer/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_override_constants/h_separation = 30
+theme_override_constants/v_separation = 30
 columns = 3
 
-[node name="BackButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=2131962680]
-custom_minimum_size = Vector2(200, 60)
+[node name="LevelButtonTemplate" type="Button" parent="UILayer/CenterContainer/VBoxContainer/ScrollContainer/LevelGrid"]
+visible = false
+custom_minimum_size = Vector2(240, 160)
 layout_mode = 2
-theme_override_font_sizes/font_size = 32
+size_flags_horizontal = 3
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "LEVEL
+TEMPLATE"
+
+[node name="Spacer" type="Control" parent="UILayer/CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+
+[node name="BackButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(600, 120)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 36
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "UI_BACK_TO_MENU"

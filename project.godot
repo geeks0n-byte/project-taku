@@ -13,12 +13,13 @@ config_version=5
 config/name="project-taku"
 run/main_scene="uid://c20pd0eqihnlp"
 config/features=PackedStringArray("4.7", "GL Compatibility")
-config/icon="uid://c53gqkhoradoj"
+config/icon="uid://b4feaalp6odnk"
 
 [autoload]
 
 GlobalGameManager="*uid://bn8d4xks38olr"
 SaveManager="*uid://blp08aux0so6"
+SpaceBackground="*uid://bjs0g2pap4nsi"
 
 [display]
 
@@ -34,11 +35,15 @@ project/assembly_name="project-taku"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/AI_Gemini_GD/plugin.cfg")
+enabled=PackedStringArray()
 
 [gemini_gd]
 
 gemini_configuration/api_key=""
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://resources/localization/translations.en.translation", "res://resources/localization/translations.pl.translation", "res://resources/localization/translations.ka.translation", "res://resources/localization/translations.es.translation", "res://resources/localization/translations.fr.translation", "res://resources/localization/translations.de.translation", "res://resources/localization/translations.uk.translation")
 
 [physics]
 

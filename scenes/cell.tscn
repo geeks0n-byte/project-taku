@@ -1,14 +1,14 @@
 [gd_scene format=3 uid="uid://j4t3jm7v17ag"]
 
 [ext_resource type="Script" uid="uid://d25rxch5oti18" path="res://scripts/cell.gd" id="1_k6tqi"]
-[ext_resource type="Texture2D" uid="uid://ci71ltxqka6f8" path="res://icons/tiles/tile_empty.svg" id="2_4kve2"]
-[ext_resource type="Texture2D" uid="uid://ch8eeuoduxhwt" path="res://icons/tiles/tile_empty_editor.svg" id="3_ely81"]
-[ext_resource type="Texture2D" uid="uid://j7fscbkdrsrm" path="res://icons/tiles/tile_lock.svg" id="4_ds1sf"]
-[ext_resource type="Texture2D" uid="uid://ctsesksrgylyq" path="res://icons/tiles/tile_purple_up.svg" id="4_k4tsc"]
-[ext_resource type="Texture2D" uid="uid://55btbus68rqs" path="res://icons/tiles/tile_purple_down.svg" id="5_ely81"]
-[ext_resource type="Texture2D" uid="uid://xeqffr3l46qi" path="res://icons/tiles/tile_purple_left.svg" id="6_brkcj"]
-[ext_resource type="Texture2D" uid="uid://dsdeejtglrqx3" path="res://icons/tiles/tile_wall.svg" id="6_v4toj"]
-[ext_resource type="Texture2D" uid="uid://cat4tyxlo2ihu" path="res://icons/tiles/tile_purple_right.svg" id="7_v4toj"]
+[ext_resource type="Texture2D" uid="uid://xfh7ulfje6nx" path="res://resources/tiles/tile_empty.svg" id="2_4kve2"]
+[ext_resource type="Texture2D" uid="uid://tw3c75xsbs4o" path="res://resources/tiles/tile_empty_editor.svg" id="3_ely81"]
+[ext_resource type="Texture2D" uid="uid://j7fscbkdrsrm" path="res://resources/tiles/tile_lock.svg" id="4_ds1sf"]
+[ext_resource type="Texture2D" uid="uid://ctsesksrgylyq" path="res://resources/tiles/tile_purple_up.svg" id="4_k4tsc"]
+[ext_resource type="Texture2D" uid="uid://55btbus68rqs" path="res://resources/tiles/tile_purple_down.svg" id="5_ely81"]
+[ext_resource type="Texture2D" uid="uid://xeqffr3l46qi" path="res://resources/tiles/tile_purple_left.svg" id="6_brkcj"]
+[ext_resource type="Texture2D" uid="uid://bam7m47cw74b7" path="res://resources/tiles/tile_wall.svg" id="6_v4toj"]
+[ext_resource type="Texture2D" uid="uid://cat4tyxlo2ihu" path="res://resources/tiles/tile_purple_right.svg" id="7_v4toj"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_q20q2"]
 bg_color = Color(0.6, 0.6, 0.6, 0)

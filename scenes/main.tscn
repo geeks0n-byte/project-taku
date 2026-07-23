@@ -1,195 +1,698 @@
 [gd_scene format=3 uid="uid://cuf448q3tm0yy"]
 
 [ext_resource type="Script" uid="uid://cu6cq88gr24e3" path="res://scripts/main.gd" id="1_trceg"]
-[ext_resource type="PackedScene" uid="uid://bjs0g2pap4nsi" path="res://scenes/space_background.tscn" id="5_tbgi4"]
 [ext_resource type="Script" uid="uid://cmilped3wai4n" path="res://scripts/board_manager.gd" id="12_y6deb"]
 [ext_resource type="Script" uid="uid://dcrkhyr8vhs3g" path="res://scripts/ui_manager.gd" id="13_og1vs"]
-[ext_resource type="PackedScene" uid="uid://qah3m84a46oi" path="res://scenes/pause_menu.tscn" id="14_a8y0u"]
+[ext_resource type="PackedScene" uid="uid://cg2j384x0y4o8" path="res://scenes/pause_menu.tscn" id="14_a8y0u"]
+[ext_resource type="FontFile" uid="uid://ckwxng7tlmws7" path="res://resources/fonts/PressStart2P-vaV7.ttf" id="font_ps2p"]
+[ext_resource type="Texture2D" uid="uid://d2ql5f4tsvnk8" path="res://resources/buttons/button_tile_gray_dark.svg" id="tex_btn_bg"]
+[ext_resource type="Texture2D" uid="uid://dwk0b06y7msdk" path="res://resources/icons/icon_exit.svg" id="tex_exit"]
+[ext_resource type="Texture2D" uid="uid://duph5sjcrwtwc" path="res://resources/icons/icon_hint.svg" id="tex_hint"]
+[ext_resource type="Texture2D" uid="uid://bh7sa76f3c8je" path="res://resources/icons/icon_pause.svg" id="tex_pause"]
+[ext_resource type="Texture2D" uid="uid://4oqca6cnuifh" path="res://resources/icons/icon_redo.svg" id="tex_redo"]
+[ext_resource type="Texture2D" uid="uid://blpwipbhfjhjb" path="res://resources/icons/icon_reset.svg" id="tex_reset"]
+[ext_resource type="Texture2D" uid="uid://tdm07fs8c43h" path="res://resources/icons/icon_rules.svg" id="tex_rules"]
+[ext_resource type="Texture2D" uid="uid://dwj0omtseqty7" path="res://resources/icons/icon_undo.svg" id="tex_undo"]
 
-[node name="Main" type="Node2D" unique_id=1789331107]
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_normal"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+texture = ExtResource("tex_btn_bg")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_pressed"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+texture = ExtResource("tex_btn_bg")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+modulate_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_hover"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+texture = ExtResource("tex_btn_bg")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+modulate_color = Color(1.2, 1.2, 1.2, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_disabled"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+texture = ExtResource("tex_btn_bg")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+modulate_color = Color(0.5, 0.5, 0.5, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dark"]
+bg_color = Color(0.12, 0.12, 0.12, 1)
+
+[node name="Main" type="Node2D" unique_id=548679913]
 script = ExtResource("1_trceg")
 
-[node name="BoardManager" type="Node2D" parent="." unique_id=1328920833]
+[node name="BoardManager" type="Node2D" parent="." unique_id=225932288]
 script = ExtResource("12_y6deb")
 
-[node name="StatusLabel" type="RichTextLabel" parent="." unique_id=511201248]
-offset_right = 40.0
-offset_bottom = 23.0
-bbcode_enabled = true
-scroll_active = false
-
-[node name="PauseButton" type="Button" parent="." unique_id=1111989897]
-offset_right = 8.0
-offset_bottom = 8.0
-text = "Pause"
-
-[node name="ResetButton" type="Button" parent="." unique_id=96924098]
-offset_right = 8.0
-offset_bottom = 8.0
-text = "Reset"
-
-[node name="HowToPlayButton" type="Button" parent="." unique_id=914807657]
-offset_right = 40.0
-offset_bottom = 40.0
-text = "?"
-
-[node name="LevelLabel" type="Label" parent="." unique_id=771772162]
-offset_right = 40.0
-offset_bottom = 23.0
-
-[node name="Timer" type="Timer" parent="." unique_id=901403189]
+[node name="Timer" type="Timer" parent="." unique_id=741453753]
 autostart = true
 
-[node name="TimerLabel" type="RichTextLabel" parent="." unique_id=1779225586]
-offset_right = 40.0
-offset_bottom = 23.0
+[node name="HUDLayer" type="CanvasLayer" parent="." unique_id=1031285283]
+
+[node name="HUDControl" type="Control" parent="HUDLayer" unique_id=213881743]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopMargin" type="MarginContainer" parent="HUDLayer/HUDControl" unique_id=378431056]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 220.0
+grow_horizontal = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+
+[node name="VBox" type="VBoxContainer" parent="HUDLayer/HUDControl/TopMargin" unique_id=2147026707]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="TopBarRow" type="HBoxContainer" parent="HUDLayer/HUDControl/TopMargin/VBox" unique_id=271841012]
+layout_mode = 2
+alignment = 1
+
+[node name="LeftButtons" type="HBoxContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow" unique_id=504211170]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_constants/separation = 15
+
+[node name="PauseButton" type="Button" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LeftButtons" unique_id=293357871]
+custom_minimum_size = Vector2(135, 135)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+
+[node name="IconContainer" type="MarginContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LeftButtons/PauseButton" unique_id=245692294]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Icon" type="TextureRect" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LeftButtons/PauseButton/IconContainer" unique_id=1866740471]
+custom_minimum_size = Vector2(90, 90)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("tex_pause")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ResetButton" type="Button" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LeftButtons" unique_id=1594091490]
+custom_minimum_size = Vector2(135, 135)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+
+[node name="IconContainer" type="MarginContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LeftButtons/ResetButton" unique_id=1090521536]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Icon" type="TextureRect" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LeftButtons/ResetButton/IconContainer" unique_id=1447618678]
+custom_minimum_size = Vector2(90, 90)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("tex_reset")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HowToPlayButton" type="Button" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LeftButtons" unique_id=1122262590]
+custom_minimum_size = Vector2(135, 135)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+
+[node name="IconContainer" type="MarginContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LeftButtons/HowToPlayButton" unique_id=1511384140]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Icon" type="TextureRect" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/LeftButtons/HowToPlayButton/IconContainer" unique_id=442391103]
+custom_minimum_size = Vector2(90, 90)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("tex_rules")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SpacerLeft" type="Control" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow" unique_id=652059477]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LevelLabel" type="RichTextLabel" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow" unique_id=694272128]
+custom_minimum_size = Vector2(250, 100)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_colors/default_color = Color(1, 0.9, 0.4, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/normal_font = ExtResource("font_ps2p")
+theme_override_font_sizes/normal_font_size = 32
 bbcode_enabled = true
+text = "[center]LEVEL[/center]"
 scroll_active = false
 
-[node name="MoveCounterLabel" type="Label" parent="." unique_id=1809504095]
-offset_right = 40.0
-offset_bottom = 23.0
+[node name="SpacerRight" type="Control" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow" unique_id=288411348]
+layout_mode = 2
+size_flags_horizontal = 3
 
-[node name="EndLayer" type="CanvasLayer" parent="." unique_id=123771825]
+[node name="RightButtons" type="HBoxContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow" unique_id=1205877497]
+layout_mode = 2
+size_flags_horizontal = 8
+theme_override_constants/separation = 15
 
-[node name="VictoryPanel" type="ColorRect" parent="EndLayer" unique_id=1482484342]
-color = Color(0, 0, 0, 0.7058824)
+[node name="UndoButton" type="Button" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons" unique_id=2007916361]
+custom_minimum_size = Vector2(135, 135)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="WinLabel" type="Label" parent="EndLayer/VictoryPanel" unique_id=440959304]
+[node name="IconContainer" type="MarginContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons/UndoButton" unique_id=2109249836]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -64.0
-offset_top = -11.5
-offset_right = 64.0
-offset_bottom = 11.5
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
+
+[node name="Icon" type="TextureRect" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons/UndoButton/IconContainer" unique_id=107140622]
+custom_minimum_size = Vector2(90, 90)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("tex_undo")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RedoButton" type="Button" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons" unique_id=1433621020]
+custom_minimum_size = Vector2(135, 135)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+
+[node name="IconContainer" type="MarginContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons/RedoButton" unique_id=194087113]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Icon" type="TextureRect" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons/RedoButton/IconContainer" unique_id=113177556]
+custom_minimum_size = Vector2(90, 90)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("tex_redo")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HintButton" type="Button" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons" unique_id=1719590708]
+custom_minimum_size = Vector2(135, 135)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+
+[node name="IconContainer" type="MarginContainer" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons/HintButton" unique_id=1741510208]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Icon" type="TextureRect" parent="HUDLayer/HUDControl/TopMargin/VBox/TopBarRow/RightButtons/HintButton/IconContainer" unique_id=1570824702]
+custom_minimum_size = Vector2(90, 90)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("tex_hint")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CounterContainer" type="HBoxContainer" parent="HUDLayer/HUDControl" unique_id=999999991]
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 180.0
+offset_bottom = 240.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_constants/separation = 40
+alignment = 1
+
+[node name="TimerLabel" type="RichTextLabel" parent="HUDLayer/HUDControl/CounterContainer" unique_id=1395314999]
+custom_minimum_size = Vector2(250, 40)
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/normal_font = ExtResource("font_ps2p")
+theme_override_font_sizes/normal_font_size = 22
+bbcode_enabled = true
+text = "[center]TIME: 00:00[/center]"
+scroll_active = false
+
+[node name="JokerCounterLabel" type="RichTextLabel" parent="HUDLayer/HUDControl/CounterContainer" unique_id=1644815541]
+custom_minimum_size = Vector2(250, 40)
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(0.4, 1, 0.4, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/normal_font = ExtResource("font_ps2p")
+theme_override_font_sizes/normal_font_size = 22
+bbcode_enabled = true
+text = "[center]USED: 0/0[/center]"
+scroll_active = false
+
+[node name="MoveCounterLabel" type="RichTextLabel" parent="HUDLayer/HUDControl/CounterContainer" unique_id=504871603]
+custom_minimum_size = Vector2(250, 40)
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(0.75, 0.55, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/normal_font = ExtResource("font_ps2p")
+theme_override_font_sizes/normal_font_size = 22
+bbcode_enabled = true
+text = "[center]MOVES: 0[/center]"
+scroll_active = false
+
+[node name="StatusLabel" type="RichTextLabel" parent="HUDLayer/HUDControl" unique_id=803071151]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -80.0
+offset_right = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_colors/default_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/normal_font_size = 28
+bbcode_enabled = true
+text = "[center]Fill the empty spaces on the board.[/center]"
+fit_content = true
+scroll_active = false
+
+[node name="EndLayer" type="CanvasLayer" parent="." unique_id=1916805682]
+layer = 5
+
+[node name="CenterContainer" type="CenterContainer" parent="EndLayer" unique_id=905097534]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VictoryPanel" type="Panel" parent="EndLayer/CenterContainer" unique_id=980826821]
+visible = false
+custom_minimum_size = Vector2(600, 600)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
+
+[node name="WinLabel" type="Label" parent="EndLayer/CenterContainer/VictoryPanel" unique_id=1448388007]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 40.0
+offset_bottom = 110.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 10
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 24
 text = "PUZZLE SOLVED!"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
 
-[node name="RestartButton" type="Button" parent="EndLayer/VictoryPanel" unique_id=1980193957]
+[node name="TimeResultLabel" type="Label" parent="EndLayer/CenterContainer/VictoryPanel" unique_id=1250829313]
 layout_mode = 1
-offset_right = 88.0
-offset_bottom = 31.0
-text = "Play Again"
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 160.0
+offset_bottom = 200.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 20
+text = "COMPLETION TIME: 00:00"
+horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="MainMenuButton" type="Button" parent="EndLayer/VictoryPanel" unique_id=2032472209]
-layout_mode = 1
-offset_right = 96.0
-offset_bottom = 31.0
-text = "Main Menu"
-
-[node name="TimeResultLabel" type="Label" parent="EndLayer/VictoryPanel" unique_id=763166549]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 23.0
-
-[node name="DefeatPanel" type="ColorRect" parent="EndLayer" unique_id=1919653874]
-color = Color(0, 0, 0, 0.7058824)
-
-[node name="DefeatLabel" type="Label" parent="EndLayer/DefeatPanel" unique_id=189345018]
+[node name="RestartButton" type="Button" parent="EndLayer/CenterContainer/VictoryPanel" unique_id=22368695]
+custom_minimum_size = Vector2(500, 120)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -64.0
-offset_top = -11.5
-offset_right = 64.0
-offset_bottom = 11.5
+offset_left = -250.0
+offset_top = -60.0
+offset_right = 250.0
+offset_bottom = 60.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="EndLayer/CenterContainer/VictoryPanel/RestartButton" unique_id=142502624]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+alignment = 1
+
+[node name="Label" type="Label" parent="EndLayer/CenterContainer/VictoryPanel/RestartButton/HBoxContainer" unique_id=1198879063]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 28
+text = "NEXT LEVEL"
+vertical_alignment = 1
+
+[node name="MainMenuButton" type="Button" parent="EndLayer/CenterContainer/VictoryPanel" unique_id=684748410]
+custom_minimum_size = Vector2(500, 120)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = 100.0
+offset_right = 250.0
+offset_bottom = 220.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="EndLayer/CenterContainer/VictoryPanel/MainMenuButton" unique_id=2077805190]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Icon" type="TextureRect" parent="EndLayer/CenterContainer/VictoryPanel/MainMenuButton/HBoxContainer" unique_id=1386590692]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("tex_exit")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="EndLayer/CenterContainer/VictoryPanel/MainMenuButton/HBoxContainer" unique_id=936359964]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 28
+text = "MAIN MENU"
+vertical_alignment = 1
+
+[node name="DefeatPanel" type="Panel" parent="EndLayer/CenterContainer" unique_id=842097150]
+visible = false
+custom_minimum_size = Vector2(600, 600)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
+
+[node name="DefeatLabel" type="Label" parent="EndLayer/CenterContainer/DefeatPanel" unique_id=312713180]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 40.0
+offset_bottom = 110.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 10
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 24
 text = "TIME'S UP!"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
 
-[node name="RestartButton" type="Button" parent="EndLayer/DefeatPanel" unique_id=2078729675]
+[node name="RestartButton" type="Button" parent="EndLayer/CenterContainer/DefeatPanel" unique_id=293220160]
+custom_minimum_size = Vector2(500, 120)
 layout_mode = 1
-offset_right = 88.0
-offset_bottom = 31.0
-text = "Try Again"
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -60.0
+offset_right = 250.0
+offset_bottom = 60.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="MainMenuButton" type="Button" parent="EndLayer/DefeatPanel" unique_id=1715181863]
+[node name="HBoxContainer" type="HBoxContainer" parent="EndLayer/CenterContainer/DefeatPanel/RestartButton" unique_id=1901386151]
 layout_mode = 1
-offset_right = 96.0
-offset_bottom = 31.0
-text = "Main Menu"
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+alignment = 1
 
-[node name="HowToPlayLayer" type="CanvasLayer" parent="." unique_id=749392160]
+[node name="Label" type="Label" parent="EndLayer/CenterContainer/DefeatPanel/RestartButton/HBoxContainer" unique_id=1241242006]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 28
+text = "TRY AGAIN"
+vertical_alignment = 1
 
-[node name="CenterContainer" type="CenterContainer" parent="HowToPlayLayer" unique_id=987175494]
+[node name="MainMenuButton" type="Button" parent="EndLayer/CenterContainer/DefeatPanel" unique_id=1168522731]
+custom_minimum_size = Vector2(500, 120)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = 100.0
+offset_right = 250.0
+offset_bottom = 220.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="EndLayer/CenterContainer/DefeatPanel/MainMenuButton" unique_id=1546153640]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Icon" type="TextureRect" parent="EndLayer/CenterContainer/DefeatPanel/MainMenuButton/HBoxContainer" unique_id=1413397421]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("tex_exit")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="EndLayer/CenterContainer/DefeatPanel/MainMenuButton/HBoxContainer" unique_id=1794079449]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 28
+text = "MAIN MENU"
+vertical_alignment = 1
+
+[node name="HowToPlayLayer" type="CanvasLayer" parent="." unique_id=1386313562]
+layer = 6
+
+[node name="CenterContainer" type="CenterContainer" parent="HowToPlayLayer" unique_id=2088028727]
+visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="HowToPlayPanel" type="Panel" parent="HowToPlayLayer/CenterContainer" unique_id=9196945]
-custom_minimum_size = Vector2(600, 500)
+[node name="HowToPlayPanel" type="Panel" parent="HowToPlayLayer/CenterContainer" unique_id=735210026]
+custom_minimum_size = Vector2(950, 1400)
 layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
 
-[node name="RulesLabel" type="RichTextLabel" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=1327694329]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
+[node name="RulesLabel" type="RichTextLabel" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=2066659259]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 40.0
+offset_right = -40.0
+offset_bottom = -160.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/normal_font = ExtResource("font_ps2p")
+theme_override_font_sizes/normal_font_size = 28
 bbcode_enabled = true
-text = "[center][font_size=56][b]HOW TO PLAY[/b][/font_size][/center]
+text = "[center][font_size=64][b]HOW TO PLAY[/b][/font_size][/center]"
 
-[font_size=32]
-• [b]Equal Balance:[/b] Every row and column must contain an equal number of [color=#ffeb3b]Yellow[/color] and [color=#2196f3]Blue[/color] tiles.
+[node name="BackButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=1284825961]
+custom_minimum_size = Vector2(400, 120)
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -140.0
+offset_right = 200.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-• [b]The Rule of Two:[/b] No more than two tiles of the same color may be placed next to each other in any row or column.
+[node name="HBoxContainer" type="HBoxContainer" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/BackButton" unique_id=844264243]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+alignment = 1
 
-              ❌ [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [img=48x48]res://icons/tiles/tile_yellow.svg[/img]  (Three [color=#ffeb3b]Yellows[/color])
-              ❌ [img=48x48]res://icons/tiles/tile_blue.svg[/img] [img=48x48]res://icons/tiles/tile_blue.svg[/img] [img=48x48]res://icons/tiles/tile_blue.svg[/img]  (Three [color=#2196f3]Blues[/color])
-              ✅ [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [img=48x48]res://icons/tiles/tile_blue.svg[/img]  (Valid Mix)
-[/font_size]
-
-[center][font_size=42][b][color=#88ccff]TILE TYPES[/color][/b][/font_size][/center]
-
-[font_size=32]
-• [b]Basic Tiles:[/b] [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [color=#ffeb3b]Yellow[/color] and [img=48x48]res://icons/tiles/tile_blue.svg[/img] [color=#2196f3]Blue[/color] tiles. Use these to fill the empty spaces on the board.
-
-• [img=48x48]res://icons/tiles/tile_green.svg[/img] [color=#4caf50][b]Green Tiles:[/b][/color] Since [color=#4caf50]green[/color] is a combination of [color=#ffeb3b]yellow[/color] and [color=#2196f3]blue[/color], this combined tile acts as both of those colors. Each row and column can contain a maximum of one [color=#4caf50]green[/color] tile.
-
-              ❌ [img=48x48]res://icons/tiles/tile_blue.svg[/img] [img=48x48]res://icons/tiles/tile_blue.svg[/img] [img=48x48]res://icons/tiles/tile_green.svg[/img]  (Two [color=#2196f3]Blues[/color] + [color=#4caf50]Green[/color])
-              ❌ [img=48x48]res://icons/tiles/tile_yellow.svg[/img] [img=48x48]res://icons/tiles/tile_green.svg[/img] [img=48x48]res://icons/tiles/tile_yellow.svg[/img]  ([color=#ffeb3b]Yellow[/color] + [color=#4caf50]Green[/color] + [color=#ffeb3b]Yellow[/color])
-              ✅ [img=48x48]res://icons/tiles/tile_blue.svg[/img] [img=48x48]res://icons/tiles/tile_green.svg[/img] [img=48x48]res://icons/tiles/tile_yellow.svg[/img]  (Valid Mix)
-
-• [img=48x48]res://icons/tiles/tile_purple.svg[/img] [color=#9c27b0][b]Purple Tiles:[/b][/color] These shifter tiles must be moved to their correct positions to solve the puzzle. When clicked, a [color=#9c27b0]purple[/color] tile moves between two neighboring cells. The arrow indicates the direction of its next move ([img=56x56]res://icons/tiles/tile_purple_up.svg[/img][img=56x56]res://icons/tiles/tile_purple_down.svg[/img][img=56x56]res://icons/tiles/tile_purple_left.svg[/img][img=56x56]res://icons/tiles/tile_purple_right.svg[/img]).
-
-• [img height=72 region=16,0,96,128]res://icons/tiles/tile_lock.svg[/img] [b]Locks:[/b] Any tile displaying a padlock icon is permanently fixed to the board.
-[/font_size]
-
-[center][font_size=42][b][color=#88ccff]HINTS[/color][/b][/font_size][/center]
-
-[font_size=32]
-• An [b]=[/b] symbol between two cells means they must be the [i]same[/i] color.
-
-• A [b]×[/b] symbol between two cells means they must be [i]different[/i] colors.
-[/font_size]"
-
-[node name="BackButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=1004694894]
-layout_mode = 0
-offset_left = 296.0
-offset_top = 246.0
-offset_right = 354.0
-offset_bottom = 277.0
+[node name="Label" type="Label" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/BackButton/HBoxContainer" unique_id=2137341597]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 32
 text = "CLOSE"
 
-[node name="UIManager" type="Control" parent="." unique_id=1396855515]
+[node name="UIManager" type="Control" parent="." unique_id=1914610177]
 layout_mode = 3
 anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 script = ExtResource("13_og1vs")
 
-[node name="PauseMenuLayer" type="CanvasLayer" parent="." unique_id=6552304]
+[node name="PauseMenuLayer" type="CanvasLayer" parent="." unique_id=777583274]
 layer = 10
 
-[node name="PauseMenu" parent="PauseMenuLayer" unique_id=1796595449 instance=ExtResource("14_a8y0u")]
+[node name="PauseMenu" parent="PauseMenuLayer" unique_id=673510329 instance=ExtResource("14_a8y0u")]
 unique_name_in_owner = true
-
-[node name="SpaceBackground" parent="." unique_id=2028332427 instance=ExtResource("5_tbgi4")]

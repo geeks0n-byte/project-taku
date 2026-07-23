@@ -1,162 +1,225 @@
 [gd_scene format=3 uid="uid://c20pd0eqihnlp"]
 
-[ext_resource type="Script" uid="uid://cvffp4gq8wfdc" path="res://scripts/main_menu.gd" id="1_8ln24"]
-[ext_resource type="PackedScene" uid="uid://cuf448q3tm0yy" path="res://scenes/main.tscn" id="2_rtw2f"]
-[ext_resource type="Texture2D" uid="uid://ds4khbnemdfjp" path="res://icons/buttons/Big@2x.png" id="3_8ln24"]
-[ext_resource type="Texture2D" uid="uid://bvh1r3erat0y1" path="res://icons/buttons/settings_icon.png" id="4_rtw2f"]
-[ext_resource type="Texture2D" uid="uid://53010pkgt77w" path="res://icons/buttons/list_icon.png" id="4_tbmy8"]
-[ext_resource type="Texture2D" uid="uid://2spy15xdte1g" path="res://icons/buttons/close_icon_128px.png" id="5_jk1qb"]
-[ext_resource type="Texture2D" uid="uid://de331neeryons" path="res://icons/placeholder_icons/brush.png" id="6_tbmy8"]
-[ext_resource type="Texture2D" uid="uid://bjgm8237l7xly" path="res://icons/buttons/pla.png" id="8_tbmy8"]
+[ext_resource type="Script" uid="uid://cvffp4gq8wfdc" path="res://scripts/main_menu.gd" id="1_script"]
+[ext_resource type="FontFile" uid="uid://ckwxng7tlmws7" path="res://resources/fonts/PressStart2P-vaV7.ttf" id="3_font"]
+[ext_resource type="Texture2D" uid="uid://d2ql5f4tsvnk8" path="res://resources/buttons/button_tile_gray_dark.svg" id="4_tex"]
+[ext_resource type="PackedScene" uid="uid://c8m3k2v1" path="res://scenes/options_menu.tscn" id="5_options"]
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_flqon"]
-atlas = ExtResource("8_tbmy8")
-region = Rect2(19.12439, 13.660278, 327.79602, 167.5906)
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_normal"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+texture = ExtResource("4_tex")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_1ajci"]
-atlas = ExtResource("8_tbmy8")
-region = Rect2(11.880234, 1.3889999, 348.60663, 195.36581)
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_pressed"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+texture = ExtResource("4_tex")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+modulate_color = Color(0.8, 0.8, 0.8, 1)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_5dd4i"]
-atlas = ExtResource("4_tbmy8")
-region = Rect2(-5.1315765, -3.2655487, 140, 140)
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_hover"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+texture = ExtResource("4_tex")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+modulate_color = Color(1.2, 1.2, 1.2, 1)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_lgwnu"]
-atlas = ExtResource("4_tbmy8")
-region = Rect2(-16, -12.5, 156, 152.5)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_overlay"]
+bg_color = Color(0, 0, 0, 0.7)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_6f8o3"]
-atlas = ExtResource("4_rtw2f")
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dark"]
+bg_color = Color(0.12, 0.12, 0.12, 1)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_1esiv"]
-atlas = ExtResource("4_rtw2f")
-region = Rect2(-9, -9.5, 134, 148.5)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_tbmy8"]
-atlas = ExtResource("5_jk1qb")
-region = Rect2(-0.85879517, -0.5502205, 127.23633, 131.22809)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_jk1qb"]
-atlas = ExtResource("5_jk1qb")
-region = Rect2(-13.108139, -14.546465, 147.57704, 159.4998)
-
-[node name="MainMenu" type="Control" unique_id=195312888]
+[node name="MainMenu" type="Control" unique_id=1615137946]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_8ln24")
-gameplay_scene = ExtResource("2_rtw2f")
+script = ExtResource("1_script")
 
-[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1103410840]
-layout_mode = 1
+[node name="UILayer" type="CanvasLayer" parent="." unique_id=116812140]
+
+[node name="CenterContainer" type="CenterContainer" parent="UILayer" unique_id=669949293]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="MainLayout" type="VBoxContainer" parent="MarginContainer" unique_id=1117181574]
+[node name="VBoxContainer" type="VBoxContainer" parent="UILayer/CenterContainer" unique_id=1400229977]
 layout_mode = 2
+theme_override_constants/separation = 40
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="MarginContainer" unique_id=1267632394]
+[node name="TitleLabel" type="Label" parent="UILayer/CenterContainer/VBoxContainer" unique_id=666801072]
 layout_mode = 2
-texture = ExtResource("3_8ln24")
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 16
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 80
+text = "SPACEBLOX"
+horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="StartButton" type="TextureButton" parent="." unique_id=2056078565]
-layout_mode = 0
-offset_left = 311.0
-offset_top = 699.0
-offset_right = 789.0
-offset_bottom = 947.0
+[node name="Spacer" type="Control" parent="UILayer/CenterContainer/VBoxContainer" unique_id=340732676]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+
+[node name="StartButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=19078216]
+custom_minimum_size = Vector2(600, 120)
+layout_mode = 2
 size_flags_horizontal = 4
-texture_normal = SubResource("AtlasTexture_flqon")
-texture_pressed = SubResource("AtlasTexture_1ajci")
-stretch_mode = 0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 36
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "UI_PLAY"
 
-[node name="LevelEditorButton" type="Button" parent="." unique_id=1971963387]
-layout_mode = 0
-offset_left = 293.0
-offset_top = 1114.0
-offset_right = 3685.5925
-offset_bottom = 2146.0
-scale = Vector2(0.135, 0.135)
-theme_override_font_sizes/font_size = 170
-text = "[DEBUG] LEVEL EDITOR"
-icon = ExtResource("6_tbmy8")
-
-[node name="LevelSelectButton" type="TextureButton" parent="." unique_id=1159234865]
-layout_mode = 0
-offset_left = 265.0
-offset_top = 1459.0
-offset_right = 422.0
-offset_bottom = 1616.0
-texture_normal = SubResource("AtlasTexture_5dd4i")
-texture_pressed = SubResource("AtlasTexture_lgwnu")
-stretch_mode = 0
-
-[node name="OptionsButton" type="TextureButton" parent="." unique_id=1391284565]
-layout_mode = 0
-offset_left = 454.0
-offset_top = 1464.0
-offset_right = 597.0
-offset_bottom = 1616.0
-texture_normal = SubResource("AtlasTexture_6f8o3")
-texture_pressed = SubResource("AtlasTexture_1esiv")
-stretch_mode = 0
-
-[node name="ExitButton" type="TextureButton" parent="." unique_id=1060431704]
-layout_mode = 0
-offset_left = 627.0
-offset_top = 1465.0
-offset_right = 776.0
-offset_bottom = 1612.0
-texture_normal = SubResource("AtlasTexture_tbmy8")
-texture_pressed = SubResource("AtlasTexture_jk1qb")
-stretch_mode = 0
-
-[node name="OptionsPanel" type="Panel" parent="." unique_id=1059985660]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="DeleteSaveButton" type="Button" parent="OptionsPanel" unique_id=680843631]
-layout_mode = 0
-offset_right = 8.0
-offset_bottom = 8.0
-text = "DELETE SAVE FILE"
-
-[node name="DeleteCustomButton" type="Button" parent="OptionsPanel" unique_id=1225232922]
-layout_mode = 0
-offset_right = 8.0
-offset_bottom = 8.0
-
-[node name="CloseOptionsButton" type="Button" parent="OptionsPanel" unique_id=1571661562]
-layout_mode = 0
-offset_right = 8.0
-offset_bottom = 8.0
-text = "CLOSE"
-
-[node name="StatusLabel" type="Label" parent="OptionsPanel" unique_id=1615861695]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 23.0
-
-[node name="GameTitle" type="Label" parent="." unique_id=2084676387]
-layout_mode = 0
-offset_left = 345.0
-offset_top = 250.0
-offset_right = 724.0
-offset_bottom = 338.0
+[node name="LevelSelectButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=732738076]
+custom_minimum_size = Vector2(600, 120)
+layout_mode = 2
 size_flags_horizontal = 4
-theme_override_font_sizes/font_size = 64
-text = "project-taku"
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 36
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "UI_LEVELS"
 
-[connection signal="pressed" from="StartButton" to="." method="_on_start_button_pressed"]
-[connection signal="pressed" from="LevelEditorButton" to="." method="_on_level_editor_pressed"]
-[connection signal="pressed" from="LevelSelectButton" to="." method="_on_level_select_pressed"]
-[connection signal="pressed" from="OptionsButton" to="." method="_on_options_pressed"]
-[connection signal="pressed" from="ExitButton" to="." method="_on_exit_pressed"]
+[node name="OptionsButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=600817596]
+custom_minimum_size = Vector2(600, 120)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 36
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "UI_OPTIONS"
+
+[node name="CreditsButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=1352780586]
+custom_minimum_size = Vector2(600, 120)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 36
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "UI_CREDITS"
+
+[node name="EditorButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=1125842215]
+custom_minimum_size = Vector2(600, 120)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 36
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "UI_EDITOR"
+
+[node name="OptionsMenu" parent="UILayer" unique_id=262705338 instance=ExtResource("5_options")]
+
+[node name="OverlayBlocker" type="Panel" parent="UILayer" unique_id=1317697056]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_overlay")
+
+[node name="CreditsPanel" type="Panel" parent="UILayer/OverlayBlocker" unique_id=2062593968]
+visible = false
+custom_minimum_size = Vector2(700, 650)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -350.0
+offset_top = -325.0
+offset_right = 350.0
+offset_bottom = 325.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UILayer/OverlayBlocker/CreditsPanel" unique_id=1264851699]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 40.0
+offset_right = -40.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 30
+alignment = 1
+
+[node name="CreditsTitle" type="Label" parent="UILayer/OverlayBlocker/CreditsPanel/VBoxContainer" unique_id=1679827605]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 10
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 48
+text = "UI_CREDITS"
+horizontal_alignment = 1
+
+[node name="CreditsText" type="RichTextLabel" parent="UILayer/OverlayBlocker/CreditsPanel/VBoxContainer" unique_id=1612252251]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_fonts/normal_font = ExtResource("3_font")
+theme_override_font_sizes/normal_font_size = 22
+bbcode_enabled = true
+text = "CREDITS_TEXT"
+
+[node name="CloseCreditsButton" type="Button" parent="UILayer/OverlayBlocker/CreditsPanel/VBoxContainer" unique_id=1268894059]
+custom_minimum_size = Vector2(500, 100)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "UI_CLOSE"

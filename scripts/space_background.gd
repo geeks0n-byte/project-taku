@@ -1,13 +1,9 @@
 extends ParallaxBackground
 
-# --- CONFIGURATION ---
 @export var base_scroll_speed: Vector2 = Vector2(-15, -5)
+@export var event_spawn_interval: Vector2 = Vector2(0.2, 12.0)
 
-# A single master timer controls how often ANY event happens. 
-# Every time it fires, it rolls a 100-sided die to decide WHAT spawns.
-@export var event_spawn_interval: Vector2 = Vector2(0.2, 12.0) 
-
-const ASSET_DIR = "res://background/" 
+const ASSET_DIR = "res://resources/background/"
 
 const ASSET_FILES = {
 	"void": "bg_0_void.svg",
@@ -21,12 +17,10 @@ const ASSET_FILES = {
 	"fx_comet_3": "fx_comet_3.svg"
 }
 
-# Textures and Animations
 var tex_shooting_star: Texture2D
-var sf_comet_anim: SpriteFrames 
+var sf_comet_anim: SpriteFrames
 var tex_asteroids: Array[Texture2D] = []
 
-# Dynamic Layers
 var dyn_layer_stars: Node2D
 var dyn_layer_comets: Node2D
 var dyn_layer_asteroids: Node2D
@@ -36,64 +30,73 @@ var event_timers: Dictionary = {}
 func _ready() -> void:
 	layer = -2
 	
-	for key in ASSET_FILES:
-		var file_path = ASSET_DIR + ASSET_FILES[key]
-		if not ResourceLoader.exists(file_path):
-			printerr("BACKGROUND ERROR: Cannot find file at: ", file_path)
-			return
-			
-	tex_shooting_star = load(ASSET_DIR + ASSET_FILES["fx_star"])
+	if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["void"]):
+		add_child(_create_pixel_rect(load(ASSET_DIR + ASSET_FILES["void"])))
+	else:
+		var fallback_bg = ColorRect.new()
+		fallback_bg.color = Color(0.04, 0.04, 0.08, 1)
+		fallback_bg.size = Vector2(1080, 1920)
+		add_child(fallback_bg)
 	
-	sf_comet_anim = SpriteFrames.new()
-	sf_comet_anim.set_animation_speed("default", 12.0) 
-	sf_comet_anim.add_frame("default", load(ASSET_DIR + ASSET_FILES["fx_comet_1"]))
-	sf_comet_anim.add_frame("default", load(ASSET_DIR + ASSET_FILES["fx_comet_2"]))
-	sf_comet_anim.add_frame("default", load(ASSET_DIR + ASSET_FILES["fx_comet_3"]))
-	
-	tex_asteroids.append(load(ASSET_DIR + "fx_asteroid_1.svg"))
-	tex_asteroids.append(load(ASSET_DIR + "fx_asteroid_2.svg"))
-	tex_asteroids.append(load(ASSET_DIR + "fx_asteroid_3.svg"))
-	
-	# --- 1. BUILD SCENE TREE ---
-	
-	add_child(_create_pixel_rect(load(ASSET_DIR + ASSET_FILES["void"])))
-	
-	_build_parallax_layer(load(ASSET_DIR + ASSET_FILES["dust"]), Vector2(0.2, 0.2))
-	var layer_stars_mid = _build_parallax_layer(load(ASSET_DIR + ASSET_FILES["stars_mid"]), Vector2(0.4, 0.4))
+	if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["dust"]):
+		_build_parallax_layer(load(ASSET_DIR + ASSET_FILES["dust"]), Vector2(0.2, 0.2))
+		
+	var layer_stars_mid = null
+	if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["stars_mid"]):
+		layer_stars_mid = _build_parallax_layer(load(ASSET_DIR + ASSET_FILES["stars_mid"]), Vector2(0.4, 0.4))
 	
 	dyn_layer_stars = Node2D.new()
-	add_child(dyn_layer_stars) 
+	add_child(dyn_layer_stars)
 	
-	var layer_accents = _build_parallax_layer(load(ASSET_DIR + ASSET_FILES["accents"]), Vector2(0.6, 0.6))
+	var layer_accents = null
+	if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["accents"]):
+		layer_accents = _build_parallax_layer(load(ASSET_DIR + ASSET_FILES["accents"]), Vector2(0.6, 0.6))
 	
 	dyn_layer_comets = Node2D.new()
 	add_child(dyn_layer_comets)
 	
-	_build_parallax_layer(load(ASSET_DIR + ASSET_FILES["sparklers"]), Vector2(0.9, 0.9))
+	if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["sparklers"]):
+		_build_parallax_layer(load(ASSET_DIR + ASSET_FILES["sparklers"]), Vector2(0.9, 0.9))
 	
 	dyn_layer_asteroids = Node2D.new()
-	add_child(dyn_layer_asteroids) 
+	add_child(dyn_layer_asteroids)
 	
-	# --- 2. TWINKLING EFFECT ---
-	var twinkle_tween = create_tween().set_loops()
-	twinkle_tween.tween_property(layer_stars_mid, "modulate:a", 0.5, 3.0)
-	twinkle_tween.parallel().tween_property(layer_accents, "modulate:a", 0.6, 3.0)
-	twinkle_tween.tween_property(layer_stars_mid, "modulate:a", 1.0, 3.0)
-	twinkle_tween.parallel().tween_property(layer_accents, "modulate:a", 1.0, 3.0)
+	if layer_stars_mid and layer_accents:
+		var twinkle_tween = create_tween().set_loops()
+		twinkle_tween.tween_property(layer_stars_mid, "modulate:a", 0.5, 3.0)
+		twinkle_tween.parallel().tween_property(layer_accents, "modulate:a", 0.6, 3.0)
+		twinkle_tween.tween_property(layer_stars_mid, "modulate:a", 1.0, 3.0)
+		twinkle_tween.parallel().tween_property(layer_accents, "modulate:a", 1.0, 3.0)
 	
-	# --- 3. MASTER TIMER ---
+	if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["fx_star"]):
+		tex_shooting_star = load(ASSET_DIR + ASSET_FILES["fx_star"])
+		
+	if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["fx_comet_1"]):
+		sf_comet_anim = SpriteFrames.new()
+		sf_comet_anim.set_animation_speed("default", 12.0)
+		sf_comet_anim.add_frame("default", load(ASSET_DIR + ASSET_FILES["fx_comet_1"]))
+		if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["fx_comet_2"]):
+			sf_comet_anim.add_frame("default", load(ASSET_DIR + ASSET_FILES["fx_comet_2"]))
+		if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["fx_comet_3"]):
+			sf_comet_anim.add_frame("default", load(ASSET_DIR + ASSET_FILES["fx_comet_3"]))
+			
+	if ResourceLoader.exists(ASSET_DIR + "fx_asteroid_1.svg"):
+		tex_asteroids.append(load(ASSET_DIR + "fx_asteroid_1.svg"))
+	if ResourceLoader.exists(ASSET_DIR + "fx_asteroid_2.svg"):
+		tex_asteroids.append(load(ASSET_DIR + "fx_asteroid_2.svg"))
+	if ResourceLoader.exists(ASSET_DIR + "fx_asteroid_3.svg"):
+		tex_asteroids.append(load(ASSET_DIR + "fx_asteroid_3.svg"))
+	
 	_setup_timer("event", event_spawn_interval, _on_event_timeout)
 
 func _process(delta: float) -> void:
 	scroll_offset += base_scroll_speed * delta
 
-# --- SETUP HELPERS ---
-
 func _build_parallax_layer(tex: Texture2D, speed_scale: Vector2) -> ParallaxLayer:
 	var p_layer = ParallaxLayer.new()
 	p_layer.motion_scale = speed_scale
 	p_layer.motion_offset = Vector2(randf_range(0.0, 1080.0), randf_range(0.0, 1920.0))
-	p_layer.motion_mirroring = Vector2(1080, 1920) 
+	p_layer.motion_mirroring = Vector2(1080, 1920)
 	p_layer.add_child(_create_pixel_rect(tex))
 	add_child(p_layer)
 	return p_layer
@@ -118,26 +121,33 @@ func _restart_timer(key: String) -> void:
 	var t_data = event_timers[key]
 	t_data["timer"].start(randf_range(t_data["interval"].x, t_data["interval"].y))
 
-# --- EVENT SPAWNER (PROBABILITY LOOT TABLE) ---
-
 func _on_event_timeout() -> void:
-	# Roll a random number between 1 and 100
-	var roll = randi() % 100 + 1 
+	var roll = randi() % 1000 + 1 
 	
 	if roll <= 1:
-		# 1% Chance: Comet
+		_trigger_meteor_shower()
+	elif roll <= 11:
 		_spawn_entity(sf_comet_anim, dyn_layer_comets, Vector2(128, 64), 10.0, 20.0, "comet")
-	elif roll <= 35:
-		# 34% Chance: Asteroid (Rolls 2 through 35)
-		_spawn_entity(tex_asteroids.pick_random(), dyn_layer_asteroids, Vector2(64, 64), 15.0, 25.0, "asteroid")
+	elif roll <= 351:
+		var spawn_count = 1
+		if randi() % 100 < 25:
+			spawn_count = randi_range(3, 6)
+			
+		for i in range(spawn_count):
+			if tex_asteroids.size() > 0:
+				_spawn_entity(tex_asteroids.pick_random(), dyn_layer_asteroids, Vector2(64, 64), 15.0, 25.0, "asteroid")
 	else:
-		# 65% Chance: Shooting Star (Rolls 36 through 100)
 		_spawn_entity(tex_shooting_star, dyn_layer_stars, Vector2(64, 64), 0.8, 1.5, "star")
 		
-	# Restart the master timer for the next random event
 	_restart_timer("event")
 
-# --- COLLISION LOGIC ---
+func _trigger_meteor_shower() -> void:
+	var count = randi_range(20, 40)
+	for i in range(count):
+		var delay = randf_range(0.0, 2.5)
+		var t = create_tween()
+		t.tween_interval(delay)
+		t.tween_callback(func(): _spawn_entity(sf_comet_anim, dyn_layer_comets, Vector2(128, 64), 3.0, 6.0, "comet"))
 
 func _on_asteroid_collided(body: Node, self_entity: RigidBody2D) -> void:
 	if not body is RigidBody2D: return
@@ -163,16 +173,12 @@ func _on_asteroid_collided(body: Node, self_entity: RigidBody2D) -> void:
 	dyn_layer_asteroids.add_child(vfx)
 	get_tree().create_timer(1.0).timeout.connect(vfx.queue_free)
 
-
-# --- UNIVERSAL SPAWN LOGIC ---
-
 func _spawn_entity(tex: Variant, target_layer: Node2D, size: Vector2, min_time: float, max_time: float, type: String) -> void:
 	if not tex or not target_layer: return
 	
 	var entity
 	var final_duration: float
 	
-	# 1. NODE CONSTRUCTION BASED ON TYPE
 	if type == "comet":
 		var anim_sprite = AnimatedSprite2D.new()
 		anim_sprite.sprite_frames = tex
@@ -212,7 +218,7 @@ func _spawn_entity(tex: Variant, target_layer: Node2D, size: Vector2, min_time: 
 		
 		entity = rb
 		
-	else: # Star
+	else:
 		var tex_rect = TextureRect.new()
 		tex_rect.texture = tex
 		tex_rect.size = size
@@ -270,8 +276,6 @@ func _spawn_entity(tex: Variant, target_layer: Node2D, size: Vector2, min_time: 
 		final_duration = base_duration * randf_range(0.85, 1.15)
 
 	target_layer.add_child(entity)
-	
-	# --- MOVEMENT DISPATCH ---
 	
 	if type == "asteroid":
 		var travel_vector = Vector2(end_x - start_x, end_y - start_y)

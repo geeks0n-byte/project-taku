@@ -1,0 +1,129 @@
+keys,en,es,de,fr,pl,ka,uk
+UI_PLAY,PLAY,JUGAR,SPIELEN,JOUER,GRAJ,თამაში,ГРАТИ
+UI_CONTINUE,CONTINUE,CONTINUAR,WEITER,CONTINUER,KONTYNUUJ,გაგრძელება,ПРОДОВЖИТИ
+UI_LEVELS,LEVELS,NIVELES,LEVEL,NIVEAUX,POZIOMY,დონეები,РІВНІ
+UI_OPTIONS,OPTIONS,OPCIONES,OPTIONEN,OPTIONS,OPCJE,პარამეტრები,НАЛАШТУВАННЯ
+UI_CREDITS,CREDITS,CRÉDITOS,CREDITS,CRÉDITS,TWÓRCY,ტიტრები,ТИТРИ
+UI_EDITOR,EDITOR,EDITOR,EDITOR,ÉDITEUR,EDYTOR,რედაქტორი,РЕДАКТОР
+UI_CLOSE,CLOSE,CERRAR,SCHLIESSEN,FERMER,ZAMKNIJ,დახურვა,ЗАКРИТИ
+UI_BACK_TO_MENU,BACK TO MENU,VOLVER AL MENÚ,ZUM MENÜ,RETOUR AU MENU,WRÓĆ DO MENU,მენიუში დაბრუნება,В ГОЛОВНЕ МЕНЮ
+UI_MAIN_MENU,MAIN MENU,MENÚ PRINCIPAL,HAUPTMENÜ,MENU PRINCIPAL,MENU GŁÓWNE,მთავარი მენიუ,ГОЛОВНЕ МЕНЮ
+UI_RESUME,RESUME,REANUDAR,FORTSETZEN,REPRENDRE,WZNÓW,გაგრძელება,ПРОДОВЖИТИ
+UI_RESTART,RESTART,REINICIAR,NEUSTART,RECOMMENCER,RESTART,თავიდან დაწყება,ПЕРЕЗАПУСК
+UI_TRY_AGAIN,TRY AGAIN,INTENTAR DE NUEVO,NOCHMAL VERSUCHEN,RÉESSAYER,SPRÓBUJ PONOWNIE,თავიდან ცდა,СПРОБУВАТИ ЩЕ РАЗ
+UI_YES,YES,SÍ,JA,OUI,TAK,დიახ,ТАК
+UI_NO,NO,NO,NEIN,NON,NIE,არა,НІ
+UI_SAVE,SAVE,GUARDAR,SPEICHERN,SAUVEGARDER,ZAPISZ,შენახვა,ЗБЕРЕГТИ
+UI_LOAD,LOAD,CARGAR,LADEN,CHARGER,WCZYTAJ,ჩატვირთვა,ЗАВАНТАЖИТИ
+UI_RESET_PROGRESS,RESET PROGRESS,RESTABLECER PROGRESO,FORTSCHRITT ZURÜCKSETZEN,RÉINITIALISER LA PROGRESSION,ZRESETUJ POSTĘP,პროგრესის განულება,СКИНУТИ ПРОГРЕС
+UI_DELETE_CUSTOM,DELETE CUSTOM LEVELS,BORRAR NIVELES PERSONALIZADOS,BENUTZERDEFINIERTE LEVEL LÖSCHEN,SUPPRIMER NIVEAUX PERSONNALISÉS,USUŃ WŁASNE POZIOMY,საკუთარი დონეების წაშლა,ВИДАЛИТИ КОРИСТУВАЦЬКІ РІВНІ
+SAVE_DELETED,SAVE DELETED! PROGRESS RESET TO LEVEL 1.,¡PARTIDA BORRADA! PROGRESO RESTABLECIDO AL NIVEL 1.,SPIELSTAND GELÖSCHT! FORTSCHRITT AUF LEVEL 1 ZURÜCKGESETZT.,SAUVEGARDE SUPPRIMÉE ! PROGRESSION RÉINITIALISÉE AU NIVEAU 1.,ZAPIS USUNIĘTY! POSTĘP ZRESETOWANY DO POZIOMU 1.,შენახვა წაიშალა! პროგრესი დაბრუნდა პირველ დონეზე.,ЗБЕРЕЖЕННЯ ВИДАЛЕНО! ПРОГРЕС СКИНУТО ДО 1 РІВНЯ.
+CUSTOM_DELETED,ALL CUSTOM LEVELS DELETED FROM DEVICE!,¡TODOS LOS NIVELES PERSONALIZADOS BORRADOS DEL DISPOSITIVO!,ALLE BENUTZERDEFINIERTEN LEVEL VOM GERÄT GELÖSCHT!,TOUS LES NIVEAUX PERSONNALISÉS ONT ÉTÉ SUPPRIMÉS DE L'APPAREIL !,WSZYSTKIE WŁASNE POZIOMY USUNIĘTE Z URZĄDZENIA!,ყველა საკუთარი დონე წაიშალა მოწყობილობიდან!,ВСІ КОРИСТУВАЦЬКІ РІВНІ ВИДАЛЕНО З ПРИСТРОЮ!
+UI_SELECT_LEVEL,SELECT LEVEL,SELECCIONAR NIVEL,LEVEL AUSWÄHLEN,CHOISIR LE NIVEAU,WYBIERZ POZIOM,დონის არჩევა,ВИБІР РІВНЯ
+UI_CORE,CORE,PRINCIPAL,HAUPT,PRINCIPAL,GŁÓWNE,მთავარი,ОСНОВНІ
+UI_CUSTOM,CUSTOM,PERSONALIZADO,BENUTZERDEFINIERT,PERSONNALISÉ,WŁASNE,საკუთარი,КОРИСТУВАЦЬКІ
+CUSTOM_LVL,CUSTOM LVL,NIVEL PERSONALIZADO,EIGENER LVL,NIV PERSO,WŁASNY POZ.,საკ. დონე,КОР. РІВЕНЬ
+LEVEL,LEVEL,NIVEL,LEVEL,NIVEAU,POZIOM,დონე,РІВЕНЬ
+LOCKED,LOCKED,BLOQUEADO,GESPERRT,VERROUILLÉ,ZABLOKOWANE,დაბლოკილია,ЗАБЛОКОВАНО
+NO_PLAYABLE_LEVELS,NO PLAYABLE LEVELS FOUND!,¡NO SE ENCONTRARON NIVELES JUGABLES!,KEINE SPIELBAREN LEVEL GEFUNDEN!,AUCUN NIVEAU JOUABLE TROUVÉ !,BRAK POZIOMÓW DO GRY!,სათამაშო დონეები არ მოიძებნა!,ІГРОВІ РІВНІ НЕ ЗНАЙДЕНО!
+TIME,TIME,TIEMPO,ZEIT,TEMPS,CZAS,დრო,ЧАС
+MOVES,MOVES,MOVIMIENTOS,ZÜGE,COUPS,RUCHY,სვლები,ХОДИ
+USED,USED,USADO,BENUTZT,UTILISÉ,UŻYTO,გამოყენებული,ВИКОРИСТАНО
+LVL,LVL,NIV,LVL,NIV,POZ,დონე,РІВ
+DEV,DEV,DESARROLLO,DEV,DÉV,DEV,დევ.,РОЗР
+UNLIMITED,Unlimited,Ilimitado,Unbegrenzt,Illimité,Nielimitowany,შეუზღუდავი,Безліміт
+PAUSED,PAUSED,EN PAUSA,PAUSIERT,EN PAUSE,PAUZA,პაუზა,ПАУЗА
+PUZZLE_SOLVED,PUZZLE SOLVED!,¡PUZLE RESUELTO!,RÄTSEL GELÖST!,PUZZLE RÉSOLU !,ZAGADKA ROZWIĄZANA!,თავსატეხი ამოხსნილია!,ГОЛОВОЛОМКУ ВИРІШЕНО!
+ALL_COMPLETED,ALL LEVELS COMPLETED!,¡TODOS LOS NIVELES COMPLETADOS!,ALLE LEVEL ABGESCHLOSSEN!,TOUS LES NIVEAUX TERMINÉS !,WSZYSTKIE POZIOMY UKOŃCZONE!,ყველა დონე დასრულებულია!,ВСІ РІВНІ ПРОЙДЕНО!
+YOU_WIN,YOU WIN!,¡TÚ GANAS!,DU GEWINNST!,VOUS AVEZ GAGNÉ !,WYGRAŁEŚ!,თქვენ მოიგეთ!,ВИ ПЕРЕМОГЛИ!
+CUSTOM_COMPLETED,CUSTOM %d COMPLETED!,¡NIVEL PERSONALIZADO %d COMPLETADO!,BENUTZERDEFINIERTES LEVEL %d ABGESCHLOSSEN!,NIVEAU PERSONNALISÉ %d TERMINÉ !,WŁASNY POZIOM %d UKOŃCZONY!,საკუთარი დონე %d დასრულებულია!,КОРИСТУВАЦЬКИЙ %d ПРОЙДЕНО!
+LEVEL_COMPLETED,LEVEL %d COMPLETED!,¡NIVEL %d COMPLETADO!,LEVEL %d ABGESCHLOSSEN!,NIVEAU %d TERMINÉ !,POZIOM %d UKOŃCZONY!,დონე %d დასრულებულია!,РІВЕНЬ %d ПРОЙДЕНО!
+PLAY_AGAIN,PLAY AGAIN,JUGAR OTRA VEZ,NOCHMAL SPIELEN,REJOUER,ZAGRAJ PONOWNIE,თავიდან თამაში,ГРАТИ ЗНОВУ
+NEXT_LEVEL,NEXT LEVEL,SIGUIENTE NIVEL,NÄCHSTES LEVEL,NIVEAU SUIVANT,NASTĘPNY POZIOM,შემდეგი დონე,НАСТУПНИЙ РІВЕНЬ
+COMPLETION_TIME,COMPLETION TIME: %s,TIEMPO DE COMPLETADO: %s,ABSCHLUSSZEIT: %s,TEMPS DE RÉSOLUTION : %s,CZAS UKOŃCZENIA: %s,დასრულების დრო: %s,ЧАС ПРОХОДЖЕННЯ: %s
+TIMES_UP_UNSOLVED,TIME'S UP! The puzzle remains unsolved.,¡TIEMPO AGOTADO! El puzle sigue sin resolverse.,ZEIT ABGELAUFEN! Das Rätsel bleibt ungelöst.,TEMPS ÉCOULÉ ! Le puzzle reste non résolu.,CZAS MINĄŁ! Zagadka pozostała nierozwiązana.,დრო ამოიწურა! თავსატეხი ამოუხსნელია.,ЧАС ВИЙШОВ! Головоломка не вирішена.
+MSG_FILL_EMPTY,Fill the empty spaces on the board.,Rellena los espacios vacíos en el tablero.,Fülle die leeren Felder auf dem Brett.,Remplissez les espaces vides sur le plateau.,Wypełnij puste miejsca na planszy.,შეავსეთ ცარიელი ადგილები დაფაზე.,Заповніть порожні місця на дошці.
+ERROR_INVALID_SHAPE,ERROR: This level's shape cannot mathematically generate a valid puzzle.,ERROR: La forma de este nivel no puede generar matemáticamente un puzle válido.,FEHLER: Die Form dieses Levels kann mathematisch kein gültiges Rätsel generieren.,ERREUR : La forme de ce niveau ne peut pas générer mathématiquement un puzzle valide.,BŁĄD: Kształt tego poziomu nie może matematycznie wygenerować poprawnej zagadki.,შეცდომა: ამ დონის ფორმა ვერ შექმნის ვალიდურ თავსატეხს.,ПОМИЛКА: Форма цього рівня математично не може згенерувати правильну головоломку.
+ERROR_NO_HINTS,No valid hints found. Check your board for errors!,No se encontraron pistas válidas. ¡Revisa tu tablero en busca de errores!,Keine gültigen Hinweise gefunden. Überprüfe dein Brett auf Fehler!,Aucun indice valide trouvé. Vérifiez votre plateau pour des erreurs !,Nie znaleziono poprawnych podpowiedzi. Sprawdź planszę pod kątem błędów!,ვერ მოიძებნა ვალიდური მინიშნება. შეამოწმეთ დაფა შეცდომებზე!,Доступних підказок не знайдено. Перевірте дошку на наявність помилок!
+EDIT_MODE,EDIT MODE,MODO EDICIÓN,BEARBEITEN,MODE ÉDITION,TRYB EDYCJI,რედაქტირების რეჟიმი,РЕЖИМ РЕДАКТОРА
+TEST_MODE,TEST MODE,MODO PRUEBA,TESTMODUS,MODE TEST,TRYB TESTOWANIA,ტესტირების რეჟიმი,РЕЖИМ ТЕСТУ
+LOCK_WALLS,LOCK WALLS,BLOQUEAR MUROS,WÄNDE SPERREN,VERR. MURS,ZABLOKUJ ŚCIANY,კედლების ჩაკეტვა,ЗАФІКСУВАТИ СТІНИ
+UNIQUE_SOLVE,UNIQUE SOLVE,SOLUCIÓN ÚNICA,EINDEUTIGE LÖSUNG,SOLUTION UNIQUE,UNIKALNE ROZWIĄZANIE,უნიკალური ამოხსნა,УНІКАЛЬНЕ РІШЕННЯ
+ALLOW,ALLOW:,PERMITIR:,ERLAUBT:,AUTORISER :,DOZWOLONE:,დაშვებულია:,ДОСТУПНО:
+LEVEL_EXISTS_OVERWRITE,LEVEL ALREADY EXISTS. OVERWRITE?,EL NIVEL YA EXISTE. ¿SOBRESCRIBIR?,LEVEL EXISTIERT BEREITS. ÜBERSCHREIBEN?,LE NIVEAU EXISTE DÉJÀ. ÉCRASER ?,POZIOM JUŻ ISTNIEJE. NADPISAĆ?,დონე უკვე არსებობს. გსურთ გადაწერა?,РІВЕНЬ ВЖЕ ІСНУЄ. ПЕРЕЗАПИСАТИ?
+LEVEL_SOLVABLE,LEVEL IS SOLVABLE!,¡EL NIVEL TIENE SOLUCIÓN!,LEVEL IST LÖSBAR!,LE NIVEAU EST RÉSOLUBLE !,POZIOM JEST MOŻLIWY DO ROZWIĄZANIA!,დონე ამოხსნადია!,РІВЕНЬ МОЖНА ПРОЙТИ!
+RETURN,RETURN,VOLVER,ZURÜCK,RETOUR,POWRÓT,დაბრუნება,ПОВЕРНУТИСЯ
+Wall,Wall,Muro,Wand,Mur,Ściana,კედელი,Стіна
+Empty (Clear),Empty (Clear),Vacío (Borrar),Leer (Löschen),Vide (Effacer),Puste (Wyczyść),ცარიელი (წაშლა),Порожньо (Очистити)
+Yellow Tile,Yellow Tile,Ficha Amarilla,Gelbes Feld,Tuile Jaune,Żółta płytka,ყვითელი ფილა,Жовта плитка
+Blue Tile,Blue Tile,Ficha Azul,Blaues Feld,Tuile Bleue,Niebieska płytka,ლურჯი ფილა,Синя плитка
+Combined Tile,Combined Tile,Ficha Combinada,Kombiniertes Feld,Tuile Combinée,Połączona płytka,კომბინირებული ფილა,Комбінована плитка
+Shifter Tile Link Tool,Shifter Tile Link Tool,Herramienta de Enlace de Ficha Deslizante,Schieber-Feld Verbindungswerkzeug,Outil de Lien Tuile Déplaçable,Narzędzie Łączenia Przesuwanej Płytki,გადამტანი ფილის დასაკავშირებელი,Інструмент зв'язку рухомої плитки
+Equals (=) Link Tool,Equals (=) Link Tool,Herramienta de Enlace Igual (=),Gleich (=) Verbindungswerkzeug,Outil de Lien Égal (=),Narzędzie Łączenia Znak Równości (=),ტოლობის (=) დასაკავშირებელი,Інструмент зв'язку Дорівнює (=)
+Not Equals (×) Link Tool,Not Equals (×) Link Tool,Herramienta de Enlace Distinto (×),Ungleich (×) Verbindungswerkzeug,Outil de Lien Différent (×),Narzędzie Łączenia Znak Różności (×),უტოლობის (×) დასაკავშირებელი,Інструмент зв'язку Не дорівнює (×)
+CREDITS_TEXT,"[center]
+
+Game Design & Programming
+Giga Sichinava
+
+Art & Assets
+Giga Sichinava
+
+Created with Godot Engine
+[/center]","[center]
+
+Diseño de Juego y Programación
+Giga Sichinava
+
+Arte y Activos
+Giga Sichinava
+
+Creado con Godot Engine
+[/center]","[center]
+
+Spieldesign & Programmierung
+Giga Sichinava
+
+Grafik & Assets
+Giga Sichinava
+
+Erstellt mit Godot Engine
+[/center]","[center]
+
+Conception du jeu & Programmation
+Giga Sichinava
+
+Graphismes & Ressources
+Giga Sichinava
+
+Créé avec Godot Engine
+[/center]","[center]
+
+Projekt gry i programowanie
+Giga Sichinava
+
+Grafika i zasoby
+Giga Sichinava
+
+Stworzono w Godot Engine
+[/center]","[center]
+
+თამაშის დიზაინი და პროგრამირება
+გიგა სიჭინავა
+
+არტი და ვიზუალი
+გიგა სიჭინავა
+
+შექმნილია Godot Engine-ით
+[/center]","[center]
+
+Геймдизайн та програмування
+Giga Sichinava
+
+Арт та ресурси
+Giga Sichinava
+
+Створено на Godot Engine
+[/center]"
+HTP_EQUAL_BALANCE,Equal Balance: Every row and column must contain an equal number of Yellow and Blue tiles.,Equilibrio: Cada fila y columna debe contener el mismo número de fichas amarillas y azules.,Gleichgewicht: Jede Zeile und Spalte muss gleich viele gelbe und blaue Felder enthalten.,Équilibre : Chaque ligne et colonne doit contenir un nombre égal de tuiles jaunes et bleues.,Zasada Balansu: W każdym rzędzie i kolumnie musi znajdować się taka sama liczba żółtych i niebieskich płytek.,ბალანსი: ყოველ რიგში და სვეტში უნდა იყოს ყვითელი და ლურჯი ფილების თანაბარი რაოდენობა.,Баланс: У кожному рядку та стовпці має бути однакова кількість жовтих та синіх плиток.
+HTP_RULE_OF_TWO,The Rule of Two: No more than two tiles of the same color may be placed next to each other in any row or column.,La Regla de Dos: No se pueden colocar más de dos fichas del mismo color juntas en ninguna fila o columna.,Die Zweier-Regel: In keiner Zeile oder Spalte dürfen mehr als zwei gleichfarbige Felder nebeneinander liegen.,Règle de Deux : Pas plus de deux tuiles de la même couleur ne peuvent être placées côte à côte dans une ligne ou colonne.,Zasada Dwóch: W żadnym rzędzie ani kolumnie nie mogą leżeć obok siebie więcej niż dwie płytki tego samego koloru.,ორიანის წესი: არცერთ რიგსა თუ სვეტში არ შეიძლება ორი ერთნაირი ფერის ფილის გვერდიგვერდ მოთავსება.,Правило двох: У рядку чи стовпці не може бути більше двох плиток одного кольору поспіль.
