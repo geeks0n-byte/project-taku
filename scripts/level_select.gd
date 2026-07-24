@@ -3,7 +3,7 @@ extends Control
 const DEV_DIR = GameConstants.DEV_LEVELS_DIR
 const PREVIEW_SIZE := 120
 const LOCK_ICON := preload("res://resources/tiles/tile_lock.svg")
-const LEVEL_LOCK_ICON_SIZE := 180.0
+const LEVEL_LOCK_ICON_SIZE := 240.0
 const TAB_LOCK_ICON_SIZE := 36.0
 
 @onready var level_grid: GridContainer = $"UILayer/CenterContainer/VBoxContainer/ScrollContainer/LevelGrid"
@@ -39,6 +39,34 @@ func _ready() -> void:
 	_mount_header()
 	if not _is_category_unlocked(current_view):
 		current_view = _first_unlocked_view()
+	_fit_chrome_buttons()
+	_update_tab_button_visuals()
+	populate_level_menu()
+	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
+		SaveManager.language_changed.connect(_on_language_changed)
+
+func _fit_chrome_buttons() -> void:
+	HudLayout.apply_primary_button(back_button)
+	for btn in [
+		tutorials_tab_button,
+		easy_tab_button,
+		medium_tab_button,
+		hard_tab_button,
+		custom_tab_button,
+	]:
+		if btn == null:
+			continue
+		# Custom tab is slightly wider for the translated label.
+		if btn == custom_tab_button:
+			btn.custom_minimum_size = Vector2(220, GameConstants.UI_BTN_TAB_SIZE.y)
+			HudLayout.fit_text_button(
+				btn, GameConstants.UI_BTN_TAB_FONT, GameConstants.UI_BTN_TAB_FONT_MIN
+			)
+		else:
+			HudLayout.apply_tab_button(btn)
+
+func _on_language_changed() -> void:
+	_fit_chrome_buttons()
 	_update_tab_button_visuals()
 	populate_level_menu()
 
@@ -88,6 +116,9 @@ func _first_unlocked_view() -> ViewMode:
 func _is_category_unlocked(view: ViewMode) -> bool:
 	if view == ViewMode.CUSTOM:
 		return GlobalGameManager.debug_tools_enabled
+	# Tutorials and Easy are available from the start.
+	if view == ViewMode.TUTORIALS or view == ViewMode.EASY:
+		return true
 	var paths := LevelUtils.scan_directory(_folder_for_view(view))
 	LevelUtils.sort_level_paths(paths)
 	var found_any := false
@@ -164,6 +195,7 @@ func populate_level_menu() -> void:
 	LevelUtils.sort_level_paths(paths)
 
 	var valid_level_count := 0
+	var tutorial_index := 0
 	for path in paths:
 		var resource = load(path)
 		if resource and resource is LevelData:
@@ -175,15 +207,21 @@ func populate_level_menu() -> void:
 				btn = custom_button_template.duplicate() as Button
 				title = tr("CUSTOM_LVL") + " " + str(resource.level_number)
 				btn.disabled = false
+			elif current_view == ViewMode.TUTORIALS:
+				tutorial_index += 1
+				btn = button_template.duplicate() as Button
+				title = tr("TUTORIAL") + " " + str(tutorial_index)
+				btn.disabled = false
 			else:
 				var is_unlocked = SaveManager.is_level_unlocked(resource.level_number)
+				var display_num := LevelUtils.get_display_level_number(resource)
 				if is_unlocked:
 					btn = button_template.duplicate() as Button
-					title = tr("LEVEL") + " " + str(resource.level_number)
+					title = tr("LEVEL") + " " + str(display_num)
 					btn.disabled = false
 				else:
 					btn = locked_button_template.duplicate() as Button
-					title = tr("LEVEL") + " " + str(resource.level_number)
+					title = tr("LEVEL") + " " + str(display_num)
 					btn.disabled = true
 					locked = true
 			btn.visible = true
@@ -193,6 +231,8 @@ func populate_level_menu() -> void:
 
 	if empty_state_label:
 		empty_state_label.visible = (valid_level_count == 0)
+		if empty_state_label.visible:
+			HudLayout.apply_body_label(empty_state_label, GameConstants.UI_BODY_FONT_SIZE)
 	if scroll_container:
 		scroll_container.visible = (valid_level_count > 0)
 
@@ -209,7 +249,8 @@ func _folder_for_view(view: ViewMode) -> String:
 
 func _apply_level_button_content(btn: Button, level: LevelData, title: String, locked: bool) -> void:
 	btn.text = ""
-	btn.custom_minimum_size = Vector2(260, 240)
+	var show_preview := current_view != ViewMode.TUTORIALS
+	btn.custom_minimum_size = Vector2(260, 280 if show_preview else 200)
 	btn.clip_text = true
 
 	var content := Control.new()
@@ -227,17 +268,18 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 	vbox.add_theme_constant_override("separation", 10)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 
-	var preview := TextureRect.new()
-	preview.name = "Preview"
-	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	preview.custom_minimum_size = Vector2(PREVIEW_SIZE, PREVIEW_SIZE)
-	preview.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	preview.texture = LevelPreview.make_texture(level, GameConstants.LEVEL_PREVIEW_SIZE)
-	if locked:
-		preview.modulate = Color(0.45, 0.45, 0.45, 1.0)
-	vbox.add_child(preview)
+	if show_preview:
+		var preview := TextureRect.new()
+		preview.name = "Preview"
+		preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		preview.custom_minimum_size = Vector2(PREVIEW_SIZE, PREVIEW_SIZE)
+		preview.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		preview.texture = LevelPreview.make_texture(level, GameConstants.LEVEL_PREVIEW_SIZE)
+		if locked:
+			preview.modulate = Color(0.45, 0.45, 0.45, 1.0)
+		vbox.add_child(preview)
 
 	var label := Label.new()
 	label.name = "Title"
@@ -248,7 +290,9 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.add_theme_font_override("font", HudLayout.ui_font())
-	label.add_theme_font_size_override("font_size", HudLayout.scaled_font_size(22))
+	label.add_theme_font_size_override(
+		"font_size", HudLayout.scaled_font_size(GameConstants.UI_BTN_TAB_FONT)
+	)
 	label.add_theme_color_override("font_outline_color", Color.BLACK)
 	label.add_theme_constant_override("outline_size", 6)
 	if locked:
@@ -256,6 +300,12 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 	else:
 		label.add_theme_color_override("font_color", btn.get_theme_color("font_color"))
 	vbox.add_child(label)
+
+	if not locked and current_view != ViewMode.TUTORIALS:
+		var earned_bits := SaveManager.get_level_star_bits(level.level_number)
+		var star_row := LevelStars.make_select_star_row(level, earned_bits)
+		vbox.add_child(star_row)
+
 	content.add_child(vbox)
 
 	if locked:
@@ -266,13 +316,13 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 		lock_overlay.texture = LOCK_ICON
 		lock_overlay.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		lock_overlay.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		lock_overlay.modulate = Color(1, 1, 1, 0.85)
+		lock_overlay.modulate = Color(1, 1, 1, 0.9)
 		lock_overlay.custom_minimum_size = Vector2(LEVEL_LOCK_ICON_SIZE, LEVEL_LOCK_ICON_SIZE)
 		lock_overlay.set_anchors_preset(Control.PRESET_CENTER)
 		lock_overlay.offset_left = -half
-		lock_overlay.offset_top = -half - 12.0
+		lock_overlay.offset_top = -half - (18.0 if show_preview else 0.0)
 		lock_overlay.offset_right = half
-		lock_overlay.offset_bottom = half - 12.0
+		lock_overlay.offset_bottom = half - (18.0 if show_preview else 0.0)
 		content.add_child(lock_overlay)
 
 	btn.add_child(content)

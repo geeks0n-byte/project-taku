@@ -2,59 +2,148 @@ class_name TutorialDirector
 extends Node
 
 signal finished
+signal tools_unlocked
 
 var board_manager: BoardManager
+var ui_manager: UIManager
 var available_tiles: Array = [0, 1, 2]
 
 var _steps: Array = []
 var _index: int = -1
 var _active: bool = false
-var _banner: CanvasLayer
-var _panel: Panel
-var _label: Label
+var _script_id: String = ""
 var _next_button: Button
 var _awaiting_next: bool = false
+var _practice_succeeded: bool = false
+var _tools_locked: bool = false
+var _highlight_button_id: String = ""
+var _solved_complete: bool = false
+var _last_status_key: String = ""
+var _last_status_icons: Array = []
+var _last_status_show_next: bool = false
 
-func setup(board: BoardManager) -> void:
+func setup(board: BoardManager, ui: UIManager = null) -> void:
 	board_manager = board
-	_ensure_banner()
+	ui_manager = ui
+	_ensure_next_button()
 
 func is_active() -> bool:
 	return _active
 
-func start(level_number: int, tiles: Array) -> void:
+func start(script_id: String, tiles: Array) -> void:
 	stop()
-	if not TutorialScripts.has_script(level_number):
+	if not TutorialScripts.has_script(script_id):
 		return
+	_script_id = script_id
 	available_tiles = tiles.duplicate()
-	_steps = TutorialScripts.steps_for(level_number)
+	_steps = TutorialScripts.steps_for(script_id)
 	if _steps.is_empty():
 		return
 	_active = true
+	_solved_complete = false
+	_tools_locked = true
 	_index = -1
+	refresh_tool_gates()
 	_advance()
 
 func stop() -> void:
 	_active = false
 	_awaiting_next = false
+	_practice_succeeded = false
+	_solved_complete = false
+	_last_status_key = ""
+	_last_status_icons.clear()
+	_last_status_show_next = false
+	_script_id = ""
 	_index = -1
 	_steps.clear()
+	_highlight_button_id = ""
+	_tools_locked = false
 	if board_manager:
 		board_manager.clear_click_whitelist()
 		board_manager.clear_guide_cells()
+		board_manager.clear_focus_cells()
 		board_manager.restore_cell_cycle_tiles(available_tiles)
-	if _banner:
-		_banner.visible = false
+	if _next_button:
+		_next_button.visible = false
+	if ui_manager:
+		ui_manager.clear_tutorial_status()
+		ui_manager.clear_hud_button_highlight()
+		ui_manager.set_tutorial_tools_locked(false)
 
 func on_board_changed(_coord: Vector2i = Vector2i(-1, -1)) -> void:
-	if not _active or _awaiting_next:
+	if not _active or _solved_complete:
+		return
+	var step := _current_step()
+	var kind := String(step.get("type", ""))
+	if kind == "practice":
+		_update_practice_feedback(step)
+		return
+	if _awaiting_next:
 		return
 	_check_wait_condition()
 
+## Called when the board is valid and full. Shows the complete tip + Next; blocks the board.
+func on_board_solved() -> void:
+	if not _active or _solved_complete:
+		return
+	_solved_complete = true
+	_awaiting_next = true
+	_practice_succeeded = false
+	_highlight_button_id = ""
+	if board_manager:
+		# Only now may the board be locked — tutorial is over except for Next.
+		board_manager.set_click_whitelist([])
+		board_manager.clear_guide_cells()
+		board_manager.clear_focus_cells()
+		board_manager.restore_cell_cycle_tiles(available_tiles)
+	if _tools_locked:
+		_tools_locked = false
+		refresh_tool_gates()
+		tools_unlocked.emit()
+	else:
+		refresh_tool_gates()
+	_show_message_key("TUT_COMPLETE", [], true)
+
+## Returns true when the HUD action was consumed by the current tutorial step.
+func consume_hud_action(button_id: String) -> bool:
+	if not _active or _solved_complete:
+		return false
+	var step := _current_step()
+	if String(step.get("type", "")) != "hud_button":
+		return false
+	if String(step.get("button", "")) != button_id:
+		return false
+	_awaiting_next = false
+	_advance()
+	return true
+
+func refresh_tool_gates() -> void:
+	if not ui_manager:
+		return
+	if not _active:
+		ui_manager.set_tutorial_tools_locked(false)
+		ui_manager.clear_hud_button_highlight()
+		return
+	ui_manager.set_tutorial_tools_locked(_tools_locked)
+	if _highlight_button_id.is_empty():
+		ui_manager.clear_hud_button_highlight()
+	else:
+		ui_manager.highlight_hud_button(_highlight_button_id)
+
+func _current_step() -> Dictionary:
+	if _index < 0 or _index >= _steps.size():
+		return {}
+	return _steps[_index]
+
 func _advance() -> void:
+	if _solved_complete:
+		return
 	_index += 1
+	_practice_succeeded = false
+	_highlight_button_id = ""
 	if _index >= _steps.size():
-		_finish()
+		_enter_await_solve()
 		return
 	_apply_step(_steps[_index])
 
@@ -62,42 +151,107 @@ func _apply_step(step: Dictionary) -> void:
 	var kind := String(step.get("type", ""))
 	match kind:
 		"message":
-			_show_message(tr(String(step.get("text_key", ""))), true)
-			board_manager.clear_click_whitelist()
-			board_manager.clear_guide_cells()
-			board_manager.restore_cell_cycle_tiles(available_tiles)
-			# Block board while reading.
-			_block_all_cells()
+			_show_message_from_step(step, true)
+			_apply_focus(step)
+		"practice":
+			_practice_succeeded = false
+			_show_message_from_step(step, false)
+			_apply_focus(step)
+			_update_practice_feedback(step)
+		"hud_button":
+			_highlight_button_id = String(step.get("button", ""))
+			_show_message_from_step(step, true)
+			_clear_board_gates(false)
+			refresh_tool_gates()
 		"wait_cell", "wait_shifter":
-			_show_message(tr(String(step.get("text_key", ""))), false)
+			_show_message_from_step(step, false)
 			_apply_focus(step)
 			_check_wait_condition()
 		"done":
-			board_manager.clear_click_whitelist()
-			board_manager.clear_guide_cells()
-			board_manager.restore_cell_cycle_tiles(available_tiles)
-			_show_message(tr("TUT_COMPLETE"), true)
+			# Tips finished — keep playing until the board is solved.
+			_enter_await_solve()
 		_:
 			_advance()
 
-func _apply_focus(step: Dictionary) -> void:
-	board_manager.restore_cell_cycle_tiles(available_tiles)
-	var whitelist: Array = step.get("whitelist", [])
-	if whitelist.is_empty():
-		board_manager.clear_click_whitelist()
+func _enter_await_solve() -> void:
+	_highlight_button_id = ""
+	_clear_board_gates(true)
+	if _tools_locked:
+		_tools_locked = false
+		refresh_tool_gates()
+		tools_unlocked.emit()
 	else:
-		board_manager.set_click_whitelist(whitelist)
-	var highlight: Array = step.get("highlight", [])
-	board_manager.set_guide_cells(highlight)
+		refresh_tool_gates()
+	_set_next_visible(false)
+	if ui_manager:
+		ui_manager.clear_tutorial_status()
+
+func _clear_board_gates(restore_cycles: bool) -> void:
+	if not board_manager:
+		return
+	board_manager.clear_click_whitelist()
+	board_manager.clear_guide_cells()
+	board_manager.clear_focus_cells()
+	if restore_cycles:
+		board_manager.restore_cell_cycle_tiles(available_tiles)
+
+func _apply_focus(step: Dictionary) -> void:
+	if not board_manager:
+		return
+	# Never gate clicks during tips — guides/masks only.
+	board_manager.clear_click_whitelist()
+	board_manager.restore_cell_cycle_tiles(available_tiles)
+	# White masks (LinkHighlight) and red focus borders can be used together.
+	var masks: Array = step.get("mask", step.get("highlight", []))
+	var reds: Array = step.get("red", [])
+	board_manager.set_guide_cells(masks)
+	board_manager.set_focus_cells(reds)
 	if step.has("cycle") and step.has("coord"):
 		board_manager.set_cell_cycle_tiles(step["coord"], step["cycle"])
+	refresh_tool_gates()
 
-func _block_all_cells() -> void:
-	# Empty whitelist → every cell blocked.
-	board_manager.set_click_whitelist([])
+func _update_practice_feedback(step: Dictionary) -> void:
+	if not board_manager or not step.has("coord"):
+		return
+	var coord: Vector2i = step["coord"]
+	if not board_manager.board_cells.has(coord):
+		return
+	var cell = board_manager.board_cells[coord]
+	var target := int(step.get("state", -999))
+
+	if step.get("wait_shifter", false):
+		if cell.state == GameConstants.TileState.SHIFTER:
+			_on_practice_success(step)
+		else:
+			_practice_succeeded = false
+			_show_message_from_step(step, false)
+		return
+
+	if cell.state == target:
+		_on_practice_success(step)
+		return
+
+	_practice_succeeded = false
+	if cell.state == GameConstants.TileState.EMPTY:
+		_show_message_from_step(step, false)
+		return
+
+	var wrong_key := String(step.get("wrong_key", ""))
+	if wrong_key.is_empty():
+		wrong_key = String(step.get("text_key", ""))
+	_show_message_key(wrong_key, step.get("wrong_icons", step.get("icons", [])), false)
+
+func _on_practice_success(step: Dictionary) -> void:
+	if _practice_succeeded:
+		return
+	_practice_succeeded = true
+	var success_key := String(step.get("success_key", ""))
+	if success_key.is_empty():
+		success_key = "TUT_GOOD"
+	_show_message_key(success_key, step.get("success_icons", []), true)
 
 func _check_wait_condition() -> void:
-	if not _active or _index < 0 or _index >= _steps.size():
+	if not _active or _solved_complete or _index < 0 or _index >= _steps.size():
 		return
 	var step: Dictionary = _steps[_index]
 	var kind := String(step.get("type", ""))
@@ -111,26 +265,50 @@ func _check_wait_condition() -> void:
 		if board_manager.board_cells.has(coord) and board_manager.board_cells[coord].state == GameConstants.TileState.SHIFTER:
 			_advance()
 
-func _show_message(text: String, show_next: bool) -> void:
-	_ensure_banner()
-	_label.text = text
-	HudLayout.apply_locale_font_to_control(_label)
-	_label.add_theme_font_size_override("font_size", HudLayout.scaled_font_size(26))
-	_next_button.visible = show_next
-	_next_button.text = tr("UI_NEXT")
-	HudLayout.fit_text_button(_next_button, 22, 14)
+func _show_message_from_step(step: Dictionary, show_next: bool) -> void:
+	_show_message_key(String(step.get("text_key", "")), step.get("icons", []), show_next)
+
+func _show_message_key(key: String, icons: Variant, show_next: bool) -> void:
+	_last_status_key = key
+	_last_status_icons = icons.duplicate() if icons is Array else []
+	_last_status_show_next = show_next
+	var text := tr(key) if not key.is_empty() else ""
+	var icon_list: Array = _last_status_icons
+	if not icon_list.is_empty():
+		var args: Array = []
+		for token in icon_list:
+			args.append(TutorialScripts.icon_bbcode(String(token)))
+		text = text % args
+	if ui_manager:
+		ui_manager.show_tutorial_status(text)
+	_set_next_visible(show_next)
+
+func refresh_for_locale() -> void:
+	if not _active:
+		return
+	if not _last_status_key.is_empty():
+		_show_message_key(_last_status_key, _last_status_icons, _last_status_show_next)
+	elif _awaiting_next:
+		_set_next_visible(true)
+
+func _set_next_visible(show_next: bool) -> void:
+	_ensure_next_button()
 	_awaiting_next = show_next
-	_banner.visible = true
+	if _next_button:
+		_next_button.visible = show_next
+		if show_next:
+			_next_button.text = tr("UI_NEXT")
+			HudLayout.apply_nav_button(_next_button)
+			_position_next_button()
 
 func _on_next_pressed() -> void:
 	if not _active or not _awaiting_next:
 		return
 	_awaiting_next = false
-	var step: Dictionary = _steps[_index] if _index >= 0 and _index < _steps.size() else {}
-	if String(step.get("type", "")) == "done":
+	if _solved_complete:
 		_finish()
-	else:
-		_advance()
+		return
+	_advance()
 
 func _finish() -> void:
 	var was_active := _active
@@ -138,65 +316,58 @@ func _finish() -> void:
 	if was_active:
 		finished.emit()
 
-func _ensure_banner() -> void:
-	if _banner:
+func _ensure_next_button() -> void:
+	if _next_button and is_instance_valid(_next_button):
 		return
-	_banner = CanvasLayer.new()
-	_banner.name = "TutorialBannerLayer"
-	_banner.layer = 7
-	_banner.visible = false
-	add_child(_banner)
-
-	var root := Control.new()
-	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_banner.add_child(root)
-
-	_panel = Panel.new()
-	_panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	_panel.offset_left = 40.0
-	_panel.offset_right = -40.0
-	_panel.offset_top = -360.0
-	_panel.offset_bottom = -40.0
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.09, 0.14, 0.94)
-	style.set_corner_radius_all(14)
-	style.set_content_margin_all(20)
-	_panel.add_theme_stylebox_override("panel", style)
-	root.add_child(_panel)
-
-	var vbox := VBoxContainer.new()
-	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	vbox.offset_left = 24.0
-	vbox.offset_top = 20.0
-	vbox.offset_right = -24.0
-	vbox.offset_bottom = -20.0
-	vbox.add_theme_constant_override("separation", 18)
-	_panel.add_child(vbox)
-
-	_label = Label.new()
-	_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_label.add_theme_color_override("font_color", Color(0.95, 0.95, 0.98, 1))
-	_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	_label.add_theme_constant_override("outline_size", 6)
-	_label.set_meta("_use_default_font", true)
-	vbox.add_child(_label)
+	var host: Control = null
+	if ui_manager and ui_manager.status_label:
+		host = ui_manager.status_label.get_parent() as Control
+	if host == null:
+		return
 
 	_next_button = Button.new()
-	_next_button.custom_minimum_size = Vector2(280, 90)
-	_next_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var btn_style := StyleBoxFlat.new()
-	btn_style.bg_color = Color(0.22, 0.28, 0.42, 1)
-	btn_style.set_corner_radius_all(10)
-	btn_style.set_content_margin_all(12)
-	_next_button.add_theme_stylebox_override("normal", btn_style)
-	var btn_hover := btn_style.duplicate()
-	btn_hover.bg_color = Color(0.30, 0.38, 0.55, 1)
-	_next_button.add_theme_stylebox_override("hover", btn_hover)
+	_next_button.name = "TutorialNextButton"
+	_next_button.visible = false
+	_next_button.focus_mode = Control.FOCUS_NONE
+	_apply_menu_button_styles(_next_button)
 	_next_button.add_theme_color_override("font_outline_color", Color.BLACK)
-	_next_button.add_theme_constant_override("outline_size", 6)
+	_next_button.add_theme_constant_override("outline_size", 8)
+	HudLayout.apply_nav_button(_next_button)
 	_next_button.pressed.connect(_on_next_pressed)
-	vbox.add_child(_next_button)
+	host.add_child(_next_button)
+	_position_next_button()
+
+func _position_next_button() -> void:
+	if not _next_button:
+		return
+	var half_w := GameConstants.UI_BTN_NAV_SIZE.x * 0.5
+	_next_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_next_button.offset_left = -half_w
+	_next_button.offset_right = half_w
+	_next_button.offset_top = -(GameConstants.UI_BTN_NAV_SIZE.y + 24.0)
+	_next_button.offset_bottom = -24.0
+	_next_button.z_index = 8
+
+func _apply_menu_button_styles(button: Button) -> void:
+	var tex := load("res://resources/buttons/button_tile_gray_dark.svg") as Texture2D
+	if tex == null:
+		return
+	for style_name in ["normal", "pressed", "hover", "disabled"]:
+		var box := StyleBoxTexture.new()
+		box.texture = tex
+		box.texture_margin_left = 16.0
+		box.texture_margin_top = 16.0
+		box.texture_margin_right = 16.0
+		box.texture_margin_bottom = 16.0
+		box.content_margin_left = 8.0
+		box.content_margin_top = 8.0
+		box.content_margin_right = 8.0
+		box.content_margin_bottom = 8.0
+		match style_name:
+			"pressed":
+				box.modulate_color = Color(0.8, 0.8, 0.8, 1)
+			"hover":
+				box.modulate_color = Color(1.2, 1.2, 1.2, 1)
+			"disabled":
+				box.modulate_color = Color(0.5, 0.5, 0.5, 1)
+		button.add_theme_stylebox_override(style_name, box)

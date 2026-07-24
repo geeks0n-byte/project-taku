@@ -6,8 +6,23 @@ const SOLUTIONS_UNKNOWN := -1
 const SOLVE_ITER_BUDGET := 60000
 const COUNT_ITER_BUDGET := 80000
 
-static func generate_random_layout(width: int, height: int, allowed_tiles: Array, current_layout: Dictionary = {}, require_unique: bool = true, lock_walls: bool = false) -> Dictionary:
+## Controls how strictly hole-punching preserves an obvious (naked-single) move.
+enum Difficulty { EASY, MEDIUM, HARD }
+
+## Medium may skip the obvious-move check on at most this fraction of punches.
+const MEDIUM_SKIP_OBVIOUS_FRACTION := 0.30
+
+static func generate_random_layout(
+	width: int,
+	height: int,
+	allowed_tiles: Array,
+	current_layout: Dictionary = {},
+	require_unique: bool = true,
+	lock_walls: bool = false,
+	difficulty: int = Difficulty.MEDIUM
+) -> Dictionary:
 	var attempt = 0
+	var punch_difficulty := clampi(difficulty, Difficulty.EASY, Difficulty.HARD)
 	
 	var solver_tiles = allowed_tiles.duplicate()
 	if not (2 in solver_tiles): solver_tiles.append(2)
@@ -222,6 +237,8 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 			
 		var cleared_count = 0
 		var count_budget_exhausted := false
+		var accepted_punches := 0
+		var punches_without_obvious := 0
 		
 		for c in clearable_cells:
 			if cleared_count >= target_to_clear:
@@ -231,6 +248,7 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 			layout[c] = -1
 			current_empty.append(c)
 			
+			var punch_ok := true
 			if require_unique:
 				var sols = _count_solutions(layout, current_empty, width, height, solver_tiles, all_possible_constraints, {"count": 0})
 				if sols == SOLUTIONS_UNKNOWN:
@@ -240,11 +258,31 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 					count_budget_exhausted = true
 					break
 				if sols != 1:
-					layout[c] = original_val
-					current_empty.erase(c)
-				else:
-					cleared_count += 1
+					punch_ok = false
+
+			if punch_ok and not _punch_keeps_obvious_move(
+				punch_difficulty,
+				layout,
+				current_empty,
+				width,
+				height,
+				solver_tiles,
+				all_possible_constraints,
+				accepted_punches,
+				punches_without_obvious
+			):
+				punch_ok = false
+
+			if not punch_ok:
+				layout[c] = original_val
+				current_empty.erase(c)
 			else:
+				var has_obvious := _has_obvious_move(
+					layout, current_empty, width, height, solver_tiles, all_possible_constraints
+				)
+				accepted_punches += 1
+				if not has_obvious:
+					punches_without_obvious += 1
 				cleared_count += 1
 
 		if count_budget_exhausted:
@@ -252,6 +290,12 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 		# Reject nearly-full unique boards that never reached the clear target.
 		if require_unique and min_clear_count > 0 and cleared_count < min_clear_count:
 			continue
+		# Easy boards must still have a teachable single after punching.
+		if punch_difficulty == Difficulty.EASY and not current_empty.is_empty():
+			if not _has_obvious_move(
+				layout, current_empty, width, height, solver_tiles, all_possible_constraints
+			):
+				continue
 
 		# ==========================================
 		# STEP 5: Constraint Minimizer
@@ -292,6 +336,26 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 			if pair.active != pair.home:
 				required_shifter_moves += 1
 
+		# Final gate: respect shifter mobility (same semantics as editor save / PuzzleSolver).
+		var verify_constraints: Array = final_constraints if require_unique else []
+		if not require_unique:
+			verify_constraints = hidden_hints
+		var analysis := PuzzleSolver.analyze(
+			layout,
+			width,
+			height,
+			solver_tiles,
+			verify_constraints,
+			shifters,
+			require_unique
+		)
+		if analysis.get("timed_out", false):
+			continue
+		if not bool(analysis.get("solvable", false)):
+			continue
+		if require_unique and not bool(analysis.get("unique", false)):
+			continue
+
 		return {
 			"layout": layout,
 			"shifters": shifters,
@@ -304,86 +368,166 @@ static func generate_random_layout(width: int, height: int, allowed_tiles: Array
 	push_error("Generator failed: Generated walls may be mathematically impossible with the strict parity rules.")
 	return {} 
 
-static func _solve(layout: Dictionary, empty_cells: Array, w: int, h: int, allowed: Array, constraints: Array, iter: Dictionary) -> bool:
-	if empty_cells.size() == 0: return true
-	iter.count += 1
-	if iter.count > SOLVE_ITER_BUDGET: return false 
-	
-	var best_idx = -1
-	var min_opts = 999
-	var best_valid_vals = []
-
-	for i in range(empty_cells.size()):
-		var test_coord = empty_cells[i] 
-		var valid_vals = []
+## True if any empty cell has exactly one legal color (naked single).
+static func _has_obvious_move(
+	layout: Dictionary,
+	empty_cells: Array,
+	w: int,
+	h: int,
+	allowed: Array,
+	constraints: Array
+) -> bool:
+	if empty_cells.is_empty():
+		return false
+	for coord in empty_cells:
+		var options := 0
 		for val in allowed:
-			if _is_valid_placement(test_coord, val, layout, w, h, constraints):
-				valid_vals.append(val)
-				
-		var c_opts = valid_vals.size()
-		if c_opts < min_opts:
-			min_opts = c_opts
-			best_idx = i
-			best_valid_vals = valid_vals
-			if min_opts <= 1: break 
-				
-	if min_opts == 0: return false 
-
-	var best_coord = empty_cells[best_idx] 
-	empty_cells.remove_at(best_idx)
-	best_valid_vals.shuffle() 
-	
-	for val in best_valid_vals:
-		layout[best_coord] = val
-		if _solve(layout, empty_cells, w, h, allowed, constraints, iter):
+			if val == GameConstants.TileState.SHIFTER:
+				continue
+			if _is_valid_placement(coord, val, layout, w, h, constraints):
+				options += 1
+				if options > 1:
+					break
+		if options == 1:
 			return true
-		layout[best_coord] = -1 
-		
-	empty_cells.insert(best_idx, best_coord) 
 	return false
 
+## Whether this punch is allowed under the difficulty's obvious-move policy.
+static func _punch_keeps_obvious_move(
+	difficulty: int,
+	layout: Dictionary,
+	empty_cells: Array,
+	w: int,
+	h: int,
+	allowed: Array,
+	constraints: Array,
+	accepted_punches: int,
+	punches_without_obvious: int
+) -> bool:
+	if difficulty == Difficulty.HARD:
+		return true
+	# No empties yet means this is the first hole — allow it.
+	if empty_cells.is_empty():
+		return true
+	var has_obvious := _has_obvious_move(layout, empty_cells, w, h, allowed, constraints)
+	if difficulty == Difficulty.EASY:
+		return has_obvious
+	# Medium: at most ~30% of accepted punches may lack an obvious move.
+	if has_obvious:
+		return true
+	var next_accepted := accepted_punches + 1
+	var next_without := punches_without_obvious + 1
+	return float(next_without) / float(maxi(1, next_accepted)) <= MEDIUM_SKIP_OBVIOUS_FRACTION
+
 ## Returns 0, 1, 2+ (capped once >1), or SOLUTIONS_UNKNOWN on iteration timeout.
-static func _count_solutions(layout: Dictionary, empty_cells: Array, w: int, h: int, allowed: Array, constraints: Array, iter: Dictionary) -> int:
-	if empty_cells.size() == 0: return 1
+## `iter` may include:
+##   count (int), budget (int, optional), solution (Dictionary, optional first leaf)
+static func _count_solutions(
+	layout: Dictionary,
+	empty_cells: Array,
+	w: int,
+	h: int,
+	allowed: Array,
+	constraints: Array,
+	iter: Dictionary
+) -> int:
+	if empty_cells.size() == 0:
+		if not iter.has("solution"):
+			iter["solution"] = layout.duplicate()
+		return 1
 	iter.count += 1
-	if iter.count > COUNT_ITER_BUDGET: return SOLUTIONS_UNKNOWN
-	
-	var best_idx = -1
-	var min_opts = 999
-	var best_valid_vals = []
+	var budget: int = int(iter.get("budget", COUNT_ITER_BUDGET))
+	if iter.count > budget:
+		return SOLUTIONS_UNKNOWN
 
-	for i in range(empty_cells.size()):
-		var test_coord = empty_cells[i] 
-		var valid_vals = []
-		for val in allowed:
-			if _is_valid_placement(test_coord, val, layout, w, h, constraints):
-				valid_vals.append(val)
-				
-		var c_opts = valid_vals.size()
-		if c_opts < min_opts:
-			min_opts = c_opts
-			best_idx = i
-			best_valid_vals = valid_vals
-			if min_opts <= 1: break
-
-	if min_opts == 0: return 0
-
-	var best_coord = empty_cells[best_idx] 
+	var pick := _pick_mrv_cell(layout, empty_cells, w, h, allowed, constraints)
+	if pick.is_empty():
+		return 0
+	var best_idx: int = pick["idx"]
+	var best_valid_vals: Array = pick["vals"]
+	var best_coord: Vector2i = empty_cells[best_idx]
 	empty_cells.remove_at(best_idx)
-	
+
 	var total_sols = 0
 	for val in best_valid_vals:
 		layout[best_coord] = val
 		var branch = _count_solutions(layout, empty_cells, w, h, allowed, constraints, iter)
-		layout[best_coord] = -1 
+		layout[best_coord] = GameConstants.TileState.EMPTY
 		if branch == SOLUTIONS_UNKNOWN:
 			empty_cells.insert(best_idx, best_coord)
 			return SOLUTIONS_UNKNOWN
 		total_sols += branch
-		if total_sols > 1: break
-			
-	empty_cells.insert(best_idx, best_coord) 
+		var max_needed: int = int(iter.get("max_needed", 2))
+		if total_sols >= max_needed:
+			break
+
+	empty_cells.insert(best_idx, best_coord)
 	return total_sols
+
+static func _solve(
+	layout: Dictionary,
+	empty_cells: Array,
+	w: int,
+	h: int,
+	allowed: Array,
+	constraints: Array,
+	iter: Dictionary
+) -> bool:
+	if empty_cells.size() == 0:
+		return true
+	iter.count += 1
+	var budget: int = int(iter.get("budget", SOLVE_ITER_BUDGET))
+	if iter.count > budget:
+		return false
+
+	var pick := _pick_mrv_cell(layout, empty_cells, w, h, allowed, constraints)
+	if pick.is_empty():
+		return false
+	var best_idx: int = pick["idx"]
+	var best_valid_vals: Array = pick["vals"]
+	var best_coord: Vector2i = empty_cells[best_idx]
+	empty_cells.remove_at(best_idx)
+	best_valid_vals.shuffle()
+
+	for val in best_valid_vals:
+		layout[best_coord] = val
+		if _solve(layout, empty_cells, w, h, allowed, constraints, iter):
+			return true
+		layout[best_coord] = GameConstants.TileState.EMPTY
+
+	empty_cells.insert(best_idx, best_coord)
+	return false
+
+## Returns {"idx": int, "vals": Array} or {} if some cell has zero options.
+static func _pick_mrv_cell(
+	layout: Dictionary,
+	empty_cells: Array,
+	w: int,
+	h: int,
+	allowed: Array,
+	constraints: Array
+) -> Dictionary:
+	var best_idx := -1
+	var min_opts := 999
+	var best_valid_vals: Array = []
+	for i in range(empty_cells.size()):
+		var test_coord: Vector2i = empty_cells[i]
+		var valid_vals: Array = []
+		for val in allowed:
+			if _is_valid_placement(test_coord, val, layout, w, h, constraints):
+				valid_vals.append(val)
+		var c_opts := valid_vals.size()
+		if c_opts == 0:
+			return {}
+		if c_opts < min_opts:
+			min_opts = c_opts
+			best_idx = i
+			best_valid_vals = valid_vals
+			if min_opts <= 1:
+				break
+	if best_idx < 0:
+		return {}
+	return {"idx": best_idx, "vals": best_valid_vals}
 
 # --- STRICT PARITY VALIDATION ---
 static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w: int, h: int, constraints: Array) -> bool:

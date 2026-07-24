@@ -11,14 +11,18 @@ config_version=5
 [application]
 
 config/name="project-taku"
-run/main_scene="uid://c20pd0eqihnlp"
+run/main_scene="res://scenes/splash.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="uid://b4feaalp6odnk"
+boot_splash/bg_color=Color(0, 0, 0, 1)
+boot_splash/show_image=false
 
 [autoload]
 
 GlobalGameManager="*uid://bn8d4xks38olr"
 SaveManager="*uid://blp08aux0so6"
+BgmManager="*uid://cq8bgmmanager01"
+UiSfx="*uid://c8uisfxclick001"
 SpaceBackground="*uid://bjs0g2pap4nsi"
 
 [display]

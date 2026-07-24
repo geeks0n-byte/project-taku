@@ -66,7 +66,11 @@ func _finish_paint_stroke() -> void:
 	_last_painted_coord = Vector2i(-9999, -9999)
 
 func _is_link_brush() -> bool:
-	return current_brush_state >= GameConstants.TileState.SHIFTER and current_brush_state <= 5
+	return (
+		current_brush_state == GameConstants.TileState.SHIFTER
+		or current_brush_state == GameConstants.BrushTool.EQUALS
+		or current_brush_state == GameConstants.BrushTool.NOT_EQUALS
+	)
 
 func _coord_from_global(global_pos: Vector2) -> Vector2i:
 	var local := canvas_manager.to_local(global_pos)
@@ -203,10 +207,11 @@ func _on_random_board_requested():
 
 	var allowed_tiles: Array = editor_ui.get_allowed_tiles()
 	var require_unique: bool = editor_ui.is_unique_solution_required()
+	var gen_difficulty: int = editor_ui.get_generation_difficulty()
 	var layout_copy: Dictionary = current_layout.duplicate(true)
 	var generated: Variant = await _loading_overlay.run_async(self, func():
 		return PuzzleGenerator.generate_random_layout(
-			target_w, target_h, allowed_tiles, layout_copy, require_unique, lock_walls
+			target_w, target_h, allowed_tiles, layout_copy, require_unique, lock_walls, gen_difficulty
 		)
 	)
 	_is_generating = false
@@ -272,9 +277,9 @@ func _handle_link_brush_click(coord: Vector2i) -> void:
 		cell.set_mask_color(Color(1.0, 1.0, 1.0, 0.4))
 		if current_brush_state == GameConstants.TileState.SHIFTER:
 			editor_ui.update_status("ED_HINT_SELECT_SHIFTER", Color.YELLOW)
-		elif current_brush_state == 4:
+		elif current_brush_state == GameConstants.BrushTool.EQUALS:
 			editor_ui.update_status("ED_HINT_SELECT_EQUALS", Color.YELLOW)
-		elif current_brush_state == 5:
+		elif current_brush_state == GameConstants.BrushTool.NOT_EQUALS:
 			editor_ui.update_status("ED_HINT_SELECT_NOT_EQUALS", Color.YELLOW)
 	else:
 		var first_coord = link_first_selection
@@ -288,10 +293,10 @@ func _handle_link_brush_click(coord: Vector2i) -> void:
 			if current_brush_state == GameConstants.TileState.SHIFTER:
 				_execute_pair_link_creation(first_coord, coord)
 				editor_ui.update_status("ED_MSG_SHIFTER_PLACED", Color(0.4, 1.0, 0.4))
-			elif current_brush_state == 4:
+			elif current_brush_state == GameConstants.BrushTool.EQUALS:
 				_execute_constraint_creation(first_coord, coord, "equals")
 				editor_ui.update_status("ED_MSG_EQUALS_PLACED", Color(0.4, 1.0, 0.4))
-			elif current_brush_state == 5:
+			elif current_brush_state == GameConstants.BrushTool.NOT_EQUALS:
 				_execute_constraint_creation(first_coord, coord, "not_equals")
 				editor_ui.update_status("ED_MSG_NOT_EQUALS_PLACED", Color(0.4, 1.0, 0.4))
 			_record_editor_change()
@@ -518,6 +523,19 @@ func _on_save_level():
 
 func _execute_save():
 	var level_num = editor_ui.get_level_number()
+	var tiles: Array = editor_ui.get_allowed_tiles()
+	var analysis := PuzzleSolver.analyze_board_cells(
+		canvas_manager.board_cells,
+		canvas_manager.grid_width,
+		canvas_manager.grid_height,
+		tiles,
+		canvas_manager.loaded_constraint_pairs,
+		canvas_manager.loaded_shifter_pairs,
+		editor_ui.is_unique_solution_required()
+	)
+	if not _accept_save_analysis(analysis):
+		return
+
 	var output_layout := {}
 	for coord in canvas_manager.board_cells:
 		var current_state = canvas_manager.board_cells[coord].state
@@ -535,8 +553,9 @@ func _execute_save():
 	new_level_resource.shifter_pairs = canvas_manager.loaded_shifter_pairs.duplicate(true)
 	new_level_resource.constraint_pairs = canvas_manager.loaded_constraint_pairs.duplicate(true)
 	new_level_resource.time_limit = editor_ui.get_time_limit()
-	new_level_resource.available_tiles = editor_ui.get_allowed_tiles()
+	new_level_resource.available_tiles = tiles
 	new_level_resource.is_unique_solution = editor_ui.is_unique_solution_required()
+	new_level_resource.keep_walls = editor_ui.is_keep_walls_requested()
 
 	if not DirAccess.dir_exists_absolute(GameConstants.DEV_LEVELS_DIR):
 		DirAccess.make_dir_absolute(GameConstants.DEV_LEVELS_DIR)
@@ -547,6 +566,18 @@ func _execute_save():
 		editor_ui.update_status(HudLayout.english("ED_MSG_LEVEL_SAVED") % level_num, Color(0.4, 1.0, 0.4), false)
 	else:
 		editor_ui.update_status(HudLayout.english("ED_MSG_LEVEL_SAVE_FAILED") % [level_num, error_string(save_result).to_upper()], Color(1.0, 0.4, 0.4), false)
+
+func _accept_save_analysis(analysis: Dictionary) -> bool:
+	if bool(analysis.get("timed_out", false)) or int(analysis.get("solution_count", 0)) == PuzzleSolver.SOLUTIONS_UNKNOWN:
+		editor_ui.update_status(HudLayout.english("ED_MSG_SOLVE_TIMEOUT"), Color(1.0, 0.4, 0.4), false)
+		return false
+	if not bool(analysis.get("solvable", false)):
+		editor_ui.update_status(HudLayout.english("ED_MSG_UNSOLVABLE"), Color(1.0, 0.4, 0.4), false)
+		return false
+	if editor_ui.is_unique_solution_required() and not bool(analysis.get("unique", false)):
+		editor_ui.update_status(HudLayout.english("ED_MSG_NOT_UNIQUE"), Color(1.0, 0.4, 0.4), false)
+		return false
+	return true
 
 func _on_load_level():
 	if playtest_controller.is_active:
@@ -570,6 +601,7 @@ func _on_load_level():
 	_recenter_editor_layout(dims.x, dims.y)
 	editor_ui.set_time_limit(loaded_level.time_limit)
 	editor_ui.set_unique_solution_required(loaded_level.is_unique_solution)
+	editor_ui.set_keep_walls_requested(loaded_level.keep_walls)
 	var raw_tiles = loaded_level.available_tiles if loaded_level.available_tiles.size() > 0 else [0, 1, 2]
 	var sanitized_tiles: Array = []
 	for tile in raw_tiles:

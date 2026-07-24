@@ -10,10 +10,23 @@ enum TileState {
 	SHIFTER = 3,
 }
 
+## Editor link brushes (not tile states).
+enum BrushTool {
+	EQUALS = 4,
+	NOT_EQUALS = 5,
+}
+
 const CELL_SIZE := 120
 const TOP_HUD_BOTTOM := 236.0
 const BOARD_GAP := 40.0
-const UNDO_STACK_LIMIT := 5
+## 0 = unlimited undo/redo history.
+const UNDO_STACK_LIMIT := 0
+
+## Soft hint quotas by difficulty (-1 = unlimited). Harder levels get more hints.
+const HINT_LIMIT_EASY := 2
+const HINT_LIMIT_MEDIUM := 3
+const HINT_LIMIT_HARD := 5
+const HINT_LIMIT_UNLIMITED := -1
 
 const HUD_BUTTON_WIDTH := 140
 const HUD_BUTTON_HEIGHT := 140
@@ -36,7 +49,8 @@ const HUD_LEVEL_OUTLINE_PAD := 8
 const HUD_COUNTER_FONT_SIZE := 32
 const HUD_COUNTER_LABEL_FONT_SIZE := 24
 const HUD_COUNTER_ICON_SIZE := 52
-const HUD_INFINITY_ICON_SIZE := 48
+const HUD_INFINITY_ICON_SIZE := 80
+const EDITOR_INFINITY_ICON_SIZE := 72
 const HUD_TIMER_Y_NUDGE := -6.0
 const HUD_COUNTER_LABEL_HALF_W := 230.0
 const HUD_COUNTER_LABEL_HALF_H := 42.0
@@ -55,6 +69,37 @@ const SCREEN_HEADER_HEIGHT := 100.0
 const SCREEN_CONTENT_GAP := 36.0
 const SCREEN_HEADER_COLOR := Color(1.0, 0.84, 0.0, 1.0)
 
+## Shared menu / dialog button tiers.
+## Font bases are for the pixel UI font (English); HudLayout scales them for default-font locales.
+const UI_BTN_PRIMARY_SIZE := Vector2(560, 120)
+const UI_BTN_PRIMARY_FONT := 32
+const UI_BTN_PRIMARY_FONT_MIN := 16
+
+const UI_BTN_SECONDARY_SIZE := Vector2(280, 100)
+const UI_BTN_SECONDARY_FONT := 24
+const UI_BTN_SECONDARY_FONT_MIN := 14
+
+const UI_BTN_DIALOG_SIZE := Vector2(220, 100)
+const UI_BTN_DIALOG_FONT := 24
+const UI_BTN_DIALOG_FONT_MIN := 14
+
+const UI_BTN_NAV_SIZE := Vector2(240, 100)
+const UI_BTN_NAV_FONT := 22
+const UI_BTN_NAV_FONT_MIN := 12
+
+const UI_BTN_PANEL_SIZE := Vector2(460, 100)
+const UI_BTN_PANEL_FONT := 24
+const UI_BTN_PANEL_FONT_MIN := 14
+
+const UI_BTN_TAB_SIZE := Vector2(200, 90)
+const UI_BTN_TAB_FONT := 22
+const UI_BTN_TAB_FONT_MIN := 12
+
+## Always-default-font body copy (credits, HTP, dialogs, resume prompt).
+const UI_BODY_FONT_SIZE := 26
+const UI_BODY_FONT_SIZE_LARGE := 28
+const UI_BODY_TITLE_FONT_SIZE := 46
+
 const ICON_INFINITY := "res://resources/icons/icon_infinity.svg"
 const ICON_HINT_ON := "res://resources/icons/icon_hint_on.svg"
 const ICON_HINT_OFF := "res://resources/icons/icon_hint_off.svg"
@@ -67,14 +112,12 @@ const TILE_SHIFTER_DOWN := "res://resources/tiles/tile_shifter_down.svg"
 const TILE_SHIFTER_LEFT := "res://resources/tiles/tile_shifter_left.svg"
 const TILE_SHIFTER_RIGHT := "res://resources/tiles/tile_shifter_right.svg"
 const TILE_LOCK := "res://resources/tiles/tile_lock.svg"
-const ICON_LOCK := "res://resources/tiles/tile_lock.svg"
 const DEFAULT_FONT_SCALE := 1.45
 const DISABLED_ICON_MODULATE := Color(0.55, 0.55, 0.55, 1.0)
 const TOGGLE_MASK_AMBER := Color(1.0, 0.78, 0.2, 0.4)
 const TOGGLE_MASK_LOCK := Color(0.95, 0.28, 0.38, 0.45)
-const TOGGLE_MASK_UNIQUE := Color(0.35, 0.9, 0.45, 0.45)
+const TOGGLE_MASK_WHITE := Color(1.0, 1.0, 1.0, 0.4)
 
-const CAMPAIGN_DIR := "res://levels/"
 const CAMPAIGN_TUTORIALS_DIR := "res://levels/tutorials/"
 const CAMPAIGN_EASY_DIR := "res://levels/easy/"
 const CAMPAIGN_MEDIUM_DIR := "res://levels/medium/"
@@ -90,3 +133,13 @@ static func is_solvable_tile(state: int) -> bool:
 ## Tiles that can appear in equals/not-equals contractions (Y/B/G/P).
 static func is_hintable_tile(state: int) -> bool:
 	return is_solvable_tile(state)
+
+## Hint quota for PuzzleGenerator.Difficulty (-1 = unlimited).
+static func hint_limit_for_difficulty(difficulty: int) -> int:
+	match difficulty:
+		PuzzleGenerator.Difficulty.EASY:
+			return HINT_LIMIT_EASY
+		PuzzleGenerator.Difficulty.HARD:
+			return HINT_LIMIT_HARD
+		_:
+			return HINT_LIMIT_MEDIUM

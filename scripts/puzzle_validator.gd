@@ -1,7 +1,7 @@
 class_name PuzzleValidator
 extends RefCounted
 
-static func validate_board(board_cells: Dictionary, cached_lines: Array, constraint_pairs: Array, max_jokers: int = -1) -> Dictionary:
+static func validate_board(board_cells: Dictionary, cached_lines: Array, constraint_pairs: Array, _max_jokers: int = -1) -> Dictionary:
 	var errors = []
 	var is_valid = true
 
@@ -138,27 +138,5 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 					if cell.state != -2 and cell.has_method("set_error_highlight"):
 						cell.set_error_highlight()
 						
-	# 3. Global green quota (exact count on a finished board)
-	if max_jokers >= 0:
-		var placed_jokers = 0
-		for coord in board_cells:
-			if board_cells[coord].state == GameConstants.TileState.JOKER:
-				placed_jokers += 1
-		var board_full := BoardRenderer.is_board_full(board_cells)
-
-		if placed_jokers > max_jokers:
-			is_valid = false
-			var msg = "ERR_TOO_MANY_GREEN"
-			if not errors.has(msg):
-				errors.append(msg)
-			for coord in board_cells:
-				var cell = board_cells[coord]
-				if cell.state == GameConstants.TileState.JOKER and cell.has_method("set_error_highlight"):
-					cell.set_error_highlight()
-		elif board_full and max_jokers > 0 and placed_jokers < max_jokers:
-			is_valid = false
-			var msg = "ERR_TOO_FEW_GREEN"
-			if not errors.has(msg):
-				errors.append(msg)
-
+	# Global green quota is an optional star goal, not a win requirement.
 	return {"valid": is_valid, "errors": errors}

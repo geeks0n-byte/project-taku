@@ -12,10 +12,12 @@ var shifter_direction: Vector2i = Vector2i.ZERO
 var allowed_cycle_tiles: Array[int] = [0, 1, 2]
 ## When true, clicks are ignored (used by scripted tutorials).
 var tutorial_blocked: bool = false
-## Soft yellow guide highlight for tutorial focus cells.
+## Soft white mask for tutorial focus cells.
 var guide_active: bool = false
+## Persistent red border for tutorial focus (survives validation clears).
+var focus_active: bool = false
 
-const GUIDE_COLOR := Color(1.0, 0.85, 0.2, 0.5)
+const GUIDE_COLOR := Color(1.0, 1.0, 1.0, 0.45)
 
 @export var tex_empty: Texture2D = preload("res://resources/tiles/tile_empty.svg")
 @export var tex_empty_editor: Texture2D = preload("res://resources/tiles/tile_empty_editor.svg")
@@ -181,11 +183,21 @@ func set_guide_highlight(enabled: bool) -> void:
 	guide_active = enabled
 	update_visuals()
 
+func set_focus_highlight(enabled: bool) -> void:
+	focus_active = enabled
+	if error_highlight:
+		error_highlight.visible = enabled
+		if enabled:
+			error_highlight.queue_redraw()
+
 func set_mask_color(mask_color: Color):
 	if link_highlight:
 		link_highlight.color = mask_color
 		link_highlight.visible = true
 
 func clear_highlight():
+	# Keep tutorial red focus borders; only clear transient validation errors.
 	if error_highlight:
-		error_highlight.visible = false
+		error_highlight.visible = focus_active
+		if focus_active:
+			error_highlight.queue_redraw()

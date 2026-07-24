@@ -19,7 +19,6 @@
 [ext_resource type="Texture2D" uid="uid://b3yf4ubfj5e5e" path="res://resources/icons/icon_play.svg" id="tex_play"]
 [ext_resource type="Texture2D" uid="uid://da6jovgg77ml0" path="res://resources/icons/icon_random.svg" id="tex_random"]
 [ext_resource type="Texture2D" uid="uid://4oqca6cnuifh" path="res://resources/icons/icon_redo.svg" id="tex_redo"]
-[ext_resource type="Texture2D" uid="uid://blpwipbhfjhjb" path="res://resources/icons/icon_reset.svg" id="tex_reset"]
 [ext_resource type="Texture2D" uid="uid://tdm07fs8c43h" path="res://resources/icons/icon_rules.svg" id="tex_rules"]
 [ext_resource type="Texture2D" uid="uid://bfcy2pkt6kw64" path="res://resources/icons/icon_save.svg" id="tex_save"]
 [ext_resource type="Texture2D" uid="uid://cnip7xhvxn4ky" path="res://resources/icons/icon_stop.svg" id="tex_stop"]
@@ -423,7 +422,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 mouse_filter = 2
-texture = ExtResource("tex_reset")
+texture = ExtResource("tex_random")
 expand_mode = 1
 stretch_mode = 5
 
@@ -598,7 +597,7 @@ offset_bottom = 228.0
 grow_horizontal = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
-alignment = 0
+alignment = 1
 
 [node name="TimerSlot" type="Control" parent="EditorUI/CounterContainer" unique_id=999999998]
 custom_minimum_size = Vector2(0, 72)
@@ -626,7 +625,7 @@ theme_override_constants/outline_size = 6
 theme_override_fonts/normal_font = ExtResource("font_ps2p")
 theme_override_font_sizes/normal_font_size = 28
 bbcode_enabled = true
-text = "[center]TIME 00:00[/center]"
+text = "[center]00:00[/center]"
 scroll_active = false
 fit_content = false
 autowrap_mode = 0
@@ -718,7 +717,7 @@ anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -560.0
+offset_top = -690.0
 offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 0
@@ -837,11 +836,13 @@ theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 text = "+"
 
-[node name="Spacer2" type="Control" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GridSizeContainer" unique_id=2099641061]
-custom_minimum_size = Vector2(10, 0)
+[node name="GeneratorOptionsContainer" type="HBoxContainer" parent="EditorUI/ControlPanel/ScrollContainer/VBox" unique_id=434208735]
+custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
 
-[node name="KeepWallsToggle" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GridSizeContainer" unique_id=1610813904]
+[node name="KeepWallsToggle" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer" unique_id=1610813904]
 custom_minimum_size = Vector2(140, 100)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -858,7 +859,7 @@ button_pressed = true
 text = "LOCK
 WALLS"
 
-[node name="UniqueSolutionToggle" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GridSizeContainer" unique_id=214377135]
+[node name="UniqueSolutionToggle" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer" unique_id=214377135]
 custom_minimum_size = Vector2(140, 100)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -874,11 +875,26 @@ toggle_mode = true
 text = "UNIQUE
 SOLVE"
 
-[node name="Spacer3" type="Control" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GridSizeContainer" unique_id=591677307]
+[node name="DifficultyButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer" unique_id=214377136]
+custom_minimum_size = Vector2(140, 100)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 1
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "DIFF
+EASY"
+
+[node name="Spacer3" type="Control" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer" unique_id=591677307]
 custom_minimum_size = Vector2(10, 0)
 layout_mode = 2
 
-[node name="RandomButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GridSizeContainer" unique_id=1363936394]
+[node name="RandomButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer" unique_id=1363936394]
 custom_minimum_size = Vector2(100, 100)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -888,7 +904,7 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="IconContainer" type="CenterContainer" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GridSizeContainer/RandomButton" unique_id=1993628198]
+[node name="IconContainer" type="CenterContainer" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/RandomButton" unique_id=1993628198]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -897,7 +913,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Icon" type="TextureRect" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GridSizeContainer/RandomButton/IconContainer" unique_id=1992747563]
+[node name="Icon" type="TextureRect" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/RandomButton/IconContainer" unique_id=1992747563]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 mouse_filter = 2
@@ -1098,8 +1114,11 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 56
+theme_override_font_sizes/font_size = 52
 text = "="
+horizontal_alignment = 1
+vertical_alignment = 1
+metadata/_use_default_font = true
 
 [node name="NotEqualsButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer" unique_id=1726656227]
 custom_minimum_size = Vector2(120, 120)
@@ -1125,8 +1144,11 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 56
+theme_override_font_sizes/font_size = 52
 text = "×"
+horizontal_alignment = 1
+vertical_alignment = 1
+metadata/_use_default_font = true
 
 [node name="LevelSettingsContainer" type="HBoxContainer" parent="EditorUI/ControlPanel/ScrollContainer/VBox" unique_id=1428156310]
 custom_minimum_size = Vector2(0, 100)
@@ -1142,6 +1164,7 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 28
 text = "TIME:"
+tooltip_text = "Star time: beat this to earn the time star. Infinity = no time star."
 vertical_alignment = 1
 
 [node name="TimeSelector" type="HBoxContainer" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer" unique_id=594708070]
@@ -1447,7 +1470,7 @@ autowrap_mode = 2
 
 [node name="OverwritePanel" type="Panel" parent="EditorUI" unique_id=1336168823]
 visible = false
-z_index = 5000
+z_index = 4096
 custom_minimum_size = Vector2(650, 400)
 anchors_preset = 8
 anchor_left = 0.5
@@ -1522,7 +1545,7 @@ text = "NO"
 
 [node name="PlaytestVictoryPanel" type="Panel" parent="EditorUI" unique_id=788465914]
 visible = false
-z_index = 5000
+z_index = 4096
 custom_minimum_size = Vector2(600, 400)
 anchors_preset = 8
 anchor_left = 0.5
@@ -1602,7 +1625,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="HowToPlayPanel" type="Panel" parent="HowToPlayLayer/CenterContainer" unique_id=937192312]
-custom_minimum_size = Vector2(950, 980)
+custom_minimum_size = Vector2(950, 1040)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_htp")
 
@@ -1612,9 +1635,9 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 40.0
-offset_top = 36.0
+offset_top = 28.0
 offset_right = -40.0
-offset_bottom = -160.0
+offset_bottom = -150.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_colors/default_color = Color(1, 1, 1, 1)

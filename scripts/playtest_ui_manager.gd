@@ -32,19 +32,22 @@ signal resume_from_tutorial_requested
 
 var _test_label_breathe_tween: Tween
 var _htp_page: int = 0
+var _hint_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED
+var _hint_forced_disabled: bool = false
 
 var _end_layer: CanvasLayer
+var _end_dimmer: ColorRect
 var _victory_panel: Panel
-var _defeat_panel: Panel
 var _victory_title: Label
-var _defeat_title: Label
-var _victory_stats: Label
-var _defeat_stats: Label
+var _victory_results_host: Control
+var _victory_buttons: Control
 var _button_style_source: Button
+var _center: CenterContainer
 
 func _ready() -> void:
 	_button_style_source = exit_button if exit_button else reset_button
-	_build_end_panels()
+	# Parent is still finishing _ready children; defer panel construction.
+	call_deferred("_build_end_panels")
 	if legacy_victory_panel:
 		legacy_victory_panel.visible = false
 	_connect_signals()
@@ -70,6 +73,9 @@ func _apply_top_bar_buttons() -> void:
 	HudLayout.align_counter_label(timer_label, GameConstants.HUD_TIMER_Y_NUDGE)
 	HudLayout.align_counter_label(jokers_label)
 	HudLayout.align_counter_label(moves_label)
+	set_playtest_joker_counter_visibility(false)
+	set_playtest_move_counter_visibility(false)
+	HudLayout.align_counter_row(counter_container)
 	_start_test_mode_label_breathe()
 
 func _start_test_mode_label_breathe() -> void:
@@ -109,109 +115,101 @@ func _connect_signals() -> void:
 		htp_next_button.pressed.connect(_on_htp_next_pressed)
 
 func _build_end_panels() -> void:
+	if _end_layer and is_instance_valid(_end_layer):
+		return
 	_end_layer = CanvasLayer.new()
 	_end_layer.name = "PlaytestEndLayer"
 	_end_layer.layer = 5
 	get_parent().add_child(_end_layer)
 
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_end_layer.add_child(center)
+	_end_dimmer = ColorRect.new()
+	_end_dimmer.name = "Dimmer"
+	_end_dimmer.color = Color(0, 0, 0, 0.78)
+	_end_dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_end_dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
+	_end_dimmer.visible = false
+	_end_layer.add_child(_end_dimmer)
 
-	_victory_panel = _make_end_panel(center)
+	_center = CenterContainer.new()
+	_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_end_layer.add_child(_center)
+
+	_victory_panel = _make_end_panel(_center)
 	_victory_title = _make_end_title(_victory_panel, Color(1.0, 0.84, 0.0, 1.0))
-	_victory_stats = _make_end_stats(_victory_panel)
-	_make_end_buttons(_victory_panel)
-	_defeat_panel = _make_end_panel(center)
-	_defeat_title = _make_end_title(_defeat_panel, Color(1.0, 0.35, 0.35, 1.0))
-	_defeat_stats = _make_end_stats(_defeat_panel)
-	_make_end_buttons(_defeat_panel)
+	_victory_results_host = _make_end_results_host(_victory_panel)
+	_victory_buttons = _make_end_buttons(_victory_panel)
 
 	hide_end_overlays()
 
 func _make_end_panel(parent: Control) -> Panel:
 	var panel := Panel.new()
 	panel.visible = false
-	panel.custom_minimum_size = Vector2(680, 720)
+	panel.custom_minimum_size = Vector2(840, 800)
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.1, 0.1, 0.12, 0.94)
-	style.set_corner_radius_all(12)
-	style.set_content_margin_all(24)
+	style.bg_color = Color(0.08, 0.08, 0.1, 0.98)
+	style.set_corner_radius_all(16)
+	style.set_content_margin_all(28)
+	style.border_color = Color(1.0, 0.84, 0.0, 0.4)
+	style.set_border_width_all(3)
 	panel.add_theme_stylebox_override("panel", style)
 	parent.add_child(panel)
 	return panel
 
-func _make_end_title(panel: Panel, color: Color) -> Label:
+func _make_end_title(panel: Panel, _color: Color) -> Label:
 	var label := Label.new()
 	label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	label.offset_top = 28.0
-	label.offset_bottom = 140.0
-	label.offset_left = 24.0
-	label.offset_right = -24.0
+	label.offset_top = 32.0
+	label.offset_bottom = 180.0
+	label.offset_left = 32.0
+	label.offset_right = -32.0
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_color_override("font_color", color)
-	label.add_theme_color_override("font_outline_color", Color.BLACK)
-	label.add_theme_constant_override("outline_size", 10)
-	label.add_theme_font_size_override("font_size", HudLayout.scaled_font_size(28))
-	HudLayout.apply_locale_font_to_control(label)
-	panel.add_child(label)
-	return label
-
-func _make_end_stats(panel: Panel) -> Label:
-	var label := Label.new()
-	label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	label.offset_top = 150.0
-	label.offset_bottom = 380.0
-	label.offset_left = 36.0
-	label.offset_right = -36.0
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.set_meta("_screen_header_font_size", 48)
+	HudLayout.apply_screen_header_style(label)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_color_override("font_color", Color(0.92, 0.92, 0.92, 1.0))
-	label.add_theme_color_override("font_outline_color", Color.BLACK)
-	label.add_theme_constant_override("outline_size", 6)
-	label.add_theme_font_size_override("font_size", HudLayout.scaled_font_size(22))
-	label.set_meta("_use_default_font", true)
-	HudLayout.apply_locale_font_to_control(label)
 	panel.add_child(label)
 	return label
 
-func _make_end_buttons(panel: Panel) -> void:
-	var row := HBoxContainer.new()
-	row.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	row.offset_top = -280.0
-	row.offset_bottom = -36.0
-	row.offset_left = 36.0
-	row.offset_right = -36.0
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 24)
-	panel.add_child(row)
+func _make_end_results_host(panel: Panel) -> Control:
+	var host := Control.new()
+	host.name = "VictoryResultsHost"
+	host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	host.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	host.offset_left = 40.0
+	host.offset_right = -40.0
+	host.offset_top = 188.0
+	host.offset_bottom = 430.0
+	panel.add_child(host)
+	return host
 
+func _make_end_buttons(panel: Panel) -> Control:
 	var col := VBoxContainer.new()
+	col.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	col.offset_left = -260.0
+	col.offset_right = 260.0
+	col.offset_top = 450.0
+	col.offset_bottom = 720.0
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
-	col.add_theme_constant_override("separation", 18)
-	row.add_child(col)
+	col.add_theme_constant_override("separation", 20)
+	panel.add_child(col)
 
 	var try_btn := _make_styled_button(tr("UI_TRY_AGAIN"))
 	try_btn.pressed.connect(func():
-		hide_end_overlays()
 		playtest_reset_requested.emit()
 	)
 	col.add_child(try_btn)
 
 	var return_btn := _make_styled_button(tr("RETURN"))
 	return_btn.pressed.connect(func():
-		hide_end_overlays()
 		test_mode_exited.emit()
 	)
 	col.add_child(return_btn)
+	return col
 
 func _make_styled_button(caption: String) -> Button:
 	var btn := Button.new()
-	btn.custom_minimum_size = Vector2(460, 100)
 	btn.text = caption
 	if _button_style_source:
 		for style_name in ["normal", "pressed", "hover", "disabled"]:
@@ -220,34 +218,34 @@ func _make_styled_button(caption: String) -> Button:
 				btn.add_theme_stylebox_override(style_name, style)
 	btn.add_theme_color_override("font_outline_color", Color.BLACK)
 	btn.add_theme_constant_override("outline_size", 8)
-	HudLayout.fit_text_button(btn, 24, 14)
+	HudLayout.apply_panel_button(btn)
 	return btn
 
-func _format_end_stats(stats: Dictionary) -> String:
-	var lines: PackedStringArray = []
-	lines.append(tr("STAT_TIME_LEFT") % str(stats.get("time_text", "--")))
-	if bool(stats.get("show_green", false)):
-		lines.append(tr("STAT_GREEN_TILES") % [
-			int(stats.get("green_current", 0)),
-			int(stats.get("green_required", 0)),
-		])
-	if bool(stats.get("show_moves", false)):
-		lines.append(tr("STAT_SHIFTER_MOVES") % [
-			int(stats.get("moves", 0)),
-			int(stats.get("moves_required", 0)),
-		])
-	return "\n\n".join(lines)
+func _layout_victory_panel(star_result: Dictionary) -> void:
+	if not _victory_panel or not _victory_results_host:
+		return
+	var goal_count := int(star_result.get("total_count", 0))
+	var title_bottom := 180.0
+	var results_h := 90.0 + float(maxi(1, goal_count)) * (LevelStars.ROW_HEIGHT + 14.0)
+	_victory_results_host.offset_top = title_bottom + 8.0
+	_victory_results_host.offset_bottom = title_bottom + 8.0 + results_h
+	var buttons_top := title_bottom + 8.0 + results_h + 36.0
+	if _victory_buttons:
+		_victory_buttons.offset_top = buttons_top
+		_victory_buttons.offset_bottom = buttons_top + 260.0
+	_victory_panel.custom_minimum_size = Vector2(840, maxf(800.0, buttons_top + 300.0))
 
 func _set_playtest_buttons_disabled(disabled: bool) -> void:
+	# Top-bar reset is unavailable in TEST MODE; Try Again on victory still works.
 	if reset_button:
-		reset_button.disabled = disabled
+		reset_button.disabled = true
 		HudLayout.refresh_button_icon_modulate(reset_button)
 	if rules_button:
 		rules_button.disabled = disabled
 		HudLayout.refresh_button_icon_modulate(rules_button)
 	if hint_button:
 		if disabled:
-			HintController.update_button(hint_button, false)
+			HintController.update_button(hint_button, false, _hint_remaining)
 	if undo_button:
 		undo_button.disabled = disabled
 		HudLayout.refresh_button_icon_modulate(undo_button)
@@ -275,6 +273,9 @@ func toggle_playtest_visibility(is_playtesting: bool) -> void:
 	if not is_playtesting:
 		hide_end_overlays()
 	if is_playtesting:
+		if reset_button:
+			reset_button.disabled = true
+			HudLayout.refresh_button_icon_modulate(reset_button)
 		_start_test_mode_label_breathe()
 	elif _test_label_breathe_tween:
 		_test_label_breathe_tween.kill()
@@ -297,35 +298,28 @@ func update_playtest_undo_redo_buttons(can_undo: bool, can_redo: bool) -> void:
 
 func show_victory_overlay(stats: Dictionary) -> void:
 	_set_playtest_buttons_disabled(true)
+	set_playtest_chrome_visible(false)
+	if _end_dimmer:
+		_end_dimmer.visible = true
+		_end_dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
 	if _victory_title:
 		_victory_title.text = tr("ED_VICTORY_SOLVABLE")
-		HudLayout.apply_locale_font_to_control(_victory_title)
-	if _victory_stats:
-		_victory_stats.text = _format_end_stats(stats)
-		HudLayout.apply_locale_font_to_control(_victory_stats)
-	if _defeat_panel:
-		_defeat_panel.visible = false
+		_victory_title.set_meta("_screen_header_font_size", 48)
+		HudLayout.apply_screen_header_style(_victory_title)
+		_victory_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var star_result: Dictionary = stats.get("star_result", {})
+	if _victory_results_host:
+		LevelStars.populate_results(_victory_results_host, star_result)
+	_layout_victory_panel(star_result)
 	if _victory_panel:
 		_victory_panel.visible = true
 
-func show_defeat_overlay(stats: Dictionary) -> void:
-	_set_playtest_buttons_disabled(true)
-	if _defeat_title:
-		_defeat_title.text = tr("ED_DEFEAT_TIME")
-		HudLayout.apply_locale_font_to_control(_defeat_title)
-	if _defeat_stats:
-		_defeat_stats.text = _format_end_stats(stats)
-		HudLayout.apply_locale_font_to_control(_defeat_stats)
-	if _victory_panel:
-		_victory_panel.visible = false
-	if _defeat_panel:
-		_defeat_panel.visible = true
-
 func hide_end_overlays() -> void:
+	if _end_dimmer:
+		_end_dimmer.visible = false
+		_end_dimmer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if _victory_panel:
 		_victory_panel.visible = false
-	if _defeat_panel:
-		_defeat_panel.visible = false
 	if legacy_victory_panel:
 		legacy_victory_panel.visible = false
 	_set_playtest_buttons_disabled(false)
@@ -349,15 +343,15 @@ func _refresh_how_to_play_text() -> void:
 	if htp_prev_button:
 		htp_prev_button.text = tr("UI_PREVIOUS")
 		htp_prev_button.disabled = _htp_page <= 0
-		HudLayout.fit_text_button(htp_prev_button, 22, 12)
+		HudLayout.apply_nav_button(htp_prev_button)
 		HudLayout.refresh_button_icon_modulate(htp_prev_button)
 	if tutorial_back_button:
 		tutorial_back_button.text = tr("UI_CLOSE")
-		HudLayout.fit_text_button(tutorial_back_button, 24, 14)
+		HudLayout.apply_secondary_button(tutorial_back_button)
 	if htp_next_button:
 		htp_next_button.text = tr("UI_NEXT")
 		htp_next_button.disabled = _htp_page >= HowToPlayContent.PAGE_COUNT - 1
-		HudLayout.fit_text_button(htp_next_button, 22, 12)
+		HudLayout.apply_nav_button(htp_next_button)
 		HudLayout.refresh_button_icon_modulate(htp_next_button)
 
 func show_how_to_play() -> void:
@@ -379,17 +373,12 @@ func set_playtest_chrome_visible(should_show: bool) -> void:
 	else:
 		_set_playtest_buttons_disabled(false)
 
-func update_playtest_hud(time_remaining: int, moves: int, editor_time_limit: int, required_moves: int = -1) -> void:
+func update_playtest_hud(elapsed_seconds: int, moves: int, _editor_time_limit: int, required_moves: int = -1) -> void:
 	if timer_label:
 		HudLayout.prepare_counter_label(timer_label)
-		if editor_time_limit == 0:
-			timer_label.text = HudLayout.format_time_counter("∞", tr("TIME"))
-		else:
-			var minutes = max(0, int(time_remaining / 60.0))
-			var seconds = max(0, time_remaining % 60)
-			timer_label.text = HudLayout.format_time_counter(
-				"%02d:%02d" % [minutes, seconds], tr("TIME")
-			)
+		timer_label.text = HudLayout.format_time_counter(
+			LevelStars.format_clock(elapsed_seconds)
+		)
 	if moves_label:
 		HudLayout.prepare_counter_label(moves_label)
 		var target := required_moves if required_moves >= 0 else moves
@@ -406,12 +395,28 @@ func update_playtest_joker_counter(current: int, required: int) -> void:
 	)
 
 func set_playtest_joker_counter_visibility(visible_state: bool) -> void:
-	if jokers_label:
+	var slot := jokers_label.get_parent() as Control if jokers_label else null
+	if slot:
+		slot.visible = visible_state
+	elif jokers_label:
 		jokers_label.visible = visible_state
+	HudLayout.align_counter_row(counter_container)
 
 func set_playtest_move_counter_visibility(visible_state: bool) -> void:
-	if moves_label:
+	var slot := moves_label.get_parent() as Control if moves_label else null
+	if slot:
+		slot.visible = visible_state
+	elif moves_label:
 		moves_label.visible = visible_state
+	HudLayout.align_counter_row(counter_container)
+
+func set_playtest_hint_remaining(remaining: int) -> void:
+	_hint_remaining = remaining
+	_refresh_playtest_hint_visual()
 
 func set_playtest_hint_button_disabled(is_disabled: bool) -> void:
-	HintController.update_button(hint_button, not is_disabled)
+	_hint_forced_disabled = is_disabled
+	_refresh_playtest_hint_visual()
+
+func _refresh_playtest_hint_visual() -> void:
+	HintController.update_button(hint_button, not _hint_forced_disabled, _hint_remaining)

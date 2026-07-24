@@ -11,7 +11,7 @@
 [ext_resource type="Texture2D" uid="uid://duph5sjcrwtwc" path="res://resources/icons/icon_hint_on.svg" id="tex_hint"]
 [ext_resource type="Texture2D" uid="uid://bh7sa76f3c8je" path="res://resources/icons/icon_pause.svg" id="tex_pause"]
 [ext_resource type="Texture2D" uid="uid://4oqca6cnuifh" path="res://resources/icons/icon_redo.svg" id="tex_redo"]
-[ext_resource type="Texture2D" uid="uid://blpwipbhfjhjb" path="res://resources/icons/icon_reset.svg" id="tex_reset"]
+[ext_resource type="Texture2D" uid="uid://da6jovgg77ml0" path="res://resources/icons/icon_random.svg" id="tex_random"]
 [ext_resource type="Texture2D" uid="uid://tdm07fs8c43h" path="res://resources/icons/icon_rules.svg" id="tex_rules"]
 [ext_resource type="Texture2D" uid="uid://dwj0omtseqty7" path="res://resources/icons/icon_undo.svg" id="tex_undo"]
 
@@ -167,7 +167,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 mouse_filter = 2
-texture = ExtResource("tex_reset")
+texture = ExtResource("tex_random")
 expand_mode = 1
 stretch_mode = 5
 
@@ -344,7 +344,7 @@ offset_bottom = 228.0
 grow_horizontal = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
-alignment = 0
+alignment = 1
 
 [node name="TimerSlot" type="Control" parent="HUDLayer/HUDControl/CounterContainer" unique_id=999999995]
 custom_minimum_size = Vector2(0, 72)
@@ -372,7 +372,7 @@ theme_override_constants/outline_size = 6
 theme_override_fonts/normal_font = ExtResource("font_ps2p")
 theme_override_font_sizes/normal_font_size = 28
 bbcode_enabled = true
-text = "[center]TIME 00:00[/center]"
+text = "[center]00:00[/center]"
 scroll_active = false
 fit_content = false
 autowrap_mode = 0
@@ -470,7 +470,7 @@ mouse_filter = 2
 
 [node name="VictoryPanel" type="Panel" parent="EndLayer/CenterContainer" unique_id=980826821]
 visible = false
-custom_minimum_size = Vector2(600, 600)
+custom_minimum_size = Vector2(680, 720)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
 
@@ -478,7 +478,9 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_top = 40.0
+offset_left = 24.0
+offset_top = 28.0
+offset_right = -24.0
 offset_bottom = 110.0
 grow_horizontal = 2
 theme_override_colors/font_color = Color(1, 0.84, 0, 1)
@@ -492,20 +494,24 @@ vertical_alignment = 1
 autowrap_mode = 3
 
 [node name="TimeResultLabel" type="Label" parent="EndLayer/CenterContainer/VictoryPanel" unique_id=1250829313]
+visible = false
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_top = 160.0
-offset_bottom = 200.0
+offset_left = 24.0
+offset_top = 130.0
+offset_right = -24.0
+offset_bottom = 280.0
 grow_horizontal = 2
 theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
 theme_override_fonts/font = ExtResource("font_ps2p")
-theme_override_font_sizes/font_size = 20
-text = "COMPLETION TIME: 00:00"
+theme_override_font_sizes/font_size = 18
+text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
+autowrap_mode = 3
 
 [node name="RestartButton" type="Button" parent="EndLayer/CenterContainer/VictoryPanel" unique_id=22368695]
 custom_minimum_size = Vector2(500, 120)
@@ -594,116 +600,6 @@ theme_override_font_sizes/font_size = 28
 text = "MAIN MENU"
 vertical_alignment = 1
 
-[node name="DefeatPanel" type="Panel" parent="EndLayer/CenterContainer" unique_id=842097150]
-visible = false
-custom_minimum_size = Vector2(600, 600)
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
-
-[node name="DefeatLabel" type="Label" parent="EndLayer/CenterContainer/DefeatPanel" unique_id=312713180]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_top = 40.0
-offset_bottom = 110.0
-grow_horizontal = 2
-theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 10
-theme_override_fonts/font = ExtResource("font_ps2p")
-theme_override_font_sizes/font_size = 24
-text = "TIME'S UP!"
-horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 3
-
-[node name="RestartButton" type="Button" parent="EndLayer/CenterContainer/DefeatPanel" unique_id=293220160]
-custom_minimum_size = Vector2(500, 120)
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -250.0
-offset_top = -60.0
-offset_right = 250.0
-offset_bottom = 60.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
-
-[node name="HBoxContainer" type="HBoxContainer" parent="EndLayer/CenterContainer/DefeatPanel/RestartButton" unique_id=1901386151]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-alignment = 1
-
-[node name="Label" type="Label" parent="EndLayer/CenterContainer/DefeatPanel/RestartButton/HBoxContainer" unique_id=1241242006]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
-theme_override_fonts/font = ExtResource("font_ps2p")
-theme_override_font_sizes/font_size = 28
-text = "TRY AGAIN"
-vertical_alignment = 1
-
-[node name="MainMenuButton" type="Button" parent="EndLayer/CenterContainer/DefeatPanel" unique_id=1168522731]
-custom_minimum_size = Vector2(500, 120)
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -250.0
-offset_top = 100.0
-offset_right = 250.0
-offset_bottom = 220.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
-
-[node name="HBoxContainer" type="HBoxContainer" parent="EndLayer/CenterContainer/DefeatPanel/MainMenuButton" unique_id=1546153640]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme_override_constants/separation = 8
-alignment = 1
-
-[node name="Icon" type="TextureRect" parent="EndLayer/CenterContainer/DefeatPanel/MainMenuButton/HBoxContainer" unique_id=1413397421]
-custom_minimum_size = Vector2(40, 40)
-layout_mode = 2
-mouse_filter = 2
-texture = ExtResource("tex_exit")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Label" type="Label" parent="EndLayer/CenterContainer/DefeatPanel/MainMenuButton/HBoxContainer" unique_id=1794079449]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
-theme_override_fonts/font = ExtResource("font_ps2p")
-theme_override_font_sizes/font_size = 28
-text = "MAIN MENU"
-vertical_alignment = 1
-
 [node name="HowToPlayLayer" type="CanvasLayer" parent="." unique_id=1386313562]
 layer = 6
 
@@ -716,7 +612,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="HowToPlayPanel" type="Panel" parent="HowToPlayLayer/CenterContainer" unique_id=735210026]
-custom_minimum_size = Vector2(950, 980)
+custom_minimum_size = Vector2(950, 1040)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_htp")
 
@@ -726,9 +622,9 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 40.0
-offset_top = 36.0
+offset_top = 28.0
 offset_right = -40.0
-offset_bottom = -160.0
+offset_bottom = -150.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_colors/default_color = Color(1, 1, 1, 1)

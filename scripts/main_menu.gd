@@ -20,12 +20,19 @@ extends Control
 @onready var credits_panel = $UILayer/OverlayBlocker/CreditsPanel
 @onready var close_credits_btn = $UILayer/OverlayBlocker/CreditsPanel/VBoxContainer/CloseCreditsButton
 
+var _tutorial_intro_blocker: ColorRect
+var _tutorial_intro_label: Label
+var _tutorial_intro_yes: Button
+var _tutorial_intro_no: Button
+
 func _ready() -> void:
 	_apply_debug_tools_visibility()
 	_apply_editor_button_label()
+	_refresh_start_button_label()
 	_fit_menu_buttons()
 	HudLayout.apply_locale_fonts_to_tree(self)
 	_setup_title_under_fx()
+	_build_tutorial_intro_panel()
 	if SpaceBackground and SpaceBackground.has_method("set_foreground_events_enabled"):
 		SpaceBackground.set_foreground_events_enabled(true)
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
@@ -45,8 +52,9 @@ func _ready() -> void:
 	_mount_credits_header()
 
 	if options_menu:
-		if options_menu.has_signal("back_requested"):
-			options_menu.back_requested.connect(_on_options_back)
+		options_menu.back_requested.connect(_on_options_back)
+		if not options_menu.save_deleted.is_connected(_on_save_deleted):
+			options_menu.save_deleted.connect(_on_save_deleted)
 
 func _exit_tree() -> void:
 	if SpaceBackground and SpaceBackground.has_method("set_foreground_events_enabled"):
@@ -86,7 +94,6 @@ func _setup_title_under_fx() -> void:
 	var spacer := $UILayer/CenterContainer/VBoxContainer/Spacer as Control
 	if spacer:
 		spacer.custom_minimum_size.y = 48.0
-	var menu_center := $UILayer/CenterContainer as Control
 	if menu_center:
 		HudLayout.pin_menu_body_below_header(menu_center, 980.0)
 
@@ -126,17 +133,26 @@ func _configure_credits_layout() -> void:
 		credits_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 func _on_language_changed() -> void:
+	_refresh_start_button_label()
 	_fit_menu_buttons()
 	HudLayout.apply_locale_fonts_to_tree(self)
 
+func _refresh_start_button_label() -> void:
+	if not start_btn:
+		return
+	if SaveManager and SaveManager.has_session():
+		start_btn.text = "UI_RESUME"
+	else:
+		start_btn.text = "UI_PLAY"
+
+func _on_save_deleted() -> void:
+	_refresh_start_button_label()
+	_fit_menu_buttons()
+
 func _fit_menu_buttons() -> void:
 	for btn in [start_btn, levels_btn, options_btn, credits_btn, editor_btn]:
-		if btn:
-			btn.custom_minimum_size = Vector2(maxf(btn.custom_minimum_size.x, 600.0), maxf(btn.custom_minimum_size.y, 130.0))
-			HudLayout.fit_text_button(btn, 36, 18)
-	if close_credits_btn:
-		close_credits_btn.custom_minimum_size = Vector2(240, 90)
-		HudLayout.fit_text_button(close_credits_btn, 24, 16)
+		HudLayout.apply_primary_button(btn)
+	HudLayout.apply_secondary_button(close_credits_btn)
 	var title = get_node_or_null("TitleLayer/TitleHost/TitleLabel") as Label
 	if title == null:
 		title = get_node_or_null("UILayer/CenterContainer/VBoxContainer/TitleLabel") as Label
@@ -145,7 +161,6 @@ func _fit_menu_buttons() -> void:
 		HudLayout.apply_screen_header_style(title)
 	var credits_text_node = credits_panel.get_node_or_null("VBoxContainer/CreditsText") if credits_panel else null
 	if credits_text_node:
-		credits_text_node.add_theme_font_size_override("normal_font_size", 26)
 		_apply_credits_fonts(credits_text_node)
 
 func _set_main_menu_chrome_visible(should_show: bool) -> void:
@@ -156,9 +171,15 @@ func _set_main_menu_chrome_visible(should_show: bool) -> void:
 		title_layer.visible = should_show
 
 func _apply_credits_fonts(credits_text_node: RichTextLabel) -> void:
-	# Credits body uses the default font for glyph coverage; BBCode sizes stay compact.
-	credits_text_node.set_meta("_use_default_font", true)
-	HudLayout.apply_locale_font_to_control(credits_text_node)
+	# English credits use the pixel UI font; other locales need default-font coverage.
+	if HudLayout.uses_pixel_font():
+		credits_text_node.set_meta("_use_default_font", false)
+		HudLayout.apply_locale_font_to_control(credits_text_node)
+		credits_text_node.add_theme_font_size_override(
+			"normal_font_size", HudLayout.scaled_font_size(GameConstants.UI_BODY_FONT_SIZE)
+		)
+	else:
+		HudLayout.apply_body_richtext(credits_text_node, GameConstants.UI_BODY_FONT_SIZE)
 	credits_text_node.scroll_active = false
 	credits_text_node.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
@@ -181,7 +202,129 @@ func _set_debug_bar_visible(should_show: bool) -> void:
 
 func _on_start_pressed() -> void:
 	_apply_debug_tools_visibility()
+	if SaveManager and not SaveManager.tutorial_intro_answered:
+		_show_tutorial_intro_prompt()
+		return
+	_start_game()
+
+func _start_game() -> void:
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
+
+func _first_level_in_dir(dir_path: String) -> LevelData:
+	var paths := LevelUtils.scan_directory(dir_path)
+	LevelUtils.sort_level_paths(paths)
+	for path in paths:
+		var resource = load(path)
+		if resource is LevelData:
+			return resource
+	return null
+
+func _build_tutorial_intro_panel() -> void:
+	var ui_layer := $UILayer as CanvasLayer
+	if ui_layer == null:
+		return
+	_tutorial_intro_blocker = ColorRect.new()
+	_tutorial_intro_blocker.name = "TutorialIntroBlocker"
+	_tutorial_intro_blocker.color = Color(0, 0, 0, 0.72)
+	_tutorial_intro_blocker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_tutorial_intro_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+	_tutorial_intro_blocker.visible = false
+	ui_layer.add_child(_tutorial_intro_blocker)
+
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tutorial_intro_blocker.add_child(center)
+
+	var panel := Panel.new()
+	panel.custom_minimum_size = Vector2(680, 380)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.12, 0.12, 0.12, 1)
+	style.set_corner_radius_all(8)
+	panel.add_theme_stylebox_override("panel", style)
+	center.add_child(panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	vbox.offset_left = 36.0
+	vbox.offset_top = 36.0
+	vbox.offset_right = -36.0
+	vbox.offset_bottom = -36.0
+	vbox.add_theme_constant_override("separation", 28)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	panel.add_child(vbox)
+
+	_tutorial_intro_label = Label.new()
+	_tutorial_intro_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_tutorial_intro_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_tutorial_intro_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_tutorial_intro_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_tutorial_intro_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.55, 1.0))
+	_tutorial_intro_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	_tutorial_intro_label.add_theme_constant_override("outline_size", 8)
+	HudLayout.apply_popup_label(_tutorial_intro_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
+	vbox.add_child(_tutorial_intro_label)
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 40)
+	vbox.add_child(row)
+
+	_tutorial_intro_yes = Button.new()
+	_tutorial_intro_yes.pressed.connect(_on_tutorial_intro_yes)
+	row.add_child(_tutorial_intro_yes)
+
+	_tutorial_intro_no = Button.new()
+	_tutorial_intro_no.pressed.connect(_on_tutorial_intro_no)
+	row.add_child(_tutorial_intro_no)
+
+	_copy_menu_button_styles(_tutorial_intro_yes)
+	_copy_menu_button_styles(_tutorial_intro_no)
+
+func _copy_menu_button_styles(target: Button) -> void:
+	var source: Button = start_btn if start_btn else options_btn
+	if not source or not target:
+		return
+	for style_name in ["normal", "pressed", "hover", "disabled"]:
+		var style := source.get_theme_stylebox(style_name)
+		if style:
+			target.add_theme_stylebox_override(style_name, style)
+	target.add_theme_color_override("font_outline_color", Color.BLACK)
+	target.add_theme_constant_override("outline_size", 6)
+
+func _show_tutorial_intro_prompt() -> void:
+	if _tutorial_intro_label:
+		_tutorial_intro_label.text = tr("TUTORIAL_INTRO_PROMPT")
+		HudLayout.apply_popup_label(_tutorial_intro_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
+	if _tutorial_intro_yes:
+		_tutorial_intro_yes.text = tr("UI_YES")
+		HudLayout.apply_dialog_button(_tutorial_intro_yes)
+	if _tutorial_intro_no:
+		_tutorial_intro_no.text = tr("UI_NO")
+		HudLayout.apply_dialog_button(_tutorial_intro_no)
+	if _tutorial_intro_blocker:
+		_tutorial_intro_blocker.visible = true
+		_tutorial_intro_blocker.move_to_front()
+
+func _hide_tutorial_intro_prompt() -> void:
+	if _tutorial_intro_blocker:
+		_tutorial_intro_blocker.visible = false
+
+func _on_tutorial_intro_yes() -> void:
+	_hide_tutorial_intro_prompt()
+	SaveManager.set_tutorial_intro_answered(true)
+	var tutorial := _first_level_in_dir(GameConstants.CAMPAIGN_TUTORIALS_DIR)
+	if tutorial:
+		GlobalGameManager.selected_level_resource = tutorial
+	_start_game()
+
+func _on_tutorial_intro_no() -> void:
+	_hide_tutorial_intro_prompt()
+	SaveManager.set_tutorial_intro_answered(true)
+	var easy := _first_level_in_dir(GameConstants.CAMPAIGN_EASY_DIR)
+	if easy:
+		GlobalGameManager.selected_level_resource = easy
+	_start_game()
 
 func _on_levels_pressed() -> void:
 	_apply_debug_tools_visibility()
@@ -196,6 +339,7 @@ func _on_options_pressed() -> void:
 func _on_options_back() -> void:
 	_set_main_menu_chrome_visible(true)
 	_set_debug_bar_visible(true)
+	_refresh_start_button_label()
 	_fit_menu_buttons()
 
 func _on_credits_pressed() -> void:
@@ -206,7 +350,6 @@ func _on_credits_pressed() -> void:
 	var credits_text = credits_panel.get_node_or_null("VBoxContainer/CreditsText") if credits_panel else null
 	if credits_text:
 		credits_text.text = tr("CREDITS_TEXT")
-		credits_text.add_theme_font_size_override("normal_font_size", 26)
 		_apply_credits_fonts(credits_text)
 
 func _on_close_credits() -> void:

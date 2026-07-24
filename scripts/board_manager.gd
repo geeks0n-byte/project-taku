@@ -197,6 +197,18 @@ func clear_guide_cells() -> void:
 		if board_cells[coord].guide_active:
 			board_cells[coord].set_guide_highlight(false)
 
+## Red cell borders for tutorial attention (independent of white masks).
+func set_focus_cells(coords: Array) -> void:
+	clear_focus_cells()
+	for c in coords:
+		if board_cells.has(c):
+			board_cells[c].set_focus_highlight(true)
+
+func clear_focus_cells() -> void:
+	for coord in board_cells:
+		if board_cells[coord].focus_active:
+			board_cells[coord].set_focus_highlight(false)
+
 func set_cell_cycle_tiles(coord: Vector2i, tiles: Array) -> void:
 	if not board_cells.has(coord):
 		return

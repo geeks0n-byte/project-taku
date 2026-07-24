@@ -188,7 +188,7 @@ columns = 3
 
 [node name="LevelButtonTemplate" type="Button" parent="UILayer/CenterContainer/VBoxContainer/ScrollContainer/LevelGrid"]
 visible = false
-custom_minimum_size = Vector2(260, 240)
+custom_minimum_size = Vector2(260, 200)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.4, 1, 0.4, 1)
@@ -205,7 +205,7 @@ TEMPLATE"
 
 [node name="LevelButtonTemplateLocked" type="Button" parent="UILayer/CenterContainer/VBoxContainer/ScrollContainer/LevelGrid"]
 visible = false
-custom_minimum_size = Vector2(260, 240)
+custom_minimum_size = Vector2(260, 200)
 layout_mode = 2
 size_flags_horizontal = 3
 disabled = true
@@ -223,7 +223,7 @@ TEMPLATE"
 
 [node name="LevelButtonTemplateCustom" type="Button" parent="UILayer/CenterContainer/VBoxContainer/ScrollContainer/LevelGrid"]
 visible = false
-custom_minimum_size = Vector2(260, 240)
+custom_minimum_size = Vector2(260, 200)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 0.84, 0, 1)

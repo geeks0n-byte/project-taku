@@ -112,7 +112,20 @@ theme_override_font_sizes/font_size = 32
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-text = "UI_RESTART"
+text = "UI_NEW_LAYOUT"
+
+[node name="LevelSelectButton" type="Button" parent="CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(500, 120)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "UI_LEVEL_SELECT"
 
 [node name="SettingsButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=265163748]
 custom_minimum_size = Vector2(500, 120)

@@ -34,6 +34,19 @@ static func position_counter_row(counter_row: Control) -> void:
 		GameConstants.HUD_COUNTER_ROW_HEIGHT,
 		GameConstants.HUD_TOP_BAR_EDGE_MARGIN
 	)
+	align_counter_row(counter_row)
+
+## Keep counter HBox centered; hidden slots collapse so a solo timer spans the row.
+static func align_counter_row(counter_row: Control) -> void:
+	if counter_row == null:
+		return
+	if counter_row is HBoxContainer:
+		(counter_row as HBoxContainer).alignment = BoxContainer.ALIGNMENT_CENTER
+	for child in counter_row.get_children():
+		if child is Control and (child as Control).visible:
+			var slot := child as Control
+			slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			slot.size_flags_stretch_ratio = 1.0
 
 static func position_top_bar(top_bar: Control) -> void:
 	position_top_wide(
@@ -92,13 +105,18 @@ static func mount_screen_header(host: Node, label: Label) -> void:
 	apply_screen_header_style(label)
 
 ## Pull menu body up under the shared header (CenterContainer otherwise leaves a large gap).
-static func pin_menu_body_below_header(body: Control, approx_body_height: float = 980.0) -> void:
+static func pin_menu_body_below_header(
+	body: Control,
+	approx_body_height: float = 980.0,
+	extra_gap: float = 0.0
+) -> void:
 	if body == null:
 		return
 	body.offset_top = (
 		GameConstants.SCREEN_HEADER_TOP
 		+ GameConstants.SCREEN_HEADER_HEIGHT
 		+ GameConstants.SCREEN_CONTENT_GAP
+		+ extra_gap
 	)
 	var vh := 1920.0
 	if body.get_viewport():
@@ -146,6 +164,14 @@ static func font_scale() -> float:
 static func scaled_font_size(base: int) -> int:
 	return int(round(float(base) * font_scale()))
 
+## Body/status copy always uses the default font — scale even for English.
+static func body_font_size(base: int) -> int:
+	var scale := GameConstants.DEFAULT_FONT_SCALE
+	var locale := TranslationServer.get_locale().substr(0, 2)
+	if locale == "ka":
+		scale *= 1.15
+	return int(round(float(base) * scale))
+
 ## Temporary: pixel font for English only; all other locales use the default font.
 const PIXEL_FONT: Font = preload("res://resources/fonts/PressStart2P-vaV7.ttf")
 
@@ -189,7 +215,14 @@ static func apply_locale_font_to_control(node: Node) -> void:
 	if is_status_label(node) and node is RichTextLabel:
 		apply_status_font(node as RichTextLabel)
 		return
-	var font := ThemeDB.fallback_font if node.get_meta("_use_default_font", false) else ui_font()
+	var use_default := bool(node.get_meta("_use_default_font", false))
+	# Constraint brush glyphs (= / ×) always need the default font.
+	if not use_default and node is Label:
+		var label_text := (node as Label).text
+		if label_text == "=" or label_text == "×":
+			use_default = true
+			node.set_meta("_use_default_font", true)
+	var font := ThemeDB.fallback_font if use_default else ui_font()
 	if node is Button or node is Label or node is LineEdit or node is OptionButton:
 		node.add_theme_font_override("font", font)
 	elif node is RichTextLabel:
@@ -212,19 +245,91 @@ static func fit_text_button(button: Button, base_font_size: int = 36, min_font_s
 	button.clip_text = false
 	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	apply_locale_font_to_control(button)
-	var font: Font = ui_font()
+	var font: Font = (
+		ThemeDB.fallback_font if button.get_meta("_use_default_font", false) else ui_font()
+	)
+	if font == null:
+		font = ThemeDB.fallback_font
 	var target_w := maxf(40.0, button.custom_minimum_size.x - 28.0)
 	var target_h := maxf(40.0, button.custom_minimum_size.y - 24.0)
 	var display := button.text
 	if button.auto_translate_mode != Node.AUTO_TRANSLATE_MODE_DISABLED:
 		display = String(TranslationServer.translate(button.text))
 	var size := scaled_font_size(base_font_size)
-	while size > min_font_size:
+	var min_size := scaled_font_size(min_font_size)
+	while size > min_size:
 		var measured := font.get_multiline_string_size(display, HORIZONTAL_ALIGNMENT_CENTER, target_w, size)
 		if measured.x <= target_w + 2.0 and measured.y <= target_h + 2.0:
 			break
 		size -= 2
 	button.add_theme_font_size_override("font_size", size)
+
+static func apply_primary_button(button: Button) -> void:
+	if not button:
+		return
+	button.custom_minimum_size = GameConstants.UI_BTN_PRIMARY_SIZE
+	fit_text_button(
+		button, GameConstants.UI_BTN_PRIMARY_FONT, GameConstants.UI_BTN_PRIMARY_FONT_MIN
+	)
+
+static func apply_secondary_button(button: Button) -> void:
+	if not button:
+		return
+	button.custom_minimum_size = GameConstants.UI_BTN_SECONDARY_SIZE
+	fit_text_button(
+		button, GameConstants.UI_BTN_SECONDARY_FONT, GameConstants.UI_BTN_SECONDARY_FONT_MIN
+	)
+
+static func apply_dialog_button(button: Button) -> void:
+	if not button:
+		return
+	button.custom_minimum_size = GameConstants.UI_BTN_DIALOG_SIZE
+	fit_text_button(
+		button, GameConstants.UI_BTN_DIALOG_FONT, GameConstants.UI_BTN_DIALOG_FONT_MIN
+	)
+
+static func apply_nav_button(button: Button) -> void:
+	if not button:
+		return
+	button.custom_minimum_size = GameConstants.UI_BTN_NAV_SIZE
+	fit_text_button(button, GameConstants.UI_BTN_NAV_FONT, GameConstants.UI_BTN_NAV_FONT_MIN)
+
+static func apply_panel_button(button: Button) -> void:
+	if not button:
+		return
+	button.custom_minimum_size = GameConstants.UI_BTN_PANEL_SIZE
+	fit_text_button(button, GameConstants.UI_BTN_PANEL_FONT, GameConstants.UI_BTN_PANEL_FONT_MIN)
+
+static func apply_tab_button(button: Button) -> void:
+	if not button:
+		return
+	button.custom_minimum_size = GameConstants.UI_BTN_TAB_SIZE
+	fit_text_button(button, GameConstants.UI_BTN_TAB_FONT, GameConstants.UI_BTN_TAB_FONT_MIN)
+
+## Popup body copy: pixel font in English, default font elsewhere.
+static func apply_popup_label(label: Label, base_size: int = GameConstants.UI_BODY_FONT_SIZE) -> void:
+	if not label:
+		return
+	label.set_meta("_use_default_font", not uses_pixel_font())
+	apply_locale_font_to_control(label)
+	var size := base_size if uses_pixel_font() else body_font_size(base_size)
+	label.add_theme_font_size_override("font_size", size)
+
+static func apply_body_label(label: Label, base_size: int = GameConstants.UI_BODY_FONT_SIZE) -> void:
+	if not label:
+		return
+	label.set_meta("_use_default_font", true)
+	apply_locale_font_to_control(label)
+	label.add_theme_font_size_override("font_size", body_font_size(base_size))
+
+static func apply_body_richtext(
+	label: RichTextLabel, base_size: int = GameConstants.UI_BODY_FONT_SIZE
+) -> void:
+	if not label:
+		return
+	label.set_meta("_use_default_font", true)
+	apply_locale_font_to_control(label)
+	label.add_theme_font_size_override("normal_font_size", body_font_size(base_size))
 
 static func apply_toggle_active_mask(button: Button, is_on: bool, tint: Color = GameConstants.TOGGLE_MASK_AMBER) -> void:
 	if not button:
@@ -397,6 +502,9 @@ static func _ensure_named_spacer(top_bar_row: HBoxContainer, spacer_name: String
 static func apply_top_bar_mode_label(label: RichTextLabel) -> void:
 	if not label:
 		return
+	# Non-English locales: default font (pixel font is English-only for now).
+	label.set_meta("_use_default_font", not uses_pixel_font())
+	apply_locale_font_to_control(label)
 	label.custom_minimum_size = Vector2(220, 0)
 	label.fit_content = true
 	label.clip_contents = false
@@ -472,14 +580,11 @@ static func format_icon_ratio_counter(
 		icon_size, icon_size, icon_path, label_size, hex, caption, num_size, hex, current, required
 	]
 
-static func format_time_counter(formatted_time: String, label_text: String) -> String:
-	var label_size := scaled_font_size(GameConstants.HUD_COUNTER_LABEL_FONT_SIZE)
+static func format_time_counter(formatted_time: String, _label_text: String = "") -> String:
 	var num_size := scaled_font_size(GameConstants.HUD_COUNTER_FONT_SIZE)
 	if formatted_time == "∞":
 		var icon_size := GameConstants.HUD_INFINITY_ICON_SIZE
-		return "[center][font_size=%d]%s[/font_size] [img=%dx%d]%s[/img][/center]" % [
-			label_size, label_text, icon_size, icon_size, GameConstants.ICON_INFINITY
+		return "[center][img=%dx%d]%s[/img][/center]" % [
+			icon_size, icon_size, GameConstants.ICON_INFINITY
 		]
-	return "[center][font_size=%d]%s[/font_size] [font_size=%d]%s[/font_size][/center]" % [
-		label_size, label_text, num_size, formatted_time
-	]
+	return "[center][font_size=%d]%s[/font_size][/center]" % [num_size, formatted_time]

@@ -8,7 +8,7 @@ extends RefCounted
 ## 3) involves a cell that already has a hint
 ## 4) both cells empty
 ## Never links a wall. Type always matches the solved reference so the puzzle stays solvable.
-## Contractions tiles: Yellow, Blue, Green, Purple (shifter).
+## Contraction tiles: Yellow, Blue, Green, Purple (shifter).
 
 static func count_usable_hints(
 	board_cells: Dictionary,
@@ -26,15 +26,6 @@ static func count_usable_hints(
 		grid_size,
 		prefer_hidden_pool
 	).size()
-
-static func is_hint_usable(
-	board_cells: Dictionary,
-	active_constraints: Array,
-	solved_reference: Dictionary,
-	coord_a: Vector2i,
-	coord_b: Vector2i
-) -> bool:
-	return _make_candidate(board_cells, active_constraints, solved_reference, coord_a, coord_b) != null
 
 static func pick_hint(
 	board_cells: Dictionary,
@@ -299,11 +290,6 @@ static func _bucket_candidate(
 	var b_empty: bool = cell_b.state == GameConstants.TileState.EMPTY
 	var a_fixed: bool = cell_a.is_locked and cell_a.state != GameConstants.TileState.WALL
 	var b_fixed: bool = cell_b.is_locked and cell_b.state != GameConstants.TileState.WALL
-	# Shifters act as fixed anchors for teaching contractions.
-	if cell_a.state == GameConstants.TileState.SHIFTER:
-		a_fixed = true
-	if cell_b.state == GameConstants.TileState.SHIFTER:
-		b_fixed = true
 
 	var a_correct := false
 	var b_correct := false

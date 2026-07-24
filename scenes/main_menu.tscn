@@ -109,7 +109,7 @@ theme_override_font_sizes/font_size = 36
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-text = "UI_LEVELS"
+text = "UI_LEVEL_SELECT"
 
 [node name="OptionsButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=600817596]
 custom_minimum_size = Vector2(600, 120)

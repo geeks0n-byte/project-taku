@@ -13,8 +13,10 @@ var prefer_hidden_hints: bool = false
 var solved_solution_reference: Dictionary = {}
 var playtest_required_jokers: int = 0
 var playtest_required_shifter_moves: int = 0
-var playtest_time_remaining: int = 0
+var playtest_elapsed_seconds: int = 0
+var playtest_star_time_limit: int = 0
 var playtest_shifter_moves: int = 0
+var hints_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED
 
 var _timer: Timer
 var _undo_stack := UndoStack.new()
@@ -23,6 +25,7 @@ func setup(canvas: EditorCanvasManager, playtest_ui: PlaytestUIManager, editor: 
 	canvas_manager = canvas
 	pt_ui = playtest_ui
 	editor_ui = editor
+	_undo_stack.max_size = 0
 
 	_timer = Timer.new()
 	_timer.wait_time = 1.0
@@ -104,9 +107,10 @@ func enter(current_level_required_jokers: int) -> void:
 		if not full_solved.is_empty():
 			solved_solution_reference = full_solved
 
-	playtest_time_remaining = editor_ui.get_time_limit()
+	playtest_star_time_limit = editor_ui.get_time_limit()
+	playtest_elapsed_seconds = 0
 	playtest_shifter_moves = 0
-	pt_ui.set_playtest_move_counter_visibility(canvas_manager.loaded_shifter_pairs.size() > 0)
+	pt_ui.set_playtest_move_counter_visibility(false)
 	playtest_required_shifter_moves = LevelUtils.compute_required_shifter_moves(
 		canvas_manager.loaded_shifter_pairs
 	)
@@ -116,11 +120,11 @@ func enter(current_level_required_jokers: int) -> void:
 		saved_required = mini(canvas_manager.grid_width, canvas_manager.grid_height)
 	playtest_required_jokers = maxi(0, saved_required)
 
-	var has_jokers: bool = GameConstants.TileState.JOKER in editor_ui.get_allowed_tiles() and playtest_required_jokers > 0
-	pt_ui.set_playtest_joker_counter_visibility(has_jokers)
+	pt_ui.set_playtest_joker_counter_visibility(false)
 	_update_joker_count()
 
 	_undo_stack.reset(_create_snapshot())
+	hints_remaining = GameConstants.hint_limit_for_difficulty(editor_ui.editor_difficulty)
 	pt_ui.toggle_playtest_visibility(true)
 	_update_hud()
 	_timer.start()
@@ -131,6 +135,8 @@ func exit() -> void:
 	is_active = false
 	canvas_manager.is_playtesting = false
 	_timer.stop()
+	if canvas_manager:
+		canvas_manager.visible = true
 	pt_ui.hide_end_overlays()
 
 	for coord in canvas_manager.board_cells:
@@ -151,19 +157,25 @@ func exit() -> void:
 	pt_ui.toggle_playtest_visibility(false)
 
 func reset() -> void:
-	# Allow restart from victory/defeat overlays (is_active is false there).
+	# Allow restart from victory overlay (is_active is false there).
 	if not canvas_manager.is_playtesting:
 		return
 	is_active = true
 	_timer.stop()
+	if canvas_manager:
+		canvas_manager.visible = true
+	pt_ui.set_playtest_chrome_visible(true)
 	pt_ui.hide_end_overlays()
 	_restore_snapshot(playtest_snapshot)
 	canvas_manager.loaded_constraint_pairs = playtest_start_constraints.duplicate(true)
-	playtest_time_remaining = editor_ui.get_time_limit()
+	playtest_star_time_limit = editor_ui.get_time_limit()
+	playtest_elapsed_seconds = 0
 	playtest_shifter_moves = 0
-	pt_ui.set_playtest_move_counter_visibility(canvas_manager.loaded_shifter_pairs.size() > 0)
+	pt_ui.set_playtest_move_counter_visibility(false)
+	pt_ui.set_playtest_joker_counter_visibility(false)
 	_update_joker_count()
 	_undo_stack.reset(_create_snapshot())
+	hints_remaining = GameConstants.hint_limit_for_difficulty(editor_ui.editor_difficulty)
 	_update_hud()
 	_timer.start()
 	canvas_manager.trigger_redraw()
@@ -226,6 +238,9 @@ func redo() -> void:
 func request_hint() -> void:
 	if not is_active:
 		return
+	if hints_remaining == 0:
+		_refresh_hint_button()
+		return
 	var result = HintController.reveal_hint(
 		canvas_manager.board_cells,
 		canvas_manager.loaded_constraint_pairs,
@@ -260,10 +275,28 @@ func request_hint() -> void:
 			var pooled = playtest_hint_pool[i]
 			if (pooled["a"] == hint["a"] and pooled["b"] == hint["b"]) or (pooled["a"] == hint["b"] and pooled["b"] == hint["a"]):
 				playtest_hint_pool.remove_at(i)
+		if hints_remaining > 0:
+			hints_remaining -= 1
 		canvas_manager.trigger_redraw()
 		_run_validation()
 	else:
-		pt_ui.set_playtest_hint_button_disabled(true)
+		_refresh_hint_button()
+
+func _can_use_hint() -> bool:
+	if hints_remaining == 0:
+		return false
+	return HintController.has_usable_hints(
+		canvas_manager.board_cells,
+		canvas_manager.loaded_constraint_pairs,
+		solved_solution_reference,
+		playtest_hint_pool,
+		Vector2i(canvas_manager.grid_width, canvas_manager.grid_height),
+		prefer_hidden_hints
+	)
+
+func _refresh_hint_button() -> void:
+	pt_ui.set_playtest_hint_remaining(hints_remaining)
+	pt_ui.set_playtest_hint_button_disabled(not _can_use_hint())
 
 func pause_timer() -> void:
 	_timer.stop()
@@ -272,14 +305,7 @@ func resume_timer() -> void:
 	if is_active:
 		_timer.start()
 		pt_ui.update_playtest_undo_redo_buttons(_undo_stack.can_undo(), _undo_stack.can_redo())
-		pt_ui.set_playtest_hint_button_disabled(not HintController.has_usable_hints(
-			canvas_manager.board_cells,
-			canvas_manager.loaded_constraint_pairs,
-			solved_solution_reference,
-			playtest_hint_pool,
-			Vector2i(canvas_manager.grid_width, canvas_manager.grid_height),
-			prefer_hidden_hints
-		))
+		_refresh_hint_button()
 
 func _create_snapshot() -> Dictionary:
 	var snap := {}
@@ -318,9 +344,9 @@ func _update_joker_count() -> void:
 
 func _update_hud() -> void:
 	pt_ui.update_playtest_hud(
-		playtest_time_remaining,
+		playtest_elapsed_seconds,
 		playtest_shifter_moves,
-		editor_ui.get_time_limit(),
+		0,
 		playtest_required_shifter_moves
 	)
 
@@ -330,16 +356,9 @@ func _run_validation() -> void:
 		canvas_manager.board_cells,
 		canvas_manager.cached_lines,
 		canvas_manager.loaded_constraint_pairs,
-		playtest_required_jokers
+		-1
 	)
-	pt_ui.set_playtest_hint_button_disabled(not HintController.has_usable_hints(
-		canvas_manager.board_cells,
-		canvas_manager.loaded_constraint_pairs,
-		solved_solution_reference,
-		playtest_hint_pool,
-		Vector2i(canvas_manager.grid_width, canvas_manager.grid_height),
-		prefer_hidden_hints
-	))
+	_refresh_hint_button()
 	pt_ui.update_playtest_undo_redo_buttons(_undo_stack.can_undo(), _undo_stack.can_redo())
 	if not results["valid"]:
 		pt_ui.update_playtest_status("\n".join(results["errors"]), Color.WHITE)
@@ -351,36 +370,34 @@ func _run_validation() -> void:
 func _trigger_victory() -> void:
 	is_active = false
 	_timer.stop()
+	if canvas_manager:
+		canvas_manager.visible = false
 	pt_ui.show_victory_overlay(_build_end_stats())
 
-func _trigger_defeat() -> void:
-	is_active = false
-	_timer.stop()
-	pt_ui.show_defeat_overlay(_build_end_stats())
-
 func _build_end_stats() -> Dictionary:
-	var time_limit := editor_ui.get_time_limit()
-	var time_text := tr("UNLIMITED")
-	if time_limit > 0:
-		var minutes := maxi(0, int(playtest_time_remaining / 60.0))
-		var seconds := maxi(0, playtest_time_remaining % 60)
-		time_text = "%02d:%02d" % [minutes, seconds]
+	var has_shifters := canvas_manager.loaded_shifter_pairs.size() > 0
+	var star_result := LevelStars.evaluate(
+		playtest_elapsed_seconds,
+		playtest_star_time_limit,
+		LevelUtils.count_jokers_on_board(canvas_manager.board_cells),
+		playtest_required_jokers,
+		playtest_shifter_moves,
+		playtest_required_shifter_moves,
+		has_shifters
+	)
 	return {
-		"time_text": time_text,
+		"star_result": star_result,
+		"time_text": LevelStars.format_clock(playtest_elapsed_seconds),
 		"green_current": LevelUtils.count_jokers_on_board(canvas_manager.board_cells),
 		"green_required": playtest_required_jokers,
 		"show_green": playtest_required_jokers > 0,
 		"moves": playtest_shifter_moves,
 		"moves_required": playtest_required_shifter_moves,
-		"show_moves": canvas_manager.loaded_shifter_pairs.size() > 0,
+		"show_moves": has_shifters and playtest_required_shifter_moves > 0,
 	}
 
 func _on_timer_timeout() -> void:
 	if not is_active:
 		return
-	if editor_ui.get_time_limit() == 0:
-		return
-	playtest_time_remaining -= 1
+	playtest_elapsed_seconds += 1
 	_update_hud()
-	if playtest_time_remaining <= 0:
-		_trigger_defeat()

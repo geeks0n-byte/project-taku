@@ -37,9 +37,10 @@ const MAX_GRID_HEIGHT: int = 8
 @onready var height_minus: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GridSizeContainer/HeightMinus"
 @onready var height_label: Label = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GridSizeContainer/HeightLabel"
 @onready var height_plus: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GridSizeContainer/HeightPlus"
-@onready var keep_walls_toggle: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GridSizeContainer/KeepWallsToggle"
-@onready var unique_solution_toggle: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GridSizeContainer/UniqueSolutionToggle"
-@onready var random_button: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GridSizeContainer/RandomButton"
+@onready var keep_walls_toggle: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/KeepWallsToggle"
+@onready var unique_solution_toggle: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/UniqueSolutionToggle"
+@onready var difficulty_button: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/DifficultyButton"
+@onready var random_button: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/RandomButton"
 @onready var wall_button: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/WallButton"
 @onready var empty_button: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/EmptyButton"
 @onready var yellow_button: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/YellowButton"
@@ -68,6 +69,7 @@ var editor_height: int = 3
 var editor_level: int = 1
 var editor_time_limit: int = 0
 var is_playtesting_mode: bool = false
+var editor_difficulty: int = PuzzleGenerator.Difficulty.EASY
 
 const HOLD_INITIAL_DELAY := 0.35
 const HOLD_REPEAT_INTERVAL := 0.08
@@ -88,14 +90,23 @@ func setup_ui(grid_width: int, grid_height: int) -> void:
 	_update_number_labels()
 	_connect_ui_signals()
 	_refresh_toggle_masks()
+	_refresh_difficulty_button()
 	_apply_default_font_to_link_buttons()
+	_apply_star_time_label()
 	_disable_editor_hint_button()
 	if status_label and control_panel:
 		HudLayout.position_editor_status_below_panel(control_panel, status_label)
 	call_deferred("_emit_startup_signals")
 	# Re-apply after SaveManager's deferred locale font pass.
 	call_deferred("_apply_default_font_to_link_buttons")
+	call_deferred("_apply_star_time_label")
 	call_deferred("_disable_editor_hint_button")
+	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
+		SaveManager.language_changed.connect(_on_language_changed)
+
+func _on_language_changed() -> void:
+	_apply_default_font_to_link_buttons()
+	_apply_star_time_label()
 
 func _disable_editor_hint_button() -> void:
 	if not editor_hint_button:
@@ -106,14 +117,37 @@ func _disable_editor_hint_button() -> void:
 	HintController.update_button(editor_hint_button, false)
 
 func _apply_default_font_to_link_buttons() -> void:
+	# = / × glyphs need the default font; Press Start 2P lacks ×.
+	# Keep button size locked — default-font metrics at 56px were stretching the brush row.
+	const BRUSH_BTN := Vector2(120, 120)
 	for button in [equals_button, not_equals_button]:
 		if not button:
 			continue
+		button.custom_minimum_size = BRUSH_BTN
+		button.size = BRUSH_BTN
+		button.clip_contents = true
 		var label := button.get_node_or_null("IconContainer/Label") as Label
 		if not label:
 			continue
 		label.set_meta("_use_default_font", true)
 		label.add_theme_font_override("font", ThemeDB.fallback_font)
+		# Default font reads larger than pixel font; 52 fits the locked 120×120 buttons.
+		label.add_theme_font_size_override("font_size", 52)
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.custom_minimum_size = Vector2.ZERO
+		label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+
+func _apply_star_time_label() -> void:
+	var title := get_node_or_null(
+		"../EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/TimeTitleLabel"
+	) as Label
+	if not title:
+		return
+	# Keep the short label so the settings row width matches the old layout.
+	title.text = "TIME:"
+	title.tooltip_text = "Star time: beat this to earn the time star. Infinity = no time star."
 
 func _ensure_hold_timer() -> void:
 	if _hold_timer:
@@ -162,8 +196,8 @@ func _connect_ui_signals() -> void:
 	if editor_redo_button:
 		editor_redo_button.pressed.connect(func(): editor_redo_requested.emit())
 	if editor_hint_button:
-		# Edit-mode hint toggle is disabled; keep icon in the off state.
-		pass
+		# Edit-mode hint is currently forced off, but keep the signal wired for later.
+		editor_hint_button.toggled.connect(func(is_on: bool): editor_hint_toggled.emit(is_on))
 
 	if width_minus:
 		_bind_hold_button(width_minus, "width", -1)
@@ -178,6 +212,8 @@ func _connect_ui_signals() -> void:
 		unique_solution_toggle.pressed.connect(_on_settings_toggle_pressed)
 	if keep_walls_toggle:
 		keep_walls_toggle.pressed.connect(_on_settings_toggle_pressed)
+	if difficulty_button:
+		difficulty_button.pressed.connect(_on_difficulty_pressed)
 	if random_button:
 		random_button.pressed.connect(func(): random_requested.emit())
 
@@ -194,9 +230,13 @@ func _connect_ui_signals() -> void:
 	if shifter_button:
 		shifter_button.pressed.connect(func(): brush_changed.emit(3, "Shifter Tile Link Tool"))
 	if equals_button:
-		equals_button.pressed.connect(func(): brush_changed.emit(4, "Equals (=) Link Tool"))
+		equals_button.pressed.connect(
+			func(): brush_changed.emit(GameConstants.BrushTool.EQUALS, "Equals (=) Link Tool")
+		)
 	if not_equals_button:
-		not_equals_button.pressed.connect(func(): brush_changed.emit(5, "Not Equals (×) Link Tool"))
+		not_equals_button.pressed.connect(
+			func(): brush_changed.emit(GameConstants.BrushTool.NOT_EQUALS, "Not Equals (×) Link Tool")
+		)
 
 	if time_minus:
 		_bind_hold_button(time_minus, "time", -30)
@@ -268,9 +308,9 @@ func _update_number_labels() -> void:
 	if time_label:
 		time_label.custom_minimum_size = Vector2(140, 90)
 		if editor_time_limit == 0:
-			var infinity_size := 64
-			# Spacer below the glyph lifts infinity to align with nearby labels.
-			time_label.text = "[center][img=%dx%d]%s[/img]\n[font_size=2][color=#00000000].[/color][/font_size][/center]" % [
+			var infinity_size := GameConstants.EDITOR_INFINITY_ICON_SIZE
+			# Spacer below the glyph lifts it to align with nearby labels.
+			time_label.text = "[center][img=%dx%d]%s[/img]\n[font_size=3][color=#00000000].[/color][/font_size][/center]" % [
 				infinity_size, infinity_size, GameConstants.ICON_INFINITY
 			]
 		else:
@@ -308,14 +348,50 @@ func _refresh_toggle_masks() -> void:
 		HudLayout.apply_toggle_active_mask(
 			keep_walls_toggle,
 			keep_walls_toggle.button_pressed,
-			GameConstants.TOGGLE_MASK_LOCK
+			GameConstants.TOGGLE_MASK_WHITE
 		)
 	if unique_solution_toggle:
 		HudLayout.apply_toggle_active_mask(
 			unique_solution_toggle,
 			unique_solution_toggle.button_pressed,
-			GameConstants.TOGGLE_MASK_UNIQUE
+			GameConstants.TOGGLE_MASK_WHITE
 		)
+	_refresh_difficulty_button()
+
+func _on_difficulty_pressed() -> void:
+	editor_difficulty = (editor_difficulty + 1) % 3
+	_refresh_difficulty_button()
+	if not is_playtesting_mode:
+		update_status("", Color.WHITE)
+
+func _refresh_difficulty_button() -> void:
+	if not difficulty_button:
+		return
+	match editor_difficulty:
+		PuzzleGenerator.Difficulty.EASY:
+			difficulty_button.text = "DIFF\nEASY"
+			HudLayout.apply_toggle_active_mask(
+				difficulty_button, true, Color(0.45, 1.0, 0.45, 0.4)
+			)
+		PuzzleGenerator.Difficulty.HARD:
+			difficulty_button.text = "DIFF\nHARD"
+			HudLayout.apply_toggle_active_mask(
+				difficulty_button, true, Color(1.0, 0.45, 0.4, 0.4)
+			)
+		_:
+			difficulty_button.text = "DIFF\nMED"
+			HudLayout.apply_toggle_active_mask(
+				difficulty_button, true, GameConstants.TOGGLE_MASK_AMBER
+			)
+
+func get_generation_difficulty() -> int:
+	return editor_difficulty
+
+func set_generation_difficulty(difficulty: int) -> void:
+	editor_difficulty = clampi(
+		difficulty, PuzzleGenerator.Difficulty.EASY, PuzzleGenerator.Difficulty.HARD
+	)
+	_refresh_difficulty_button()
 
 func _start_hold(button: Button, target: String, amount: int) -> void:
 	_stop_hold(_hold_button)
@@ -371,14 +447,14 @@ func _adjust_value(target: String, amount: int) -> void:
 	if grid_changed:
 		grid_size_changed.emit(editor_width, editor_height)
 
-func update_status(msg: String, text_color: Color = Color.WHITE, translate: bool = true) -> void:
+func update_status(msg: String, text_color: Color = Color.WHITE, should_translate: bool = true) -> void:
 	if not status_label:
 		return
 	status_label.modulate = text_color
 	HudLayout.apply_status_font(status_label, GameConstants.HUD_EDITOR_STATUS_FONT_SIZE)
 	if msg.is_empty():
 		status_label.text = "[center][/center]"
-	elif translate:
+	elif should_translate:
 		status_label.text = "[center]" + HudLayout.translate_status_text(msg, true) + "[/center]"
 	else:
 		status_label.text = "[center]" + msg + "[/center]"
@@ -409,6 +485,11 @@ func set_unique_solution_required(is_required: bool) -> void:
 		unique_solution_toggle.button_pressed = is_required
 		_refresh_toggle_masks()
 
+func set_keep_walls_requested(keep: bool) -> void:
+	if keep_walls_toggle:
+		keep_walls_toggle.button_pressed = keep
+		_refresh_toggle_masks()
+
 func is_keep_walls_requested() -> bool:
 	if keep_walls_toggle:
 		return keep_walls_toggle.button_pressed
@@ -431,6 +512,9 @@ func show_overwrite_warning() -> void:
 	var warning_label := overwrite_panel.get_node_or_null("WarningLabel") as Label
 	if warning_label:
 		warning_label.text = "Level already exists.\nOverwrite?"
-	overwrite_panel.z_index = 5000
+		HudLayout.apply_popup_label(warning_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
+	HudLayout.apply_dialog_button(confirm_button)
+	HudLayout.apply_dialog_button(cancel_button)
+	overwrite_panel.z_index = 4096
 	overwrite_panel.move_to_front()
 	overwrite_panel.visible = true

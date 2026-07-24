@@ -134,6 +134,26 @@ static func solve_reference(
 		return test_layout
 	return {}
 
+## Returns 0, 1, 2+ (capped), or PuzzleGenerator.SOLUTIONS_UNKNOWN on timeout.
+## Pass a shared `iter` Dictionary to accumulate budget across multiple calls.
+static func count_solutions(
+	layout: Dictionary,
+	empty_cells: Array,
+	width: int,
+	height: int,
+	tiles: Array,
+	constraints: Array,
+	iter: Variant = null
+) -> int:
+	var test_layout = layout.duplicate()
+	var test_empty = empty_cells.duplicate()
+	var tracker: Dictionary = iter if typeof(iter) == TYPE_DICTIONARY else {"count": 0}
+	if not tracker.has("count"):
+		tracker["count"] = 0
+	return PuzzleGenerator._count_solutions(
+		test_layout, test_empty, width, height, tiles, constraints, tracker
+	)
+
 static func empty_cells_from_layout(layout: Dictionary) -> Array:
 	var empty_cells: Array = []
 	for coord in layout:
@@ -214,3 +234,28 @@ static func scan_campaign_levels() -> Array:
 		sort_level_paths(folder_paths)
 		found.append_array(folder_paths)
 	return found
+
+## Highest tutorial `level_number` (0 if none). Used to map playable IDs → display 1+.
+static func highest_tutorial_level_number() -> int:
+	var highest := 0
+	for path in scan_directory(GameConstants.CAMPAIGN_TUTORIALS_DIR):
+		var resource = load(path)
+		if resource is LevelData:
+			highest = maxi(highest, int(resource.level_number))
+	return highest
+
+## Player-facing level label number. Tutorials / custom keep authored numbers;
+## campaign playable levels (easy→hard) start at 1 after tutorials.
+static func get_display_level_number(level: LevelData) -> int:
+	if level == null:
+		return 0
+	var path := String(level.resource_path)
+	if path.begins_with(GameConstants.CAMPAIGN_TUTORIALS_DIR):
+		return int(level.level_number)
+	if (
+		path.begins_with(GameConstants.CAMPAIGN_EASY_DIR)
+		or path.begins_with(GameConstants.CAMPAIGN_MEDIUM_DIR)
+		or path.begins_with(GameConstants.CAMPAIGN_HARD_DIR)
+	):
+		return maxi(1, int(level.level_number) - highest_tutorial_level_number())
+	return int(level.level_number)
