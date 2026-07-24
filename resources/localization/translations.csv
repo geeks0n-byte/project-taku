@@ -38,6 +38,7 @@ UI_BGM_ON,MUSIC: ON,MÚSICA: SÍ,MUSIK: AN,MUSIQUE : OUI,MUZYKA: WŁ.,მუს�
 UI_BGM_OFF,MUSIC: OFF,MÚSICA: NO,MUSIK: AUS,MUSIQUE : NON,MUZYKA: WYŁ.,მუსიკა: გამორთ.,МУЗИКА: ВИМК.
 UI_SFX_ON,SFX: ON,SFX: SÍ,SFX: AN,SFX : OUI,SFX: WŁ.,SFX: ჩართ.,SFX: УВІМК.
 UI_SFX_OFF,SFX: OFF,SFX: NO,SFX: AUS,SFX : NON,SFX: WYŁ.,SFX: გამორთ.,SFX: ВИМК.
+UI_PRIVACY_POLICY,PRIVACY POLICY,POLÍTICA DE PRIVACIDAD,DATENSCHUTZ,POLITIQUE DE CONFIDENTIALITÉ,POLITYKA PRYWATNOŚCI,კონფიდენციალობა,ПОЛІТИКА КОНФІДЕНЦІЙНОСТІ
 SAVE_DELETED,SAVE DELETED! PROGRESS RESET.,¡PARTIDA BORRADA! PROGRESO RESTABLECIDO.,SPIELSTAND GELÖSCHT! FORTSCHRITT ZURÜCKGESETZT.,SAUVEGARDE SUPPRIMÉE ! PROGRESSION RÉINITIALISÉE.,ZAPIS USUNIĘTY! POSTĘP ZRESETOWANY.,შენახვა წაიშალა! პროგრესი განულდა.,ЗБЕРЕЖЕННЯ ВИДАЛЕНО! ПРОГРЕС СКИНУТО.
 CUSTOM_DELETED,ALL CUSTOM LEVELS DELETED FROM DEVICE!,¡TODOS LOS NIVELES PERSONALIZADOS BORRADOS DEL DISPOSITIVO!,ALLE BENUTZERDEFINIERTEN LEVEL VOM GERÄT GELÖSCHT!,TOUS LES NIVEAUX PERSONNALISÉS ONT ÉTÉ SUPPRIMÉS DE L'APPAREIL !,WSZYSTKIE WŁASNE POZIOMY USUNIĘTE Z URZĄDZENIA!,ყველა საკუთარი დონე წაიშალა მოწყობილობიდან!,ВСІ КОРИСТУВАЦЬКІ РІВНІ ВИДАЛЕНО З ПРИСТРОЮ!
 UNLOCK_ALL_DONE,ALL LEVELS UNLOCKED!,¡TODOS LOS NIVELES DESBLOQUEADOS!,ALLE LEVEL FREIGESCHALTET!,TOUS LES NIVEAUX DÉBLOQUÉS !,WSZYSTKIE POZIOMY ODBLOKOWANE!,ყველა დონე განბლოკილია!,УСІ РІВНІ ВІДБЛОКОВАНО!
@@ -163,6 +164,7 @@ ED_DEFEAT_TIME,DEFEAT!\nTIME RAN OUT,¡DERROTA!\nTIEMPO AGOTADO,NIEDERLAGE!\nZEI
 MSG_PUZZLE_SOLVED_SHORT,Puzzle solved!,¡Puzle resuelto!,Rätsel gelöst!,Puzzle résolu !,Zagadka rozwiązana!,თავსატეხი ამოხსნილია!,Головоломку вирішено!
 ERROR_INVALID_SHAPE,ERROR: This level's shape cannot mathematically generate a valid puzzle.,ERROR: La forma de este nivel no puede generar matemáticamente un puzle válido.,FEHLER: Die Form dieses Levels kann mathematisch kein gültiges Rätsel generieren.,ERREUR : La forme de ce niveau ne peut pas générer mathématiquement un puzzle valide.,BŁĄD: Kształt tego poziomu nie może matematycznie wygenerować poprawnej zagadki.,შეცდომა: ამ დონის ფორმა ვერ შექმნის ვალიდურ თავსატეხს.,ПОМИЛКА: Форма цього рівня математично не може згенерувати правильну головоломку.
 ERROR_NO_HINTS,No hints available. Check the board!,Sin pistas. ¡Revisa el tablero!,Keine Hinweise. Brett prüfen!,Aucun indice. Vérifiez le plateau !,Brak podpowiedzi. Sprawdź planszę!,მინიშნება არაა. შეამოწმეთ დაფა!,Немає підказок. Перевірте дошку!
+ERROR_AD_HINT_UNAVAILABLE,Watch an ad for another hint (ad not ready).,Mira un anuncio para otra pista (aún no listo).,Werbung ansehen für einen weiteren Tipp (noch nicht bereit).,Regardez une pub pour un autre indice (pas prêt).,Obejrzyj reklamę po kolejną podpowiedź (niedostępna).,მინიშნებისთვის ნახეთ რეკლამა (ჯერ არაა მზად).,Подивіться рекламу за ще одну підказку (ще не готова).
 EDIT_MODE,EDIT MODE,MODO EDICIÓN,BEARBEITEN,MODE ÉDITION,TRYB EDYCJI,რედაქტირების რეჟიმი,РЕЖИМ РЕДАКТОРА
 TEST_MODE,TEST MODE,MODO PRUEBA,TESTMODUS,MODE TEST,TRYB TESTOWANIA,ტესტირების რეჟიმი,РЕЖИМ ТЕСТУ
 LOCK_WALLS,LOCK WALLS,BLOQUEAR MUROS,WÄNDE SPERREN,VERR. MURS,ZABLOKUJ ŚCIANY,კედლების ჩაკეტვა,ЗАФІКСУВАТИ СТІНИ

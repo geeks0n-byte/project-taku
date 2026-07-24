@@ -31,27 +31,27 @@ signal resume_from_tutorial_requested
 @onready var tutorial_back_button: Button = $"../HowToPlayLayer/CenterContainer/NavRow/BackButton"
 @onready var htp_prev_button: Button = $"../HowToPlayLayer/CenterContainer/NavRow/PrevSlot/PrevButton"
 @onready var htp_next_button: Button = $"../HowToPlayLayer/CenterContainer/NavRow/NextSlot/NextButton"
+@onready var _end_layer: CanvasLayer = $"../PlaytestEndLayer"
+@onready var _end_dimmer: ColorRect = $"../PlaytestEndLayer/Dimmer"
+@onready var _center: CenterContainer = $"../PlaytestEndLayer/CenterContainer"
+@onready var _victory_panel: Panel = $"../PlaytestEndLayer/CenterContainer/VictoryPanel"
+@onready var _victory_title: Label = $"../PlaytestEndLayer/CenterContainer/VictoryPanel/VictoryTitle"
+@onready var _victory_results_host: Control = $"../PlaytestEndLayer/CenterContainer/VictoryPanel/VictoryResultsHost"
+@onready var _victory_preview: TextureRect = $"../PlaytestEndLayer/CenterContainer/VictoryPanel/VictoryBoardPreview"
+@onready var _victory_buttons: VBoxContainer = $"../PlaytestEndLayer/CenterContainer/VictoryPanel/VictoryButtons"
+@onready var _try_again_button: Button = $"../PlaytestEndLayer/CenterContainer/VictoryPanel/VictoryButtons/TryAgainButton"
+@onready var _return_button: Button = $"../PlaytestEndLayer/CenterContainer/VictoryPanel/VictoryButtons/ReturnButton"
 
 var _test_label_breathe_tween: Tween
 var _htp_page: int = 0
 var _htp_header: Label
 var _hint_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED
 var _hint_forced_disabled: bool = false
-
-var _end_layer: CanvasLayer
-var _end_dimmer: ColorRect
-var _victory_panel: Panel
-var _victory_title: Label
-var _victory_results_host: Control
-var _victory_preview: TextureRect
-var _victory_buttons: Control
 var _button_style_source: Button
-var _center: CenterContainer
 
 func _ready() -> void:
 	_button_style_source = exit_button if exit_button else reset_button
-	# Parent is still finishing _ready children; defer panel construction.
-	call_deferred("_build_end_panels")
+	_setup_end_layer()
 	if legacy_victory_panel:
 		legacy_victory_panel.visible = false
 	_connect_signals()
@@ -123,106 +123,37 @@ func _connect_signals() -> void:
 		htp_prev_button.pressed.connect(_on_htp_prev_pressed)
 	if htp_next_button:
 		htp_next_button.pressed.connect(_on_htp_next_pressed)
+	if _try_again_button and not _try_again_button.pressed.is_connected(_on_try_again_pressed):
+		_try_again_button.pressed.connect(_on_try_again_pressed)
+	if _return_button and not _return_button.pressed.is_connected(_on_return_pressed):
+		_return_button.pressed.connect(_on_return_pressed)
 
-func _build_end_panels() -> void:
-	if _end_layer and is_instance_valid(_end_layer):
-		return
-	_end_layer = CanvasLayer.new()
-	_end_layer.name = "PlaytestEndLayer"
-	_end_layer.layer = 5
-	get_parent().add_child(_end_layer)
+func _on_try_again_pressed() -> void:
+	playtest_reset_requested.emit()
 
-	_end_dimmer = ColorRect.new()
-	_end_dimmer.name = "Dimmer"
-	_end_dimmer.color = Color(0, 0, 0, 0)
-	_end_dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_end_dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
-	_end_dimmer.visible = false
-	_end_layer.add_child(_end_dimmer)
+func _on_return_pressed() -> void:
+	test_mode_exited.emit()
 
-	_center = CenterContainer.new()
-	_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_end_layer.add_child(_center)
-
-	_victory_panel = _make_end_panel(_center)
-	_victory_title = _make_end_title(_victory_panel, Color(1.0, 0.84, 0.0, 1.0))
-	_victory_results_host = _make_end_results_host(_victory_panel)
-	_victory_buttons = _make_end_buttons(_victory_panel)
-
+func _setup_end_layer() -> void:
+	if _center:
+		_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if _victory_panel:
+		_victory_panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
+	_style_end_buttons()
 	hide_end_overlays()
 
-func _make_end_panel(parent: Control) -> Panel:
-	var panel := Panel.new()
-	panel.visible = false
-	panel.custom_minimum_size = Vector2(840, 800)
-	panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
-	parent.add_child(panel)
-	return panel
-
-func _make_end_title(panel: Panel, _color: Color) -> Label:
-	var label := Label.new()
-	label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	label.offset_top = 24.0
-	label.offset_bottom = 200.0
-	label.offset_left = 28.0
-	label.offset_right = -28.0
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.clip_contents = false
-	label.clip_text = false
-	HudLayout.apply_end_screen_header_style(label, 48)
-	panel.add_child(label)
-	return label
-
-func _make_end_results_host(panel: Panel) -> Control:
-	var host := Control.new()
-	host.name = "VictoryResultsHost"
-	host.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	host.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	host.offset_left = 40.0
-	host.offset_right = -40.0
-	host.offset_top = 188.0
-	host.offset_bottom = 430.0
-	panel.add_child(host)
-	return host
-
-func _make_end_buttons(panel: Panel) -> Control:
-	var col := VBoxContainer.new()
-	col.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	col.offset_left = -260.0
-	col.offset_right = 260.0
-	col.offset_top = 450.0
-	col.offset_bottom = 720.0
-	col.alignment = BoxContainer.ALIGNMENT_CENTER
-	col.add_theme_constant_override("separation", 20)
-	panel.add_child(col)
-
-	var try_btn := _make_styled_button(tr("UI_TRY_AGAIN"))
-	try_btn.pressed.connect(func():
-		playtest_reset_requested.emit()
-	)
-	col.add_child(try_btn)
-
-	var return_btn := _make_styled_button(tr("RETURN"))
-	return_btn.pressed.connect(func():
-		test_mode_exited.emit()
-	)
-	col.add_child(return_btn)
-	return col
-
-func _make_styled_button(caption: String) -> Button:
-	var btn := Button.new()
-	btn.text = caption
-	if _button_style_source:
-		for style_name in ["normal", "pressed", "hover", "disabled"]:
-			var style := _button_style_source.get_theme_stylebox(style_name)
-			if style:
-				btn.add_theme_stylebox_override(style_name, style)
-	btn.add_theme_color_override("font_outline_color", Color.BLACK)
-	btn.add_theme_constant_override("outline_size", 8)
-	HudLayout.apply_panel_button(btn)
-	return btn
+func _style_end_buttons() -> void:
+	for btn in [_try_again_button, _return_button]:
+		if btn == null:
+			continue
+		if _button_style_source:
+			for style_name in ["normal", "pressed", "hover", "disabled"]:
+				var style := _button_style_source.get_theme_stylebox(style_name)
+				if style:
+					btn.add_theme_stylebox_override(style_name, style)
+		btn.add_theme_color_override("font_outline_color", Color.BLACK)
+		btn.add_theme_constant_override("outline_size", 8)
+		HudLayout.apply_panel_button(btn)
 
 func _layout_victory_panel(star_result: Dictionary) -> void:
 	if not _victory_panel or not _victory_results_host:
@@ -331,22 +262,16 @@ func show_victory_overlay(stats: Dictionary) -> void:
 	_layout_victory_panel(star_result)
 	if _victory_panel:
 		_victory_panel.visible = true
+	if _try_again_button:
+		_try_again_button.text = tr("UI_TRY_AGAIN")
+		HudLayout.apply_panel_button(_try_again_button)
+	if _return_button:
+		_return_button.text = tr("RETURN")
+		HudLayout.apply_panel_button(_return_button)
 
 func _ensure_victory_preview() -> void:
 	if _victory_preview and is_instance_valid(_victory_preview):
 		return
-	if _victory_panel == null:
-		return
-	_victory_preview = TextureRect.new()
-	_victory_preview.name = "VictoryBoardPreview"
-	_victory_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_victory_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_victory_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_victory_preview.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_victory_preview.visible = false
-	_victory_panel.add_child(_victory_preview)
-	if _victory_buttons:
-		_victory_panel.move_child(_victory_buttons, -1)
 
 func hide_end_overlays() -> void:
 	if _end_dimmer:

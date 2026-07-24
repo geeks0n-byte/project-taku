@@ -15,6 +15,9 @@ const PATH_WALL := "res://resources/tiles/tile_wall.svg"
 
 ## path@size -> resized Image
 static var _tile_image_cache: Dictionary = {}
+## layout hash + pixel_size (+ dirs) -> ImageTexture
+static var _preview_texture_cache: Dictionary = {}
+const _PREVIEW_CACHE_MAX := 64
 
 static func make_texture(level: LevelData, pixel_size: int = GameConstants.LEVEL_PREVIEW_SIZE) -> ImageTexture:
 	if level == null:
@@ -50,6 +53,10 @@ static func make_texture_from_layout(
 	if layout == null or layout.is_empty():
 		return ImageTexture.create_from_image(Image.create(pixel_size, pixel_size, false, Image.FORMAT_RGBA8))
 
+	var cache_key := _layout_cache_key(layout, pixel_size, shifter_dirs)
+	if _preview_texture_cache.has(cache_key):
+		return _preview_texture_cache[cache_key]
+
 	var max_x := 0
 	var max_y := 0
 	for coord in layout.keys():
@@ -79,7 +86,31 @@ static func make_texture_from_layout(
 			if state == GameConstants.TileState.SHIFTER and shifter_dirs.has(coord):
 				_blit_shifter_arrow(image, dst, cell, shifter_dirs[coord])
 
-	return ImageTexture.create_from_image(image)
+	var tex := ImageTexture.create_from_image(image)
+	_store_preview_texture(cache_key, tex)
+	return tex
+
+static func _layout_cache_key(layout: Dictionary, pixel_size: int, shifter_dirs: Dictionary) -> String:
+	var parts: PackedStringArray = []
+	parts.append(str(pixel_size))
+	var coords: Array = layout.keys()
+	coords.sort_custom(func(a, b): return str(a) < str(b))
+	for coord in coords:
+		parts.append("%s:%d" % [str(coord), int(layout[coord])])
+	if not shifter_dirs.is_empty():
+		var dir_coords: Array = shifter_dirs.keys()
+		dir_coords.sort_custom(func(a, b): return str(a) < str(b))
+		for coord in dir_coords:
+			var d: Vector2i = shifter_dirs[coord] as Vector2i
+			parts.append("d%s:%d,%d" % [str(coord), d.x, d.y])
+	return "|".join(parts)
+
+static func _store_preview_texture(key: String, tex: ImageTexture) -> void:
+	if _preview_texture_cache.size() >= _PREVIEW_CACHE_MAX:
+		# Drop an arbitrary oldest-ish entry (Dictionary keeps insertion order in Godot 4).
+		var first_key = _preview_texture_cache.keys()[0]
+		_preview_texture_cache.erase(first_key)
+	_preview_texture_cache[key] = tex
 
 ## Snapshot board cells including purple-tile arrow directions for solved previews.
 static func make_texture_from_board_cells(

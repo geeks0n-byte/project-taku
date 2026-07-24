@@ -20,6 +20,23 @@ extends Control
 @onready var overlay_blocker = $UILayer/OverlayBlocker
 @onready var credits_panel = $UILayer/OverlayBlocker/CreditsPanel
 @onready var close_credits_btn = $UILayer/OverlayBlocker/CreditsPanel/VBoxContainer/CloseCreditsButton
+@onready var _htp_host: Control = $UILayer/HowToPlayHost
+@onready var _htp_panel: Panel = $UILayer/HowToPlayHost/HowToPlayPanel
+@onready var _htp_rules: RichTextLabel = $UILayer/HowToPlayHost/HowToPlayPanel/RulesLabel
+@onready var _htp_nav: HBoxContainer = $UILayer/HowToPlayHost/NavRow
+@onready var _htp_prev: Button = $UILayer/HowToPlayHost/NavRow/PrevSlot/PrevButton
+@onready var _htp_close: Button = $UILayer/HowToPlayHost/NavRow/CloseButton
+@onready var _htp_next: Button = $UILayer/HowToPlayHost/NavRow/NextSlot/NextButton
+@onready var _tutorial_intro_blocker: ColorRect = $UILayer/TutorialIntroBlocker
+@onready var _tutorial_intro_label: Label = (
+	$UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/PromptLabel
+)
+@onready var _tutorial_intro_yes: Button = (
+	$UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/YesButton
+)
+@onready var _tutorial_intro_no: Button = (
+	$UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/NoButton
+)
 
 const TITLE_FONT_SIZE := 96
 const TITLE_OUTLINE := 14
@@ -30,19 +47,7 @@ const CREDITS_HEADER_OUTLINE := 14
 const CREDITS_BODY_SIZE := 54
 const MENU_FADE_IN := 0.65
 
-var _tutorial_intro_blocker: ColorRect
-var _tutorial_intro_label: Label
-var _tutorial_intro_yes: Button
-var _tutorial_intro_no: Button
-
-var _htp_host: Control
-var _htp_panel: Panel
-var _htp_rules: RichTextLabel
 var _htp_header: Label
-var _htp_nav: HBoxContainer
-var _htp_prev: Button
-var _htp_close: Button
-var _htp_next: Button
 var _htp_page: int = 0
 
 func _ready() -> void:
@@ -52,8 +57,11 @@ func _ready() -> void:
 	_fit_menu_buttons()
 	HudLayout.apply_locale_fonts_to_tree(self)
 	_setup_title_under_fx()
-	_build_tutorial_intro_panel()
-	_build_how_to_play_overlay()
+	_setup_tutorial_intro_panel()
+	_setup_how_to_play_overlay()
+	if AdsManager:
+		AdsManager.ensure_started()
+		AdsManager.show_menu_banner()
 	if SpaceBackground and SpaceBackground.has_method("set_foreground_events_enabled"):
 		SpaceBackground.set_foreground_events_enabled(true)
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
@@ -71,6 +79,11 @@ func _ready() -> void:
 	if debug_comet_shower_btn: debug_comet_shower_btn.pressed.connect(_on_debug_comet_shower_pressed)
 
 	if close_credits_btn: close_credits_btn.pressed.connect(_on_close_credits)
+	if _htp_prev: _htp_prev.pressed.connect(_on_htp_prev)
+	if _htp_close: _htp_close.pressed.connect(_on_htp_close)
+	if _htp_next: _htp_next.pressed.connect(_on_htp_next)
+	if _tutorial_intro_yes: _tutorial_intro_yes.pressed.connect(_on_tutorial_intro_yes)
+	if _tutorial_intro_no: _tutorial_intro_no.pressed.connect(_on_tutorial_intro_no)
 	_mount_credits_header()
 
 	if options_menu:
@@ -381,75 +394,17 @@ func _first_level_in_dir(dir_path: String) -> LevelData:
 			return resource
 	return null
 
-func _build_how_to_play_overlay() -> void:
-	var ui_layer := $UILayer as CanvasLayer
-	if ui_layer == null:
-		return
-	_htp_host = Control.new()
-	_htp_host.name = "HowToPlayHost"
-	_htp_host.visible = false
-	_htp_host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_htp_host.mouse_filter = Control.MOUSE_FILTER_STOP
-	ui_layer.add_child(_htp_host)
-
-	_htp_panel = Panel.new()
-	_htp_panel.name = "HowToPlayPanel"
-	_htp_panel.custom_minimum_size = Vector2(950, 1040)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0, 0, 0, 0)
-	_htp_panel.add_theme_stylebox_override("panel", style)
-	_htp_host.add_child(_htp_panel)
-
-	_htp_rules = RichTextLabel.new()
-	_htp_rules.name = "RulesLabel"
-	_htp_rules.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_htp_rules.offset_left = 40.0
-	_htp_rules.offset_top = 0.0
-	_htp_rules.offset_right = -40.0
-	_htp_rules.offset_bottom = -28.0
-	_htp_rules.bbcode_enabled = true
-	_htp_rules.scroll_active = false
-	_htp_rules.fit_content = false
-	_htp_rules.add_theme_color_override("default_color", Color.WHITE)
-	_htp_rules.add_theme_color_override("font_outline_color", Color.BLACK)
-	_htp_rules.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
-	_htp_rules.set_meta("_use_default_font", true)
-	_htp_panel.add_child(_htp_rules)
-
-	_htp_nav = HBoxContainer.new()
-	_htp_nav.name = "NavRow"
-	_htp_nav.add_theme_constant_override("separation", 20)
-	_htp_nav.alignment = BoxContainer.ALIGNMENT_CENTER
-	_htp_host.add_child(_htp_nav)
-
-	var prev_slot := Control.new()
-	prev_slot.name = "PrevSlot"
-	prev_slot.custom_minimum_size = GameConstants.UI_BTN_NAV_SIZE
-	_htp_nav.add_child(prev_slot)
-	_htp_prev = Button.new()
-	_htp_prev.name = "PrevButton"
-	_htp_prev.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_htp_prev.pressed.connect(_on_htp_prev)
-	prev_slot.add_child(_htp_prev)
-
-	_htp_close = Button.new()
-	_htp_close.name = "CloseButton"
-	_htp_close.pressed.connect(_on_htp_close)
-	_htp_nav.add_child(_htp_close)
-
-	var next_slot := Control.new()
-	next_slot.name = "NextSlot"
-	next_slot.custom_minimum_size = GameConstants.UI_BTN_NAV_SIZE
-	_htp_nav.add_child(next_slot)
-	_htp_next = Button.new()
-	_htp_next.name = "NextButton"
-	_htp_next.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_htp_next.pressed.connect(_on_htp_next)
-	next_slot.add_child(_htp_next)
-
-	_copy_menu_button_styles(_htp_prev)
-	_copy_menu_button_styles(_htp_close)
-	_copy_menu_button_styles(_htp_next)
+func _setup_how_to_play_overlay() -> void:
+	if _htp_host:
+		_htp_host.visible = false
+		_htp_host.mouse_filter = Control.MOUSE_FILTER_STOP
+	if _htp_rules:
+		_htp_rules.set_meta("_use_default_font", true)
+		_htp_rules.add_theme_color_override("default_color", Color.WHITE)
+		_htp_rules.add_theme_color_override("font_outline_color", Color.BLACK)
+		_htp_rules.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
+	for btn in [_htp_prev, _htp_close, _htp_next]:
+		_copy_menu_button_styles(btn)
 	HudLayout.layout_how_to_play(_htp_host, _htp_panel, _htp_nav)
 	HudLayout.ensure_how_to_play_nav_slots(_htp_nav, _htp_prev, _htp_next)
 	_htp_header = HudLayout.ensure_how_to_play_page_header(_htp_host)
@@ -490,62 +445,18 @@ func _on_htp_close() -> void:
 	_set_main_menu_chrome_visible(true)
 	_set_debug_bar_visible(true)
 
-func _build_tutorial_intro_panel() -> void:
-	var ui_layer := $UILayer as CanvasLayer
-	if ui_layer == null:
-		return
-	_tutorial_intro_blocker = ColorRect.new()
-	_tutorial_intro_blocker.name = "TutorialIntroBlocker"
-	_tutorial_intro_blocker.color = Color(0, 0, 0, 0.72)
-	_tutorial_intro_blocker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_tutorial_intro_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
-	_tutorial_intro_blocker.visible = false
-	ui_layer.add_child(_tutorial_intro_blocker)
-
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_tutorial_intro_blocker.add_child(center)
-
-	var panel := Panel.new()
-	panel.custom_minimum_size = Vector2(680, 380)
-	panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
-	center.add_child(panel)
-
-	var vbox := VBoxContainer.new()
-	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	vbox.offset_left = 36.0
-	vbox.offset_top = 36.0
-	vbox.offset_right = -36.0
-	vbox.offset_bottom = -36.0
-	vbox.add_theme_constant_override("separation", 28)
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	panel.add_child(vbox)
-
-	_tutorial_intro_label = Label.new()
-	_tutorial_intro_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_tutorial_intro_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_tutorial_intro_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_tutorial_intro_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_tutorial_intro_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.55, 1.0))
-	_tutorial_intro_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	_tutorial_intro_label.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
-	HudLayout.apply_popup_label(_tutorial_intro_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
-	vbox.add_child(_tutorial_intro_label)
-
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 40)
-	vbox.add_child(row)
-
-	_tutorial_intro_yes = Button.new()
-	_tutorial_intro_yes.pressed.connect(_on_tutorial_intro_yes)
-	row.add_child(_tutorial_intro_yes)
-
-	_tutorial_intro_no = Button.new()
-	_tutorial_intro_no.pressed.connect(_on_tutorial_intro_no)
-	row.add_child(_tutorial_intro_no)
-
+func _setup_tutorial_intro_panel() -> void:
+	if _tutorial_intro_blocker:
+		_tutorial_intro_blocker.visible = false
+		_tutorial_intro_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+	var panel := _tutorial_intro_blocker.get_node_or_null("CenterContainer/Panel") as Panel if _tutorial_intro_blocker else null
+	if panel:
+		panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
+	if _tutorial_intro_label:
+		_tutorial_intro_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.55, 1.0))
+		_tutorial_intro_label.add_theme_color_override("font_outline_color", Color.BLACK)
+		_tutorial_intro_label.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
+		HudLayout.apply_popup_label(_tutorial_intro_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
 	_copy_menu_button_styles(_tutorial_intro_yes)
 	_copy_menu_button_styles(_tutorial_intro_no)
 

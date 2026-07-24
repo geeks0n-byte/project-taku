@@ -7,6 +7,8 @@ var _leaving := false
 var _intro_tween: Tween
 
 func _ready() -> void:
+	if AdsManager:
+		AdsManager.hide_menu_banner()
 	if SpaceBackground and SpaceBackground.has_method("set_foreground_events_enabled"):
 		SpaceBackground.set_foreground_events_enabled(false)
 	# Splash is space background only — hide any credit / title chrome.

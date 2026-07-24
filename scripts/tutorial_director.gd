@@ -369,16 +369,11 @@ func _ensure_next_button() -> void:
 	if host == null:
 		return
 
-	_next_button = Button.new()
-	_next_button.name = "TutorialNextButton"
-	_next_button.visible = false
-	_next_button.focus_mode = Control.FOCUS_NONE
-	_apply_menu_button_styles(_next_button)
-	_next_button.add_theme_color_override("font_outline_color", Color.BLACK)
-	_next_button.add_theme_constant_override("outline_size", 8)
-	HudLayout.apply_nav_button(_next_button)
-	_next_button.pressed.connect(_on_next_pressed)
-	host.add_child(_next_button)
+	_next_button = host.get_node_or_null("TutorialNextButton") as Button
+	if _next_button == null:
+		return
+	if not _next_button.pressed.is_connected(_on_next_pressed):
+		_next_button.pressed.connect(_on_next_pressed)
 	_position_next_button()
 
 func _position_next_button() -> void:
@@ -393,27 +388,3 @@ func _position_next_button() -> void:
 	_next_button.offset_top = -(GameConstants.UI_BTN_NAV_SIZE.y + bottom_margin)
 	_next_button.offset_bottom = -bottom_margin
 	_next_button.z_index = 8
-
-func _apply_menu_button_styles(button: Button) -> void:
-	var tex := load("res://resources/buttons/button_tile_gray_dark.svg") as Texture2D
-	if tex == null:
-		return
-	for style_name in ["normal", "pressed", "hover", "disabled"]:
-		var box := StyleBoxTexture.new()
-		box.texture = tex
-		box.texture_margin_left = 16.0
-		box.texture_margin_top = 16.0
-		box.texture_margin_right = 16.0
-		box.texture_margin_bottom = 16.0
-		box.content_margin_left = 8.0
-		box.content_margin_top = 8.0
-		box.content_margin_right = 8.0
-		box.content_margin_bottom = 8.0
-		match style_name:
-			"pressed":
-				box.modulate_color = Color(0.8, 0.8, 0.8, 1)
-			"hover":
-				box.modulate_color = Color(1.2, 1.2, 1.2, 1)
-			"disabled":
-				box.modulate_color = Color(0.5, 0.5, 0.5, 1)
-		button.add_theme_stylebox_override(style_name, box)

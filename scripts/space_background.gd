@@ -4,8 +4,12 @@ extends ParallaxBackground
 @export var event_spawn_interval: Vector2 = Vector2(0.2, 12.0)
 ## Chance that a random event draws above the main-menu title (0–1).
 @export var foreground_event_chance: float = 0.38
+## Cap concurrent RigidBody asteroids to avoid frame spikes on phones.
+@export var max_active_asteroids: int = 10
 
 const ASSET_DIR = "res://resources/background/"
+const ASTEROID_POOL_SIZE := 16
+const ASTEROID_LIFETIME_SEC := 120.0
 
 const ASSET_FILES = {
 	"void": "bg_0_void.svg",
@@ -39,6 +43,10 @@ var _static_mode: bool = false
 var _static_rect: TextureRect
 var _twinkle_tween: Tween
 var _parallax_layer_nodes: Array[ParallaxLayer] = []
+var _asteroid_pool: Array[RigidBody2D] = []
+var _asteroid_pool_root: Node2D
+var _active_asteroid_count: int = 0
+var _asteroid_phys_mat: PhysicsMaterial
 
 func _ready() -> void:
 	layer = -2
@@ -46,6 +54,7 @@ func _ready() -> void:
 	_build_background_layers()
 	_build_foreground_fx_layer()
 	_load_fx_assets()
+	_init_asteroid_pool()
 	_setup_timer("event", event_spawn_interval, _on_event_timeout)
 	call_deferred("_on_viewport_size_changed")
 	if SaveManager:
@@ -73,7 +82,90 @@ func _clear_foreground_fx() -> void:
 	for layer_node in [_fg_stars, _fg_comets, _fg_asteroids]:
 		if layer_node:
 			for child in layer_node.get_children():
-				child.queue_free()
+				if child is RigidBody2D and child.has_meta("pooled_asteroid"):
+					_release_asteroid(child as RigidBody2D)
+				else:
+					child.queue_free()
+
+func _init_asteroid_pool() -> void:
+	_asteroid_pool_root = Node2D.new()
+	_asteroid_pool_root.name = "AsteroidPool"
+	_asteroid_pool_root.visible = false
+	add_child(_asteroid_pool_root)
+	_asteroid_phys_mat = PhysicsMaterial.new()
+	_asteroid_phys_mat.bounce = 0.8
+	_asteroid_phys_mat.friction = 0.5
+	for _i in ASTEROID_POOL_SIZE:
+		_asteroid_pool.append(_make_pooled_asteroid())
+
+func _make_pooled_asteroid() -> RigidBody2D:
+	var rb := RigidBody2D.new()
+	rb.set_meta("pooled_asteroid", true)
+	rb.gravity_scale = 0.0
+	rb.linear_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
+	rb.linear_damp = 0.0
+	rb.angular_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
+	rb.angular_damp = 0.0
+	rb.physics_material_override = _asteroid_phys_mat
+	rb.collision_layer = 2
+	rb.collision_mask = 2
+	rb.contact_monitor = true
+	rb.max_contacts_reported = 2
+	rb.freeze = true
+	rb.process_mode = Node.PROCESS_MODE_DISABLED
+	var sprite := Sprite2D.new()
+	sprite.name = "Sprite"
+	rb.add_child(sprite)
+	var overlay := Sprite2D.new()
+	overlay.name = "Overlay"
+	overlay.centered = true
+	overlay.z_index = 1
+	overlay.visible = false
+	rb.add_child(overlay)
+	var col := CollisionShape2D.new()
+	col.name = "Collision"
+	var circle := CircleShape2D.new()
+	circle.radius = 1.0
+	col.shape = circle
+	rb.add_child(col)
+	_asteroid_pool_root.add_child(rb)
+	return rb
+
+func _acquire_asteroid() -> RigidBody2D:
+	if _active_asteroid_count >= max_active_asteroids:
+		return null
+	var rb: RigidBody2D = null
+	if not _asteroid_pool.is_empty():
+		rb = _asteroid_pool.pop_back()
+	else:
+		rb = _make_pooled_asteroid()
+	_active_asteroid_count += 1
+	return rb
+
+func _release_asteroid(rb: RigidBody2D) -> void:
+	if not is_instance_valid(rb):
+		return
+	for conn in rb.body_entered.get_connections():
+		rb.body_entered.disconnect(conn["callable"])
+	rb.freeze = true
+	rb.linear_velocity = Vector2.ZERO
+	rb.angular_velocity = 0.0
+	rb.process_mode = Node.PROCESS_MODE_DISABLED
+	rb.visible = false
+	var overlay := rb.get_node_or_null("Overlay") as Sprite2D
+	if overlay:
+		overlay.visible = false
+		overlay.texture = null
+	var parent := rb.get_parent()
+	if parent != _asteroid_pool_root:
+		if parent:
+			parent.remove_child(rb)
+		_asteroid_pool_root.add_child(rb)
+	_active_asteroid_count = maxi(0, _active_asteroid_count - 1)
+	if _asteroid_pool.size() < ASTEROID_POOL_SIZE:
+		_asteroid_pool.append(rb)
+	else:
+		rb.queue_free()
 
 func _use_foreground_layer() -> bool:
 	return _foreground_events_enabled and not _static_mode and randf() < foreground_event_chance
@@ -96,7 +188,10 @@ func _stop_events_and_fx() -> void:
 	for layer_node in [dyn_layer_stars, dyn_layer_comets, dyn_layer_asteroids]:
 		if layer_node:
 			for child in layer_node.get_children():
-				child.queue_free()
+				if child is RigidBody2D and child.has_meta("pooled_asteroid"):
+					_release_asteroid(child as RigidBody2D)
+				else:
+					child.queue_free()
 	_clear_foreground_fx()
 
 func _show_static_composite() -> void:
@@ -452,52 +547,38 @@ func _spawn_entity(
 		entity = anim_sprite
 		
 	elif type == "asteroid":
-		var rb = RigidBody2D.new()
-		rb.gravity_scale = 0.0 
-		
-		rb.linear_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
-		rb.linear_damp = 0.0   
-		rb.angular_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
-		rb.angular_damp = 0.0
-		
-		var phys_mat = PhysicsMaterial.new()
-		phys_mat.bounce = 0.8
-		phys_mat.friction = 0.5
-		rb.physics_material_override = phys_mat
-		
-		rb.collision_layer = 2
-		rb.collision_mask = 2
-		
-		rb.contact_monitor = true
-		rb.max_contacts_reported = 2
-		rb.body_entered.connect(_on_asteroid_collided.bind(rb))
-		
-		var sprite = Sprite2D.new()
+		var rb := _acquire_asteroid()
+		if rb == null:
+			return
+		rb.freeze = false
+		rb.process_mode = Node.PROCESS_MODE_INHERIT
+		rb.visible = true
+		rb.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		if not rb.body_entered.is_connected(_on_asteroid_collided):
+			rb.body_entered.connect(_on_asteroid_collided.bind(rb))
+
+		var sprite := rb.get_node("Sprite") as Sprite2D
 		sprite.texture = tex
 		var base_scale := 1.0
 		if tex:
 			var tex_w := maxf(1.0, float(tex.get_width()))
 			base_scale = size.x / tex_w
 			sprite.scale = Vector2.ONE * base_scale
-		rb.add_child(sprite)
 
-		# Board-style purple tile: base shifter + direction arrow on top.
+		var overlay := rb.get_node("Overlay") as Sprite2D
 		if overlay_tex:
-			var overlay := Sprite2D.new()
 			overlay.texture = overlay_tex
-			overlay.centered = true
+			overlay.visible = true
 			var overlay_w := maxf(1.0, float(overlay_tex.get_width()))
-			# Match cell chevron: arrow sits on the purple tile at similar relative size.
 			overlay.scale = Vector2.ONE * (size.x * 0.72 / overlay_w)
-			overlay.z_index = 1
-			rb.add_child(overlay)
-		
-		var col = CollisionShape2D.new()
-		var circle = CircleShape2D.new()
-		circle.radius = size.x * 0.4
-		col.shape = circle
-		rb.add_child(col)
-		
+		else:
+			overlay.visible = false
+			overlay.texture = null
+
+		var col := rb.get_node("Collision") as CollisionShape2D
+		if col and col.shape is CircleShape2D:
+			(col.shape as CircleShape2D).radius = size.x * 0.4
+
 		entity = rb
 		
 	else:
@@ -551,7 +632,7 @@ func _spawn_entity(
 			if child is Sprite2D:
 				(child as Sprite2D).scale *= random_scale
 		
-		var col = entity.get_child(entity.get_child_count() - 1) as CollisionShape2D
+		var col = entity.get_node_or_null("Collision") as CollisionShape2D
 		if col and col.shape is CircleShape2D:
 			(col.shape as CircleShape2D).radius = size.x * 0.4 * random_scale
 		
@@ -560,6 +641,8 @@ func _spawn_entity(
 		var base_duration = remap(random_scale, 0.8, 1.2, max_time, min_time)
 		final_duration = base_duration * randf_range(0.85, 1.15)
 
+	if entity.get_parent() != null:
+		entity.get_parent().remove_child(entity)
 	target_layer.add_child(entity)
 	
 	if type == "asteroid":
@@ -571,7 +654,11 @@ func _spawn_entity(
 		var total_spin_amount = total_rotations * (PI * 2.0) * (1.0 if randi() % 2 == 0 else -1.0)
 		entity.angular_velocity = total_spin_amount / final_duration
 		
-		get_tree().create_timer(120.0).timeout.connect(entity.queue_free)
+		get_tree().create_timer(ASTEROID_LIFETIME_SEC).timeout.connect(
+			func():
+				if is_instance_valid(entity):
+					_release_asteroid(entity as RigidBody2D)
+		)
 		
 	else:
 		var tween = entity.create_tween()

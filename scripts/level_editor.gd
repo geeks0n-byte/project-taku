@@ -17,6 +17,8 @@ var _loading_overlay: LoadingOverlay
 var _is_generating: bool = false
 
 func _ready():
+	if AdsManager:
+		AdsManager.hide_menu_banner()
 	_loading_overlay = LoadingOverlay.new()
 	add_child(_loading_overlay)
 	_apply_background_for_mode(false)

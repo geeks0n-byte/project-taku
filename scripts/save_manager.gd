@@ -16,6 +16,8 @@ var tutorial_intro_answered: bool = false
 var level_star_bits: Dictionary = {}
 ## In-progress puzzle session (empty when none).
 var session_data: Dictionary = {}
+## Non-tutorial wins since last interstitial (AdsManager).
+var ads_wins_since_interstitial: int = 0
 
 func _ready() -> void:
 	load_progress()
@@ -72,6 +74,7 @@ func load_progress() -> void:
 		session_data = config.get_value("Session", "data", {})
 		if typeof(session_data) != TYPE_DICTIONARY:
 			session_data = {}
+		ads_wins_since_interstitial = int(config.get_value("Ads", "wins_since_interstitial", 0))
 		if not SUPPORTED_LANGUAGES.has(current_language):
 			current_language = "en"
 		TranslationServer.set_locale(current_language)
@@ -80,6 +83,7 @@ func load_progress() -> void:
 		TranslationServer.set_locale(current_language)
 		session_data = {}
 		tutorial_intro_answered = false
+		ads_wins_since_interstitial = 0
 		max_unlocked_level = get_campaign_start_unlock()
 		save_progress()
 	_ensure_campaign_start_unlock()
@@ -104,12 +108,24 @@ func save_progress() -> void:
 	config.set_value("Progression", "sfx_enabled", sfx_enabled)
 	config.set_value("Progression", "tutorial_intro_answered", tutorial_intro_answered)
 	config.set_value("Progression", "level_star_bits", level_star_bits)
+	config.set_value("Ads", "wins_since_interstitial", ads_wins_since_interstitial)
 	if session_data.is_empty():
 		if config.has_section("Session"):
 			config.erase_section("Session")
 	else:
 		config.set_value("Session", "data", session_data)
 	config.save(SAVE_PATH)
+
+func record_ad_win() -> void:
+	ads_wins_since_interstitial += 1
+	save_progress()
+
+func should_show_interstitial(every_n: int) -> bool:
+	return every_n > 0 and ads_wins_since_interstitial >= every_n
+
+func consume_interstitial_wins() -> void:
+	ads_wins_since_interstitial = 0
+	save_progress()
 
 func set_language(lang_code: String) -> void:
 	current_language = lang_code
@@ -202,6 +218,7 @@ func delete_save_file() -> void:
 	level_star_bits.clear()
 	session_data = {}
 	tutorial_intro_answered = false
+	ads_wins_since_interstitial = 0
 	# Keep language and background preference across progress reset.
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(SAVE_PATH)

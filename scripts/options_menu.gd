@@ -15,17 +15,18 @@ enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM }
 @onready var bg_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/BackgroundButton
 @onready var bgm_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/BgmButton
 @onready var sfx_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/SfxButton
+@onready var privacy_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/PrivacyPolicyButton
 @onready var del_save_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DeleteSaveButton
 @onready var del_custom_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DeleteCustomButton
 @onready var unlock_all_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/UnlockAllButton
 @onready var close_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/CloseOptionsButton
 @onready var status_label: Label = $CenterContainer/OptionsPanel/VBoxContainer/StatusLabel
+@onready var _confirm_blocker: ColorRect = $ConfirmBlocker
+@onready var _confirm_label: Label = $ConfirmBlocker/CenterContainer/Panel/VBoxContainer/PromptLabel
+@onready var _confirm_yes_btn: Button = $ConfirmBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/YesButton
+@onready var _confirm_no_btn: Button = $ConfirmBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/NoButton
 
 var _pending_confirm: ConfirmAction = ConfirmAction.NONE
-var _confirm_blocker: ColorRect
-var _confirm_label: Label
-var _confirm_yes_btn: Button
-var _confirm_no_btn: Button
 ## Main-menu-only rows (reset progress + debug tools).
 var _from_main_menu: bool = false
 var _show_debug_options: bool = false
@@ -41,6 +42,8 @@ func _ready() -> void:
 		bgm_btn.pressed.connect(_on_toggle_bgm)
 	if sfx_btn:
 		sfx_btn.pressed.connect(_on_toggle_sfx)
+	if privacy_btn:
+		privacy_btn.pressed.connect(_on_privacy_policy_pressed)
 	if del_save_btn:
 		del_save_btn.pressed.connect(_on_delete_save_pressed)
 	if del_custom_btn:
@@ -49,7 +52,7 @@ func _ready() -> void:
 		unlock_all_btn.pressed.connect(_on_unlock_all_pressed)
 	if close_btn:
 		close_btn.pressed.connect(hide_menu)
-	_build_confirm_panel()
+	_setup_confirm_panel()
 	_configure_main_menu_buttons()
 	_mount_header()
 	_update_lang_label()
@@ -138,7 +141,9 @@ func _fit_option_buttons() -> void:
 		title_label.set_meta("_screen_header_font_size", 72)
 		title_label.set_meta("_screen_header_outline", GameConstants.SCREEN_HEADER_OUTLINE)
 		HudLayout.apply_screen_header_style(title_label)
-	for btn in [del_save_btn, bg_btn, bgm_btn, sfx_btn, del_custom_btn, unlock_all_btn]:
+	if privacy_btn:
+		privacy_btn.text = tr("UI_PRIVACY_POLICY")
+	for btn in [del_save_btn, bg_btn, bgm_btn, sfx_btn, privacy_btn, del_custom_btn, unlock_all_btn]:
 		_apply_option_button(btn)
 	_position_close_button()
 	HudLayout.apply_secondary_button(close_btn)
@@ -363,59 +368,23 @@ func _on_toggle_sfx() -> void:
 	SaveManager.set_sfx_enabled(not SaveManager.sfx_enabled)
 	_update_sfx_label()
 
-func _build_confirm_panel() -> void:
-	_confirm_blocker = ColorRect.new()
-	_confirm_blocker.name = "ConfirmBlocker"
-	_confirm_blocker.color = Color(0, 0, 0, 0.72)
-	_confirm_blocker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_confirm_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
-	_confirm_blocker.visible = false
-	add_child(_confirm_blocker)
+func _on_privacy_policy_pressed() -> void:
+	if AdsManager:
+		AdsManager.open_privacy_policy()
+	else:
+		OS.shell_open("https://spaceblox.game/privacy")
 
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_confirm_blocker.add_child(center)
-
-	var panel := Panel.new()
-	panel.custom_minimum_size = Vector2(640, 360)
-	panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
-	center.add_child(panel)
-
-	var vbox := VBoxContainer.new()
-	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	vbox.offset_left = 36.0
-	vbox.offset_top = 36.0
-	vbox.offset_right = -36.0
-	vbox.offset_bottom = -36.0
-	vbox.add_theme_constant_override("separation", 28)
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	panel.add_child(vbox)
-
-	_confirm_label = Label.new()
-	_confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_confirm_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_confirm_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_confirm_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_confirm_label.add_theme_color_override("font_color", Color(1, 0.45, 0.45, 1))
-	_confirm_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	_confirm_label.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
-	HudLayout.apply_popup_label(_confirm_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
-	vbox.add_child(_confirm_label)
-
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 40)
-	vbox.add_child(row)
-
-	_confirm_yes_btn = Button.new()
-	_confirm_yes_btn.pressed.connect(_on_confirm_yes)
-	row.add_child(_confirm_yes_btn)
-
-	_confirm_no_btn = Button.new()
-	_confirm_no_btn.pressed.connect(_hide_confirm)
-	row.add_child(_confirm_no_btn)
-
+func _setup_confirm_panel() -> void:
+	if _confirm_blocker:
+		_confirm_blocker.visible = false
+		_confirm_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+	var panel := _confirm_blocker.get_node_or_null("CenterContainer/Panel") as Panel if _confirm_blocker else null
+	if panel:
+		panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
+	if _confirm_yes_btn and not _confirm_yes_btn.pressed.is_connected(_on_confirm_yes):
+		_confirm_yes_btn.pressed.connect(_on_confirm_yes)
+	if _confirm_no_btn and not _confirm_no_btn.pressed.is_connected(_hide_confirm):
+		_confirm_no_btn.pressed.connect(_hide_confirm)
 	_copy_button_styles(_confirm_yes_btn)
 	_copy_button_styles(_confirm_no_btn)
 	_refresh_confirm_texts()

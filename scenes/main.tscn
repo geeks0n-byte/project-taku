@@ -456,8 +456,45 @@ text = "[center]Fill the empty spaces on the board.[/center]"
 fit_content = true
 scroll_active = false
 
+[node name="TutorialNextButton" type="Button" parent="HUDLayer/HUDControl"]
+visible = false
+custom_minimum_size = Vector2(260, 100)
+layout_mode = 0
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -130.0
+offset_top = -600.0
+offset_right = 130.0
+offset_bottom = -500.0
+grow_horizontal = 2
+grow_vertical = 0
+focus_mode = 0
+z_index = 8
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "UI_NEXT"
+
 [node name="EndLayer" type="CanvasLayer" parent="." unique_id=1916805682]
 layer = 5
+
+[node name="Dimmer" type="ColorRect" parent="EndLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0, 0, 0)
+visible = false
 
 [node name="CenterContainer" type="CenterContainer" parent="EndLayer" unique_id=905097534]
 anchors_preset = 15
@@ -511,6 +548,63 @@ text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
+
+[node name="VictoryResultsHost" type="Control" parent="EndLayer/CenterContainer/VictoryPanel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 40.0
+offset_right = -40.0
+mouse_filter = 2
+
+[node name="VictoryBoardPreview" type="TextureRect" parent="EndLayer/CenterContainer/VictoryPanel"]
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PlayAgainButton" type="Button" parent="EndLayer/CenterContainer/VictoryPanel"]
+custom_minimum_size = Vector2(500, 120)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -60.0
+offset_right = 250.0
+offset_bottom = 60.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="EndLayer/CenterContainer/VictoryPanel/PlayAgainButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+alignment = 1
+
+[node name="Label" type="Label" parent="EndLayer/CenterContainer/VictoryPanel/PlayAgainButton/HBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 28
+text = "PLAY AGAIN"
+vertical_alignment = 1
 
 [node name="RestartButton" type="Button" parent="EndLayer/CenterContainer/VictoryPanel" unique_id=22368695]
 custom_minimum_size = Vector2(500, 120)
@@ -591,6 +685,144 @@ theme_override_font_sizes/font_size = 28
 text = "MAIN MENU"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="SessionResumePanel" type="Panel" parent="EndLayer/CenterContainer"]
+visible = false
+custom_minimum_size = Vector2(820, 760)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
+
+[node name="PromptLabel" type="Label" parent="EndLayer/CenterContainer/SessionResumePanel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 48.0
+offset_top = 40.0
+offset_right = -48.0
+offset_bottom = 240.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 10
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 24
+text = "SESSION_RESUME_PROMPT"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="Buttons" type="VBoxContainer" parent="EndLayer/CenterContainer/SessionResumePanel"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -240.0
+offset_top = 280.0
+offset_right = 240.0
+offset_bottom = 720.0
+grow_horizontal = 2
+theme_override_constants/separation = 28
+alignment = 1
+
+[node name="ContinueButton" type="Button" parent="EndLayer/CenterContainer/SessionResumePanel/Buttons"]
+custom_minimum_size = Vector2(460, 110)
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "UI_CONTINUE"
+
+[node name="RestartButton" type="Button" parent="EndLayer/CenterContainer/SessionResumePanel/Buttons"]
+custom_minimum_size = Vector2(460, 110)
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "UI_NEW_LAYOUT"
+
+[node name="BackButton" type="Button" parent="EndLayer/CenterContainer/SessionResumePanel/Buttons"]
+custom_minimum_size = Vector2(460, 110)
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "UI_BACK"
+
+[node name="ResetConfirmPanel" type="Panel" parent="EndLayer/CenterContainer"]
+visible = false
+custom_minimum_size = Vector2(640, 360)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="EndLayer/CenterContainer/ResetConfirmPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 36.0
+offset_top = 36.0
+offset_right = -36.0
+offset_bottom = -36.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 28
+alignment = 1
+
+[node name="PromptLabel" type="Label" parent="EndLayer/CenterContainer/ResetConfirmPanel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(1, 0.45, 0.45, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="HBoxContainer" type="HBoxContainer" parent="EndLayer/CenterContainer/ResetConfirmPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 40
+alignment = 1
+
+[node name="YesButton" type="Button" parent="EndLayer/CenterContainer/ResetConfirmPanel/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "UI_YES"
+
+[node name="NoButton" type="Button" parent="EndLayer/CenterContainer/ResetConfirmPanel/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "UI_NO"
 
 [node name="HowToPlayLayer" type="CanvasLayer" parent="." unique_id=1386313562]
 layer = 6

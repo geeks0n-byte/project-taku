@@ -248,20 +248,45 @@ theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 text = "LEVEL
 TEMPLATE"
 
-[node name="BackButton" type="Button" parent="UILayer/CenterContainer"]
-custom_minimum_size = Vector2(280, 100)
+[node name="PageNav" type="HBoxContainer" parent="UILayer/CenterContainer"]
 layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
+anchors_preset = 12
 anchor_top = 1.0
-anchor_right = 0.5
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -140.0
-offset_top = -140.0
-offset_right = 140.0
-offset_bottom = -20.0
+offset_left = 40.0
+offset_top = -260.0
+offset_right = -40.0
+offset_bottom = -160.0
 grow_horizontal = 2
 grow_vertical = 0
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="PrevSlot" type="Control" parent="UILayer/CenterContainer/PageNav"]
+custom_minimum_size = Vector2(240, 100)
+layout_mode = 2
+
+[node name="PrevButton" type="Button" parent="UILayer/CenterContainer/PageNav/PrevSlot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "UI_PREVIOUS"
+
+[node name="BackButton" type="Button" parent="UILayer/CenterContainer/PageNav"]
+custom_minimum_size = Vector2(280, 100)
+layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
 theme_override_fonts/font = ExtResource("3_font")
@@ -271,3 +296,24 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 text = "UI_CLOSE"
+
+[node name="NextSlot" type="Control" parent="UILayer/CenterContainer/PageNav"]
+custom_minimum_size = Vector2(240, 100)
+layout_mode = 2
+
+[node name="NextButton" type="Button" parent="UILayer/CenterContainer/PageNav/NextSlot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "UI_NEXT"

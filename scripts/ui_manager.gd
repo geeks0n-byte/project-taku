@@ -46,9 +46,17 @@ signal locale_refresh_requested
 @onready var victory_restart_label: Label = $"../EndLayer/CenterContainer/VictoryPanel/RestartButton/HBoxContainer/Label"
 @onready var end_layer: CanvasLayer = $"../EndLayer"
 @onready var end_center: CenterContainer = $"../EndLayer/CenterContainer"
-
-var _play_again_button: Button
-var _play_again_label: Label
+@onready var end_dimmer: ColorRect = $"../EndLayer/Dimmer"
+@onready var play_again_button: Button = $"../EndLayer/CenterContainer/VictoryPanel/PlayAgainButton"
+@onready var play_again_label: Label = $"../EndLayer/CenterContainer/VictoryPanel/PlayAgainButton/HBoxContainer/Label"
+@onready var victory_results_host: Control = $"../EndLayer/CenterContainer/VictoryPanel/VictoryResultsHost"
+@onready var victory_preview: TextureRect = $"../EndLayer/CenterContainer/VictoryPanel/VictoryBoardPreview"
+@onready var resume_panel: Panel = $"../EndLayer/CenterContainer/SessionResumePanel"
+@onready var resume_prompt_label: Label = $"../EndLayer/CenterContainer/SessionResumePanel/PromptLabel"
+@onready var reset_confirm_panel: Panel = $"../EndLayer/CenterContainer/ResetConfirmPanel"
+@onready var reset_confirm_label: Label = $"../EndLayer/CenterContainer/ResetConfirmPanel/VBoxContainer/PromptLabel"
+@onready var reset_confirm_yes: Button = $"../EndLayer/CenterContainer/ResetConfirmPanel/VBoxContainer/HBoxContainer/YesButton"
+@onready var reset_confirm_no: Button = $"../EndLayer/CenterContainer/ResetConfirmPanel/VBoxContainer/HBoxContainer/NoButton"
 
 var _is_last_level_completed: bool = false
 var _victory_display_num: int = 0
@@ -57,15 +65,6 @@ var _victory_is_tutorial: bool = false
 var _victory_star_result: Dictionary = {}
 var _htp_page: int = 0
 var _htp_header: Label
-var _victory_results_host: Control
-var _victory_preview: TextureRect
-var _resume_panel: Panel
-var _resume_prompt_label: Label
-var _end_dimmer: ColorRect
-var _reset_confirm_panel: Panel
-var _reset_confirm_label: Label
-var _reset_confirm_yes: Button
-var _reset_confirm_no: Button
 var _tutorial_tools_locked: bool = false
 var _highlighted_hud_button: String = ""
 var _tutorial_status_body: String = ""
@@ -90,10 +89,7 @@ func _ready() -> void:
 	_setup_how_to_play_font()
 	_refresh_how_to_play_text()
 	_connect_signals()
-	_ensure_resume_panel()
-	_ensure_end_dimmer()
-	_ensure_reset_confirm_panel()
-	_ensure_play_again_button()
+	_setup_end_layer()
 	_style_victory_chrome()
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
@@ -115,9 +111,9 @@ func _on_language_changed() -> void:
 		update_joker_counter(_joker_current, _joker_required)
 	if move_counter_label and move_counter_label.visible:
 		update_move_counter(_move_count, _move_required)
-	if _reset_confirm_panel and _reset_confirm_panel.visible:
+	if reset_confirm_panel and reset_confirm_panel.visible:
 		show_reset_confirm()
-	if _resume_panel and _resume_panel.visible:
+	if resume_panel and resume_panel.visible:
 		show_session_resume_prompt()
 	if victory_panel and victory_panel.visible:
 		_refresh_victory_locale()
@@ -173,6 +169,21 @@ func _connect_signals() -> void:
 		htp_prev_button.pressed.connect(_on_htp_prev_pressed)
 	if htp_next_button and not htp_next_button.pressed.is_connected(_on_htp_next_pressed):
 		htp_next_button.pressed.connect(_on_htp_next_pressed)
+	if play_again_button and not play_again_button.pressed.is_connected(_on_play_again_pressed):
+		play_again_button.pressed.connect(_on_play_again_pressed)
+	if reset_confirm_yes and not reset_confirm_yes.pressed.is_connected(_on_reset_confirm_yes):
+		reset_confirm_yes.pressed.connect(_on_reset_confirm_yes)
+	if reset_confirm_no and not reset_confirm_no.pressed.is_connected(_on_reset_confirm_no):
+		reset_confirm_no.pressed.connect(_on_reset_confirm_no)
+	var resume_continue_btn := resume_panel.get_node_or_null("Buttons/ContinueButton") as Button if resume_panel else null
+	var resume_restart_btn := resume_panel.get_node_or_null("Buttons/RestartButton") as Button if resume_panel else null
+	var resume_back_btn := resume_panel.get_node_or_null("Buttons/BackButton") as Button if resume_panel else null
+	if resume_continue_btn and not resume_continue_btn.pressed.is_connected(_on_session_continue_pressed):
+		resume_continue_btn.pressed.connect(_on_session_continue_pressed)
+	if resume_restart_btn and not resume_restart_btn.pressed.is_connected(_on_session_restart_pressed):
+		resume_restart_btn.pressed.connect(_on_session_restart_pressed)
+	if resume_back_btn and not resume_back_btn.pressed.is_connected(_on_session_back_pressed):
+		resume_back_btn.pressed.connect(_on_session_back_pressed)
 
 func _on_pause_requested() -> void:
 	pause_requested.emit()
@@ -484,101 +495,37 @@ func set_overlays_hidden() -> void:
 	set_hud_buttons_disabled(false)
 
 func show_reset_confirm() -> void:
-	_ensure_reset_confirm_panel()
-	_ensure_end_dimmer()
 	# Match pause / how-to-play: clear view of the space background (board already hidden).
-	if _end_dimmer:
-		_end_dimmer.color = Color(0, 0, 0, 0)
+	if end_dimmer:
+		end_dimmer.color = Color(0, 0, 0, 0)
 	_set_end_dimmer_visible(true)
-	if _reset_confirm_label:
-		_reset_confirm_label.text = tr("CONFIRM_RESTART_LEVEL" if _reset_is_restart else "CONFIRM_NEW_PUZZLE")
-		HudLayout.apply_popup_label(_reset_confirm_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
-	if _reset_confirm_yes:
-		_reset_confirm_yes.text = tr("UI_YES")
-		HudLayout.apply_dialog_button(_reset_confirm_yes)
-	if _reset_confirm_no:
-		_reset_confirm_no.text = tr("UI_NO")
-		HudLayout.apply_dialog_button(_reset_confirm_no)
+	if reset_confirm_label:
+		reset_confirm_label.text = tr("CONFIRM_RESTART_LEVEL" if _reset_is_restart else "CONFIRM_NEW_PUZZLE")
+		HudLayout.apply_popup_label(reset_confirm_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
+	if reset_confirm_yes:
+		reset_confirm_yes.text = tr("UI_YES")
+		HudLayout.apply_dialog_button(reset_confirm_yes)
+	if reset_confirm_no:
+		reset_confirm_no.text = tr("UI_NO")
+		HudLayout.apply_dialog_button(reset_confirm_no)
 	if victory_panel:
 		victory_panel.visible = false
-	if _resume_panel:
-		_resume_panel.visible = false
-	if _reset_confirm_panel:
-		_reset_confirm_panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
-		_reset_confirm_panel.visible = true
-		_reset_confirm_panel.move_to_front()
+	if resume_panel:
+		resume_panel.visible = false
+	if reset_confirm_panel:
+		reset_confirm_panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
+		reset_confirm_panel.visible = true
+		reset_confirm_panel.move_to_front()
 	set_hud_buttons_disabled(true)
 
 func hide_reset_confirm() -> void:
-	if _reset_confirm_panel:
-		_reset_confirm_panel.visible = false
+	if reset_confirm_panel:
+		reset_confirm_panel.visible = false
 	if (
 		(victory_panel == null or not victory_panel.visible)
-		and (_resume_panel == null or not _resume_panel.visible)
+		and (resume_panel == null or not resume_panel.visible)
 	):
 		_set_end_dimmer_visible(false)
-
-func _ensure_reset_confirm_panel() -> void:
-	if _reset_confirm_panel and is_instance_valid(_reset_confirm_panel):
-		return
-	var center := get_node_or_null("../EndLayer/CenterContainer") as CenterContainer
-	if center == null:
-		return
-
-	_reset_confirm_panel = Panel.new()
-	_reset_confirm_panel.name = "ResetConfirmPanel"
-	_reset_confirm_panel.visible = false
-	_reset_confirm_panel.custom_minimum_size = Vector2(640, 360)
-	_reset_confirm_panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
-	center.add_child(_reset_confirm_panel)
-
-	var vbox := VBoxContainer.new()
-	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	vbox.offset_left = 36.0
-	vbox.offset_top = 36.0
-	vbox.offset_right = -36.0
-	vbox.offset_bottom = -36.0
-	vbox.add_theme_constant_override("separation", 28)
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	_reset_confirm_panel.add_child(vbox)
-
-	_reset_confirm_label = Label.new()
-	_reset_confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_reset_confirm_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_reset_confirm_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_reset_confirm_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_reset_confirm_label.add_theme_color_override("font_color", Color(1, 0.45, 0.45, 1))
-	_reset_confirm_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	_reset_confirm_label.add_theme_constant_override("outline_size", 8)
-	HudLayout.apply_popup_label(_reset_confirm_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
-	vbox.add_child(_reset_confirm_label)
-
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 40)
-	vbox.add_child(row)
-
-	_reset_confirm_yes = Button.new()
-	_reset_confirm_yes.pressed.connect(_on_reset_confirm_yes)
-	row.add_child(_reset_confirm_yes)
-
-	_reset_confirm_no = Button.new()
-	_reset_confirm_no.pressed.connect(_on_reset_confirm_no)
-	row.add_child(_reset_confirm_no)
-
-	_copy_dialog_button_styles(_reset_confirm_yes)
-	_copy_dialog_button_styles(_reset_confirm_no)
-
-func _copy_dialog_button_styles(target: Button) -> void:
-	var source := main_menu_button if main_menu_button else restart_button
-	if not source or not target:
-		return
-	for style_name in ["normal", "pressed", "hover", "disabled"]:
-		var style := source.get_theme_stylebox(style_name)
-		if style:
-			target.add_theme_stylebox_override(style_name, style)
-	target.add_theme_color_override("font_outline_color", Color.BLACK)
-	target.add_theme_constant_override("outline_size", 6)
 
 func _on_reset_confirm_yes() -> void:
 	hide_reset_confirm()
@@ -589,19 +536,17 @@ func _on_reset_confirm_no() -> void:
 	reset_cancelled.emit()
 
 func show_session_resume_prompt() -> void:
-	_ensure_resume_panel()
-	_ensure_end_dimmer()
 	# Keep space background undimmed (same as reset confirm / pause).
-	if _end_dimmer:
-		_end_dimmer.color = Color(0, 0, 0, 0)
+	if end_dimmer:
+		end_dimmer.color = Color(0, 0, 0, 0)
 	_set_end_dimmer_visible(true)
-	if _resume_prompt_label:
-		_resume_prompt_label.text = tr("SESSION_RESUME_PROMPT")
-		HudLayout.apply_popup_label(_resume_prompt_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
-	if _resume_panel:
-		var continue_btn := _resume_panel.get_node_or_null("Buttons/ContinueButton") as Button
-		var restart_btn := _resume_panel.get_node_or_null("Buttons/RestartButton") as Button
-		var back_btn := _resume_panel.get_node_or_null("Buttons/BackButton") as Button
+	if resume_prompt_label:
+		resume_prompt_label.text = tr("SESSION_RESUME_PROMPT")
+		HudLayout.apply_popup_label(resume_prompt_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
+	if resume_panel:
+		var continue_btn := resume_panel.get_node_or_null("Buttons/ContinueButton") as Button
+		var restart_btn := resume_panel.get_node_or_null("Buttons/RestartButton") as Button
+		var back_btn := resume_panel.get_node_or_null("Buttons/BackButton") as Button
 		if continue_btn:
 			continue_btn.text = tr("UI_CONTINUE")
 			_style_resume_button(continue_btn)
@@ -613,94 +558,31 @@ func show_session_resume_prompt() -> void:
 			_style_resume_button(back_btn)
 	if victory_panel:
 		victory_panel.visible = false
-	if _resume_panel:
-		_resume_panel.visible = true
+	if resume_panel:
+		resume_panel.add_theme_stylebox_override("panel", _make_end_screen_panel_style())
+		resume_panel.visible = true
 	set_hud_buttons_disabled(true)
 
 func hide_session_resume_prompt() -> void:
-	if _resume_panel:
-		_resume_panel.visible = false
+	if resume_panel:
+		resume_panel.visible = false
 	if victory_panel == null or not victory_panel.visible:
 		_set_end_dimmer_visible(false)
 
-func _ensure_resume_panel() -> void:
-	if _resume_panel and is_instance_valid(_resume_panel):
-		return
-	var center := get_node_or_null("../EndLayer/CenterContainer") as CenterContainer
-	if center == null:
-		return
+func _on_session_continue_pressed() -> void:
+	hide_session_resume_prompt()
+	session_continue_requested.emit()
 
-	_resume_panel = Panel.new()
-	_resume_panel.name = "SessionResumePanel"
-	_resume_panel.visible = false
-	# Wide enough that "NEW PUZZLE" / resume copy stay on clean lines.
-	_resume_panel.custom_minimum_size = Vector2(820, 760)
-	_resume_panel.add_theme_stylebox_override("panel", _make_end_screen_panel_style())
-	center.add_child(_resume_panel)
+func _on_session_restart_pressed() -> void:
+	hide_session_resume_prompt()
+	session_restart_requested.emit()
 
-	_resume_prompt_label = Label.new()
-	_resume_prompt_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_resume_prompt_label.offset_left = 48.0
-	_resume_prompt_label.offset_right = -48.0
-	_resume_prompt_label.offset_top = 40.0
-	_resume_prompt_label.offset_bottom = 240.0
-	_resume_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_resume_prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_resume_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_resume_prompt_label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.0, 1.0))
-	_resume_prompt_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	_resume_prompt_label.add_theme_constant_override("outline_size", 10)
-	HudLayout.apply_popup_label(_resume_prompt_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
-	_resume_panel.add_child(_resume_prompt_label)
-
-	var buttons := VBoxContainer.new()
-	buttons.name = "Buttons"
-	buttons.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	buttons.offset_left = -240.0
-	buttons.offset_right = 240.0
-	buttons.offset_top = 280.0
-	buttons.offset_bottom = 720.0
-	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
-	buttons.add_theme_constant_override("separation", 28)
-	_resume_panel.add_child(buttons)
-
-	var continue_btn := _make_resume_button(tr("UI_CONTINUE"))
-	continue_btn.name = "ContinueButton"
-	continue_btn.pressed.connect(func():
-		hide_session_resume_prompt()
-		session_continue_requested.emit()
-	)
-	buttons.add_child(continue_btn)
-
-	var restart_btn := _make_resume_button(tr("UI_NEW_LAYOUT"))
-	restart_btn.name = "RestartButton"
-	restart_btn.pressed.connect(func():
-		hide_session_resume_prompt()
-		session_restart_requested.emit()
-	)
-	buttons.add_child(restart_btn)
-
-	var back_btn := _make_resume_button(tr("UI_BACK"))
-	back_btn.name = "BackButton"
-	back_btn.pressed.connect(func():
-		hide_session_resume_prompt()
-		session_back_requested.emit()
-	)
-	buttons.add_child(back_btn)
+func _on_session_back_pressed() -> void:
+	hide_session_resume_prompt()
+	session_back_requested.emit()
 
 func _make_end_screen_panel_style() -> StyleBoxFlat:
 	return HudLayout.make_dialog_panel_style()
-
-func _make_resume_button(caption: String) -> Button:
-	var btn := Button.new()
-	btn.text = caption
-	if restart_button:
-		for style_name in ["normal", "pressed", "hover", "disabled"]:
-			var style := restart_button.get_theme_stylebox(style_name)
-			if style:
-				btn.add_theme_stylebox_override(style_name, style)
-	_style_resume_button(btn)
-	return btn
 
 ## Wider than generic dialog buttons so "NEW PUZZLE" doesn't wrap / clip on mobile.
 func _style_resume_button(button: Button) -> void:
@@ -772,10 +654,9 @@ func show_victory(
 	_victory_is_tutorial = is_tutorial
 	_victory_star_result = star_result.duplicate(true)
 	set_hud_buttons_disabled(true)
-	_ensure_end_dimmer()
 	_style_victory_chrome()
-	if _end_dimmer:
-		_end_dimmer.color = Color(0, 0, 0, 0)
+	if end_dimmer:
+		end_dimmer.color = Color(0, 0, 0, 0)
 	_set_end_dimmer_visible(true)
 	_refresh_victory_locale()
 	_populate_victory_results(_victory_star_result)
@@ -807,48 +688,32 @@ func _refresh_victory_locale() -> void:
 	if restart_button:
 		restart_button.visible = not _is_last_level_completed
 		HudLayout.apply_panel_button(restart_button)
-	_ensure_play_again_button()
-	if _play_again_label:
-		_play_again_label.text = tr("PLAY_AGAIN")
-		HudLayout.apply_locale_font_to_control(_play_again_label)
-	if _play_again_button:
-		_play_again_button.visible = true
-		HudLayout.apply_panel_button(_play_again_button)
+	if play_again_label:
+		play_again_label.text = tr("PLAY_AGAIN")
+		HudLayout.apply_locale_font_to_control(play_again_label)
+	if play_again_button:
+		play_again_button.visible = true
+		HudLayout.apply_panel_button(play_again_button)
 	if main_menu_button:
 		var menu_label := main_menu_button.get_node_or_null("HBoxContainer/Label") as Label
 		if menu_label:
 			menu_label.text = tr("UI_MAIN_MENU")
 			HudLayout.apply_locale_font_to_control(menu_label)
 		HudLayout.apply_panel_button(main_menu_button)
-	if _victory_results_host and not _victory_star_result.is_empty():
+	if victory_results_host and not _victory_star_result.is_empty():
 		_populate_victory_results(_victory_star_result)
 	if victory_panel and victory_panel.visible:
 		_layout_victory_panel(_victory_star_result)
 
-func _ensure_end_dimmer() -> void:
-	if _end_dimmer and is_instance_valid(_end_dimmer):
-		return
-	if end_layer == null:
-		return
-	_end_dimmer = end_layer.get_node_or_null("Dimmer") as ColorRect
-	if _end_dimmer == null:
-		_end_dimmer = ColorRect.new()
-		_end_dimmer.name = "Dimmer"
-		_end_dimmer.color = Color(0, 0, 0, 0)
-		_end_dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		_end_dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
-		_end_dimmer.visible = false
-		end_layer.add_child(_end_dimmer)
-		end_layer.move_child(_end_dimmer, 0)
+func _setup_end_layer() -> void:
 	# Keep full-screen center as IGNORE so HUD stays clickable when overlays are off.
 	if end_center:
 		end_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func _set_end_dimmer_visible(should_show: bool) -> void:
-	_ensure_end_dimmer()
-	if _end_dimmer:
-		_end_dimmer.visible = should_show
-		_end_dimmer.mouse_filter = (
+	if end_dimmer:
+		end_dimmer.visible = should_show
+		end_dimmer.mouse_filter = (
 			Control.MOUSE_FILTER_STOP if should_show else Control.MOUSE_FILTER_IGNORE
 		)
 
@@ -867,96 +732,28 @@ func _style_victory_chrome() -> void:
 		win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		win_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
-func _ensure_play_again_button() -> void:
-	if _play_again_button and is_instance_valid(_play_again_button):
-		return
-	if victory_panel == null or restart_button == null:
-		return
-	_play_again_button = Button.new()
-	_play_again_button.name = "PlayAgainButton"
-	_play_again_button.custom_minimum_size = restart_button.custom_minimum_size
-	for style_name in ["normal", "pressed", "hover", "disabled"]:
-		var style := restart_button.get_theme_stylebox(style_name)
-		if style:
-			_play_again_button.add_theme_stylebox_override(style_name, style)
-	var hbox := HBoxContainer.new()
-	hbox.name = "HBoxContainer"
-	hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	_play_again_button.add_child(hbox)
-	_play_again_label = Label.new()
-	_play_again_label.name = "Label"
-	_play_again_label.text = "PLAY AGAIN"
-	_play_again_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_play_again_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_play_again_label.add_theme_color_override("font_color", Color.WHITE)
-	_play_again_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	_play_again_label.add_theme_constant_override("outline_size", 8)
-	if victory_restart_label:
-		var font := victory_restart_label.get_theme_font("font")
-		if font:
-			_play_again_label.add_theme_font_override("font", font)
-		_play_again_label.add_theme_font_size_override(
-			"font_size",
-			victory_restart_label.get_theme_font_size("font_size")
-		)
-	hbox.add_child(_play_again_label)
-	_play_again_button.pressed.connect(_on_play_again_pressed)
-	victory_panel.add_child(_play_again_button)
-	if main_menu_button:
-		victory_panel.move_child(_play_again_button, main_menu_button.get_index())
-
-func _ensure_victory_results_host() -> Control:
-	if _victory_results_host and is_instance_valid(_victory_results_host):
-		return _victory_results_host
-	if time_result_label:
-		time_result_label.visible = false
-	_victory_results_host = Control.new()
-	_victory_results_host.name = "VictoryResultsHost"
-	_victory_results_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_victory_results_host.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_victory_results_host.offset_left = 40.0
-	_victory_results_host.offset_right = -40.0
-	if victory_panel:
-		victory_panel.add_child(_victory_results_host)
-		_raise_victory_buttons()
-	return _victory_results_host
-
-func _ensure_victory_preview() -> TextureRect:
-	if _victory_preview and is_instance_valid(_victory_preview):
-		return _victory_preview
-	_victory_preview = TextureRect.new()
-	_victory_preview.name = "VictoryBoardPreview"
-	_victory_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_victory_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_victory_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_victory_preview.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_victory_preview.visible = false
-	if victory_panel:
-		victory_panel.add_child(_victory_preview)
-		_raise_victory_buttons()
-	return _victory_preview
-
 func _raise_victory_buttons() -> void:
 	if victory_panel == null:
 		return
 	if restart_button:
 		victory_panel.move_child(restart_button, -1)
-	_ensure_play_again_button()
-	if _play_again_button:
-		victory_panel.move_child(_play_again_button, -1)
+	if play_again_button:
+		victory_panel.move_child(play_again_button, -1)
 	if main_menu_button:
 		victory_panel.move_child(main_menu_button, -1)
 
 func _set_victory_preview(texture: Texture2D) -> void:
-	var preview := _ensure_victory_preview()
-	preview.texture = texture
-	preview.visible = texture != null
+	if not victory_preview:
+		return
+	victory_preview.texture = texture
+	victory_preview.visible = texture != null
 
 func _populate_victory_results(star_result: Dictionary) -> void:
-	var host := _ensure_victory_results_host()
-	LevelStars.populate_results(host, star_result)
+	if not victory_results_host:
+		return
+	if time_result_label:
+		time_result_label.visible = false
+	LevelStars.populate_results(victory_results_host, star_result)
 
 func _layout_victory_panel(star_result: Dictionary) -> void:
 	if not victory_panel:
@@ -967,12 +764,14 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 	var results_h := 0.0
 	if not untimed:
 		results_h = 90.0 + float(maxi(1, goal_count)) * (LevelStars.ROW_HEIGHT + 14.0)
-	var host := _ensure_victory_results_host()
-	host.offset_top = title_bottom + 8.0
-	host.offset_bottom = title_bottom + 8.0 + results_h
+	if not victory_results_host or not victory_preview:
+		return
+	_raise_victory_buttons()
+	victory_results_host.offset_top = title_bottom + 8.0
+	victory_results_host.offset_bottom = title_bottom + 8.0 + results_h
 
 	var cursor := title_bottom + 8.0 + results_h
-	var preview := _ensure_victory_preview()
+	var preview := victory_preview
 	var preview_h := 0.0
 	if preview.visible and preview.texture != null:
 		preview_h = 320.0
@@ -988,10 +787,9 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 	if restart_button and restart_button.visible:
 		_place_victory_button(restart_button, buttons_top, row)
 		row += 1
-	_ensure_play_again_button()
-	if _play_again_button:
-		_play_again_button.visible = true
-		_place_victory_button(_play_again_button, buttons_top, row)
+	if play_again_button:
+		play_again_button.visible = true
+		_place_victory_button(play_again_button, buttons_top, row)
 		row += 1
 	if main_menu_button:
 		_place_victory_button(main_menu_button, buttons_top, row)

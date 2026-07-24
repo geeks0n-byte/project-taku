@@ -1724,3 +1724,107 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 text = "UI_NEXT"
+
+[node name="PlaytestEndLayer" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="Dimmer" type="ColorRect" parent="PlaytestEndLayer"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0, 0, 0)
+
+[node name="CenterContainer" type="CenterContainer" parent="PlaytestEndLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VictoryPanel" type="Panel" parent="PlaytestEndLayer/CenterContainer"]
+visible = false
+custom_minimum_size = Vector2(840, 800)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
+
+[node name="VictoryTitle" type="Label" parent="PlaytestEndLayer/CenterContainer/VictoryPanel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 28.0
+offset_top = 24.0
+offset_right = -28.0
+offset_bottom = 200.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 10
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 48
+horizontal_alignment = 1
+vertical_alignment = 1
+clip_contents = false
+clip_text = false
+
+[node name="VictoryResultsHost" type="Control" parent="PlaytestEndLayer/CenterContainer/VictoryPanel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 40.0
+offset_top = 188.0
+offset_right = -40.0
+offset_bottom = 430.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="VictoryBoardPreview" type="TextureRect" parent="PlaytestEndLayer/CenterContainer/VictoryPanel"]
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="VictoryButtons" type="VBoxContainer" parent="PlaytestEndLayer/CenterContainer/VictoryPanel"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -260.0
+offset_top = 450.0
+offset_right = 260.0
+offset_bottom = 720.0
+grow_horizontal = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="TryAgainButton" type="Button" parent="PlaytestEndLayer/CenterContainer/VictoryPanel/VictoryButtons"]
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "UI_TRY_AGAIN"
+
+[node name="ReturnButton" type="Button" parent="PlaytestEndLayer/CenterContainer/VictoryPanel/VictoryButtons"]
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("font_ps2p")
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
+text = "RETURN"

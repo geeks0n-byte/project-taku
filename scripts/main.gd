@@ -64,16 +64,20 @@ func _reset_hint_quota(level: LevelData) -> void:
 		hints_remaining = GameConstants.hint_limit_for_difficulty(_difficulty_for_level(level))
 
 func _can_use_hint() -> bool:
-	if hints_remaining == 0:
-		return false
-	return HintController.has_usable_hints(
-		board_manager.board_cells,
-		board_manager.active_constraint_pairs,
+	var board_ok := HintController.has_usable_hints(
+		board_manager.board_cells if board_manager else {},
+		board_manager.active_constraint_pairs if board_manager else [],
 		solved_solution_reference,
 		hidden_reference_constraints,
 		Vector2i.ZERO,
 		prefer_hidden_hints
 	)
+	if not board_ok:
+		return false
+	if hints_remaining != 0:
+		return true
+	# Out of free hints — still allow if a rewarded video can grant one.
+	return AdsManager != null and AdsManager.can_offer_rewarded_hint()
 
 func _refresh_hint_button() -> void:
 	if ui_manager:
@@ -81,6 +85,8 @@ func _refresh_hint_button() -> void:
 		ui_manager.set_hint_button_disabled(not _can_use_hint())
 
 func _ready():
+	if AdsManager:
+		AdsManager.hide_menu_banner()
 	_loading_overlay = LoadingOverlay.new()
 	add_child(_loading_overlay)
 	tutorial_director = TutorialDirector.new()
@@ -522,7 +528,24 @@ func _on_hint_requested():
 	if not is_game_active or is_paused:
 		return
 	if hints_remaining == 0:
+		# Free quota exhausted — offer a rewarded video for +1 hint.
+		if AdsManager and AdsManager.show_rewarded_for_hint(_on_rewarded_hint_earned):
+			return
+		if ui_manager:
+			ui_manager.show_status_errors(["ERROR_AD_HINT_UNAVAILABLE"])
 		_refresh_hint_button()
+		return
+	_apply_hint()
+
+func _on_rewarded_hint_earned() -> void:
+	# Grant one consumable hint use, then reveal immediately.
+	hints_remaining = 1
+	_apply_hint()
+
+func _apply_hint() -> void:
+	if not is_game_active or is_paused:
+		return
+	if not board_manager or levels.is_empty() or current_level_index < 0:
 		return
 	var current_res = levels[current_level_index]
 	var tiles_list = current_res.available_tiles if current_res.available_tiles.size() > 0 else [0, 1, 2]
@@ -561,6 +584,7 @@ func _on_hint_requested():
 		board_manager.trigger_redraw()
 		_run_validation_pass()
 		_autosave_session()
+		_refresh_hint_button()
 	else:
 		ui_manager.show_status_errors(["ERROR_NO_HINTS"])
 		_refresh_hint_button()
@@ -648,12 +672,15 @@ func trigger_victory():
 			SaveManager.record_level_stars(unlock_num, int(star_result.get("bits", 0)))
 	_set_board_and_hud_visible(false)
 	var solved_preview := LevelPreview.make_texture_from_board_cells(board_manager.board_cells, 320)
+	var won_tutorial := _is_campaign_tutorial(levels[current_level_index])
+	if AdsManager:
+		AdsManager.record_level_win(won_tutorial)
 	ui_manager.show_victory(
 		display_num,
 		is_last,
 		star_result,
 		is_custom,
-		_is_campaign_tutorial(levels[current_level_index]),
+		won_tutorial,
 		solved_preview
 	)
 
@@ -774,6 +801,18 @@ func _on_options_back_from_pause() -> void:
 
 func _on_next_level():
 	SaveManager.clear_session()
+	var skip_ad := (
+		not levels.is_empty()
+		and current_level_index >= 0
+		and current_level_index < levels.size()
+		and _is_campaign_tutorial(levels[current_level_index])
+	)
+	if AdsManager and not skip_ad:
+		AdsManager.show_interstitial_if_ready(_do_next_level)
+	else:
+		_do_next_level()
+
+func _do_next_level() -> void:
 	if current_level_index < levels.size() - 1:
 		current_level_index += 1
 	_begin_level_entry()
@@ -781,6 +820,18 @@ func _on_next_level():
 func _on_play_again():
 	# Retry the current level so the player can chase remaining challenge stars.
 	SaveManager.clear_session()
+	var skip_ad := (
+		not levels.is_empty()
+		and current_level_index >= 0
+		and current_level_index < levels.size()
+		and _is_campaign_tutorial(levels[current_level_index])
+	)
+	if AdsManager and not skip_ad:
+		AdsManager.show_interstitial_if_ready(_do_play_again)
+	else:
+		_do_play_again()
+
+func _do_play_again() -> void:
 	_begin_level_entry()
 
 func _apply_debug_tools_visibility() -> void:

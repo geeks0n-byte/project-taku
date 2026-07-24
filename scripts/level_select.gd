@@ -10,7 +10,10 @@ const LEVEL_LOCK_ICON_SIZE := 200.0
 const TAB_LOCK_ICON_SIZE := 36.0
 
 @onready var level_grid: GridContainer = $"UILayer/CenterContainer/VBoxContainer/LevelGrid"
-@onready var back_button: Button = $"UILayer/CenterContainer/BackButton"
+@onready var back_button: Button = $"UILayer/CenterContainer/PageNav/BackButton"
+@onready var _page_nav: HBoxContainer = $"UILayer/CenterContainer/PageNav"
+@onready var _page_prev_button: Button = $"UILayer/CenterContainer/PageNav/PrevSlot/PrevButton"
+@onready var _page_next_button: Button = $"UILayer/CenterContainer/PageNav/NextSlot/NextButton"
 @onready var tutorials_tab_button: Button = $"UILayer/CenterContainer/VBoxContainer/TabContainer/TutorialsTabButton"
 @onready var easy_tab_button: Button = $"UILayer/CenterContainer/VBoxContainer/TabContainer/EasyTabButton"
 @onready var medium_tab_button: Button = $"UILayer/CenterContainer/VBoxContainer/TabContainer/MediumTabButton"
@@ -25,16 +28,19 @@ const TAB_LOCK_ICON_SIZE := 36.0
 @onready var tab_container: HBoxContainer = $"UILayer/CenterContainer/VBoxContainer/TabContainer"
 
 enum ViewMode { TUTORIALS, EASY, MEDIUM, HARD, CUSTOM }
-var current_view: ViewMode = ViewMode.TUTORIALS
+var current_view: ViewMode = ViewMode.EASY
 var _level_entries: Array = []
 var _page_index: int = 0
-var _page_prev_button: Button
-var _page_next_button: Button
-var _page_nav: HBoxContainer
 
 func _ready() -> void:
+	if AdsManager:
+		AdsManager.show_menu_banner()
 	if back_button:
 		back_button.pressed.connect(_on_back_pressed)
+	if _page_prev_button:
+		_page_prev_button.pressed.connect(_on_page_prev)
+	if _page_next_button:
+		_page_next_button.pressed.connect(_on_page_next)
 	if tutorials_tab_button:
 		tutorials_tab_button.pressed.connect(func(): _switch_view(ViewMode.TUTORIALS))
 	if easy_tab_button:
@@ -159,62 +165,20 @@ func _layout_level_select() -> void:
 	_position_custom_tab_button()
 
 func _ensure_page_nav() -> void:
-	if content_root == null:
+	if content_root == null or _page_nav == null:
 		return
-	if _page_nav and is_instance_valid(_page_nav):
-		return
-	_page_nav = HBoxContainer.new()
-	_page_nav.name = "PageNav"
-	_page_nav.alignment = BoxContainer.ALIGNMENT_CENTER
-	_page_nav.add_theme_constant_override("separation", 20)
-	content_root.add_child(_page_nav)
-
-	var prev_slot := Control.new()
-	prev_slot.name = "PrevSlot"
-	prev_slot.custom_minimum_size = GameConstants.UI_BTN_NAV_SIZE
-	_page_nav.add_child(prev_slot)
-
-	_page_prev_button = Button.new()
-	_page_prev_button.name = "PrevButton"
-	_page_prev_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_page_prev_button.pressed.connect(_on_page_prev)
-	prev_slot.add_child(_page_prev_button)
-
-	# Close lives in the center slot of the same bottom band.
-	if back_button:
-		if back_button.get_parent():
-			back_button.get_parent().remove_child(back_button)
-		_page_nav.add_child(back_button)
-
-	var next_slot := Control.new()
-	next_slot.name = "NextSlot"
-	next_slot.custom_minimum_size = GameConstants.UI_BTN_NAV_SIZE
-	_page_nav.add_child(next_slot)
-
-	_page_next_button = Button.new()
-	_page_next_button.name = "NextButton"
-	_page_next_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_page_next_button.pressed.connect(_on_page_next)
-	next_slot.add_child(_page_next_button)
-
-	# Copy tile chrome onto nav buttons from Close if available.
-	if back_button:
-		for style_name in ["normal", "pressed", "hover", "disabled"]:
-			var style := back_button.get_theme_stylebox(style_name)
-			if style:
-				if _page_prev_button:
-					_page_prev_button.add_theme_stylebox_override(style_name, style)
-				if _page_next_button:
-					_page_next_button.add_theme_stylebox_override(style_name, style)
+	_position_bottom_nav()
+	for style_name in ["normal", "pressed", "hover", "disabled"]:
+		var style := back_button.get_theme_stylebox(style_name) if back_button else null
+		if style:
+			if _page_prev_button:
+				_page_prev_button.add_theme_stylebox_override(style_name, style)
+			if _page_next_button:
+				_page_next_button.add_theme_stylebox_override(style_name, style)
 
 func _position_bottom_nav() -> void:
 	if _page_nav == null or content_root == null:
 		return
-	if _page_nav.get_parent() != content_root:
-		var old := _page_nav.get_parent()
-		if old:
-			old.remove_child(_page_nav)
-		content_root.add_child(_page_nav)
 	_page_nav.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	_page_nav.offset_left = 40.0
 	_page_nav.offset_right = -40.0
@@ -250,7 +214,7 @@ func _configure_custom_tab() -> void:
 		if show_custom:
 			custom_tab_button.text = "UI_CUSTOM"
 	if not show_custom and current_view == ViewMode.CUSTOM:
-		current_view = ViewMode.TUTORIALS
+		current_view = ViewMode.EASY
 
 func _switch_view(new_mode: ViewMode) -> void:
 	if new_mode == ViewMode.CUSTOM and not GlobalGameManager.debug_tools_enabled:
