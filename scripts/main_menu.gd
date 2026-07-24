@@ -5,6 +5,7 @@ extends Control
 @onready var menu_center = $UILayer/CenterContainer
 @onready var start_btn = $UILayer/CenterContainer/VBoxContainer/StartButton
 @onready var levels_btn = $UILayer/CenterContainer/VBoxContainer/LevelSelectButton
+@onready var how_to_play_btn = $UILayer/CenterContainer/VBoxContainer/HowToPlayButton
 @onready var options_btn = $UILayer/CenterContainer/VBoxContainer/OptionsButton
 @onready var credits_btn = $UILayer/CenterContainer/VBoxContainer/CreditsButton
 @onready var editor_btn = $UILayer/CenterContainer/VBoxContainer/EditorButton
@@ -20,10 +21,29 @@ extends Control
 @onready var credits_panel = $UILayer/OverlayBlocker/CreditsPanel
 @onready var close_credits_btn = $UILayer/OverlayBlocker/CreditsPanel/VBoxContainer/CloseCreditsButton
 
+const TITLE_FONT_SIZE := 96
+const TITLE_OUTLINE := 14
+const MENU_BTN_FONT := 64
+const MENU_BTN_OUTLINE := GameConstants.MENU_TEXT_OUTLINE
+const CREDITS_HEADER_SIZE := 80
+const CREDITS_HEADER_OUTLINE := 14
+const CREDITS_BODY_SIZE := 54
+const MENU_FADE_IN := 0.65
+
 var _tutorial_intro_blocker: ColorRect
 var _tutorial_intro_label: Label
 var _tutorial_intro_yes: Button
 var _tutorial_intro_no: Button
+
+var _htp_host: Control
+var _htp_panel: Panel
+var _htp_rules: RichTextLabel
+var _htp_header: Label
+var _htp_nav: HBoxContainer
+var _htp_prev: Button
+var _htp_close: Button
+var _htp_next: Button
+var _htp_page: int = 0
 
 func _ready() -> void:
 	_apply_debug_tools_visibility()
@@ -33,12 +53,14 @@ func _ready() -> void:
 	HudLayout.apply_locale_fonts_to_tree(self)
 	_setup_title_under_fx()
 	_build_tutorial_intro_panel()
+	_build_how_to_play_overlay()
 	if SpaceBackground and SpaceBackground.has_method("set_foreground_events_enabled"):
 		SpaceBackground.set_foreground_events_enabled(true)
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
 	if start_btn: start_btn.pressed.connect(_on_start_pressed)
 	if levels_btn: levels_btn.pressed.connect(_on_levels_pressed)
+	if how_to_play_btn: how_to_play_btn.pressed.connect(_on_how_to_play_pressed)
 	if options_btn: options_btn.pressed.connect(_on_options_pressed)
 	if credits_btn: credits_btn.pressed.connect(_on_credits_pressed)
 	if editor_btn: editor_btn.pressed.connect(_on_editor_pressed)
@@ -56,73 +78,132 @@ func _ready() -> void:
 		if not options_menu.save_deleted.is_connected(_on_save_deleted):
 			options_menu.save_deleted.connect(_on_save_deleted)
 
+	if GlobalGameManager.main_menu_should_fade_in:
+		GlobalGameManager.main_menu_should_fade_in = false
+		_set_menu_ui_alpha(0.0)
+		call_deferred("_fade_in_menu_ui")
+		# Hard fallback: never leave the menu invisible on device if the tween fails.
+		get_tree().create_timer(MENU_FADE_IN + 0.75).timeout.connect(_ensure_menu_ui_visible)
+
+func _ensure_menu_ui_visible() -> void:
+	_set_menu_ui_alpha(1.0)
+
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_WM_GO_BACK_REQUEST:
+		return
+	if _htp_host and _htp_host.visible:
+		_on_htp_close()
+		return
+	if credits_panel and credits_panel.visible:
+		_on_close_credits()
+		return
+	if options_menu and options_menu.visible:
+		if options_menu.has_method("hide_menu"):
+			options_menu.hide_menu()
+		return
+	if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
+		_hide_tutorial_intro_prompt()
+		return
+	get_tree().quit()
+
 func _exit_tree() -> void:
 	if SpaceBackground and SpaceBackground.has_method("set_foreground_events_enabled"):
 		SpaceBackground.set_foreground_events_enabled(false)
 
+## Fade title + menu chrome in over the persistent space background (post-splash).
+func _menu_fade_targets() -> Array[CanvasItem]:
+	var nodes: Array[CanvasItem] = []
+	var title_host := get_node_or_null("TitleLayer/TitleHost") as CanvasItem
+	if title_host:
+		nodes.append(title_host)
+	var center := menu_center as CanvasItem
+	if center:
+		nodes.append(center)
+	var bar := debug_bar as CanvasItem
+	if bar and debug_bar.visible:
+		nodes.append(bar)
+	return nodes
+
+func _set_menu_ui_alpha(alpha: float) -> void:
+	for node in _menu_fade_targets():
+		if node:
+			node.modulate.a = alpha
+
+func _fade_in_menu_ui() -> void:
+	var nodes := _menu_fade_targets()
+	if nodes.is_empty():
+		_set_menu_ui_alpha(1.0)
+		return
+	_set_menu_ui_alpha(0.0)
+	var tween := create_tween()
+	tween.set_parallel(true)
+	for node in nodes:
+		tween.tween_property(node, "modulate:a", 1.0, MENU_FADE_IN).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	# Safety: never leave the menu stuck invisible if the tween is interrupted.
+	if not tween.finished.is_connected(_ensure_menu_ui_visible):
+		tween.finished.connect(_ensure_menu_ui_visible)
+
 ## Title sits under FX (layer 1); menu buttons stay above FX.
+## P/O tiles are children of TitleLabel — edit their offsets relative to the title.
+## Move TitleCluster to move the whole title (text + tiles) together.
 func _setup_title_under_fx() -> void:
 	var ui_layer := $UILayer as CanvasLayer
 	if ui_layer:
 		ui_layer.layer = 2
-	var title := $UILayer/CenterContainer/VBoxContainer/TitleLabel as Label
-	if not title:
-		return
-	var title_layer := CanvasLayer.new()
-	title_layer.name = "TitleLayer"
-	title_layer.layer = 0
-	add_child(title_layer)
-	var host := Control.new()
-	host.name = "TitleHost"
-	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	host.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title_layer.add_child(host)
-	# Keep vertical placement roughly where the centered title sat.
-	var parent := title.get_parent()
-	if parent:
-		parent.remove_child(title)
-	host.add_child(title)
-	# Same vertical slot as Options / Level Select / Credits / Pause headers.
-	title.set_meta("_screen_header_font_size", 80)
-	HudLayout.apply_screen_header_style(title)
-	title.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	title.offset_left = GameConstants.HUD_SIDE_MARGIN
-	title.offset_right = -GameConstants.HUD_SIDE_MARGIN
-	title.offset_top = GameConstants.SCREEN_HEADER_TOP
-	title.offset_bottom = GameConstants.SCREEN_HEADER_TOP + GameConstants.SCREEN_HEADER_HEIGHT
-	# Shrink leftover spacer now that the title lives outside the VBox.
+	var title_layer := get_node_or_null("TitleLayer") as CanvasLayer
+	if title_layer:
+		title_layer.layer = 0
+	var title := get_node_or_null("TitleLayer/TitleHost/TitleCluster/TitleLabel") as Label
+	if title:
+		_style_title_label(title)
 	var spacer := $UILayer/CenterContainer/VBoxContainer/Spacer as Control
 	if spacer:
-		spacer.custom_minimum_size.y = 48.0
+		spacer.custom_minimum_size.y = 20.0
+	var vbox := $UILayer/CenterContainer/VBoxContainer as VBoxContainer
+	if vbox:
+		vbox.add_theme_constant_override("separation", 22)
 	if menu_center:
-		HudLayout.pin_menu_body_below_header(menu_center, 980.0)
+		# Tall enough for PLAY + 4 rows (and EDITOR when debug is on) on phone viewports.
+		HudLayout.pin_menu_body_below_header(menu_center, 1280.0)
+
+func _style_title_label(title: Label) -> void:
+	# Brand title always uses the pixel font (even in Georgian); tiles stay title-relative.
+	title.set_meta("_brand_title", true)
+	title.set_meta("_screen_header", true)
+	title.set_meta("_screen_header_font_size", TITLE_FONT_SIZE)
+	title.set_meta("_screen_header_outline", TITLE_OUTLINE)
+	HudLayout.apply_screen_header_style(title)
 
 func _mount_credits_header() -> void:
 	var credits_title = credits_panel.get_node_or_null("VBoxContainer/CreditsTitle") if credits_panel else null
 	if credits_title and overlay_blocker:
 		HudLayout.mount_screen_header(overlay_blocker, credits_title)
+		credits_title.set_meta("_screen_header_font_size", CREDITS_HEADER_SIZE)
+		credits_title.set_meta("_screen_header_outline", CREDITS_HEADER_OUTLINE)
+		HudLayout.apply_screen_header_style(credits_title)
 	_configure_credits_layout()
 
 func _configure_credits_layout() -> void:
 	if not credits_panel:
 		return
-	# Sit the panel under the shared header band (not vertically centered).
+	# Sit lower under the larger credits header.
 	var top := (
 		GameConstants.SCREEN_HEADER_TOP
 		+ GameConstants.SCREEN_HEADER_HEIGHT
 		+ GameConstants.SCREEN_CONTENT_GAP
+		+ 40.0
 	)
 	credits_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	credits_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	credits_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	credits_panel.custom_minimum_size = Vector2(820, 780)
-	credits_panel.offset_left = -410.0
-	credits_panel.offset_right = 410.0
+	credits_panel.custom_minimum_size = Vector2(860, 900)
+	credits_panel.offset_left = -430.0
+	credits_panel.offset_right = 430.0
 	credits_panel.offset_top = top
-	credits_panel.offset_bottom = top + 780.0
+	credits_panel.offset_bottom = top + 900.0
 	var vbox := credits_panel.get_node_or_null("VBoxContainer") as VBoxContainer
 	if vbox:
-		vbox.add_theme_constant_override("separation", 18)
+		vbox.add_theme_constant_override("separation", 24)
 		vbox.offset_top = 24.0
 		vbox.offset_bottom = -24.0
 	var credits_text = credits_panel.get_node_or_null("VBoxContainer/CreditsText") as RichTextLabel
@@ -131,11 +212,31 @@ func _configure_credits_layout() -> void:
 		credits_text.scroll_active = false
 		credits_text.fit_content = false
 		credits_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_position_credits_close()
+
+func _position_credits_close() -> void:
+	if close_credits_btn == null or overlay_blocker == null:
+		return
+	if close_credits_btn.get_parent() != overlay_blocker:
+		var old := close_credits_btn.get_parent()
+		if old:
+			old.remove_child(close_credits_btn)
+		overlay_blocker.add_child(close_credits_btn)
+	close_credits_btn.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	var half_w := GameConstants.UI_BTN_SECONDARY_SIZE.x * 0.5
+	close_credits_btn.offset_left = -half_w
+	close_credits_btn.offset_right = half_w
+	close_credits_btn.offset_top = GameConstants.SCREEN_BOTTOM_NAV_TOP
+	close_credits_btn.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_BOTTOM
+	close_credits_btn.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	close_credits_btn.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	HudLayout.apply_secondary_button(close_credits_btn)
 
 func _on_language_changed() -> void:
 	_refresh_start_button_label()
 	_fit_menu_buttons()
 	HudLayout.apply_locale_fonts_to_tree(self)
+	_refresh_how_to_play_text()
 
 func _refresh_start_button_label() -> void:
 	if not start_btn:
@@ -150,18 +251,77 @@ func _on_save_deleted() -> void:
 	_fit_menu_buttons()
 
 func _fit_menu_buttons() -> void:
-	for btn in [start_btn, levels_btn, options_btn, credits_btn, editor_btn]:
-		HudLayout.apply_primary_button(btn)
+	for btn in [start_btn, levels_btn, how_to_play_btn, options_btn, credits_btn, editor_btn]:
+		_apply_main_menu_button(btn)
+	_fit_debug_bar_buttons()
 	HudLayout.apply_secondary_button(close_credits_btn)
-	var title = get_node_or_null("TitleLayer/TitleHost/TitleLabel") as Label
-	if title == null:
-		title = get_node_or_null("UILayer/CenterContainer/VBoxContainer/TitleLabel") as Label
+	var title = get_node_or_null("TitleLayer/TitleHost/TitleCluster/TitleLabel") as Label
 	if title:
-		title.set_meta("_screen_header_font_size", 80)
-		HudLayout.apply_screen_header_style(title)
+		_style_title_label(title)
+	var credits_title = get_node_or_null("UILayer/OverlayBlocker/CreditsTitle") as Label
+	if credits_title == null and overlay_blocker:
+		credits_title = overlay_blocker.get_node_or_null("CreditsTitle") as Label
+	if credits_title:
+		credits_title.set_meta("_screen_header_font_size", CREDITS_HEADER_SIZE)
+		credits_title.set_meta("_screen_header_outline", CREDITS_HEADER_OUTLINE)
+		HudLayout.apply_screen_header_style(credits_title)
 	var credits_text_node = credits_panel.get_node_or_null("VBoxContainer/CreditsText") if credits_panel else null
 	if credits_text_node:
 		_apply_credits_fonts(credits_text_node)
+
+## Text-only main-menu rows (no tile backgrounds), larger type.
+func _apply_main_menu_button(button: Button) -> void:
+	if not button:
+		return
+	var empty := StyleBoxEmpty.new()
+	for style_name in ["normal", "pressed", "hover", "disabled", "focus"]:
+		button.add_theme_stylebox_override(style_name, empty)
+	button.flat = true
+	# Georgian (and other non-English locales): default font; English keeps pixel UI font.
+	button.set_meta("_use_default_font", not HudLayout.uses_pixel_font())
+	var is_play: bool = button == start_btn
+	# Keep rows short enough that all menu items fit on tall phone viewports.
+	var row_h := 148.0 if is_play else 118.0
+	var row_w := 780.0 if is_play else 720.0
+	var font_size := 72 if is_play else MENU_BTN_FONT
+	var min_font := 34 if is_play else 30
+	button.custom_minimum_size = Vector2(row_w, row_h)
+	button.add_theme_constant_override("outline_size", MENU_BTN_OUTLINE + (2 if is_play else 0))
+	button.add_theme_color_override("font_outline_color", Color.BLACK)
+	# Keep Level Select on one line (no mid-phrase wrap).
+	if button == levels_btn:
+		button.autowrap_mode = TextServer.AUTOWRAP_OFF
+		button.clip_text = false
+		HudLayout.apply_locale_font_to_control(button)
+		var font: Font = (
+			ThemeDB.fallback_font if button.get_meta("_use_default_font", false) else HudLayout.ui_font()
+		)
+		var display := String(TranslationServer.translate(button.text))
+		var fitted := HudLayout.scaled_font_size(MENU_BTN_FONT)
+		var min_font_size := HudLayout.scaled_font_size(32)
+		var target_w := maxf(40.0, button.custom_minimum_size.x - 28.0)
+		while fitted > min_font_size:
+			var measured := font.get_string_size(display, HORIZONTAL_ALIGNMENT_CENTER, -1, fitted)
+			if measured.x <= target_w + 2.0:
+				break
+			fitted -= 2
+		button.add_theme_font_size_override("font_size", fitted)
+	else:
+		HudLayout.fit_text_button(button, font_size, min_font)
+
+func _fit_debug_bar_buttons() -> void:
+	for btn in [
+		debug_star_btn,
+		debug_comet_btn,
+		debug_asteroid_btn,
+		debug_asteroid_cloud_btn,
+		debug_comet_shower_btn,
+	]:
+		if btn == null:
+			continue
+		btn.custom_minimum_size = Vector2(180, 64)
+		btn.add_theme_constant_override("outline_size", 6)
+		HudLayout.fit_text_button(btn, 22, 12)
 
 func _set_main_menu_chrome_visible(should_show: bool) -> void:
 	if menu_center:
@@ -176,10 +336,12 @@ func _apply_credits_fonts(credits_text_node: RichTextLabel) -> void:
 		credits_text_node.set_meta("_use_default_font", false)
 		HudLayout.apply_locale_font_to_control(credits_text_node)
 		credits_text_node.add_theme_font_size_override(
-			"normal_font_size", HudLayout.scaled_font_size(GameConstants.UI_BODY_FONT_SIZE)
+			"normal_font_size", HudLayout.scaled_font_size(CREDITS_BODY_SIZE)
 		)
+		credits_text_node.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
 	else:
-		HudLayout.apply_body_richtext(credits_text_node, GameConstants.UI_BODY_FONT_SIZE)
+		HudLayout.apply_body_richtext(credits_text_node, CREDITS_BODY_SIZE)
+		credits_text_node.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
 	credits_text_node.scroll_active = false
 	credits_text_node.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
@@ -219,6 +381,115 @@ func _first_level_in_dir(dir_path: String) -> LevelData:
 			return resource
 	return null
 
+func _build_how_to_play_overlay() -> void:
+	var ui_layer := $UILayer as CanvasLayer
+	if ui_layer == null:
+		return
+	_htp_host = Control.new()
+	_htp_host.name = "HowToPlayHost"
+	_htp_host.visible = false
+	_htp_host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_htp_host.mouse_filter = Control.MOUSE_FILTER_STOP
+	ui_layer.add_child(_htp_host)
+
+	_htp_panel = Panel.new()
+	_htp_panel.name = "HowToPlayPanel"
+	_htp_panel.custom_minimum_size = Vector2(950, 1040)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0)
+	_htp_panel.add_theme_stylebox_override("panel", style)
+	_htp_host.add_child(_htp_panel)
+
+	_htp_rules = RichTextLabel.new()
+	_htp_rules.name = "RulesLabel"
+	_htp_rules.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_htp_rules.offset_left = 40.0
+	_htp_rules.offset_top = 0.0
+	_htp_rules.offset_right = -40.0
+	_htp_rules.offset_bottom = -28.0
+	_htp_rules.bbcode_enabled = true
+	_htp_rules.scroll_active = false
+	_htp_rules.fit_content = false
+	_htp_rules.add_theme_color_override("default_color", Color.WHITE)
+	_htp_rules.add_theme_color_override("font_outline_color", Color.BLACK)
+	_htp_rules.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
+	_htp_rules.set_meta("_use_default_font", true)
+	_htp_panel.add_child(_htp_rules)
+
+	_htp_nav = HBoxContainer.new()
+	_htp_nav.name = "NavRow"
+	_htp_nav.add_theme_constant_override("separation", 20)
+	_htp_nav.alignment = BoxContainer.ALIGNMENT_CENTER
+	_htp_host.add_child(_htp_nav)
+
+	var prev_slot := Control.new()
+	prev_slot.name = "PrevSlot"
+	prev_slot.custom_minimum_size = GameConstants.UI_BTN_NAV_SIZE
+	_htp_nav.add_child(prev_slot)
+	_htp_prev = Button.new()
+	_htp_prev.name = "PrevButton"
+	_htp_prev.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_htp_prev.pressed.connect(_on_htp_prev)
+	prev_slot.add_child(_htp_prev)
+
+	_htp_close = Button.new()
+	_htp_close.name = "CloseButton"
+	_htp_close.pressed.connect(_on_htp_close)
+	_htp_nav.add_child(_htp_close)
+
+	var next_slot := Control.new()
+	next_slot.name = "NextSlot"
+	next_slot.custom_minimum_size = GameConstants.UI_BTN_NAV_SIZE
+	_htp_nav.add_child(next_slot)
+	_htp_next = Button.new()
+	_htp_next.name = "NextButton"
+	_htp_next.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_htp_next.pressed.connect(_on_htp_next)
+	next_slot.add_child(_htp_next)
+
+	_copy_menu_button_styles(_htp_prev)
+	_copy_menu_button_styles(_htp_close)
+	_copy_menu_button_styles(_htp_next)
+	HudLayout.layout_how_to_play(_htp_host, _htp_panel, _htp_nav)
+	HudLayout.ensure_how_to_play_nav_slots(_htp_nav, _htp_prev, _htp_next)
+	_htp_header = HudLayout.ensure_how_to_play_page_header(_htp_host)
+	_refresh_how_to_play_text()
+
+func _refresh_how_to_play_text() -> void:
+	if _htp_header == null and _htp_host:
+		_htp_header = HudLayout.ensure_how_to_play_page_header(_htp_host)
+	if _htp_header:
+		_htp_header.text = tr(HowToPlayContent.get_page_title_key(_htp_page))
+		HudLayout.apply_screen_header_style(_htp_header)
+	if _htp_rules:
+		HudLayout.apply_locale_font_to_control(_htp_rules)
+		_htp_rules.text = HowToPlayContent.get_page_text(_htp_page)
+	if _htp_prev:
+		_htp_prev.text = tr("UI_PREVIOUS")
+		_htp_prev.visible = _htp_page > 0
+		HudLayout.apply_nav_button(_htp_prev)
+	if _htp_next:
+		_htp_next.text = tr("UI_NEXT")
+		_htp_next.visible = _htp_page < HowToPlayContent.PAGE_COUNT - 1
+		HudLayout.apply_nav_button(_htp_next)
+	if _htp_close:
+		_htp_close.text = tr("UI_CLOSE")
+		HudLayout.apply_secondary_button(_htp_close)
+
+func _on_htp_prev() -> void:
+	_htp_page = maxi(_htp_page - 1, 0)
+	_refresh_how_to_play_text()
+
+func _on_htp_next() -> void:
+	_htp_page = mini(_htp_page + 1, HowToPlayContent.PAGE_COUNT - 1)
+	_refresh_how_to_play_text()
+
+func _on_htp_close() -> void:
+	if _htp_host:
+		_htp_host.visible = false
+	_set_main_menu_chrome_visible(true)
+	_set_debug_bar_visible(true)
+
 func _build_tutorial_intro_panel() -> void:
 	var ui_layer := $UILayer as CanvasLayer
 	if ui_layer == null:
@@ -238,10 +509,7 @@ func _build_tutorial_intro_panel() -> void:
 
 	var panel := Panel.new()
 	panel.custom_minimum_size = Vector2(680, 380)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.12, 0.12, 0.12, 1)
-	style.set_corner_radius_all(8)
-	panel.add_theme_stylebox_override("panel", style)
+	panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
 	center.add_child(panel)
 
 	var vbox := VBoxContainer.new()
@@ -261,7 +529,7 @@ func _build_tutorial_intro_panel() -> void:
 	_tutorial_intro_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_tutorial_intro_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.55, 1.0))
 	_tutorial_intro_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	_tutorial_intro_label.add_theme_constant_override("outline_size", 8)
+	_tutorial_intro_label.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
 	HudLayout.apply_popup_label(_tutorial_intro_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
 	vbox.add_child(_tutorial_intro_label)
 
@@ -285,12 +553,14 @@ func _copy_menu_button_styles(target: Button) -> void:
 	var source: Button = start_btn if start_btn else options_btn
 	if not source or not target:
 		return
+	# Prefer tiled chrome from options close / credits close when available.
+	var style_source: Button = close_credits_btn if close_credits_btn else source
 	for style_name in ["normal", "pressed", "hover", "disabled"]:
-		var style := source.get_theme_stylebox(style_name)
-		if style:
+		var style := style_source.get_theme_stylebox(style_name)
+		if style and not (style is StyleBoxEmpty):
 			target.add_theme_stylebox_override(style_name, style)
 	target.add_theme_color_override("font_outline_color", Color.BLACK)
-	target.add_theme_constant_override("outline_size", 6)
+	target.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
 
 func _show_tutorial_intro_prompt() -> void:
 	if _tutorial_intro_label:
@@ -330,11 +600,20 @@ func _on_levels_pressed() -> void:
 	_apply_debug_tools_visibility()
 	get_tree().change_scene_to_file("res://scenes/level_select.tscn")
 
+func _on_how_to_play_pressed() -> void:
+	_set_main_menu_chrome_visible(false)
+	_set_debug_bar_visible(false)
+	_htp_page = 0
+	_refresh_how_to_play_text()
+	if _htp_host:
+		_htp_host.visible = true
+		_htp_host.move_to_front()
+
 func _on_options_pressed() -> void:
 	_set_main_menu_chrome_visible(false)
 	_set_debug_bar_visible(false)
 	if options_menu:
-		options_menu.show_menu()
+		options_menu.show_menu(true)
 
 func _on_options_back() -> void:
 	_set_main_menu_chrome_visible(true)
@@ -351,6 +630,7 @@ func _on_credits_pressed() -> void:
 	if credits_text:
 		credits_text.text = tr("CREDITS_TEXT")
 		_apply_credits_fonts(credits_text)
+	_position_credits_close()
 
 func _on_close_credits() -> void:
 	if overlay_blocker: overlay_blocker.visible = false

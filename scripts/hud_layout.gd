@@ -57,34 +57,67 @@ static func position_top_bar(top_bar: Control) -> void:
 	)
 
 static var _screen_header_font: Font
+static var _screen_header_font_default: Font
 
-## Pixel title font for all locales, with default-font fallback for missing glyphs.
-static func screen_header_font() -> Font:
-	if _screen_header_font == null:
-		_screen_header_font = PIXEL_FONT.duplicate()
-		var fallback := ThemeDB.fallback_font
-		if fallback:
-			_screen_header_font.fallbacks = [fallback]
-	return _screen_header_font
+## Brand / English headers use the pixel font; other locales use the default UI font.
+static func screen_header_font(force_pixel: bool = false) -> Font:
+	if force_pixel or uses_pixel_font():
+		if _screen_header_font == null:
+			_screen_header_font = PIXEL_FONT.duplicate()
+			var fallback := ThemeDB.fallback_font
+			if fallback:
+				_screen_header_font.fallbacks = [fallback]
+		return _screen_header_font
+	if _screen_header_font_default == null:
+		_screen_header_font_default = ThemeDB.fallback_font
+	return _screen_header_font_default
 
 static func apply_screen_header_style(label: Label) -> void:
 	if not label:
 		return
 	label.set_meta("_screen_header", true)
-	label.add_theme_font_override("font", screen_header_font())
-	# Keep header size stable across locales (do not apply DEFAULT_FONT_SCALE).
+	var force_pixel := bool(label.get_meta("_brand_title", false))
+	label.add_theme_font_override("font", screen_header_font(force_pixel))
 	var header_size: int = int(label.get_meta(
 		"_screen_header_font_size",
 		GameConstants.SCREEN_HEADER_FONT_SIZE
 	))
-	label.add_theme_font_size_override("font_size", header_size)
-	label.add_theme_constant_override("outline_size", GameConstants.SCREEN_HEADER_OUTLINE)
+	var outline_size: int = int(label.get_meta(
+		"_screen_header_outline",
+		GameConstants.SCREEN_HEADER_OUTLINE
+	))
+	# Brand title stays pixel-sized; localized headers scale for the default font.
+	if force_pixel or uses_pixel_font():
+		label.add_theme_font_size_override("font_size", header_size)
+	else:
+		label.add_theme_font_size_override("font_size", body_font_size(header_size))
+	label.add_theme_constant_override("outline_size", outline_size)
 	label.add_theme_color_override("font_outline_color", Color.BLACK)
 	label.add_theme_color_override("font_color", GameConstants.SCREEN_HEADER_COLOR)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	label.clip_text = false
+	label.clip_contents = false
+
+## Victory / defeat titles — safer outlines on mobile (stretch can clip glyph edges into a hard line).
+static func apply_end_screen_header_style(label: Label, base_size: int = 48) -> void:
+	if not label:
+		return
+	var size := base_size
+	var outline := 8
+	if OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios"):
+		# Keep sizes on the pixel grid; lighter outline avoids atlas/edge clipping on GL.
+		size = 40
+		outline = 6
+	label.set_meta("_brand_title", true)
+	label.set_meta("_screen_header", true)
+	label.set_meta("_screen_header_font_size", size)
+	label.set_meta("_screen_header_outline", outline)
+	apply_screen_header_style(label)
+	label.clip_text = false
+	label.clip_contents = false
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 
 ## Moves a header label onto `host` and pins it to the shared top-of-screen slot.
 static func mount_screen_header(host: Node, label: Label) -> void:
@@ -103,6 +136,116 @@ static func mount_screen_header(host: Node, label: Label) -> void:
 		label.offset_bottom = GameConstants.SCREEN_HEADER_TOP + GameConstants.SCREEN_HEADER_HEIGHT
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	apply_screen_header_style(label)
+
+## How-to-play: page titles sit on the shared header band; nav stays screen-bottom.
+static func layout_how_to_play(host: Control, panel: Control, nav: Control) -> void:
+	if host == null or panel == null or nav == null:
+		return
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	host.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	host.grow_vertical = Control.GROW_DIRECTION_BOTH
+
+	if nav.get_parent() != host:
+		var old_parent := nav.get_parent()
+		if old_parent:
+			old_parent.remove_child(nav)
+		host.add_child(nav)
+
+	nav.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	nav.anchor_left = 0.0
+	nav.anchor_top = 1.0
+	nav.anchor_right = 1.0
+	nav.anchor_bottom = 1.0
+	nav.offset_left = 40.0
+	nav.offset_right = -40.0
+	nav.offset_top = GameConstants.SCREEN_BOTTOM_NAV_TOP
+	nav.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_BOTTOM
+	nav.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	nav.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	if nav is HBoxContainer:
+		(nav as HBoxContainer).alignment = BoxContainer.ALIGNMENT_CENTER
+
+	var panel_w := 950.0
+	if panel.custom_minimum_size.x > 0.0:
+		panel_w = panel.custom_minimum_size.x
+	# Stretch body between the shared header band and bottom nav (stops truncation).
+	panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	panel.anchor_left = 0.5
+	panel.anchor_top = 0.0
+	panel.anchor_right = 0.5
+	panel.anchor_bottom = 1.0
+	panel.offset_left = -panel_w * 0.5
+	panel.offset_right = panel_w * 0.5
+	panel.offset_top = (
+		GameConstants.SCREEN_HEADER_TOP
+		+ GameConstants.SCREEN_HEADER_HEIGHT
+		+ GameConstants.SCREEN_CONTENT_GAP
+	)
+	panel.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_TOP - 12.0
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+
+	var rules := panel.get_node_or_null("RulesLabel") as Control
+	if rules:
+		rules.offset_top = 0.0
+		rules.offset_bottom = -12.0
+		if rules is RichTextLabel:
+			var rtl := rules as RichTextLabel
+			rtl.fit_content = false
+			# Avoid a useless 1px scrollbar; pages are laid out to fit the panel.
+			rtl.scroll_active = false
+			rtl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+## Shared Label header for How to Play pages (same band/style as other screens).
+static func ensure_how_to_play_page_header(host: Control) -> Label:
+	if host == null:
+		return null
+	var header := host.get_node_or_null("HowToPlayPageHeader") as Label
+	if header == null:
+		header = Label.new()
+		header.name = "HowToPlayPageHeader"
+		header.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		host.add_child(header)
+	mount_screen_header(host, header)
+	return header
+
+## Keep Close centered when Prev/Next are hidden by reserving fixed side slots.
+static func ensure_how_to_play_nav_slots(nav: HBoxContainer, prev: Button, next: Button) -> void:
+	if nav == null:
+		return
+	_ensure_htp_side_slot(nav, prev, "PrevSlot", 0)
+	_ensure_htp_side_slot(nav, next, "NextSlot", -1)
+
+static func _ensure_htp_side_slot(
+	nav: HBoxContainer,
+	button: Button,
+	slot_name: String,
+	desired_index: int
+) -> void:
+	if button == null:
+		return
+	var slot := nav.get_node_or_null(slot_name) as Control
+	if slot == null:
+		slot = Control.new()
+		slot.name = slot_name
+		nav.add_child(slot)
+	slot.custom_minimum_size = GameConstants.UI_BTN_NAV_SIZE
+	slot.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	if button.get_parent() != slot:
+		var old_parent := button.get_parent()
+		if old_parent:
+			old_parent.remove_child(button)
+		slot.add_child(button)
+	button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	button.offset_left = 0.0
+	button.offset_top = 0.0
+	button.offset_right = 0.0
+	button.offset_bottom = 0.0
+	var target_index := desired_index if desired_index >= 0 else nav.get_child_count() - 1
+	target_index = clampi(target_index, 0, nav.get_child_count() - 1)
+	if slot.get_index() != target_index:
+		nav.move_child(slot, target_index)
 
 ## Pull menu body up under the shared header (CenterContainer otherwise leaves a large gap).
 static func pin_menu_body_below_header(
@@ -140,14 +283,43 @@ static func translate_status_text(msg: String, force_english: bool = false) -> S
 		return ""
 	# Keep intentional multi-message breaks; do not force mid-sentence wraps.
 	# RichTextLabel autowrap handles line breaks by available width.
+	var translated := ""
 	if msg.contains("\n"):
 		var translated_lines: PackedStringArray = []
 		for line in msg.split("\n"):
 			if line.is_empty():
 				continue
 			translated_lines.append(_tr(line, force_english))
-		return "\n".join(translated_lines)
-	return _tr(msg, force_english)
+		translated = "\n".join(translated_lines)
+	else:
+		translated = _tr(msg, force_english)
+	return break_after_sentences(translated)
+
+## After a sentence ends (. ! ?), put the following text on its own line.
+## Skips digit-after-abbrev cases like "Max. 1".
+static func break_after_sentences(text: String) -> String:
+	if text.is_empty():
+		return text
+	var out := ""
+	var i := 0
+	var n := text.length()
+	while i < n:
+		var c := text[i]
+		out += c
+		if c == "." or c == "!" or c == "?":
+			var j := i + 1
+			while j < n and (text[j] == " " or text[j] == "\t"):
+				j += 1
+			# Only break when there was whitespace and more content on the same line.
+			if j > i + 1 and j < n and text[j] != "\n":
+				var next_c := text[j]
+				# Keep "Max. 1 ..." on one line; break for real next sentences.
+				if next_c < "0" or next_c > "9":
+					out += "\n"
+					i = j
+					continue
+		i += 1
+	return out
 
 static func format_centered_status(msg: String, force_english: bool = false) -> String:
 	return "[center]" + translate_status_text(msg, force_english) + "[/center]"
@@ -322,6 +494,16 @@ static func apply_popup_label(label: Label, base_size: int = GameConstants.UI_BO
 	apply_locale_font_to_control(label)
 	var size := base_size if uses_pixel_font() else body_font_size(base_size)
 	label.add_theme_font_size_override("font_size", size)
+
+## Shared dialog / confirm panel chrome (dark fill + soft yellow border).
+static func make_dialog_panel_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.08, 0.1, 0.98)
+	style.set_corner_radius_all(16)
+	style.set_content_margin_all(28)
+	style.border_color = Color(1.0, 0.84, 0.0, 0.4)
+	style.set_border_width_all(3)
+	return style
 
 static func apply_body_label(label: Label, base_size: int = GameConstants.UI_BODY_FONT_SIZE) -> void:
 	if not label:

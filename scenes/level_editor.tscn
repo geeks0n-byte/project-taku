@@ -1616,7 +1616,7 @@ text = "RETURN"
 [node name="HowToPlayLayer" type="CanvasLayer" parent="." unique_id=604745175]
 layer = 6
 
-[node name="CenterContainer" type="CenterContainer" parent="HowToPlayLayer" unique_id=2080898294]
+[node name="CenterContainer" type="Control" parent="HowToPlayLayer" unique_id=2080898294]
 visible = false
 anchors_preset = 15
 anchor_right = 1.0
@@ -1626,7 +1626,15 @@ grow_vertical = 2
 
 [node name="HowToPlayPanel" type="Panel" parent="HowToPlayLayer/CenterContainer" unique_id=937192312]
 custom_minimum_size = Vector2(950, 1040)
-layout_mode = 2
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -475.0
+offset_top = 280.0
+offset_right = 475.0
+offset_bottom = 1320.0
+grow_horizontal = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_htp")
 
 [node name="RulesLabel" type="RichTextLabel" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=2066659259]
@@ -1635,19 +1643,19 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 40.0
-offset_top = 28.0
+offset_top = 0.0
 offset_right = -40.0
-offset_bottom = -150.0
+offset_bottom = -28.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_colors/default_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
+theme_override_constants/outline_size = 10
 bbcode_enabled = true
 scroll_active = false
 fit_content = false
 
-[node name="NavRow" type="HBoxContainer" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=1284825960]
+[node name="NavRow" type="HBoxContainer" parent="HowToPlayLayer/CenterContainer" unique_id=1284825960]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
@@ -1662,9 +1670,17 @@ grow_vertical = 0
 theme_override_constants/separation = 20
 alignment = 1
 
-[node name="PrevButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow" unique_id=1284825962]
-custom_minimum_size = Vector2(220, 110)
+[node name="PrevSlot" type="Control" parent="HowToPlayLayer/CenterContainer/NavRow" unique_id=1284825964]
+custom_minimum_size = Vector2(240, 100)
 layout_mode = 2
+
+[node name="PrevButton" type="Button" parent="HowToPlayLayer/CenterContainer/NavRow/PrevSlot" unique_id=1284825962]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
 theme_override_fonts/font = ExtResource("font_ps2p")
@@ -1673,10 +1689,9 @@ theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
-disabled = true
 text = "UI_PREVIOUS"
 
-[node name="BackButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow" unique_id=1284825961]
+[node name="BackButton" type="Button" parent="HowToPlayLayer/CenterContainer/NavRow" unique_id=1284825961]
 custom_minimum_size = Vector2(260, 110)
 layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -1689,9 +1704,17 @@ theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 text = "UI_CLOSE"
 
-[node name="NextButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow" unique_id=1284825963]
-custom_minimum_size = Vector2(220, 110)
+[node name="NextSlot" type="Control" parent="HowToPlayLayer/CenterContainer/NavRow" unique_id=1284825965]
+custom_minimum_size = Vector2(240, 100)
 layout_mode = 2
+
+[node name="NextButton" type="Button" parent="HowToPlayLayer/CenterContainer/NavRow/NextSlot" unique_id=1284825963]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
 theme_override_fonts/font = ExtResource("font_ps2p")

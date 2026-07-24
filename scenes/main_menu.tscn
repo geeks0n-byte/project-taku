@@ -4,6 +4,9 @@
 [ext_resource type="FontFile" uid="uid://ckwxng7tlmws7" path="res://resources/fonts/PressStart2P-vaV7.ttf" id="3_font"]
 [ext_resource type="Texture2D" uid="uid://d2ql5f4tsvnk8" path="res://resources/buttons/button_tile_gray_dark.svg" id="4_tex"]
 [ext_resource type="PackedScene" uid="uid://c8m3k2v1" path="res://scenes/options_menu.tscn" id="5_options"]
+[ext_resource type="Texture2D" uid="uid://bnmamps4et8l4" path="res://resources/tiles/tile_green.svg" id="6_green"]
+[ext_resource type="Texture2D" uid="uid://dsu5bgexlaa44" path="res://resources/tiles/tile_yellow.svg" id="7_yellow"]
+[ext_resource type="Texture2D" uid="uid://dkilaw7wyetxk" path="res://resources/tiles/tile_blue.svg" id="8_blue"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_normal"]
 content_margin_left = 8.0
@@ -56,7 +59,94 @@ grow_vertical = 2
 script = ExtResource("1_script")
 show_debug_tools = true
 
+[node name="TitleLayer" type="CanvasLayer" parent="." unique_id=731966347]
+layer = 0
+
+[node name="TitleHost" type="Control" parent="TitleLayer" unique_id=722246569]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TitleCluster" type="Control" parent="TitleLayer/TitleHost" unique_id=722246570]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -540.0
+offset_right = 540.0
+offset_bottom = 420.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="TitleTileHost" type="Control" parent="TitleLayer/TitleHost/TitleCluster" unique_id=1536194439]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TilePGreen" type="TextureRect" parent="TitleLayer/TitleHost/TitleCluster/TitleTileHost" unique_id=880448444]
+layout_mode = 0
+offset_left = 230.0
+offset_top = 286.0
+offset_right = 258.0
+offset_bottom = 314.0
+scale = Vector2(1.15, 1.15)
+mouse_filter = 2
+texture = ExtResource("6_green")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TileOYellow" type="TextureRect" parent="TitleLayer/TitleHost/TitleCluster/TitleTileHost" unique_id=1510172620]
+layout_mode = 0
+offset_left = 806.0
+offset_top = 286.0
+offset_right = 834.0
+offset_bottom = 314.0
+scale = Vector2(1.15, 1.15)
+mouse_filter = 2
+texture = ExtResource("7_yellow")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TileOBlue" type="TextureRect" parent="TitleLayer/TitleHost/TitleCluster/TitleTileHost" unique_id=1252949679]
+layout_mode = 0
+offset_left = 806.0
+offset_top = 313.0
+offset_right = 834.0
+offset_bottom = 341.0
+scale = Vector2(1.15, 1.15)
+mouse_filter = 2
+texture = ExtResource("8_blue")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TitleLabel" type="Label" parent="TitleLayer/TitleHost/TitleCluster" unique_id=362378081]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 240.0
+offset_right = -24.0
+offset_bottom = 400.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 14
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 96
+text = "SPACEBLOX"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="UILayer" type="CanvasLayer" parent="." unique_id=116812140]
+layer = 2
 
 [node name="CenterContainer" type="CenterContainer" parent="UILayer" unique_id=669949293]
 anchors_preset = 15
@@ -67,90 +157,80 @@ grow_vertical = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="UILayer/CenterContainer" unique_id=1400229977]
 layout_mode = 2
-theme_override_constants/separation = 40
+theme_override_constants/separation = 22
 alignment = 1
 
-[node name="TitleLabel" type="Label" parent="UILayer/CenterContainer/VBoxContainer" unique_id=666801072]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.84, 0, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 16
-theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 80
-text = "SPACEBLOX"
-horizontal_alignment = 1
-vertical_alignment = 1
-
 [node name="Spacer" type="Control" parent="UILayer/CenterContainer/VBoxContainer" unique_id=340732676]
-custom_minimum_size = Vector2(0, 60)
+custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 
 [node name="StartButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=19078216]
-custom_minimum_size = Vector2(600, 120)
+custom_minimum_size = Vector2(640, 140)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
+theme_override_constants/outline_size = 14
 theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 36
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_font_sizes/font_size = 56
 text = "UI_PLAY"
+flat = true
 
 [node name="LevelSelectButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=732738076]
-custom_minimum_size = Vector2(600, 120)
+custom_minimum_size = Vector2(640, 140)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
+theme_override_constants/outline_size = 14
 theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 36
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_font_sizes/font_size = 56
 text = "UI_LEVEL_SELECT"
+flat = true
+
+[node name="HowToPlayButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=732738077]
+custom_minimum_size = Vector2(640, 140)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 14
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 56
+text = "UI_HOW_TO_PLAY"
+flat = true
 
 [node name="OptionsButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=600817596]
-custom_minimum_size = Vector2(600, 120)
+custom_minimum_size = Vector2(640, 140)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
+theme_override_constants/outline_size = 14
 theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 36
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_font_sizes/font_size = 56
 text = "UI_OPTIONS"
+flat = true
 
 [node name="CreditsButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=1352780586]
-custom_minimum_size = Vector2(600, 120)
+custom_minimum_size = Vector2(640, 140)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
+theme_override_constants/outline_size = 14
 theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 36
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_font_sizes/font_size = 56
 text = "UI_CREDITS"
+flat = true
 
 [node name="EditorButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=1125842215]
 auto_translate_mode = 2
 visible = false
-custom_minimum_size = Vector2(600, 120)
+custom_minimum_size = Vector2(640, 140)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
+theme_override_constants/outline_size = 14
 theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 36
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_font_sizes/font_size = 56
 text = "EDITOR"
+flat = true
 
 [node name="OptionsMenu" parent="UILayer" unique_id=262705338 instance=ExtResource("5_options")]
 
@@ -285,7 +365,7 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 12
 theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 64
+theme_override_font_sizes/font_size = 80
 text = "UI_CREDITS"
 horizontal_alignment = 1
 
@@ -299,8 +379,8 @@ theme_override_fonts/bold_font = ExtResource("3_font")
 theme_override_fonts/bold_italics_font = ExtResource("3_font")
 theme_override_fonts/italics_font = ExtResource("3_font")
 theme_override_fonts/mono_font = ExtResource("3_font")
-theme_override_font_sizes/normal_font_size = 34
-theme_override_font_sizes/bold_font_size = 34
+theme_override_font_sizes/normal_font_size = 54
+theme_override_font_sizes/bold_font_size = 54
 bbcode_enabled = true
 text = "CREDITS_TEXT"
 

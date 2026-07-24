@@ -85,7 +85,8 @@ static func evaluate(
 	goals.append({
 		"id": "green",
 		"earned": green_earned,
-		"title": TranslationServer.translate("STAR_GREEN"),
+		"title": TranslationServer.translate("USED"),
+		"title_icon": GameConstants.TILE_GREEN,
 		"detail": (
 			"%d / %d" % [greens_used, green_target]
 			if green_target > 0
@@ -93,16 +94,17 @@ static func evaluate(
 		),
 	})
 
-	var moves_earned := has_shifters and move_target > 0 and moves_used <= move_target
+	var moves_earned := has_shifters and moves_used <= maxi(0, move_target)
 	if moves_earned:
 		bits |= BIT_MOVES
 	goals.append({
 		"id": "moves",
 		"earned": moves_earned,
-		"title": TranslationServer.translate("STAR_MOVES"),
+		"title": TranslationServer.translate("MOVES"),
+		"title_icon": GameConstants.TILE_SHIFTER,
 		"detail": (
-			"%d / %d" % [moves_used, move_target]
-			if has_shifters and move_target > 0
+			"%d / %d" % [moves_used, maxi(0, move_target)]
+			if has_shifters
 			else "%d / —" % moves_used
 		),
 	})
@@ -118,6 +120,61 @@ static func evaluate(
 		"earned_count": earned_count,
 		"total_count": goals.size(),
 		"elapsed_sec": elapsed_sec,
+	}
+
+## Requirements preview for level select (targets + earned stars from save).
+static func build_requirements(level: LevelData, earned_bits: int = 0) -> Dictionary:
+	if level == null:
+		return {
+			"bits": 0,
+			"goals": [],
+			"earned_count": 0,
+			"total_count": 0,
+			"elapsed_sec": 0,
+			"untimed": true,
+		}
+	var dims := LevelUtils.get_dimensions_from_level(level)
+	var time_limit := int(level.time_limit)
+	var green_target := LevelUtils.resolve_required_jokers(int(level.required_jokers), dims.x, dims.y)
+	var move_target := int(level.required_shifter_moves)
+	var has_shifters := not LevelUtils.get_shifter_pairs(level).is_empty()
+	if move_target <= 0 and has_shifters:
+		move_target = LevelUtils.compute_required_shifter_moves(LevelUtils.get_shifter_pairs(level))
+
+	var goals: Array = []
+	var bits := int(earned_bits) & (BIT_TIME | BIT_GREEN | BIT_MOVES)
+
+	goals.append({
+		"id": "time",
+		"earned": (bits & BIT_TIME) != 0,
+		"title": TranslationServer.translate("STAR_TIME"),
+		"detail": format_clock(time_limit) if time_limit > 0 else "—",
+	})
+	goals.append({
+		"id": "green",
+		"earned": (bits & BIT_GREEN) != 0,
+		"title": TranslationServer.translate("USED"),
+		"title_icon": GameConstants.TILE_GREEN,
+		"detail": str(green_target) if green_target > 0 else "—",
+	})
+	goals.append({
+		"id": "moves",
+		"earned": (bits & BIT_MOVES) != 0,
+		"title": TranslationServer.translate("MOVES"),
+		"title_icon": GameConstants.TILE_SHIFTER,
+		"detail": (
+			str(maxi(0, move_target)) if has_shifters else "—"
+		),
+	})
+
+	var earned_count := count_earned_bits(bits)
+	return {
+		"bits": bits,
+		"goals": goals,
+		"earned_count": earned_count,
+		"total_count": goals.size(),
+		"elapsed_sec": 0,
+		"untimed": false,
 	}
 
 ## Builds completion-time + star rows into `host` (clears previous children).
@@ -156,6 +213,26 @@ static func populate_results(host: Control, star_result: Dictionary) -> void:
 	for g in goals:
 		stars_box.add_child(_make_star_row(g))
 
+## Level-select challenge preview: star rows only (no completion time).
+static func populate_requirements(host: Control, level: LevelData, earned_bits: int = 0) -> void:
+	if host == null:
+		return
+	while host.get_child_count() > 0:
+		host.get_child(0).free()
+	var preview := build_requirements(level, earned_bits)
+	var root := VBoxContainer.new()
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_theme_constant_override("separation", 16)
+	root.alignment = BoxContainer.ALIGNMENT_CENTER
+	host.add_child(root)
+	var stars_box := VBoxContainer.new()
+	stars_box.custom_minimum_size = Vector2(RESULTS_CONTENT_WIDTH, 0)
+	stars_box.add_theme_constant_override("separation", 12)
+	stars_box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	root.add_child(stars_box)
+	for g in preview.get("goals", []):
+		stars_box.add_child(_make_star_row(g))
+
 static func _make_text_row(text: String, color: Color, font_size: int) -> Label:
 	var label := Label.new()
 	label.text = text
@@ -187,9 +264,25 @@ static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 	icon.modulate = Color(1, 1, 1, 1) if earned else Color(1, 1, 1, 0.5)
 	icon_slot.add_child(icon)
 
+	var title_slot := HBoxContainer.new()
+	title_slot.custom_minimum_size = Vector2(240, 0)
+	title_slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	title_slot.add_theme_constant_override("separation", 10)
+	title_slot.alignment = BoxContainer.ALIGNMENT_BEGIN
+	row.add_child(title_slot)
+
+	var icon_path := str(goal.get("title_icon", ""))
+	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
+		var tile_icon := TextureRect.new()
+		tile_icon.custom_minimum_size = Vector2(40, 40)
+		tile_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tile_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tile_icon.texture = load(icon_path) as Texture2D
+		tile_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		title_slot.add_child(tile_icon)
+
 	var title := Label.new()
 	title.text = str(goal.get("title", ""))
-	title.custom_minimum_size = Vector2(200, 0)
 	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -197,7 +290,7 @@ static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	title.add_theme_constant_override("outline_size", 8)
 	HudLayout.apply_popup_label(title, RESULTS_ROW_FONT)
-	row.add_child(title)
+	title_slot.add_child(title)
 
 	var detail := Label.new()
 	detail.text = str(goal.get("detail", ""))

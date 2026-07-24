@@ -11,12 +11,12 @@
 [ext_resource type="Texture2D" uid="uid://cat4tyxlo2ihu" path="res://resources/tiles/tile_shifter_right.svg" id="7_v4toj"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_q20q2"]
-bg_color = Color(0.6, 0.6, 0.6, 0)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(0.8, 0, 0, 1)
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+border_color = Color(0, 0, 0, 0)
 
 [node name="Cell" type="TextureButton" unique_id=258424194]
 custom_minimum_size = Vector2(120, 120)

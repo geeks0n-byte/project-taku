@@ -1,26 +1,36 @@
 extends Control
 
 const DEV_DIR = GameConstants.DEV_LEVELS_DIR
-const PREVIEW_SIZE := 120
+const LEVELS_PER_PAGE := 12
+## Higher than the shared menu band so title + tabs sit closer to the top.
+const LEVEL_SELECT_HEADER_TOP := 160.0
+const PREVIEW_SIZE := 96
 const LOCK_ICON := preload("res://resources/tiles/tile_lock.svg")
-const LEVEL_LOCK_ICON_SIZE := 240.0
+const LEVEL_LOCK_ICON_SIZE := 200.0
 const TAB_LOCK_ICON_SIZE := 36.0
 
-@onready var level_grid: GridContainer = $"UILayer/CenterContainer/VBoxContainer/ScrollContainer/LevelGrid"
-@onready var back_button: Button = $"UILayer/CenterContainer/VBoxContainer/BackButton"
+@onready var level_grid: GridContainer = $"UILayer/CenterContainer/VBoxContainer/LevelGrid"
+@onready var back_button: Button = $"UILayer/CenterContainer/BackButton"
 @onready var tutorials_tab_button: Button = $"UILayer/CenterContainer/VBoxContainer/TabContainer/TutorialsTabButton"
 @onready var easy_tab_button: Button = $"UILayer/CenterContainer/VBoxContainer/TabContainer/EasyTabButton"
 @onready var medium_tab_button: Button = $"UILayer/CenterContainer/VBoxContainer/TabContainer/MediumTabButton"
 @onready var hard_tab_button: Button = $"UILayer/CenterContainer/VBoxContainer/TabContainer/HardTabButton"
 @onready var custom_tab_button: Button = $"UILayer/CenterContainer/VBoxContainer/TabContainer/CustomTabButton"
-@onready var button_template: Button = $"UILayer/CenterContainer/VBoxContainer/ScrollContainer/LevelGrid/LevelButtonTemplate"
-@onready var locked_button_template: Button = $"UILayer/CenterContainer/VBoxContainer/ScrollContainer/LevelGrid/LevelButtonTemplateLocked"
-@onready var custom_button_template: Button = $"UILayer/CenterContainer/VBoxContainer/ScrollContainer/LevelGrid/LevelButtonTemplateCustom"
+@onready var button_template: Button = $"UILayer/CenterContainer/VBoxContainer/LevelGrid/LevelButtonTemplate"
+@onready var locked_button_template: Button = $"UILayer/CenterContainer/VBoxContainer/LevelGrid/LevelButtonTemplateLocked"
+@onready var custom_button_template: Button = $"UILayer/CenterContainer/VBoxContainer/LevelGrid/LevelButtonTemplateCustom"
 @onready var empty_state_label: Label = $"UILayer/CenterContainer/VBoxContainer/EmptyStateLabel"
-@onready var scroll_container: ScrollContainer = $"UILayer/CenterContainer/VBoxContainer/ScrollContainer"
+@onready var content_root: Control = $"UILayer/CenterContainer"
+@onready var content_vbox: VBoxContainer = $"UILayer/CenterContainer/VBoxContainer"
+@onready var tab_container: HBoxContainer = $"UILayer/CenterContainer/VBoxContainer/TabContainer"
 
 enum ViewMode { TUTORIALS, EASY, MEDIUM, HARD, CUSTOM }
 var current_view: ViewMode = ViewMode.TUTORIALS
+var _level_entries: Array = []
+var _page_index: int = 0
+var _page_prev_button: Button
+var _page_next_button: Button
+var _page_nav: HBoxContainer
 
 func _ready() -> void:
 	if back_button:
@@ -36,7 +46,7 @@ func _ready() -> void:
 	if custom_tab_button:
 		custom_tab_button.pressed.connect(func(): _switch_view(ViewMode.CUSTOM))
 	_configure_custom_tab()
-	_mount_header()
+	_layout_level_select()
 	if not _is_category_unlocked(current_view):
 		current_view = _first_unlocked_view()
 	_fit_chrome_buttons()
@@ -45,54 +55,200 @@ func _ready() -> void:
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		_on_back_pressed()
+
 func _fit_chrome_buttons() -> void:
-	HudLayout.apply_primary_button(back_button)
+	_apply_close_button()
+	_configure_custom_tab()
 	for btn in [
 		tutorials_tab_button,
 		easy_tab_button,
 		medium_tab_button,
 		hard_tab_button,
-		custom_tab_button,
 	]:
 		if btn == null:
 			continue
-		# Custom tab is slightly wider for the translated label.
-		if btn == custom_tab_button:
-			btn.custom_minimum_size = Vector2(220, GameConstants.UI_BTN_TAB_SIZE.y)
-			HudLayout.fit_text_button(
-				btn, GameConstants.UI_BTN_TAB_FONT, GameConstants.UI_BTN_TAB_FONT_MIN
-			)
-		else:
-			HudLayout.apply_tab_button(btn)
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.custom_minimum_size = Vector2(0, GameConstants.UI_BTN_TAB_SIZE.y)
+		btn.add_theme_color_override("font_outline_color", Color.BLACK)
+		btn.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
+		btn.autowrap_mode = TextServer.AUTOWRAP_OFF
+		btn.clip_text = false
+		HudLayout.fit_text_button(
+			btn, GameConstants.UI_BTN_TAB_FONT, GameConstants.UI_BTN_TAB_FONT_MIN
+		)
+		# Prefer keeping the larger category type; only shrink when truly needed.
+		btn.autowrap_mode = TextServer.AUTOWRAP_OFF
+	if custom_tab_button and custom_tab_button.visible:
+		custom_tab_button.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
+		HudLayout.apply_secondary_button(custom_tab_button)
+		custom_tab_button.text = "UI_CUSTOM"
+	if _page_prev_button:
+		_page_prev_button.text = tr("UI_PREVIOUS")
+		HudLayout.apply_nav_button(_page_prev_button)
+	if _page_next_button:
+		_page_next_button.text = tr("UI_NEXT")
+		HudLayout.apply_nav_button(_page_next_button)
+
+func _apply_close_button() -> void:
+	if not back_button:
+		return
+	back_button.text = "UI_CLOSE"
+	back_button.flat = false
+	HudLayout.apply_secondary_button(back_button)
 
 func _on_language_changed() -> void:
 	_fit_chrome_buttons()
 	_update_tab_button_visuals()
 	populate_level_menu()
 
-func _mount_header() -> void:
+func _layout_level_select() -> void:
 	var ui_layer := $UILayer as CanvasLayer
 	var title := $UILayer/CenterContainer/VBoxContainer/TitleLabel as Label
-	if ui_layer and title:
-		# Host must be a Control for anchors; use a full-rect root under the layer.
-		var host := ui_layer.get_node_or_null("ScreenHeaderHost") as Control
-		if host == null:
-			host = Control.new()
-			host.name = "ScreenHeaderHost"
-			host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-			host.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			ui_layer.add_child(host)
-			ui_layer.move_child(host, 0)
+	if ui_layer == null or content_root == null:
+		return
+
+	# Full-rect host (was a CenterContainer).
+	content_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	content_root.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	content_root.grow_vertical = Control.GROW_DIRECTION_BOTH
+
+	var host := ui_layer.get_node_or_null("ScreenHeaderHost") as Control
+	if host == null:
+		host = Control.new()
+		host.name = "ScreenHeaderHost"
+		host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ui_layer.add_child(host)
+		ui_layer.move_child(host, 0)
+	if title:
 		HudLayout.mount_screen_header(host, title)
-	# Keep content below the shared header band.
-	var center := $UILayer/CenterContainer as Control
-	if center:
-		HudLayout.pin_menu_body_below_header(center, 1180.0)
+		title.offset_top = LEVEL_SELECT_HEADER_TOP
+		title.offset_bottom = LEVEL_SELECT_HEADER_TOP + GameConstants.SCREEN_HEADER_HEIGHT
+		HudLayout.apply_screen_header_style(title)
+
+	# Content column under the raised header.
+	if content_vbox:
+		content_vbox.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		content_vbox.anchor_bottom = 1.0
+		content_vbox.offset_left = GameConstants.HUD_SIDE_MARGIN
+		content_vbox.offset_right = -GameConstants.HUD_SIDE_MARGIN
+		content_vbox.offset_top = (
+			LEVEL_SELECT_HEADER_TOP
+			+ GameConstants.SCREEN_HEADER_HEIGHT
+			+ GameConstants.SCREEN_CONTENT_GAP
+		)
+		# Leave room for Prev/Close/Next (same band as How to Play nav).
+		content_vbox.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_TOP - 20.0
+		content_vbox.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		content_vbox.grow_vertical = Control.GROW_DIRECTION_BOTH
+		content_vbox.alignment = BoxContainer.ALIGNMENT_BEGIN
+		content_vbox.add_theme_constant_override("separation", 28)
+
+	if level_grid:
+		level_grid.columns = 3
+		level_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		level_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		level_grid.add_theme_constant_override("h_separation", 30)
+		level_grid.add_theme_constant_override("v_separation", 30)
+
+	_ensure_page_nav()
+	_position_bottom_nav()
+	_position_custom_tab_button()
+
+func _ensure_page_nav() -> void:
+	if content_root == null:
+		return
+	if _page_nav and is_instance_valid(_page_nav):
+		return
+	_page_nav = HBoxContainer.new()
+	_page_nav.name = "PageNav"
+	_page_nav.alignment = BoxContainer.ALIGNMENT_CENTER
+	_page_nav.add_theme_constant_override("separation", 20)
+	content_root.add_child(_page_nav)
+
+	var prev_slot := Control.new()
+	prev_slot.name = "PrevSlot"
+	prev_slot.custom_minimum_size = GameConstants.UI_BTN_NAV_SIZE
+	_page_nav.add_child(prev_slot)
+
+	_page_prev_button = Button.new()
+	_page_prev_button.name = "PrevButton"
+	_page_prev_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_page_prev_button.pressed.connect(_on_page_prev)
+	prev_slot.add_child(_page_prev_button)
+
+	# Close lives in the center slot of the same bottom band.
+	if back_button:
+		if back_button.get_parent():
+			back_button.get_parent().remove_child(back_button)
+		_page_nav.add_child(back_button)
+
+	var next_slot := Control.new()
+	next_slot.name = "NextSlot"
+	next_slot.custom_minimum_size = GameConstants.UI_BTN_NAV_SIZE
+	_page_nav.add_child(next_slot)
+
+	_page_next_button = Button.new()
+	_page_next_button.name = "NextButton"
+	_page_next_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_page_next_button.pressed.connect(_on_page_next)
+	next_slot.add_child(_page_next_button)
+
+	# Copy tile chrome onto nav buttons from Close if available.
+	if back_button:
+		for style_name in ["normal", "pressed", "hover", "disabled"]:
+			var style := back_button.get_theme_stylebox(style_name)
+			if style:
+				if _page_prev_button:
+					_page_prev_button.add_theme_stylebox_override(style_name, style)
+				if _page_next_button:
+					_page_next_button.add_theme_stylebox_override(style_name, style)
+
+func _position_bottom_nav() -> void:
+	if _page_nav == null or content_root == null:
+		return
+	if _page_nav.get_parent() != content_root:
+		var old := _page_nav.get_parent()
+		if old:
+			old.remove_child(_page_nav)
+		content_root.add_child(_page_nav)
+	_page_nav.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_page_nav.offset_left = 40.0
+	_page_nav.offset_right = -40.0
+	_page_nav.offset_top = GameConstants.SCREEN_BOTTOM_NAV_TOP
+	_page_nav.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_BOTTOM
+	_page_nav.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_page_nav.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_apply_close_button()
+
+## Debug-only Custom list sits under Close (same bottom margin band).
+func _position_custom_tab_button() -> void:
+	if custom_tab_button == null or content_root == null:
+		return
+	if custom_tab_button.get_parent() != content_root:
+		var old := custom_tab_button.get_parent()
+		if old:
+			old.remove_child(custom_tab_button)
+		content_root.add_child(custom_tab_button)
+	custom_tab_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	var half_w := GameConstants.UI_BTN_SECONDARY_SIZE.x * 0.5
+	custom_tab_button.offset_left = -half_w
+	custom_tab_button.offset_right = half_w
+	# Directly under the Close / Prev / Next band.
+	custom_tab_button.offset_top = GameConstants.SCREEN_BOTTOM_NAV_BOTTOM + 10.0
+	custom_tab_button.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_BOTTOM + 110.0
+	custom_tab_button.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	custom_tab_button.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
 func _configure_custom_tab() -> void:
 	var show_custom := GlobalGameManager.debug_tools_enabled
 	if custom_tab_button:
 		custom_tab_button.visible = show_custom
+		if show_custom:
+			custom_tab_button.text = "UI_CUSTOM"
 	if not show_custom and current_view == ViewMode.CUSTOM:
 		current_view = ViewMode.TUTORIALS
 
@@ -104,6 +260,7 @@ func _switch_view(new_mode: ViewMode) -> void:
 	if current_view == new_mode:
 		return
 	current_view = new_mode
+	_page_index = 0
 	_update_tab_button_visuals()
 	populate_level_menu()
 
@@ -116,7 +273,6 @@ func _first_unlocked_view() -> ViewMode:
 func _is_category_unlocked(view: ViewMode) -> bool:
 	if view == ViewMode.CUSTOM:
 		return GlobalGameManager.debug_tools_enabled
-	# Tutorials and Easy are available from the start.
 	if view == ViewMode.TUTORIALS or view == ViewMode.EASY:
 		return true
 	var paths := LevelUtils.scan_directory(_folder_for_view(view))
@@ -128,7 +284,6 @@ func _is_category_unlocked(view: ViewMode) -> bool:
 			found_any = true
 			if SaveManager.is_level_unlocked(resource.level_number):
 				return true
-	# Empty category stays selectable; only lock when every level is locked.
 	return not found_any
 
 func _update_tab_button_visuals() -> void:
@@ -183,10 +338,7 @@ func populate_level_menu() -> void:
 	if not level_grid or not button_template:
 		return
 
-	for child in level_grid.get_children():
-		if child not in [button_template, locked_button_template, custom_button_template]:
-			child.queue_free()
-
+	_level_entries.clear()
 	var paths: Array = []
 	if current_view == ViewMode.CUSTOM:
 		paths = LevelUtils.scan_directory(DEV_DIR)
@@ -194,47 +346,98 @@ func populate_level_menu() -> void:
 		paths = LevelUtils.scan_directory(_folder_for_view(current_view))
 	LevelUtils.sort_level_paths(paths)
 
-	var valid_level_count := 0
 	var tutorial_index := 0
 	for path in paths:
 		var resource = load(path)
-		if resource and resource is LevelData:
-			valid_level_count += 1
-			var btn: Button
-			var title: String
-			var locked := false
-			if current_view == ViewMode.CUSTOM:
-				btn = custom_button_template.duplicate() as Button
-				title = tr("CUSTOM_LVL") + " " + str(resource.level_number)
-				btn.disabled = false
-			elif current_view == ViewMode.TUTORIALS:
-				tutorial_index += 1
-				btn = button_template.duplicate() as Button
-				title = tr("TUTORIAL") + " " + str(tutorial_index)
-				btn.disabled = false
-			else:
-				var is_unlocked = SaveManager.is_level_unlocked(resource.level_number)
-				var display_num := LevelUtils.get_display_level_number(resource)
-				if is_unlocked:
-					btn = button_template.duplicate() as Button
-					title = tr("LEVEL") + " " + str(display_num)
-					btn.disabled = false
-				else:
-					btn = locked_button_template.duplicate() as Button
-					title = tr("LEVEL") + " " + str(display_num)
-					btn.disabled = true
-					locked = true
-			btn.visible = true
-			_apply_level_button_content(btn, resource, title, locked)
-			btn.pressed.connect(_on_level_selected.bind(resource))
-			level_grid.add_child(btn)
+		if resource == null or not (resource is LevelData):
+			continue
+		var title: String
+		var locked := false
+		if current_view == ViewMode.CUSTOM:
+			title = tr("CUSTOM_LVL") + " " + str(resource.level_number)
+		elif current_view == ViewMode.TUTORIALS:
+			tutorial_index += 1
+			title = tr("TUTORIAL") + " " + str(tutorial_index)
+		else:
+			var display_num := LevelUtils.get_display_level_number(resource)
+			title = tr("LEVEL") + " " + str(display_num)
+			locked = not SaveManager.is_level_unlocked(resource.level_number)
+		_level_entries.append({
+			"resource": resource,
+			"title": title,
+			"locked": locked,
+		})
 
+	_page_index = clampi(_page_index, 0, _max_page_index())
+	_refresh_page()
+
+func _max_page_index() -> int:
+	if _level_entries.is_empty():
+		return 0
+	return int(ceili(float(_level_entries.size()) / float(LEVELS_PER_PAGE))) - 1
+
+func _on_page_prev() -> void:
+	_page_index = maxi(_page_index - 1, 0)
+	_refresh_page()
+
+func _on_page_next() -> void:
+	_page_index = mini(_page_index + 1, _max_page_index())
+	_refresh_page()
+
+func _refresh_page() -> void:
+	for child in level_grid.get_children():
+		if child not in [button_template, locked_button_template, custom_button_template]:
+			child.queue_free()
+
+	var valid_level_count := _level_entries.size()
 	if empty_state_label:
-		empty_state_label.visible = (valid_level_count == 0)
+		empty_state_label.visible = valid_level_count == 0
 		if empty_state_label.visible:
 			HudLayout.apply_body_label(empty_state_label, GameConstants.UI_BODY_FONT_SIZE)
-	if scroll_container:
-		scroll_container.visible = (valid_level_count > 0)
+	if level_grid:
+		level_grid.visible = valid_level_count > 0
+
+	var start := _page_index * LEVELS_PER_PAGE
+	var end := mini(start + LEVELS_PER_PAGE, valid_level_count)
+	for i in range(start, end):
+		var entry: Dictionary = _level_entries[i]
+		var resource: LevelData = entry["resource"]
+		var title: String = entry["title"]
+		var locked: bool = entry["locked"]
+		var btn: Button
+		if current_view == ViewMode.CUSTOM:
+			btn = custom_button_template.duplicate() as Button
+			btn.disabled = false
+		elif locked:
+			btn = locked_button_template.duplicate() as Button
+			btn.disabled = true
+		else:
+			btn = button_template.duplicate() as Button
+			btn.disabled = false
+		btn.visible = true
+		_apply_level_button_content(btn, resource, title, locked)
+		btn.pressed.connect(_on_level_selected.bind(resource))
+		level_grid.add_child(btn)
+
+	_update_page_nav_visibility()
+
+func _update_page_nav_visibility() -> void:
+	var multi_page := _level_entries.size() > LEVELS_PER_PAGE
+	if _page_nav:
+		_page_nav.visible = true
+	if _page_prev_button:
+		_page_prev_button.text = tr("UI_PREVIOUS")
+		_page_prev_button.visible = multi_page and _page_index > 0
+		_page_prev_button.disabled = false
+		HudLayout.apply_nav_button(_page_prev_button)
+		HudLayout.refresh_button_icon_modulate(_page_prev_button)
+	if _page_next_button:
+		_page_next_button.text = tr("UI_NEXT")
+		_page_next_button.visible = multi_page and _page_index < _max_page_index()
+		_page_next_button.disabled = false
+		HudLayout.apply_nav_button(_page_next_button)
+		HudLayout.refresh_button_icon_modulate(_page_next_button)
+	_apply_close_button()
 
 func _folder_for_view(view: ViewMode) -> String:
 	match view:
@@ -249,8 +452,7 @@ func _folder_for_view(view: ViewMode) -> String:
 
 func _apply_level_button_content(btn: Button, level: LevelData, title: String, locked: bool) -> void:
 	btn.text = ""
-	var show_preview := current_view != ViewMode.TUTORIALS
-	btn.custom_minimum_size = Vector2(260, 280 if show_preview else 200)
+	btn.custom_minimum_size = Vector2(260, 240)
 	btn.clip_text = true
 
 	var content := Control.new()
@@ -268,18 +470,17 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 	vbox.add_theme_constant_override("separation", 10)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 
-	if show_preview:
-		var preview := TextureRect.new()
-		preview.name = "Preview"
-		preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		preview.custom_minimum_size = Vector2(PREVIEW_SIZE, PREVIEW_SIZE)
-		preview.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		preview.texture = LevelPreview.make_texture(level, GameConstants.LEVEL_PREVIEW_SIZE)
-		if locked:
-			preview.modulate = Color(0.45, 0.45, 0.45, 1.0)
-		vbox.add_child(preview)
+	var preview := TextureRect.new()
+	preview.name = "Preview"
+	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	preview.custom_minimum_size = Vector2(PREVIEW_SIZE, PREVIEW_SIZE)
+	preview.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	preview.texture = LevelPreview.make_texture(level, GameConstants.LEVEL_PREVIEW_SIZE)
+	if locked:
+		preview.modulate = Color(0.45, 0.45, 0.45, 1.0)
+	vbox.add_child(preview)
 
 	var label := Label.new()
 	label.name = "Title"
@@ -291,10 +492,10 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.add_theme_font_override("font", HudLayout.ui_font())
 	label.add_theme_font_size_override(
-		"font_size", HudLayout.scaled_font_size(GameConstants.UI_BTN_TAB_FONT)
+		"font_size", HudLayout.scaled_font_size(GameConstants.UI_BTN_SECONDARY_FONT)
 	)
 	label.add_theme_color_override("font_outline_color", Color.BLACK)
-	label.add_theme_constant_override("outline_size", 6)
+	label.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
 	if locked:
 		label.add_theme_color_override("font_color", btn.get_theme_color("font_disabled_color"))
 	else:
@@ -320,9 +521,9 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 		lock_overlay.custom_minimum_size = Vector2(LEVEL_LOCK_ICON_SIZE, LEVEL_LOCK_ICON_SIZE)
 		lock_overlay.set_anchors_preset(Control.PRESET_CENTER)
 		lock_overlay.offset_left = -half
-		lock_overlay.offset_top = -half - (18.0 if show_preview else 0.0)
+		lock_overlay.offset_top = -half - 28.0
 		lock_overlay.offset_right = half
-		lock_overlay.offset_bottom = half - (18.0 if show_preview else 0.0)
+		lock_overlay.offset_bottom = half - 28.0
 		content.add_child(lock_overlay)
 
 	btn.add_child(content)

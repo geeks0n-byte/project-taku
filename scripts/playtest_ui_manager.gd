@@ -24,14 +24,17 @@ signal resume_from_tutorial_requested
 @onready var status_label: RichTextLabel = $"../EditorUI/PlaytestStatusLabel"
 @onready var counter_container: HBoxContainer = $"../EditorUI/CounterContainer"
 @onready var legacy_victory_panel: Panel = $"../EditorUI/PlaytestVictoryPanel"
-@onready var how_to_play_container: CenterContainer = $"../HowToPlayLayer/CenterContainer"
+@onready var how_to_play_container: Control = $"../HowToPlayLayer/CenterContainer"
+@onready var how_to_play_panel: Control = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel"
+@onready var how_to_play_nav: HBoxContainer = $"../HowToPlayLayer/CenterContainer/NavRow"
 @onready var rules_label: RichTextLabel = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/RulesLabel"
-@onready var tutorial_back_button: Button = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow/BackButton"
-@onready var htp_prev_button: Button = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow/PrevButton"
-@onready var htp_next_button: Button = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow/NextButton"
+@onready var tutorial_back_button: Button = $"../HowToPlayLayer/CenterContainer/NavRow/BackButton"
+@onready var htp_prev_button: Button = $"../HowToPlayLayer/CenterContainer/NavRow/PrevSlot/PrevButton"
+@onready var htp_next_button: Button = $"../HowToPlayLayer/CenterContainer/NavRow/NextSlot/NextButton"
 
 var _test_label_breathe_tween: Tween
 var _htp_page: int = 0
+var _htp_header: Label
 var _hint_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED
 var _hint_forced_disabled: bool = false
 
@@ -40,6 +43,7 @@ var _end_dimmer: ColorRect
 var _victory_panel: Panel
 var _victory_title: Label
 var _victory_results_host: Control
+var _victory_preview: TextureRect
 var _victory_buttons: Control
 var _button_style_source: Button
 var _center: CenterContainer
@@ -53,10 +57,16 @@ func _ready() -> void:
 	_connect_signals()
 	if test_mode_label:
 		test_mode_label.text = HudLayout.format_mode_label("TEST_MODE", true)
+	_layout_how_to_play()
 	_setup_how_to_play_font()
 	_refresh_how_to_play_text()
 	HudLayout.position_top_bar(playtest_hud_container)
 	call_deferred("_apply_top_bar_buttons")
+
+func _layout_how_to_play() -> void:
+	HudLayout.layout_how_to_play(how_to_play_container, how_to_play_panel, how_to_play_nav)
+	HudLayout.ensure_how_to_play_nav_slots(how_to_play_nav, htp_prev_button, htp_next_button)
+	_htp_header = HudLayout.ensure_how_to_play_page_header(how_to_play_container)
 
 func _setup_how_to_play_font() -> void:
 	if not rules_label:
@@ -124,7 +134,7 @@ func _build_end_panels() -> void:
 
 	_end_dimmer = ColorRect.new()
 	_end_dimmer.name = "Dimmer"
-	_end_dimmer.color = Color(0, 0, 0, 0.78)
+	_end_dimmer.color = Color(0, 0, 0, 0)
 	_end_dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_end_dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
 	_end_dimmer.visible = false
@@ -146,29 +156,22 @@ func _make_end_panel(parent: Control) -> Panel:
 	var panel := Panel.new()
 	panel.visible = false
 	panel.custom_minimum_size = Vector2(840, 800)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.08, 0.1, 0.98)
-	style.set_corner_radius_all(16)
-	style.set_content_margin_all(28)
-	style.border_color = Color(1.0, 0.84, 0.0, 0.4)
-	style.set_border_width_all(3)
-	panel.add_theme_stylebox_override("panel", style)
+	panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
 	parent.add_child(panel)
 	return panel
 
 func _make_end_title(panel: Panel, _color: Color) -> Label:
 	var label := Label.new()
 	label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	label.offset_top = 32.0
-	label.offset_bottom = 180.0
-	label.offset_left = 32.0
-	label.offset_right = -32.0
+	label.offset_top = 24.0
+	label.offset_bottom = 200.0
+	label.offset_left = 28.0
+	label.offset_right = -28.0
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.set_meta("_screen_header_font_size", 48)
-	HudLayout.apply_screen_header_style(label)
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.clip_contents = false
+	label.clip_text = false
+	HudLayout.apply_end_screen_header_style(label, 48)
 	panel.add_child(label)
 	return label
 
@@ -225,15 +228,26 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 	if not _victory_panel or not _victory_results_host:
 		return
 	var goal_count := int(star_result.get("total_count", 0))
-	var title_bottom := 180.0
+	var title_bottom := 200.0
 	var results_h := 90.0 + float(maxi(1, goal_count)) * (LevelStars.ROW_HEIGHT + 14.0)
 	_victory_results_host.offset_top = title_bottom + 8.0
 	_victory_results_host.offset_bottom = title_bottom + 8.0 + results_h
-	var buttons_top := title_bottom + 8.0 + results_h + 36.0
+	var cursor := title_bottom + 8.0 + results_h
+	var preview_h := 0.0
+	if _victory_preview and _victory_preview.visible and _victory_preview.texture != null:
+		preview_h = 320.0
+		cursor += 24.0
+		_victory_preview.offset_left = -160.0
+		_victory_preview.offset_right = 160.0
+		_victory_preview.offset_top = cursor
+		_victory_preview.offset_bottom = cursor + preview_h
+		cursor += preview_h
+	var buttons_top := cursor + 28.0
 	if _victory_buttons:
 		_victory_buttons.offset_top = buttons_top
 		_victory_buttons.offset_bottom = buttons_top + 260.0
-	_victory_panel.custom_minimum_size = Vector2(840, maxf(800.0, buttons_top + 300.0))
+	var min_h := 980.0 if preview_h > 0.0 else 900.0
+	_victory_panel.custom_minimum_size = Vector2(840, maxf(min_h, buttons_top + 300.0))
 
 func _set_playtest_buttons_disabled(disabled: bool) -> void:
 	# Top-bar reset is unavailable in TEST MODE; Try Again on victory still works.
@@ -300,19 +314,39 @@ func show_victory_overlay(stats: Dictionary) -> void:
 	_set_playtest_buttons_disabled(true)
 	set_playtest_chrome_visible(false)
 	if _end_dimmer:
+		_end_dimmer.color = Color(0, 0, 0, 0)
 		_end_dimmer.visible = true
 		_end_dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
 	if _victory_title:
 		_victory_title.text = tr("ED_VICTORY_SOLVABLE")
-		_victory_title.set_meta("_screen_header_font_size", 48)
-		HudLayout.apply_screen_header_style(_victory_title)
-		_victory_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		HudLayout.apply_end_screen_header_style(_victory_title, 48)
 	var star_result: Dictionary = stats.get("star_result", {})
 	if _victory_results_host:
 		LevelStars.populate_results(_victory_results_host, star_result)
+	_ensure_victory_preview()
+	var preview_tex = stats.get("solved_preview", null)
+	if _victory_preview:
+		_victory_preview.texture = preview_tex if preview_tex is Texture2D else null
+		_victory_preview.visible = _victory_preview.texture != null
 	_layout_victory_panel(star_result)
 	if _victory_panel:
 		_victory_panel.visible = true
+
+func _ensure_victory_preview() -> void:
+	if _victory_preview and is_instance_valid(_victory_preview):
+		return
+	if _victory_panel == null:
+		return
+	_victory_preview = TextureRect.new()
+	_victory_preview.name = "VictoryBoardPreview"
+	_victory_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_victory_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_victory_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_victory_preview.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_victory_preview.visible = false
+	_victory_panel.add_child(_victory_preview)
+	if _victory_buttons:
+		_victory_panel.move_child(_victory_buttons, -1)
 
 func hide_end_overlays() -> void:
 	if _end_dimmer:
@@ -337,12 +371,18 @@ func _on_htp_next_pressed() -> void:
 	_refresh_how_to_play_text()
 
 func _refresh_how_to_play_text() -> void:
+	if _htp_header == null and how_to_play_container:
+		_htp_header = HudLayout.ensure_how_to_play_page_header(how_to_play_container)
+	if _htp_header:
+		_htp_header.text = tr(HowToPlayContent.get_page_title_key(_htp_page))
+		HudLayout.apply_screen_header_style(_htp_header)
 	if rules_label:
 		_setup_how_to_play_font()
 		rules_label.text = HowToPlayContent.get_page_text(_htp_page)
 	if htp_prev_button:
 		htp_prev_button.text = tr("UI_PREVIOUS")
-		htp_prev_button.disabled = _htp_page <= 0
+		htp_prev_button.visible = _htp_page > 0
+		htp_prev_button.disabled = false
 		HudLayout.apply_nav_button(htp_prev_button)
 		HudLayout.refresh_button_icon_modulate(htp_prev_button)
 	if tutorial_back_button:
@@ -350,7 +390,8 @@ func _refresh_how_to_play_text() -> void:
 		HudLayout.apply_secondary_button(tutorial_back_button)
 	if htp_next_button:
 		htp_next_button.text = tr("UI_NEXT")
-		htp_next_button.disabled = _htp_page >= HowToPlayContent.PAGE_COUNT - 1
+		htp_next_button.visible = _htp_page < HowToPlayContent.PAGE_COUNT - 1
+		htp_next_button.disabled = false
 		HudLayout.apply_nav_button(htp_next_button)
 		HudLayout.refresh_button_icon_modulate(htp_next_button)
 

@@ -457,7 +457,7 @@ func update_status(msg: String, text_color: Color = Color.WHITE, should_translat
 	elif should_translate:
 		status_label.text = "[center]" + HudLayout.translate_status_text(msg, true) + "[/center]"
 	else:
-		status_label.text = "[center]" + msg + "[/center]"
+		status_label.text = "[center]" + HudLayout.break_after_sentences(msg) + "[/center]"
 
 func update_dynamic_editor_layout(_board_y: float, _board_height: float) -> void:
 	if status_label and control_panel:

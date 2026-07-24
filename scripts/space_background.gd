@@ -332,9 +332,9 @@ func _on_event_timeout() -> void:
 		debug_spawn_comet()
 	elif roll <= 351:
 		var spawn_count = 1
-		if randi() % 100 < 25:
-			spawn_count = randi_range(3, 6)
-			
+		# Occasional clusters so asteroids can collide without crowding the sky.
+		if randi() % 100 < 30:
+			spawn_count = randi_range(3, 5)
 		for i in range(spawn_count):
 			debug_spawn_asteroid()
 	else:
@@ -354,7 +354,37 @@ func debug_spawn_asteroid() -> void:
 	if tex_asteroids.is_empty():
 		return
 	var target := _fg_asteroids if _use_foreground_layer() else dyn_layer_asteroids
+	# Rare: a drifting puzzle tile instead of a rock.
+	if randi() % 100 < 2:
+		_spawn_tile_asteroid(target)
+		return
 	_spawn_entity(tex_asteroids.pick_random(), target, Vector2(64, 64), 15.0, 25.0, "asteroid")
+
+## Yellow / blue / green tiles, or purple tile with a random board-style arrow overlay.
+func _spawn_tile_asteroid(target: Node2D) -> void:
+	var size := Vector2(36, 36)
+	var roll := randi() % 4
+	if roll == 3:
+		var base := load(GameConstants.TILE_SHIFTER) as Texture2D
+		if base == null:
+			return
+		var arrows: Array[String] = [
+			GameConstants.TILE_SHIFTER_UP,
+			GameConstants.TILE_SHIFTER_DOWN,
+			GameConstants.TILE_SHIFTER_LEFT,
+			GameConstants.TILE_SHIFTER_RIGHT,
+		]
+		var arrow := load(arrows[randi() % arrows.size()]) as Texture2D
+		_spawn_entity(base, target, size, 15.0, 25.0, "asteroid", arrow)
+		return
+	var paths: Array[String] = [
+		GameConstants.TILE_YELLOW,
+		GameConstants.TILE_BLUE,
+		GameConstants.TILE_GREEN,
+	]
+	var tex := load(paths[roll]) as Texture2D
+	if tex:
+		_spawn_entity(tex, target, size, 15.0, 25.0, "asteroid")
 
 func debug_spawn_asteroid_cloud() -> void:
 	var spawn_count := randi_range(3, 6)
@@ -400,7 +430,15 @@ func _on_asteroid_collided(body: Node, self_entity: RigidBody2D) -> void:
 	dyn_layer_asteroids.add_child(vfx)
 	get_tree().create_timer(1.0).timeout.connect(vfx.queue_free)
 
-func _spawn_entity(tex: Variant, target_layer: Node2D, size: Vector2, min_time: float, max_time: float, type: String) -> void:
+func _spawn_entity(
+	tex: Variant,
+	target_layer: Node2D,
+	size: Vector2,
+	min_time: float,
+	max_time: float,
+	type: String,
+	overlay_tex: Texture2D = null
+) -> void:
 	if not tex or not target_layer: return
 	
 	var entity
@@ -436,10 +474,27 @@ func _spawn_entity(tex: Variant, target_layer: Node2D, size: Vector2, min_time: 
 		
 		var sprite = Sprite2D.new()
 		sprite.texture = tex
+		var base_scale := 1.0
+		if tex:
+			var tex_w := maxf(1.0, float(tex.get_width()))
+			base_scale = size.x / tex_w
+			sprite.scale = Vector2.ONE * base_scale
 		rb.add_child(sprite)
+
+		# Board-style purple tile: base shifter + direction arrow on top.
+		if overlay_tex:
+			var overlay := Sprite2D.new()
+			overlay.texture = overlay_tex
+			overlay.centered = true
+			var overlay_w := maxf(1.0, float(overlay_tex.get_width()))
+			# Match cell chevron: arrow sits on the purple tile at similar relative size.
+			overlay.scale = Vector2.ONE * (size.x * 0.72 / overlay_w)
+			overlay.z_index = 1
+			rb.add_child(overlay)
 		
 		var col = CollisionShape2D.new()
 		var circle = CircleShape2D.new()
+		circle.radius = size.x * 0.4
 		col.shape = circle
 		rb.add_child(col)
 		
@@ -491,11 +546,14 @@ func _spawn_entity(tex: Variant, target_layer: Node2D, size: Vector2, min_time: 
 		entity.rotation = randf_range(0.0, PI * 2.0) 
 		var random_scale = randf_range(0.8, 1.2)
 		
-		var sprite = entity.get_child(0) as Sprite2D
-		sprite.scale = Vector2.ONE * random_scale
+		# Scale every visual child (base tile + optional arrow overlay).
+		for child in entity.get_children():
+			if child is Sprite2D:
+				(child as Sprite2D).scale *= random_scale
 		
-		var col = entity.get_child(1) as CollisionShape2D
-		col.shape.radius = 32.0 * random_scale * 0.8 
+		var col = entity.get_child(entity.get_child_count() - 1) as CollisionShape2D
+		if col and col.shape is CircleShape2D:
+			(col.shape as CircleShape2D).radius = size.x * 0.4 * random_scale
 		
 		entity.mass = random_scale * 1.5 
 		

@@ -71,7 +71,7 @@ static func _icon_path(token: String) -> String:
 		"shifter":
 			return GameConstants.TILE_SHIFTER
 		"reset":
-			return "res://resources/icons/icon_random.svg"
+			return "res://resources/icons/icon_reset.svg"
 		"rules":
 			return "res://resources/icons/icon_rules.svg"
 		"hint":
@@ -84,7 +84,8 @@ static func _icon_path(token: String) -> String:
 			return ""
 
 static func _level_1() -> Array:
-	# 4x4: locks + tap-to-cycle. Empties (1,1)=Y and (2,2)=B.
+	# YYEE / BBEE / BYYB / YBBY — empties (2,0)(3,0)=Blue, (2,1)(3,1)=Yellow.
+	# Cycle first; after the first correct place, teach Rule of Two + Equal Balance.
 	var y := GameConstants.TileState.YELLOW
 	var b := GameConstants.TileState.BLUE
 	return [
@@ -92,41 +93,68 @@ static func _level_1() -> Array:
 			"type": "message",
 			"text_key": "TUT1_LOCKS",
 			"icons": ["lock"],
-			"red": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0)],
+			"mask": [Vector2i(0, 0)],
+			"red": [Vector2i(0, 0)],
+		},
+		{
+			"type": "practice",
+			"text_key": "TUT1_CYCLE",
+			"wrong_key": "TUT1_WRONG_PLACE",
+			"success_key": "TUT_GOOD",
+			"icons": ["yellow", "blue"],
+			"wrong_icons": ["blue"],
+			"success_icons": [],
+			"coord": Vector2i(2, 0),
+			"state": b,
+			"cycle": [y, b],
+			"mask": [Vector2i(2, 0)],
 		},
 		{
 			"type": "message",
-			"text_key": "TUT1_TAP",
+			"text_key": "TUT1_RULE_OF_TWO",
 			"icons": ["yellow", "blue"],
-			"mask": [Vector2i(1, 1), Vector2i(2, 2)],
+		},
+		{
+			"type": "message",
+			"text_key": "TUT1_BALANCE",
+			"icons": ["yellow", "blue"],
 		},
 		{
 			"type": "practice",
-			"text_key": "TUT1_PLACE_YELLOW",
-			"wrong_key": "TUT1_WRONG_COLOR_Y",
-			"success_key": "TUT1_GOOD_PLACE",
-			"icons": ["yellow"],
-			"wrong_icons": ["yellow"],
-			"success_icons": ["yellow"],
-			"coord": Vector2i(1, 1),
-			"state": y,
-			"cycle": [y, b],
-			"mask": [Vector2i(1, 1)],
-			"red": [Vector2i(1, 1)],
-		},
-		{
-			"type": "practice",
-			"text_key": "TUT1_PLACE_BLUE",
-			"wrong_key": "TUT1_WRONG_COLOR",
-			"success_key": "TUT1_GOOD_BOARD",
+			"text_key": "TUT1_PLACE_NEXT",
+			"wrong_key": "TUT1_WRONG_PLACE",
+			"success_key": "TUT_GOOD",
 			"icons": ["blue"],
 			"wrong_icons": ["blue"],
-			"success_icons": ["yellow", "blue"],
-			"coord": Vector2i(2, 2),
+			"coord": Vector2i(3, 0),
 			"state": b,
 			"cycle": [y, b],
-			"mask": [Vector2i(2, 2)],
-			"red": [Vector2i(2, 2)],
+			"mask": [Vector2i(3, 0)],
+		},
+		{
+			"type": "practice",
+			"text_key": "TUT1_PLACE_NEXT",
+			"wrong_key": "TUT1_WRONG_PLACE",
+			"success_key": "TUT_GOOD",
+			"icons": ["yellow"],
+			"wrong_icons": ["yellow"],
+			"coord": Vector2i(2, 1),
+			"state": y,
+			"cycle": [y, b],
+			"mask": [Vector2i(2, 1)],
+		},
+		{
+			"type": "practice",
+			"text_key": "TUT1_PLACE_NEXT",
+			"wrong_key": "TUT1_WRONG_PLACE",
+			"success_key": "TUT1_GOOD_BOARD",
+			"icons": ["yellow"],
+			"wrong_icons": ["yellow"],
+			"success_icons": ["yellow", "blue"],
+			"coord": Vector2i(3, 1),
+			"state": y,
+			"cycle": [y, b],
+			"mask": [Vector2i(3, 1)],
 		},
 		{
 			"type": "done",

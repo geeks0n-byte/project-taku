@@ -214,6 +214,8 @@ func _on_random_board_requested():
 			target_w, target_h, allowed_tiles, layout_copy, require_unique, lock_walls, gen_difficulty
 		)
 	)
+	if not is_instance_valid(self) or not is_inside_tree():
+		return
 	_is_generating = false
 	if typeof(generated) != TYPE_DICTIONARY or (generated as Dictionary).is_empty() or not generated.has("layout"):
 		var msg = "ERR_GEN_WALLS" if lock_walls else "ERR_GEN_CONSTRAINTS"
@@ -614,9 +616,15 @@ func _on_load_level():
 	_record_editor_change()
 
 func _on_main_menu():
+	if _is_generating or (_loading_overlay and _loading_overlay.is_busy()):
+		return
 	if SpaceBackground:
 		SpaceBackground.visible = true
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		_on_main_menu()
 
 func _rebuild_editor_hidden_hints():
 	canvas_manager.hidden_constraint_pairs = HintSystem.rebuild_hidden_hints(

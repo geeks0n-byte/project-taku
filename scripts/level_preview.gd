@@ -21,59 +21,123 @@ static func make_texture(level: LevelData, pixel_size: int = GameConstants.LEVEL
 		return ImageTexture.create_from_image(Image.create(pixel_size, pixel_size, false, Image.FORMAT_RGBA8))
 
 	var layout: Dictionary = level.layout if level.layout != null else {}
+	# Generated campaign levels often store only width/height with an empty layout.
+	if layout.is_empty():
+		var dims := LevelUtils.get_dimensions_from_level(level)
+		layout = LevelUtils.make_empty_layout(maxi(1, dims.x), maxi(1, dims.y))
 	if LevelUtils.is_shape_only_layout(layout):
-		return _make_silhouette_texture(level, pixel_size)
-	return _make_tile_texture(level, pixel_size)
+		return _make_silhouette_texture(layout, pixel_size)
+	# Apply authored shifter homes so previews match the starting board.
+	var preview_layout := layout.duplicate()
+	var active_shifters := _active_shifter_set(level)
+	var shifter_cells := _shifter_cell_set(level)
+	for coord in preview_layout.keys():
+		var state := int(preview_layout[coord])
+		if active_shifters.has(coord):
+			preview_layout[coord] = GameConstants.TileState.SHIFTER
+		elif shifter_cells.has(coord) and state == GameConstants.TileState.SHIFTER:
+			preview_layout[coord] = GameConstants.TileState.EMPTY
+	return make_texture_from_layout(preview_layout, pixel_size)
 
-static func _make_tile_texture(level: LevelData, pixel_size: int) -> ImageTexture:
-	var dims := LevelUtils.get_dimensions_from_level(level)
-	var width: int = maxi(1, dims.x)
-	var height: int = maxi(1, dims.y)
+## Renders an arbitrary coord -> TileState layout (e.g. a solved board).
+## Walls are omitted (transparent like gameplay) — no wall tiles or wall grid lines.
+## Optional `shifter_dirs`: coord -> Vector2i direction for purple-tile arrow overlays.
+static func make_texture_from_layout(
+	layout: Dictionary,
+	pixel_size: int = GameConstants.LEVEL_PREVIEW_SIZE,
+	shifter_dirs: Dictionary = {}
+) -> ImageTexture:
+	if layout == null or layout.is_empty():
+		return ImageTexture.create_from_image(Image.create(pixel_size, pixel_size, false, Image.FORMAT_RGBA8))
+
+	var max_x := 0
+	var max_y := 0
+	for coord in layout.keys():
+		max_x = maxi(max_x, int(coord.x))
+		max_y = maxi(max_y, int(coord.y))
+	var width: int = maxi(1, max_x + 1)
+	var height: int = maxi(1, max_y + 1)
 	var cell := maxi(4, int(float(pixel_size) / float(maxi(width, height))))
 	var img_w := width * cell
 	var img_h := height * cell
 	var image := Image.create(img_w, img_h, false, Image.FORMAT_RGBA8)
-	image.fill(COLOR_BG)
-
-	var shifter_cells := _shifter_cell_set(level)
-	var active_shifters := _active_shifter_set(level)
+	# Transparent like gameplay — wall cells stay invisible (no fill, no grid).
+	image.fill(Color(0, 0, 0, 0))
 
 	for y in height:
 		for x in width:
 			var coord := Vector2i(x, y)
 			var state: int = GameConstants.TileState.EMPTY
-			if level.layout.has(coord):
-				state = int(level.layout[coord])
-			var is_active_shifter := active_shifters.has(coord)
-			var is_shifter_slot := shifter_cells.has(coord)
-			if is_active_shifter:
-				state = GameConstants.TileState.SHIFTER
-			elif is_shifter_slot and state == GameConstants.TileState.SHIFTER:
-				# Inactive home cell stored as shifter in some levels — show empty pad.
-				state = GameConstants.TileState.EMPTY
-
+			if layout.has(coord):
+				state = int(layout[coord])
+			if state == GameConstants.TileState.WALL:
+				continue
+			var dst := Vector2i(x * cell, y * cell)
 			var tile_img := _resized_tile(_path_for_state(state), cell)
 			if tile_img:
-				image.blit_rect(tile_img, Rect2i(Vector2i.ZERO, tile_img.get_size()), Vector2i(x * cell, y * cell))
+				image.blend_rect(tile_img, Rect2i(Vector2i.ZERO, tile_img.get_size()), dst)
+			if state == GameConstants.TileState.SHIFTER and shifter_dirs.has(coord):
+				_blit_shifter_arrow(image, dst, cell, shifter_dirs[coord])
 
 	return ImageTexture.create_from_image(image)
 
-static func _make_silhouette_texture(level: LevelData, pixel_size: int) -> ImageTexture:
-	var dims := LevelUtils.get_dimensions_from_level(level)
-	var width: int = maxi(1, dims.x)
-	var height: int = maxi(1, dims.y)
+## Snapshot board cells including purple-tile arrow directions for solved previews.
+static func make_texture_from_board_cells(
+	board_cells: Dictionary,
+	pixel_size: int = GameConstants.LEVEL_PREVIEW_SIZE
+) -> ImageTexture:
+	return make_texture_from_layout(
+		layout_from_board_cells(board_cells),
+		pixel_size,
+		shifter_dirs_from_board_cells(board_cells)
+	)
+
+static func layout_from_board_cells(board_cells: Dictionary) -> Dictionary:
+	var layout := {}
+	for coord in board_cells:
+		var cell = board_cells[coord]
+		if cell == null:
+			continue
+		layout[coord] = int(cell.state)
+	return layout
+
+static func shifter_dirs_from_board_cells(board_cells: Dictionary) -> Dictionary:
+	var dirs := {}
+	for coord in board_cells:
+		var cell = board_cells[coord]
+		if cell == null:
+			continue
+		if int(cell.state) != GameConstants.TileState.SHIFTER:
+			continue
+		var dir: Vector2i = cell.shifter_direction
+		if dir != Vector2i.ZERO:
+			dirs[coord] = dir
+	return dirs
+
+static func _make_silhouette_texture(layout: Dictionary, pixel_size: int) -> ImageTexture:
+	var max_x := 0
+	var max_y := 0
+	for coord in layout.keys():
+		max_x = maxi(max_x, int(coord.x))
+		max_y = maxi(max_y, int(coord.y))
+	var width: int = maxi(1, max_x + 1)
+	var height: int = maxi(1, max_y + 1)
 	var cell := maxi(2, int(float(pixel_size) / float(maxi(width, height))))
 	var img_w := width * cell
 	var img_h := height * cell
 	var image := Image.create(img_w, img_h, false, Image.FORMAT_RGBA8)
-	image.fill(COLOR_BG)
+	# Transparent like gameplay — wall cells stay invisible (no fill, no grid).
+	image.fill(Color(0, 0, 0, 0))
 
 	for y in height:
 		for x in width:
 			var coord := Vector2i(x, y)
 			var state: int = GameConstants.TileState.EMPTY
-			if level.layout.has(coord):
-				state = int(level.layout[coord])
+			if layout.has(coord):
+				state = int(layout[coord])
+			# Match gameplay: walls are invisible (no fill, no grid).
+			if state == GameConstants.TileState.WALL:
+				continue
 			var color := _color_for_state(state)
 			var rect := Rect2i(x * cell, y * cell, cell, cell)
 			image.fill_rect(rect, color)
@@ -125,6 +189,33 @@ static func _path_for_state(state: int) -> String:
 			return GameConstants.TILE_SHIFTER
 		_:
 			return PATH_EMPTY
+
+static func _path_for_shifter_dir(dir: Vector2i) -> String:
+	if dir == Vector2i(0, -1):
+		return GameConstants.TILE_SHIFTER_UP
+	if dir == Vector2i(0, 1):
+		return GameConstants.TILE_SHIFTER_DOWN
+	if dir == Vector2i(-1, 0):
+		return GameConstants.TILE_SHIFTER_LEFT
+	if dir == Vector2i(1, 0):
+		return GameConstants.TILE_SHIFTER_RIGHT
+	return ""
+
+static func _blit_shifter_arrow(image: Image, cell_pos: Vector2i, cell: int, dir: Variant) -> void:
+	var path := _path_for_shifter_dir(dir as Vector2i)
+	if path.is_empty():
+		return
+	# Match in-game chevron: slightly smaller than the purple tile, centered.
+	var arrow_size := maxi(4, int(round(float(cell) * 0.72)))
+	var arrow_img := _resized_tile(path, arrow_size)
+	if arrow_img == null:
+		return
+	var inset := int((cell - arrow_size) / 2.0)
+	image.blend_rect(
+		arrow_img,
+		Rect2i(Vector2i.ZERO, arrow_img.get_size()),
+		cell_pos + Vector2i(inset, inset)
+	)
 
 static func _resized_tile(path: String, size: int) -> Image:
 	var key := "%s@%d" % [path, size]

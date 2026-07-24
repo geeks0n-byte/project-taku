@@ -6,6 +6,20 @@ const PAGE_COUNT := 5
 static func get_rules_text(force_english: bool = false) -> String:
 	return get_page_text(0, force_english)
 
+static func get_page_title_key(page_index: int) -> String:
+	var page := clampi(page_index, 0, PAGE_COUNT - 1)
+	match page:
+		0:
+			return "HTP_TITLE"
+		1:
+			return "HTP_CORE_TITLE"
+		2:
+			return "HTP_GREEN_TITLE"
+		3:
+			return "HTP_SPECIALS_TITLE"
+		_:
+			return "HTP_STARS_TITLE"
+
 static func get_page_text(page_index: int, force_english: bool = false) -> String:
 	var page := clampi(page_index, 0, PAGE_COUNT - 1)
 	match page:
@@ -20,23 +34,15 @@ static func get_page_text(page_index: int, force_english: bool = false) -> Strin
 		_:
 			return _page_stars(force_english)
 
-static func _title_size() -> int:
-	return HudLayout.body_font_size(GameConstants.UI_BODY_TITLE_FONT_SIZE)
-
 static func _body_size() -> int:
-	return HudLayout.body_font_size(GameConstants.UI_BODY_FONT_SIZE)
+	return HudLayout.body_font_size(GameConstants.UI_BODY_FONT_SIZE_LARGE)
 
 static func _page_goal(force_english: bool) -> String:
 	var img_y := _tile_img(GameConstants.TILE_YELLOW)
 	var img_b := _tile_img(GameConstants.TILE_BLUE)
 	var img_g := _tile_img(GameConstants.TILE_GREEN)
-	var title_sz := _title_size()
 	var body_sz := _body_size()
 	var lines: PackedStringArray = [
-		"[center][font_size=%d][b][color=#88ccff]%s[/color][/b][/font_size][/center]" % [
-			title_sz, _t("HTP_TITLE", force_english)
-		],
-		"",
 		"[font_size=%d]" % body_sz,
 		"• %s" % _t("HTP_GOAL_TAP", force_english) % [img_y, img_b, img_g],
 		"",
@@ -50,37 +56,32 @@ static func _page_goal(force_english: bool) -> String:
 static func _page_core_rules(force_english: bool) -> String:
 	var img_y := _tile_img(GameConstants.TILE_YELLOW)
 	var img_b := _tile_img(GameConstants.TILE_BLUE)
-	var title_sz := _title_size()
 	var body_sz := _body_size()
 	var lines: PackedStringArray = [
-		"[center][font_size=%d][b][color=#88ccff]%s[/color][/b][/font_size][/center]" % [
-			title_sz, _t("HTP_CORE_TITLE", force_english)
-		],
-		"",
 		"[font_size=%d]" % body_sz,
 		_rule_bullet("HTP_EQUAL_BALANCE", force_english),
 		"",
 		_rule_bullet("HTP_RULE_OF_TWO", force_english),
 		"",
-		"              ❌ %s %s %s  %s" % [img_y, img_y, img_y, _t("HTP_EXAMPLE_THREE_YELLOWS", force_english)],
-		"              ❌ %s %s %s  %s" % [img_b, img_b, img_b, _t("HTP_EXAMPLE_THREE_BLUES", force_english)],
-		"              ✅ %s %s %s  %s" % [img_y, img_y, img_b, _t("HTP_EXAMPLE_VALID_MIX", force_english)],
+		"[center]❌ %s %s %s[/center]" % [img_y, img_y, img_y],
+		"[center]%s[/center]" % _t("HTP_EXAMPLE_THREE_YELLOWS", force_english),
+		"",
+		"[center]❌ %s %s %s[/center]" % [img_b, img_b, img_b],
+		"[center]%s[/center]" % _t("HTP_EXAMPLE_THREE_BLUES", force_english),
+		"",
+		"[center]✅ %s %s %s[/center]" % [img_y, img_y, img_b],
+		"[center]%s[/center]" % _t("HTP_EXAMPLE_VALID_MIX", force_english),
 		"[/font_size]",
 	]
 	return "\n".join(lines)
 
 static func _page_green(force_english: bool) -> String:
 	var img_g := _tile_img(GameConstants.TILE_GREEN)
-	var ex_y := _tile_img(GameConstants.TILE_YELLOW, 40)
-	var ex_b := _tile_img(GameConstants.TILE_BLUE, 40)
-	var ex_g := _tile_img(GameConstants.TILE_GREEN, 40)
-	var title_sz := _title_size()
+	var ex_y := _tile_img(GameConstants.TILE_YELLOW, 44)
+	var ex_b := _tile_img(GameConstants.TILE_BLUE, 44)
+	var ex_g := _tile_img(GameConstants.TILE_GREEN, 44)
 	var body_sz := _body_size()
 	var lines: PackedStringArray = [
-		"[center][font_size=%d][b][color=#88ccff]%s[/color][/b][/font_size][/center]" % [
-			title_sz, _t("HTP_GREEN_TITLE", force_english)
-		],
-		"",
 		"[font_size=%d]" % body_sz,
 		"• %s %s" % [img_g, _t("HTP_GREEN_TILES_DESC", force_english)],
 		"",
@@ -88,29 +89,29 @@ static func _page_green(force_english: bool) -> String:
 		"",
 		"• %s" % _t("HTP_GREEN_BALANCE_NOTE", force_english),
 		"",
-		"              ❌ %s %s %s  %s" % [ex_b, ex_b, ex_g, _t("HTP_GREEN_EXAMPLE_INVALID_1", force_english)],
-		"              ❌ %s %s %s  %s" % [ex_y, ex_g, ex_y, _t("HTP_GREEN_EXAMPLE_INVALID_2", force_english)],
-		"              ✅ %s %s %s  %s" % [ex_b, ex_g, ex_y, _t("HTP_GREEN_EXAMPLE_VALID", force_english)],
+		"[center]❌ %s %s %s[/center]" % [ex_b, ex_b, ex_g],
+		"[center]%s[/center]" % _t("HTP_GREEN_EXAMPLE_INVALID_1", force_english),
+		"",
+		"[center]❌ %s %s %s[/center]" % [ex_y, ex_g, ex_y],
+		"[center]%s[/center]" % _t("HTP_GREEN_EXAMPLE_INVALID_2", force_english),
+		"",
+		"[center]✅ %s %s %s[/center]" % [ex_b, ex_g, ex_y],
+		"[center]%s[/center]" % _t("HTP_GREEN_EXAMPLE_VALID", force_english),
 		"[/font_size]",
 	]
 	return "\n".join(lines)
 
 static func _page_specials(force_english: bool) -> String:
 	var img_s := _tile_img(GameConstants.TILE_SHIFTER)
-	var img_lock := "[img height=72 region=16,0,96,128]%s[/img]" % GameConstants.TILE_LOCK
+	var img_lock := "[img height=80 region=16,0,96,128]%s[/img]" % GameConstants.TILE_LOCK
 	var shifter_arrows := "".join([
-		_tile_img(GameConstants.TILE_SHIFTER_UP, 56),
-		_tile_img(GameConstants.TILE_SHIFTER_DOWN, 56),
-		_tile_img(GameConstants.TILE_SHIFTER_LEFT, 56),
-		_tile_img(GameConstants.TILE_SHIFTER_RIGHT, 56),
+		_tile_img(GameConstants.TILE_SHIFTER_UP, 64),
+		_tile_img(GameConstants.TILE_SHIFTER_DOWN, 64),
+		_tile_img(GameConstants.TILE_SHIFTER_LEFT, 64),
+		_tile_img(GameConstants.TILE_SHIFTER_RIGHT, 64),
 	])
-	var title_sz := _title_size()
 	var body_sz := _body_size()
 	var lines: PackedStringArray = [
-		"[center][font_size=%d][b][color=#88ccff]%s[/color][/b][/font_size][/center]" % [
-			title_sz, _t("HTP_SPECIALS_TITLE", force_english)
-		],
-		"",
 		"[font_size=%d]" % body_sz,
 		"• %s %s" % [img_s, _t("HTP_SHIFTER_TILES_DESC", force_english) % shifter_arrows],
 		"",
@@ -124,13 +125,8 @@ static func _page_specials(force_english: bool) -> String:
 	return "\n".join(lines)
 
 static func _page_stars(force_english: bool) -> String:
-	var title_sz := _title_size()
 	var body_sz := _body_size()
 	var lines: PackedStringArray = [
-		"[center][font_size=%d][b][color=#88ccff]%s[/color][/b][/font_size][/center]" % [
-			title_sz, _t("HTP_STARS_TITLE", force_english)
-		],
-		"",
 		"[font_size=%d]" % body_sz,
 		"• %s" % _t("HTP_STARS_INTRO", force_english),
 		"",
@@ -143,7 +139,7 @@ static func _page_stars(force_english: bool) -> String:
 	]
 	return "\n".join(lines)
 
-static func _tile_img(path: String, size: int = 48) -> String:
+static func _tile_img(path: String, size: int = 56) -> String:
 	return "[img=%dx%d]%s[/img]" % [size, size, path]
 
 static func _t(key: String, force_english: bool) -> String:

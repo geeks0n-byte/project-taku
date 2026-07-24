@@ -37,6 +37,8 @@ var tutorial_director: TutorialDirector
 var _run_layout: Dictionary = {}
 var _run_shifter_pairs: Array = []
 var _run_available_tiles: Array = []
+## When true, cancelling the new-puzzle confirm returns to the pause menu.
+var _reset_confirm_return_to_pause: bool = false
 
 func _is_campaign_tutorial(level: LevelData) -> bool:
 	if level == null:
@@ -97,6 +99,35 @@ func _ready():
 		timer_node.timeout.connect(_on_timer_timeout)
 	_begin_level_entry()
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		_on_system_back()
+
+func _on_system_back() -> void:
+	# Never leave mid-generation — that freed the scene under an awaiting worker.
+	if _is_generating_board or (_loading_overlay and _loading_overlay.is_busy()):
+		return
+	if options_menu and options_menu.visible:
+		if options_menu.has_method("hide_menu"):
+			options_menu.hide_menu()
+		return
+	if ui_manager and ui_manager.how_to_play_container and ui_manager.how_to_play_container.visible:
+		_on_resume()
+		return
+	if ui_manager and ui_manager.has_method("hide_reset_confirm"):
+		# Cancel confirm dialogs back into play / pause.
+		pass
+	if is_paused:
+		if pause_menu and pause_menu.visible:
+			_on_resume()
+			return
+		_on_resume()
+		return
+	if is_game_active:
+		_on_pause()
+		return
+	_on_quit_to_menu()
+
 func _bind_submanager_signals():
 	if not ui_manager or not board_manager:
 		return
@@ -120,7 +151,6 @@ func _bind_submanager_signals():
 		pause_menu.resume_pressed.connect(_on_resume)
 		pause_menu.restart_pressed.connect(_on_restart_level)
 		pause_menu.settings_pressed.connect(_on_pause_settings)
-		pause_menu.level_select_pressed.connect(_on_level_select)
 		pause_menu.auto_win_pressed.connect(_on_auto_win)
 		pause_menu.quit_pressed.connect(_on_quit_to_menu)
 	if options_menu:
@@ -200,6 +230,8 @@ func generate_board():
 	if tutorial_director:
 		tutorial_director.stop()
 	ui_manager.set_overlays_hidden()
+	ui_manager.set_status_visible(false)
+	ui_manager.set_top_bar_visible(false)
 	if pause_menu:
 		pause_menu.hide()
 	if options_menu:
@@ -309,9 +341,12 @@ func generate_board():
 					break
 			return result
 		)
+		if not is_instance_valid(self) or not is_inside_tree():
+			return
 		if typeof(generated) != TYPE_DICTIONARY or (generated as Dictionary).is_empty():
 			_is_generating_board = false
 			is_game_active = false
+			ui_manager.set_top_bar_visible(true)
 			ui_manager.show_status_errors(["ERROR_INVALID_SHAPE"])
 			return
 		var generated_dict: Dictionary = generated
@@ -338,10 +373,12 @@ func generate_board():
 
 	ui_manager.set_joker_counter_visibility(false)
 	ui_manager.set_move_counter_visibility(false)
+	var is_tutorial := _is_campaign_tutorial(current_level_resource)
+	ui_manager.set_reset_mode_restart(is_tutorial)
 	ui_manager.display_level(
 		LevelUtils.get_display_level_number(current_level_resource),
 		is_custom,
-		_is_campaign_tutorial(current_level_resource)
+		is_tutorial
 	)
 	_run_layout = fresh_layout.duplicate(true)
 	_run_shifter_pairs = final_s_pairs.duplicate(true)
@@ -377,6 +414,7 @@ func generate_board():
 	ui_manager.update_dynamic_layout(centered_board_y, dims.y * GameConstants.CELL_SIZE)
 	game_undo.reset(_create_game_snapshot())
 	_is_generating_board = false
+	ui_manager.set_top_bar_visible(true)
 	_start_tutorial_if_needed(tiles_list)
 	# After tutorial tip is set so status can combine tip + rule errors.
 	_run_validation_pass()
@@ -609,12 +647,14 @@ func trigger_victory():
 		if not _challenges_disabled:
 			SaveManager.record_level_stars(unlock_num, int(star_result.get("bits", 0)))
 	_set_board_and_hud_visible(false)
+	var solved_preview := LevelPreview.make_texture_from_board_cells(board_manager.board_cells, 320)
 	ui_manager.show_victory(
 		display_num,
 		is_last,
 		star_result,
 		is_custom,
-		_is_campaign_tutorial(levels[current_level_index])
+		_is_campaign_tutorial(levels[current_level_index]),
+		solved_preview
 	)
 
 func _set_board_and_hud_visible(should_show: bool) -> void:
@@ -624,6 +664,8 @@ func _set_board_and_hud_visible(should_show: bool) -> void:
 		hud_layer.visible = should_show
 
 func _on_pause():
+	if _is_generating_board or (_loading_overlay and _loading_overlay.is_busy()):
+		return
 	if not is_game_active or is_paused:
 		return
 	is_paused = true
@@ -634,11 +676,12 @@ func _on_pause():
 	_set_board_and_hud_visible(false)
 	ui_manager.set_hud_buttons_disabled(true)
 	if pause_menu:
+		if pause_menu.has_method("set_restart_label_key"):
+			pause_menu.set_restart_label_key("UI_RESTART" if _challenges_disabled else "UI_NEW_LAYOUT")
 		pause_menu.show()
 
 func _on_how_to_play():
-	if tutorial_director and tutorial_director.consume_hud_action("how_to_play"):
-		return
+	# Always open the guide (never consumed as a tutorial teach tap).
 	if not is_game_active or is_paused:
 		return
 	is_paused = true
@@ -673,38 +716,47 @@ func _on_resume():
 		tutorial_director.refresh_tool_gates()
 
 func _on_reset():
-	if tutorial_director and tutorial_director.consume_hud_action("reset"):
-		return
+	# Reset always offers restart/new-puzzle confirm (never consumed as a tutorial teach tap).
 	if not is_game_active or is_paused:
 		return
 	is_paused = true
 	if timer_node:
 		timer_node.stop()
 	board_manager.process_mode = Node.PROCESS_MODE_DISABLED
+	_reset_confirm_return_to_pause = false
+	_set_board_and_hud_visible(false)
 	ui_manager.set_hud_buttons_disabled(true)
 	ui_manager.show_reset_confirm()
 
 func _on_reset_confirmed() -> void:
+	_reset_confirm_return_to_pause = false
 	is_paused = false
 	if pause_menu:
 		pause_menu.hide()
 	if options_menu:
 		options_menu.visible = false
 	SaveManager.clear_session()
+	_set_board_and_hud_visible(true)
 	generate_board()
 
 func _on_reset_cancelled() -> void:
+	if _reset_confirm_return_to_pause:
+		_reset_confirm_return_to_pause = false
+		_set_board_and_hud_visible(false)
+		ui_manager.set_hud_buttons_disabled(true)
+		if pause_menu:
+			pause_menu.show()
+		return
 	_on_resume()
 
 func _on_restart_level():
-	is_paused = false
+	# NEW PUZZLE from pause — same confirm as the HUD reset button.
 	if pause_menu:
 		pause_menu.hide()
-	if options_menu:
-		options_menu.visible = false
-	_set_board_and_hud_visible(true)
-	SaveManager.clear_session()
-	generate_board()
+	_reset_confirm_return_to_pause = true
+	_set_board_and_hud_visible(false)
+	ui_manager.set_hud_buttons_disabled(true)
+	ui_manager.show_reset_confirm()
 
 func _on_pause_settings() -> void:
 	if pause_menu:
@@ -744,14 +796,11 @@ func _on_auto_win() -> void:
 	trigger_victory()
 
 func _on_quit_to_menu():
+	if _is_generating_board or (_loading_overlay and _loading_overlay.is_busy()):
+		return
 	_autosave_session()
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
-
-func _on_level_select() -> void:
-	_autosave_session()
-	get_tree().paused = false
-	get_tree().change_scene_to_file("res://scenes/level_select.tscn")
 
 func _begin_level_entry() -> void:
 	if levels.is_empty() or current_level_index < 0 or current_level_index >= levels.size():
@@ -879,10 +928,12 @@ func restore_session() -> void:
 
 	ui_manager.set_joker_counter_visibility(false)
 	ui_manager.set_move_counter_visibility(false)
+	var is_tutorial := _is_campaign_tutorial(current_level_resource)
+	ui_manager.set_reset_mode_restart(is_tutorial)
 	ui_manager.display_level(
 		LevelUtils.get_display_level_number(current_level_resource),
 		is_custom,
-		_is_campaign_tutorial(current_level_resource)
+		is_tutorial
 	)
 	_update_timer_display()
 

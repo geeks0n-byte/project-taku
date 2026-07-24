@@ -37,9 +37,11 @@ signal locale_refresh_requested
 @onready var time_result_label: Label = $"../EndLayer/CenterContainer/VictoryPanel/TimeResultLabel"
 @onready var win_label: Label = $"../EndLayer/CenterContainer/VictoryPanel/WinLabel"
 @onready var how_to_play_container: Control = $"../HowToPlayLayer/CenterContainer"
-@onready var tutorial_back_button: Button = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow/BackButton"
-@onready var htp_prev_button: Button = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow/PrevButton"
-@onready var htp_next_button: Button = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow/NextButton"
+@onready var how_to_play_panel: Control = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel"
+@onready var how_to_play_nav: HBoxContainer = $"../HowToPlayLayer/CenterContainer/NavRow"
+@onready var tutorial_back_button: Button = $"../HowToPlayLayer/CenterContainer/NavRow/BackButton"
+@onready var htp_prev_button: Button = $"../HowToPlayLayer/CenterContainer/NavRow/PrevSlot/PrevButton"
+@onready var htp_next_button: Button = $"../HowToPlayLayer/CenterContainer/NavRow/NextSlot/NextButton"
 @onready var rules_label: RichTextLabel = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/RulesLabel"
 @onready var victory_restart_label: Label = $"../EndLayer/CenterContainer/VictoryPanel/RestartButton/HBoxContainer/Label"
 @onready var end_layer: CanvasLayer = $"../EndLayer"
@@ -51,7 +53,9 @@ var _victory_is_custom: bool = false
 var _victory_is_tutorial: bool = false
 var _victory_star_result: Dictionary = {}
 var _htp_page: int = 0
+var _htp_header: Label
 var _victory_results_host: Control
+var _victory_preview: TextureRect
 var _resume_panel: Panel
 var _resume_prompt_label: Label
 var _end_dimmer: ColorRect
@@ -62,6 +66,10 @@ var _reset_confirm_no: Button
 var _tutorial_tools_locked: bool = false
 var _highlighted_hud_button: String = ""
 var _tutorial_status_body: String = ""
+## Tutorial levels: reset restarts the board; other levels: new puzzle.
+var _reset_is_restart: bool = false
+const _ICON_RESET: Texture2D = preload("res://resources/icons/icon_reset.svg")
+const _ICON_RANDOM: Texture2D = preload("res://resources/icons/icon_random.svg")
 var _status_error_keys: Array = []
 var _hint_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED
 var _hint_forced_disabled: bool = false
@@ -75,6 +83,7 @@ var _move_count: int = 0
 var _move_required: int = -1
 
 func _ready() -> void:
+	_layout_how_to_play()
 	_setup_how_to_play_font()
 	_refresh_how_to_play_text()
 	_connect_signals()
@@ -84,6 +93,11 @@ func _ready() -> void:
 	_style_victory_chrome()
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
+
+func _layout_how_to_play() -> void:
+	HudLayout.layout_how_to_play(how_to_play_container, how_to_play_panel, how_to_play_nav)
+	HudLayout.ensure_how_to_play_nav_slots(how_to_play_nav, htp_prev_button, htp_next_button)
+	_htp_header = HudLayout.ensure_how_to_play_page_header(how_to_play_container)
 
 func _on_language_changed() -> void:
 	HudLayout.apply_locale_fonts_to_tree(self)
@@ -116,6 +130,7 @@ func setup_ui(_show_debug_tools: bool, _cell_size: float) -> void:
 	set_overlays_hidden()
 	set_joker_counter_visibility(false)
 	set_move_counter_visibility(false)
+	set_status_visible(false)
 	HudLayout.position_top_bar(top_margin)
 	if status_label:
 		HudLayout.apply_status_font(status_label, GameConstants.HUD_STATUS_FONT_SIZE)
@@ -289,6 +304,18 @@ func clear_hud_button_highlight() -> void:
 	_highlighted_hud_button = ""
 	_apply_tutorial_tool_state()
 
+## Tutorial: reset icon + restart confirm. Campaign/other: random icon + new puzzle.
+func set_reset_mode_restart(is_restart: bool) -> void:
+	_reset_is_restart = is_restart
+	_apply_reset_button_icon()
+
+func _apply_reset_button_icon() -> void:
+	if not reset_button:
+		return
+	var icon := reset_button.get_node_or_null("IconContainer/Icon") as TextureRect
+	if icon:
+		icon.texture = _ICON_RESET if _reset_is_restart else _ICON_RANDOM
+
 func get_hud_button(button_id: String) -> Button:
 	match button_id:
 		"reset":
@@ -314,6 +341,11 @@ func _apply_tutorial_tool_state() -> void:
 			continue
 		var is_focus: bool = _highlighted_hud_button == id
 		HudLayout.apply_toggle_active_mask(button, is_focus, GameConstants.TOGGLE_MASK_LOCK)
+		# Reset and How to Play stay usable during tutorials.
+		if id == "reset" or id == "how_to_play":
+			button.disabled = false
+			HudLayout.refresh_button_icon_modulate(button)
+			continue
 		if not _tutorial_tools_locked:
 			if id == "hint":
 				# Caller restores enabled state via set_hint_button_disabled.
@@ -408,6 +440,16 @@ func show_status_errors(errors: Array) -> void:
 	_status_error_keys = errors.duplicate()
 	_refresh_status_label()
 
+func set_status_visible(should_show: bool) -> void:
+	if status_label:
+		status_label.visible = should_show
+
+func set_top_bar_visible(should_show: bool) -> void:
+	if top_margin:
+		top_margin.visible = should_show
+	if counter_container:
+		counter_container.visible = should_show
+
 func _refresh_status_label() -> void:
 	if not status_label:
 		return
@@ -415,15 +457,17 @@ func _refresh_status_label() -> void:
 	HudLayout.apply_status_font(status_label, GameConstants.HUD_STATUS_FONT_SIZE)
 	var lines: PackedStringArray = []
 	if not _tutorial_status_body.is_empty():
-		lines.append(_tutorial_status_body)
+		lines.append(HudLayout.break_after_sentences(_tutorial_status_body))
 	for e in _status_error_keys:
 		var translated := HudLayout.translate_status_text(str(e))
 		if not translated.is_empty():
 			lines.append(translated)
 	# Default fill prompt only when there is no tutorial tip and no errors.
 	if lines.is_empty():
-		lines.append(tr("MSG_FILL_EMPTY"))
+		lines.append(HudLayout.break_after_sentences(tr("MSG_FILL_EMPTY")))
 	status_label.text = "[center]" + "\n".join(lines) + "[/center]"
+	# Keep status visible once content is driven by gameplay / tutorial.
+	status_label.visible = true
 
 func set_overlays_hidden() -> void:
 	if victory_panel:
@@ -438,9 +482,12 @@ func set_overlays_hidden() -> void:
 func show_reset_confirm() -> void:
 	_ensure_reset_confirm_panel()
 	_ensure_end_dimmer()
+	# Match pause / how-to-play: clear view of the space background (board already hidden).
+	if _end_dimmer:
+		_end_dimmer.color = Color(0, 0, 0, 0)
 	_set_end_dimmer_visible(true)
 	if _reset_confirm_label:
-		_reset_confirm_label.text = tr("CONFIRM_NEW_PUZZLE")
+		_reset_confirm_label.text = tr("CONFIRM_RESTART_LEVEL" if _reset_is_restart else "CONFIRM_NEW_PUZZLE")
 		HudLayout.apply_popup_label(_reset_confirm_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
 	if _reset_confirm_yes:
 		_reset_confirm_yes.text = tr("UI_YES")
@@ -453,6 +500,7 @@ func show_reset_confirm() -> void:
 	if _resume_panel:
 		_resume_panel.visible = false
 	if _reset_confirm_panel:
+		_reset_confirm_panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
 		_reset_confirm_panel.visible = true
 		_reset_confirm_panel.move_to_front()
 	set_hud_buttons_disabled(true)
@@ -477,10 +525,7 @@ func _ensure_reset_confirm_panel() -> void:
 	_reset_confirm_panel.name = "ResetConfirmPanel"
 	_reset_confirm_panel.visible = false
 	_reset_confirm_panel.custom_minimum_size = Vector2(640, 360)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.12, 0.12, 0.12, 1)
-	style.set_corner_radius_all(8)
-	_reset_confirm_panel.add_theme_stylebox_override("panel", style)
+	_reset_confirm_panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
 	center.add_child(_reset_confirm_panel)
 
 	var vbox := VBoxContainer.new()
@@ -542,6 +587,9 @@ func _on_reset_confirm_no() -> void:
 func show_session_resume_prompt() -> void:
 	_ensure_resume_panel()
 	_ensure_end_dimmer()
+	# Keep space background undimmed (same as reset confirm / pause).
+	if _end_dimmer:
+		_end_dimmer.color = Color(0, 0, 0, 0)
 	_set_end_dimmer_visible(true)
 	if _resume_prompt_label:
 		_resume_prompt_label.text = tr("SESSION_RESUME_PROMPT")
@@ -552,13 +600,13 @@ func show_session_resume_prompt() -> void:
 		var back_btn := _resume_panel.get_node_or_null("Buttons/BackButton") as Button
 		if continue_btn:
 			continue_btn.text = tr("UI_CONTINUE")
-			HudLayout.apply_panel_button(continue_btn)
+			_style_resume_button(continue_btn)
 		if restart_btn:
-			restart_btn.text = tr("UI_RESTART")
-			HudLayout.apply_panel_button(restart_btn)
+			restart_btn.text = tr("UI_NEW_LAYOUT")
+			_style_resume_button(restart_btn)
 		if back_btn:
 			back_btn.text = tr("UI_BACK")
-			HudLayout.apply_panel_button(back_btn)
+			_style_resume_button(back_btn)
 	if victory_panel:
 		victory_panel.visible = false
 	if _resume_panel:
@@ -581,38 +629,35 @@ func _ensure_resume_panel() -> void:
 	_resume_panel = Panel.new()
 	_resume_panel.name = "SessionResumePanel"
 	_resume_panel.visible = false
-	_resume_panel.custom_minimum_size = Vector2(680, 640)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.1, 0.1, 0.12, 0.94)
-	style.set_corner_radius_all(12)
-	style.set_content_margin_all(24)
-	_resume_panel.add_theme_stylebox_override("panel", style)
+	# Wide enough that "NEW PUZZLE" / resume copy stay on clean lines.
+	_resume_panel.custom_minimum_size = Vector2(820, 760)
+	_resume_panel.add_theme_stylebox_override("panel", _make_end_screen_panel_style())
 	center.add_child(_resume_panel)
 
 	_resume_prompt_label = Label.new()
 	_resume_prompt_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_resume_prompt_label.offset_left = 28.0
-	_resume_prompt_label.offset_right = -28.0
-	_resume_prompt_label.offset_top = 36.0
-	_resume_prompt_label.offset_bottom = 200.0
+	_resume_prompt_label.offset_left = 48.0
+	_resume_prompt_label.offset_right = -48.0
+	_resume_prompt_label.offset_top = 40.0
+	_resume_prompt_label.offset_bottom = 240.0
 	_resume_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_resume_prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_resume_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_resume_prompt_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.55, 1.0))
+	_resume_prompt_label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.0, 1.0))
 	_resume_prompt_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	_resume_prompt_label.add_theme_constant_override("outline_size", 8)
-	HudLayout.apply_popup_label(_resume_prompt_label, GameConstants.UI_BODY_FONT_SIZE)
+	_resume_prompt_label.add_theme_constant_override("outline_size", 10)
+	HudLayout.apply_popup_label(_resume_prompt_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
 	_resume_panel.add_child(_resume_prompt_label)
 
 	var buttons := VBoxContainer.new()
 	buttons.name = "Buttons"
 	buttons.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	buttons.offset_left = -230.0
-	buttons.offset_right = 230.0
-	buttons.offset_top = 220.0
-	buttons.offset_bottom = 600.0
+	buttons.offset_left = -240.0
+	buttons.offset_right = 240.0
+	buttons.offset_top = 280.0
+	buttons.offset_bottom = 720.0
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
-	buttons.add_theme_constant_override("separation", 18)
+	buttons.add_theme_constant_override("separation", 28)
 	_resume_panel.add_child(buttons)
 
 	var continue_btn := _make_resume_button(tr("UI_CONTINUE"))
@@ -623,7 +668,7 @@ func _ensure_resume_panel() -> void:
 	)
 	buttons.add_child(continue_btn)
 
-	var restart_btn := _make_resume_button(tr("UI_RESTART"))
+	var restart_btn := _make_resume_button(tr("UI_NEW_LAYOUT"))
 	restart_btn.name = "RestartButton"
 	restart_btn.pressed.connect(func():
 		hide_session_resume_prompt()
@@ -639,6 +684,9 @@ func _ensure_resume_panel() -> void:
 	)
 	buttons.add_child(back_btn)
 
+func _make_end_screen_panel_style() -> StyleBoxFlat:
+	return HudLayout.make_dialog_panel_style()
+
 func _make_resume_button(caption: String) -> Button:
 	var btn := Button.new()
 	btn.text = caption
@@ -647,10 +695,24 @@ func _make_resume_button(caption: String) -> Button:
 			var style := restart_button.get_theme_stylebox(style_name)
 			if style:
 				btn.add_theme_stylebox_override(style_name, style)
-	btn.add_theme_color_override("font_outline_color", Color.BLACK)
-	btn.add_theme_constant_override("outline_size", 8)
-	HudLayout.apply_panel_button(btn)
+	_style_resume_button(btn)
 	return btn
+
+## Wider than generic dialog buttons so "NEW PUZZLE" doesn't wrap / clip on mobile.
+func _style_resume_button(button: Button) -> void:
+	if not button:
+		return
+	button.custom_minimum_size = Vector2(460, 110)
+	var outline := 8
+	if OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios"):
+		# Lighter outline avoids Press Start glyph-edge clipping (same as end-screen headers).
+		outline = 5
+	button.add_theme_color_override("font_outline_color", Color.BLACK)
+	button.add_theme_constant_override("outline_size", outline)
+	HudLayout.fit_text_button(button, 28, 18)
+	# fit_text_button enables wrap — keep one line so glyphs don't clip into each other.
+	button.autowrap_mode = TextServer.AUTOWRAP_OFF
+	button.clip_text = false
 
 func _on_htp_prev_pressed() -> void:
 	_htp_page = maxi(_htp_page - 1, 0)
@@ -661,12 +723,18 @@ func _on_htp_next_pressed() -> void:
 	_refresh_how_to_play_text()
 
 func _refresh_how_to_play_text() -> void:
+	if _htp_header == null and how_to_play_container:
+		_htp_header = HudLayout.ensure_how_to_play_page_header(how_to_play_container)
+	if _htp_header:
+		_htp_header.text = tr(HowToPlayContent.get_page_title_key(_htp_page))
+		HudLayout.apply_screen_header_style(_htp_header)
 	if rules_label:
 		_setup_how_to_play_font()
 		rules_label.text = HowToPlayContent.get_page_text(_htp_page)
 	if htp_prev_button:
 		htp_prev_button.text = tr("UI_PREVIOUS")
-		htp_prev_button.disabled = _htp_page <= 0
+		htp_prev_button.visible = _htp_page > 0
+		htp_prev_button.disabled = false
 		HudLayout.apply_nav_button(htp_prev_button)
 		HudLayout.refresh_button_icon_modulate(htp_prev_button)
 	if tutorial_back_button:
@@ -674,7 +742,8 @@ func _refresh_how_to_play_text() -> void:
 		HudLayout.apply_secondary_button(tutorial_back_button)
 	if htp_next_button:
 		htp_next_button.text = tr("UI_NEXT")
-		htp_next_button.disabled = _htp_page >= HowToPlayContent.PAGE_COUNT - 1
+		htp_next_button.visible = _htp_page < HowToPlayContent.PAGE_COUNT - 1
+		htp_next_button.disabled = false
 		HudLayout.apply_nav_button(htp_next_button)
 		HudLayout.refresh_button_icon_modulate(htp_next_button)
 
@@ -685,7 +754,14 @@ func show_how_to_play() -> void:
 		how_to_play_container.visible = true
 	set_hud_buttons_disabled(true)
 
-func show_victory(display_num: int, is_last_level: bool, star_result: Dictionary = {}, is_custom: bool = false, is_tutorial: bool = false) -> void:
+func show_victory(
+	display_num: int,
+	is_last_level: bool,
+	star_result: Dictionary = {},
+	is_custom: bool = false,
+	is_tutorial: bool = false,
+	solved_preview: Texture2D = null
+) -> void:
 	_is_last_level_completed = is_last_level
 	_victory_display_num = display_num
 	_victory_is_custom = is_custom
@@ -694,9 +770,12 @@ func show_victory(display_num: int, is_last_level: bool, star_result: Dictionary
 	set_hud_buttons_disabled(true)
 	_ensure_end_dimmer()
 	_style_victory_chrome()
+	if _end_dimmer:
+		_end_dimmer.color = Color(0, 0, 0, 0)
 	_set_end_dimmer_visible(true)
 	_refresh_victory_locale()
 	_populate_victory_results(_victory_star_result)
+	_set_victory_preview(solved_preview)
 	_layout_victory_panel(_victory_star_result)
 	if victory_panel:
 		victory_panel.visible = true
@@ -706,14 +785,16 @@ func _refresh_victory_locale() -> void:
 		if _is_last_level_completed:
 			win_label.text = tr("ALL_COMPLETED") + "\n" + tr("YOU_WIN")
 		elif _victory_is_custom:
-			win_label.text = tr("CUSTOM_COMPLETED") % _victory_display_num
+			win_label.text = (tr("CUSTOM_COMPLETED") % _victory_display_num) + "\n" + tr("COMPLETED")
 		elif _victory_is_tutorial:
-			win_label.text = tr("TUTORIAL_COMPLETED") % _victory_display_num
+			win_label.text = (tr("TUTORIAL_COMPLETED") % _victory_display_num) + "\n" + tr("COMPLETED")
 		else:
-			win_label.text = tr("LEVEL_COMPLETED") % _victory_display_num
-		win_label.set_meta("_screen_header_font_size", 48)
-		HudLayout.apply_screen_header_style(win_label)
-		win_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			win_label.text = (tr("LEVEL_COMPLETED") % _victory_display_num) + "\n" + tr("COMPLETED")
+		HudLayout.apply_end_screen_header_style(win_label, 48)
+		# Explicit two-line title: "LEVEL 1" / "COMPLETED!"
+		win_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		win_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	if victory_restart_label:
 		victory_restart_label.text = tr("PLAY_AGAIN") if _is_last_level_completed else tr("NEXT_LEVEL")
 		HudLayout.apply_locale_font_to_control(victory_restart_label)
@@ -739,7 +820,7 @@ func _ensure_end_dimmer() -> void:
 	if _end_dimmer == null:
 		_end_dimmer = ColorRect.new()
 		_end_dimmer.name = "Dimmer"
-		_end_dimmer.color = Color(0, 0, 0, 0.78)
+		_end_dimmer.color = Color(0, 0, 0, 0)
 		_end_dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		_end_dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
 		_end_dimmer.visible = false
@@ -759,19 +840,18 @@ func _set_end_dimmer_visible(should_show: bool) -> void:
 
 func _style_victory_chrome() -> void:
 	if victory_panel and victory_panel is Panel:
-		var style := StyleBoxFlat.new()
-		style.bg_color = Color(0.08, 0.08, 0.1, 0.98)
-		style.set_corner_radius_all(16)
-		style.set_content_margin_all(28)
-		style.border_color = Color(1.0, 0.84, 0.0, 0.4)
-		style.set_border_width_all(3)
-		(victory_panel as Panel).add_theme_stylebox_override("panel", style)
+		(victory_panel as Panel).add_theme_stylebox_override("panel", _make_end_screen_panel_style())
 	if win_label:
 		win_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-		win_label.offset_left = 32.0
-		win_label.offset_right = -32.0
-		win_label.offset_top = 32.0
-		win_label.offset_bottom = 180.0
+		win_label.offset_left = 28.0
+		win_label.offset_right = -28.0
+		# Extra vertical room for two-line title + outlined glyphs on mobile.
+		win_label.offset_top = 24.0
+		win_label.offset_bottom = 220.0
+		win_label.clip_contents = false
+		win_label.clip_text = false
+		win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		win_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
 func _ensure_victory_results_host() -> Control:
 	if _victory_results_host and is_instance_valid(_victory_results_host):
@@ -792,6 +872,29 @@ func _ensure_victory_results_host() -> Control:
 			victory_panel.move_child(main_menu_button, -1)
 	return _victory_results_host
 
+func _ensure_victory_preview() -> TextureRect:
+	if _victory_preview and is_instance_valid(_victory_preview):
+		return _victory_preview
+	_victory_preview = TextureRect.new()
+	_victory_preview.name = "VictoryBoardPreview"
+	_victory_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_victory_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_victory_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_victory_preview.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_victory_preview.visible = false
+	if victory_panel:
+		victory_panel.add_child(_victory_preview)
+		if restart_button:
+			victory_panel.move_child(restart_button, -1)
+		if main_menu_button:
+			victory_panel.move_child(main_menu_button, -1)
+	return _victory_preview
+
+func _set_victory_preview(texture: Texture2D) -> void:
+	var preview := _ensure_victory_preview()
+	preview.texture = texture
+	preview.visible = texture != null
+
 func _populate_victory_results(star_result: Dictionary) -> void:
 	var host := _ensure_victory_results_host()
 	LevelStars.populate_results(host, star_result)
@@ -801,14 +904,27 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 		return
 	var goal_count := int(star_result.get("total_count", 0))
 	var untimed := bool(star_result.get("untimed", false))
-	var title_bottom := 180.0
+	var title_bottom := 220.0
 	var results_h := 0.0
 	if not untimed:
 		results_h = 90.0 + float(maxi(1, goal_count)) * (LevelStars.ROW_HEIGHT + 14.0)
 	var host := _ensure_victory_results_host()
 	host.offset_top = title_bottom + 8.0
 	host.offset_bottom = title_bottom + 8.0 + results_h
-	var buttons_top := title_bottom + 8.0 + results_h + (36.0 if results_h > 0.0 else 24.0)
+
+	var cursor := title_bottom + 8.0 + results_h
+	var preview := _ensure_victory_preview()
+	var preview_h := 0.0
+	if preview.visible and preview.texture != null:
+		preview_h = 320.0
+		cursor += 24.0 if results_h > 0.0 else 16.0
+		preview.offset_left = -160.0
+		preview.offset_right = 160.0
+		preview.offset_top = cursor
+		preview.offset_bottom = cursor + preview_h
+		cursor += preview_h
+
+	var buttons_top := cursor + 28.0
 	if restart_button:
 		restart_button.set_anchors_preset(Control.PRESET_CENTER_TOP)
 		restart_button.offset_left = -260.0
@@ -821,4 +937,5 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 		main_menu_button.offset_right = 260.0
 		main_menu_button.offset_top = buttons_top + 130.0
 		main_menu_button.offset_bottom = buttons_top + 240.0
-	victory_panel.custom_minimum_size = Vector2(840, maxf(520.0 if untimed else 800.0, buttons_top + 300.0))
+	var min_h := 980.0 if preview_h > 0.0 else (620.0 if untimed else 900.0)
+	victory_panel.custom_minimum_size = Vector2(840, maxf(min_h, buttons_top + 300.0))

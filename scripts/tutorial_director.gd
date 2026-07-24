@@ -218,6 +218,7 @@ func _update_practice_feedback(step: Dictionary) -> void:
 
 	if step.get("wait_shifter", false):
 		if cell.state == GameConstants.TileState.SHIFTER:
+			_clear_practice_error(cell)
 			_on_practice_success(step)
 		else:
 			_practice_succeeded = false
@@ -225,18 +226,29 @@ func _update_practice_feedback(step: Dictionary) -> void:
 		return
 
 	if cell.state == target:
+		_clear_practice_error(cell)
 		_on_practice_success(step)
 		return
 
 	_practice_succeeded = false
 	if cell.state == GameConstants.TileState.EMPTY:
+		_clear_practice_error(cell)
 		_show_message_from_step(step, false)
 		return
 
+	# Wrong tile: red border + error tip (no Tap Next — player can keep interacting).
+	if cell.has_method("set_error_highlight"):
+		cell.set_error_highlight()
 	var wrong_key := String(step.get("wrong_key", ""))
 	if wrong_key.is_empty():
 		wrong_key = String(step.get("text_key", ""))
 	_show_message_key(wrong_key, step.get("wrong_icons", step.get("icons", [])), false)
+
+func _clear_practice_error(cell) -> void:
+	if cell == null:
+		return
+	if cell.has_method("clear_highlight"):
+		cell.clear_highlight()
 
 func _on_practice_success(step: Dictionary) -> void:
 	if _practice_succeeded:
@@ -373,8 +385,8 @@ func _position_next_button() -> void:
 	if not _next_button:
 		return
 	var half_w := GameConstants.UI_BTN_NAV_SIZE.x * 0.5
-	# Keep clear of the screen bottom so Next sits under the tip, not on the bezel.
-	var bottom_margin := 96.0
+	# Sit under the tip / above the board bottom chrome — not near the bezel.
+	var bottom_margin := 500.0
 	_next_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_next_button.offset_left = -half_w
 	_next_button.offset_right = half_w

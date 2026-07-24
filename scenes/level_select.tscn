@@ -62,7 +62,7 @@ script = ExtResource("1_script")
 
 [node name="UILayer" type="CanvasLayer" parent="."]
 
-[node name="CenterContainer" type="CenterContainer" parent="UILayer"]
+[node name="CenterContainer" type="Control" parent="UILayer"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -70,9 +70,18 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="UILayer/CenterContainer"]
-layout_mode = 2
-theme_override_constants/separation = 40
-alignment = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 280.0
+offset_right = -24.0
+offset_bottom = -160.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 28
+alignment = 0
 
 [node name="TitleLabel" type="Label" parent="UILayer/CenterContainer/VBoxContainer"]
 layout_mode = 2
@@ -160,9 +169,15 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 text = "UI_CUSTOM"
 
+[node name="TabListGap" type="Control" parent="UILayer/CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+mouse_filter = 2
+size_flags_horizontal = 3
+
 [node name="EmptyStateLabel" type="Label" parent="UILayer/CenterContainer/VBoxContainer"]
 visible = false
-custom_minimum_size = Vector2(0, 600)
+custom_minimum_size = Vector2(0, 400)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -173,12 +188,7 @@ text = "NO_PLAYABLE_LEVELS"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="ScrollContainer" type="ScrollContainer" parent="UILayer/CenterContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 600)
-layout_mode = 2
-horizontal_scroll_mode = 0
-
-[node name="LevelGrid" type="GridContainer" parent="UILayer/CenterContainer/VBoxContainer/ScrollContainer"]
+[node name="LevelGrid" type="GridContainer" parent="UILayer/CenterContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -186,7 +196,7 @@ theme_override_constants/h_separation = 30
 theme_override_constants/v_separation = 30
 columns = 3
 
-[node name="LevelButtonTemplate" type="Button" parent="UILayer/CenterContainer/VBoxContainer/ScrollContainer/LevelGrid"]
+[node name="LevelButtonTemplate" type="Button" parent="UILayer/CenterContainer/VBoxContainer/LevelGrid"]
 visible = false
 custom_minimum_size = Vector2(260, 200)
 layout_mode = 2
@@ -203,7 +213,7 @@ theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 text = "LEVEL
 TEMPLATE"
 
-[node name="LevelButtonTemplateLocked" type="Button" parent="UILayer/CenterContainer/VBoxContainer/ScrollContainer/LevelGrid"]
+[node name="LevelButtonTemplateLocked" type="Button" parent="UILayer/CenterContainer/VBoxContainer/LevelGrid"]
 visible = false
 custom_minimum_size = Vector2(260, 200)
 layout_mode = 2
@@ -221,7 +231,7 @@ theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 text = "LEVEL
 TEMPLATE"
 
-[node name="LevelButtonTemplateCustom" type="Button" parent="UILayer/CenterContainer/VBoxContainer/ScrollContainer/LevelGrid"]
+[node name="LevelButtonTemplateCustom" type="Button" parent="UILayer/CenterContainer/VBoxContainer/LevelGrid"]
 visible = false
 custom_minimum_size = Vector2(260, 200)
 layout_mode = 2
@@ -238,20 +248,26 @@ theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 text = "LEVEL
 TEMPLATE"
 
-[node name="Spacer" type="Control" parent="UILayer/CenterContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-
-[node name="BackButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer"]
-custom_minimum_size = Vector2(600, 120)
-layout_mode = 2
-size_flags_horizontal = 4
+[node name="BackButton" type="Button" parent="UILayer/CenterContainer"]
+custom_minimum_size = Vector2(280, 100)
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -140.0
+offset_top = -140.0
+offset_right = 140.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
 theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 24
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
-text = "UI_BACK_TO_MENU"
+text = "UI_CLOSE"

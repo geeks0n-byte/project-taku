@@ -7,7 +7,6 @@
 [ext_resource type="PackedScene" uid="uid://c8m3k2v1" path="res://scenes/options_menu.tscn" id="15_options"]
 [ext_resource type="FontFile" uid="uid://ckwxng7tlmws7" path="res://resources/fonts/PressStart2P-vaV7.ttf" id="font_ps2p"]
 [ext_resource type="Texture2D" uid="uid://d2ql5f4tsvnk8" path="res://resources/buttons/button_tile_gray_dark.svg" id="tex_btn_bg"]
-[ext_resource type="Texture2D" uid="uid://dwk0b06y7msdk" path="res://resources/icons/icon_exit.svg" id="tex_exit"]
 [ext_resource type="Texture2D" uid="uid://duph5sjcrwtwc" path="res://resources/icons/icon_hint_on.svg" id="tex_hint"]
 [ext_resource type="Texture2D" uid="uid://bh7sa76f3c8je" path="res://resources/icons/icon_pause.svg" id="tex_pause"]
 [ext_resource type="Texture2D" uid="uid://4oqca6cnuifh" path="res://resources/icons/icon_redo.svg" id="tex_redo"]
@@ -470,7 +469,7 @@ mouse_filter = 2
 
 [node name="VictoryPanel" type="Panel" parent="EndLayer/CenterContainer" unique_id=980826821]
 visible = false
-custom_minimum_size = Vector2(680, 720)
+custom_minimum_size = Vector2(840, 1100)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
 
@@ -582,14 +581,6 @@ mouse_filter = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="Icon" type="TextureRect" parent="EndLayer/CenterContainer/VictoryPanel/MainMenuButton/HBoxContainer" unique_id=1386590692]
-custom_minimum_size = Vector2(40, 40)
-layout_mode = 2
-mouse_filter = 2
-texture = ExtResource("tex_exit")
-expand_mode = 1
-stretch_mode = 5
-
 [node name="Label" type="Label" parent="EndLayer/CenterContainer/VictoryPanel/MainMenuButton/HBoxContainer" unique_id=936359964]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -598,12 +589,13 @@ theme_override_constants/outline_size = 8
 theme_override_fonts/font = ExtResource("font_ps2p")
 theme_override_font_sizes/font_size = 28
 text = "MAIN MENU"
+horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="HowToPlayLayer" type="CanvasLayer" parent="." unique_id=1386313562]
 layer = 6
 
-[node name="CenterContainer" type="CenterContainer" parent="HowToPlayLayer" unique_id=2088028727]
+[node name="CenterContainer" type="Control" parent="HowToPlayLayer" unique_id=2088028727]
 visible = false
 anchors_preset = 15
 anchor_right = 1.0
@@ -613,7 +605,15 @@ grow_vertical = 2
 
 [node name="HowToPlayPanel" type="Panel" parent="HowToPlayLayer/CenterContainer" unique_id=735210026]
 custom_minimum_size = Vector2(950, 1040)
-layout_mode = 2
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -475.0
+offset_top = 280.0
+offset_right = 475.0
+offset_bottom = 1320.0
+grow_horizontal = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_htp")
 
 [node name="RulesLabel" type="RichTextLabel" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=2066659259]
@@ -622,19 +622,19 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 40.0
-offset_top = 28.0
+offset_top = 0.0
 offset_right = -40.0
-offset_bottom = -150.0
+offset_bottom = -28.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_colors/default_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
+theme_override_constants/outline_size = 10
 bbcode_enabled = true
 scroll_active = false
 fit_content = false
 
-[node name="NavRow" type="HBoxContainer" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel" unique_id=1284825960]
+[node name="NavRow" type="HBoxContainer" parent="HowToPlayLayer/CenterContainer" unique_id=1284825960]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
@@ -649,9 +649,17 @@ grow_vertical = 0
 theme_override_constants/separation = 20
 alignment = 1
 
-[node name="PrevButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow" unique_id=1284825962]
-custom_minimum_size = Vector2(220, 110)
+[node name="PrevSlot" type="Control" parent="HowToPlayLayer/CenterContainer/NavRow" unique_id=1284825964]
+custom_minimum_size = Vector2(240, 100)
 layout_mode = 2
+
+[node name="PrevButton" type="Button" parent="HowToPlayLayer/CenterContainer/NavRow/PrevSlot" unique_id=1284825962]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
 theme_override_fonts/font = ExtResource("font_ps2p")
@@ -660,10 +668,9 @@ theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
-disabled = true
 text = "UI_PREVIOUS"
 
-[node name="BackButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow" unique_id=1284825961]
+[node name="BackButton" type="Button" parent="HowToPlayLayer/CenterContainer/NavRow" unique_id=1284825961]
 custom_minimum_size = Vector2(260, 110)
 layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -676,9 +683,17 @@ theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 text = "UI_CLOSE"
 
-[node name="NextButton" type="Button" parent="HowToPlayLayer/CenterContainer/HowToPlayPanel/NavRow" unique_id=1284825963]
-custom_minimum_size = Vector2(220, 110)
+[node name="NextSlot" type="Control" parent="HowToPlayLayer/CenterContainer/NavRow" unique_id=1284825965]
+custom_minimum_size = Vector2(240, 100)
 layout_mode = 2
+
+[node name="NextButton" type="Button" parent="HowToPlayLayer/CenterContainer/NavRow/NextSlot" unique_id=1284825963]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
 theme_override_fonts/font = ExtResource("font_ps2p")

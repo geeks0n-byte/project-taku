@@ -370,9 +370,12 @@ func _run_validation() -> void:
 func _trigger_victory() -> void:
 	is_active = false
 	_timer.stop()
+	var solved_preview := LevelPreview.make_texture_from_board_cells(canvas_manager.board_cells, 320)
 	if canvas_manager:
 		canvas_manager.visible = false
-	pt_ui.show_victory_overlay(_build_end_stats())
+	var stats := _build_end_stats()
+	stats["solved_preview"] = solved_preview
+	pt_ui.show_victory_overlay(stats)
 
 func _build_end_stats() -> Dictionary:
 	var has_shifters := canvas_manager.loaded_shifter_pairs.size() > 0

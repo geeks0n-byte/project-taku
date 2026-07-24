@@ -76,7 +76,13 @@ func is_busy() -> bool:
 func run_async(host: Node, work: Callable, message_key: String = "UI_LOADING") -> Variant:
 	show_loading(message_key)
 	# Let the overlay paint before heavy work starts.
+	if not is_instance_valid(host) or host.get_tree() == null:
+		hide_loading()
+		return null
 	await host.get_tree().process_frame
+	if not is_instance_valid(host) or host.get_tree() == null:
+		hide_loading()
+		return null
 	await host.get_tree().process_frame
 
 	var box := {"value": null}
@@ -84,6 +90,11 @@ func run_async(host: Node, work: Callable, message_key: String = "UI_LOADING") -
 		box.value = work.call()
 	)
 	while not WorkerThreadPool.is_task_completed(task_id):
+		if not is_instance_valid(host) or host.get_tree() == null:
+			# Host left the tree (e.g. Android back). Wait for the worker, then bail.
+			WorkerThreadPool.wait_for_task_completion(task_id)
+			hide_loading()
+			return null
 		await host.get_tree().process_frame
 	WorkerThreadPool.wait_for_task_completion(task_id)
 

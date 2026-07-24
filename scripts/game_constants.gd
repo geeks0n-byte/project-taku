@@ -62,12 +62,16 @@ const LEVEL_PREVIEW_SIZE := 112
 
 ## Shared screen headers (Options, Level Select, Credits, Pause, …).
 ## Vertical slot matches the main menu title label.
-const SCREEN_HEADER_FONT_SIZE := 56
+const SCREEN_HEADER_FONT_SIZE := 64
 const SCREEN_HEADER_OUTLINE := 12
-const SCREEN_HEADER_TOP := 280.0
-const SCREEN_HEADER_HEIGHT := 100.0
+const SCREEN_HEADER_TOP := 260.0
+const SCREEN_HEADER_HEIGHT := 152.0
 const SCREEN_CONTENT_GAP := 36.0
 const SCREEN_HEADER_COLOR := Color(1.0, 0.84, 0.0, 1.0)
+
+## Shared bottom Close / Prev / Next band (matches level-select Close height).
+const SCREEN_BOTTOM_NAV_TOP := -260.0
+const SCREEN_BOTTOM_NAV_BOTTOM := -160.0
 
 ## Shared menu / dialog button tiers.
 ## Font bases are for the pixel UI font (English); HudLayout scales them for default-font locales.
@@ -91,9 +95,12 @@ const UI_BTN_PANEL_SIZE := Vector2(460, 100)
 const UI_BTN_PANEL_FONT := 24
 const UI_BTN_PANEL_FONT_MIN := 14
 
-const UI_BTN_TAB_SIZE := Vector2(200, 90)
-const UI_BTN_TAB_FONT := 22
-const UI_BTN_TAB_FONT_MIN := 12
+const UI_BTN_TAB_SIZE := Vector2(240, 110)
+const UI_BTN_TAB_FONT := 42
+const UI_BTN_TAB_FONT_MIN := 26
+
+## Shared black outline for menu / dialog text rows.
+const MENU_TEXT_OUTLINE := 10
 
 ## Always-default-font body copy (credits, HTP, dialogs, resume prompt).
 const UI_BODY_FONT_SIZE := 26
