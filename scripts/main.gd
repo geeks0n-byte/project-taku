@@ -86,7 +86,7 @@ func _refresh_hint_button() -> void:
 
 func _ready():
 	if AdsManager:
-		AdsManager.hide_menu_banner()
+		AdsManager.show_menu_banner()
 	_loading_overlay = LoadingOverlay.new()
 	add_child(_loading_overlay)
 	tutorial_director = TutorialDirector.new()
@@ -763,6 +763,20 @@ func _on_reset_confirmed() -> void:
 	if options_menu:
 		options_menu.visible = false
 	SaveManager.clear_session()
+	var is_tutorial := (
+		not levels.is_empty()
+		and current_level_index >= 0
+		and current_level_index < levels.size()
+		and _is_campaign_tutorial(levels[current_level_index])
+	)
+	if AdsManager:
+		AdsManager.record_level_restart(is_tutorial)
+		if not is_tutorial:
+			AdsManager.show_interstitial_if_ready(_finish_reset_confirmed)
+			return
+	_finish_reset_confirmed()
+
+func _finish_reset_confirmed() -> void:
 	_set_board_and_hud_visible(true)
 	generate_board()
 
@@ -880,6 +894,20 @@ func _on_session_continue() -> void:
 
 func _on_session_restart() -> void:
 	SaveManager.clear_session()
+	var is_tutorial := (
+		not levels.is_empty()
+		and current_level_index >= 0
+		and current_level_index < levels.size()
+		and _is_campaign_tutorial(levels[current_level_index])
+	)
+	if AdsManager:
+		AdsManager.record_level_restart(is_tutorial)
+		if not is_tutorial:
+			AdsManager.show_interstitial_if_ready(_finish_session_restart)
+			return
+	_finish_session_restart()
+
+func _finish_session_restart() -> void:
 	_set_board_and_hud_visible(true)
 	generate_board()
 

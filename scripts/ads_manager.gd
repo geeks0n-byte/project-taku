@@ -121,7 +121,7 @@ func show_menu_banner() -> void:
 	if _banner and _banner_loaded:
 		_banner.show()
 
-## Hide banner during gameplay / editor / splash.
+## Hide banner on splash / editor (menus + gameplay keep it visible).
 func hide_menu_banner() -> void:
 	_banner_wanted_visible = false
 	if _banner:
@@ -197,7 +197,14 @@ func _finish_pending_after_ad() -> void:
 	if cb.is_valid():
 		cb.call()
 
+## Count a non-tutorial win or puzzle restart toward the interstitial cadence.
 func record_level_win(is_tutorial: bool) -> void:
+	_record_interstitial_progress(is_tutorial)
+
+func record_level_restart(is_tutorial: bool) -> void:
+	_record_interstitial_progress(is_tutorial)
+
+func _record_interstitial_progress(is_tutorial: bool) -> void:
 	if is_tutorial:
 		return
 	if SaveManager:
