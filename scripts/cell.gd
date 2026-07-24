@@ -123,7 +123,9 @@ func update_visuals():
 
 	if link_highlight:
 		if guide_active:
-			var alpha := link_highlight.color.a if link_highlight.visible else GUIDE_ALPHA_MAX
+			var alpha: float = (
+				float(link_highlight.color.a) if link_highlight.visible else GUIDE_ALPHA_MAX
+			)
 			link_highlight.color = Color(GUIDE_COLOR.r, GUIDE_COLOR.g, GUIDE_COLOR.b, alpha)
 			link_highlight.visible = true
 		elif is_linked_pair:

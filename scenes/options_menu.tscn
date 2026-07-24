@@ -166,6 +166,20 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 autowrap_mode = 3
 text = "UI_BGM_ON"
 
+[node name="SfxButton" type="Button" parent="CenterContainer/OptionsPanel/VBoxContainer"]
+custom_minimum_size = Vector2(560, 100)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+autowrap_mode = 3
+text = "UI_SFX_ON"
+
 [node name="DeleteSaveButton" type="Button" parent="CenterContainer/OptionsPanel/VBoxContainer"]
 custom_minimum_size = Vector2(560, 100)
 layout_mode = 2

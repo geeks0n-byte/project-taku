@@ -9,6 +9,7 @@ var max_unlocked_level: int = 1
 var current_language: String = "en"
 var background_static: bool = false
 var bgm_enabled: bool = true
+var sfx_enabled: bool = true
 ## True after the player answers the first-launch tutorial offer.
 var tutorial_intro_answered: bool = false
 ## level_number (as String) -> star bitmask (LevelStars.BIT_*)
@@ -59,6 +60,7 @@ func load_progress() -> void:
 		current_language = config.get_value("Progression", "current_language", "en")
 		background_static = bool(config.get_value("Progression", "background_static", false))
 		bgm_enabled = bool(config.get_value("Progression", "bgm_enabled", true))
+		sfx_enabled = bool(config.get_value("Progression", "sfx_enabled", true))
 		if config.has_section_key("Progression", "tutorial_intro_answered"):
 			tutorial_intro_answered = bool(config.get_value("Progression", "tutorial_intro_answered", false))
 		else:
@@ -99,6 +101,7 @@ func save_progress() -> void:
 	config.set_value("Progression", "current_language", current_language)
 	config.set_value("Progression", "background_static", background_static)
 	config.set_value("Progression", "bgm_enabled", bgm_enabled)
+	config.set_value("Progression", "sfx_enabled", sfx_enabled)
 	config.set_value("Progression", "tutorial_intro_answered", tutorial_intro_answered)
 	config.set_value("Progression", "level_star_bits", level_star_bits)
 	if session_data.is_empty():
@@ -133,6 +136,10 @@ func set_bgm_enabled(enabled: bool) -> void:
 	save_progress()
 	if BgmManager and BgmManager.has_method("apply_enabled"):
 		BgmManager.apply_enabled()
+
+func set_sfx_enabled(enabled: bool) -> void:
+	sfx_enabled = enabled
+	save_progress()
 
 func _apply_background_mode() -> void:
 	if SpaceBackground and SpaceBackground.has_method("set_static_mode"):

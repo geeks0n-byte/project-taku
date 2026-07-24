@@ -28,6 +28,8 @@ func _ready() -> void:
 	call_deferred("_hook_existing", get_tree().root)
 
 func play_click() -> void:
+	if SaveManager and not SaveManager.sfx_enabled:
+		return
 	if _player == null or _click_stream == null:
 		return
 	_player.stream = _click_stream

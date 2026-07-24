@@ -14,6 +14,7 @@ enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM }
 @onready var next_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/LanguageContainer/NextLangButton
 @onready var bg_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/BackgroundButton
 @onready var bgm_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/BgmButton
+@onready var sfx_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/SfxButton
 @onready var del_save_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DeleteSaveButton
 @onready var del_custom_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DeleteCustomButton
 @onready var unlock_all_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/UnlockAllButton
@@ -35,6 +36,8 @@ func _ready() -> void:
 		bg_btn.pressed.connect(_on_toggle_background)
 	if bgm_btn:
 		bgm_btn.pressed.connect(_on_toggle_bgm)
+	if sfx_btn:
+		sfx_btn.pressed.connect(_on_toggle_sfx)
 	if del_save_btn:
 		del_save_btn.pressed.connect(_on_delete_save_pressed)
 	if del_custom_btn:
@@ -49,6 +52,7 @@ func _ready() -> void:
 	_update_lang_label()
 	_update_background_label()
 	_update_bgm_label()
+	_update_sfx_label()
 	_fit_option_buttons()
 
 func _mount_header() -> void:
@@ -72,6 +76,7 @@ func show_menu() -> void:
 	_update_lang_label()
 	_update_background_label()
 	_update_bgm_label()
+	_update_sfx_label()
 	_fit_option_buttons()
 	if status_label:
 		status_label.text = ""
@@ -117,7 +122,7 @@ func _update_lang_label() -> void:
 func _fit_option_buttons() -> void:
 	if title_label:
 		HudLayout.apply_screen_header_style(title_label)
-	for btn in [del_save_btn, bg_btn, bgm_btn]:
+	for btn in [del_save_btn, bg_btn, bgm_btn, sfx_btn]:
 		HudLayout.apply_primary_button(btn)
 	if del_custom_btn and del_custom_btn.visible:
 		HudLayout.apply_primary_button(del_custom_btn)
@@ -156,6 +161,7 @@ func _on_prev_lang() -> void:
 	_update_lang_label()
 	_update_background_label()
 	_update_bgm_label()
+	_update_sfx_label()
 	_fit_option_buttons()
 
 func _on_next_lang() -> void:
@@ -168,6 +174,7 @@ func _on_next_lang() -> void:
 	_update_lang_label()
 	_update_background_label()
 	_update_bgm_label()
+	_update_sfx_label()
 	_fit_option_buttons()
 
 func _on_toggle_background() -> void:
@@ -183,6 +190,16 @@ func _update_bgm_label() -> void:
 func _on_toggle_bgm() -> void:
 	SaveManager.set_bgm_enabled(not SaveManager.bgm_enabled)
 	_update_bgm_label()
+
+func _update_sfx_label() -> void:
+	if not sfx_btn:
+		return
+	sfx_btn.text = tr("UI_SFX_ON" if SaveManager.sfx_enabled else "UI_SFX_OFF")
+	HudLayout.apply_primary_button(sfx_btn)
+
+func _on_toggle_sfx() -> void:
+	SaveManager.set_sfx_enabled(not SaveManager.sfx_enabled)
+	_update_sfx_label()
 
 func _build_confirm_panel() -> void:
 	_confirm_blocker = ColorRect.new()
