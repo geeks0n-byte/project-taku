@@ -177,7 +177,7 @@ static func build_requirements(level: LevelData, earned_bits: int = 0) -> Dictio
 		"untimed": false,
 	}
 
-## Builds completion-time + star rows into `host` (clears previous children).
+## Builds star challenge rows into `host` (clears previous children).
 static func populate_results(host: Control, star_result: Dictionary) -> void:
 	if host == null:
 		return
@@ -191,15 +191,6 @@ static func populate_results(host: Control, star_result: Dictionary) -> void:
 	host.add_child(root)
 
 	var untimed := bool(star_result.get("untimed", false))
-	var elapsed := int(star_result.get("elapsed_sec", 0))
-	# Tutorials / untimed runs: never show an infinity glyph; skip optional star goals.
-	if not untimed:
-		root.add_child(_make_text_row(
-			TranslationServer.translate("COMPLETION_TIME") % format_clock(elapsed),
-			Color(0.95, 0.95, 0.95, 1.0),
-			RESULTS_TITLE_FONT
-		))
-
 	if untimed:
 		return
 

@@ -763,7 +763,7 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 	var title_bottom := 220.0
 	var results_h := 0.0
 	if not untimed:
-		results_h = 90.0 + float(maxi(1, goal_count)) * (LevelStars.ROW_HEIGHT + 14.0)
+		results_h = float(maxi(1, goal_count)) * (LevelStars.ROW_HEIGHT + 14.0) + 24.0
 	if not victory_results_host or not victory_preview:
 		return
 	_raise_victory_buttons()

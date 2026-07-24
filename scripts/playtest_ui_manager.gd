@@ -160,7 +160,7 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 		return
 	var goal_count := int(star_result.get("total_count", 0))
 	var title_bottom := 200.0
-	var results_h := 90.0 + float(maxi(1, goal_count)) * (LevelStars.ROW_HEIGHT + 14.0)
+	var results_h := float(maxi(1, goal_count)) * (LevelStars.ROW_HEIGHT + 14.0) + 24.0
 	_victory_results_host.offset_top = title_bottom + 8.0
 	_victory_results_host.offset_bottom = title_bottom + 8.0 + results_h
 	var cursor := title_bottom + 8.0 + results_h
