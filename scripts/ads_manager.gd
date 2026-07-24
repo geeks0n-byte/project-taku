@@ -9,11 +9,11 @@ const TEST_INTERSTITIAL_UNIT_ID := "ca-app-pub-3940256099942544/1033173712"
 const TEST_REWARDED_UNIT_ID := "ca-app-pub-3940256099942544/5224354917"
 
 ## Replace with production unit IDs before Play release.
-const PROD_BANNER_UNIT_ID := "ca-app-pub-3940256099942544/6300978111"
-const PROD_INTERSTITIAL_UNIT_ID := "ca-app-pub-3940256099942544/1033173712"
-const PROD_REWARDED_UNIT_ID := "ca-app-pub-3940256099942544/5224354917"
+const PROD_BANNER_UNIT_ID := "ca-app-pub-1624206851803206/6555942665"
+const PROD_INTERSTITIAL_UNIT_ID := "ca-app-pub-1624206851803206/8878973813"
+const PROD_REWARDED_UNIT_ID := "ca-app-pub-1624206851803206/1850531037"
 
-const PRIVACY_POLICY_URL := "https://spaceblox.game/privacy"
+const PRIVACY_POLICY_URL := "https://geeks0n-byte.github.io/project-taku/privacy-policy.html"
 
 var _initialized: bool = false
 var _initializing: bool = false

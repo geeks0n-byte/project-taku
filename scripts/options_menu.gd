@@ -372,7 +372,7 @@ func _on_privacy_policy_pressed() -> void:
 	if AdsManager:
 		AdsManager.open_privacy_policy()
 	else:
-		OS.shell_open("https://spaceblox.game/privacy")
+		OS.shell_open("https://geeks0n-byte.github.io/project-taku/privacy-policy.html")
 
 func _setup_confirm_panel() -> void:
 	if _confirm_blocker:
