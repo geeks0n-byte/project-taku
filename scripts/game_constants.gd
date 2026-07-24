@@ -70,8 +70,10 @@ const SCREEN_CONTENT_GAP := 36.0
 const SCREEN_HEADER_COLOR := Color(1.0, 0.84, 0.0, 1.0)
 
 ## Shared bottom Close / Prev / Next band (matches level-select Close height).
-const SCREEN_BOTTOM_NAV_TOP := -260.0
-const SCREEN_BOTTOM_NAV_BOTTOM := -160.0
+## Raised so an adaptive AdMob banner (~90–140px) fits under the nav.
+const AD_BANNER_RESERVE := 140.0
+const SCREEN_BOTTOM_NAV_TOP := -260.0 - AD_BANNER_RESERVE
+const SCREEN_BOTTOM_NAV_BOTTOM := -160.0 - AD_BANNER_RESERVE
 
 ## Shared menu / dialog button tiers.
 ## Font bases are for the pixel UI font (English); HudLayout scales them for default-font locales.

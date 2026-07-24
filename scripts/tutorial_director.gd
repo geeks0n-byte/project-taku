@@ -381,7 +381,7 @@ func _position_next_button() -> void:
 		return
 	var half_w := GameConstants.UI_BTN_NAV_SIZE.x * 0.5
 	# Sit under the tip / above the board bottom chrome — not near the bezel.
-	var bottom_margin := 500.0
+	var bottom_margin := 500.0 + GameConstants.AD_BANNER_RESERVE
 	_next_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_next_button.offset_left = -half_w
 	_next_button.offset_right = half_w

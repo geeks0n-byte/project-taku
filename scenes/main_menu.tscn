@@ -57,7 +57,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
-show_debug_tools = false
 
 [node name="TitleLayer" type="CanvasLayer" parent="." unique_id=731966347]
 layer = 0
@@ -241,9 +240,9 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 12.0
-offset_top = -70.0
+offset_top = -210.0
 offset_right = -12.0
-offset_bottom = -12.0
+offset_bottom = -152.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_constants/separation = 8
@@ -397,7 +396,7 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 text = "UI_CLOSE"
 
-[node name="HowToPlayHost" type="Control" parent="UILayer"]
+[node name="HowToPlayHost" type="Control" parent="UILayer" unique_id=949103428]
 visible = false
 layout_mode = 3
 anchors_preset = 15
@@ -405,9 +404,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 0
 
-[node name="HowToPlayPanel" type="Panel" parent="UILayer/HowToPlayHost"]
+[node name="HowToPlayPanel" type="Panel" parent="UILayer/HowToPlayHost" unique_id=940262022]
 custom_minimum_size = Vector2(950, 1040)
 layout_mode = 1
 anchors_preset = 15
@@ -417,13 +415,12 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_overlay")
 
-[node name="RulesLabel" type="RichTextLabel" parent="UILayer/HowToPlayHost/HowToPlayPanel"]
+[node name="RulesLabel" type="RichTextLabel" parent="UILayer/HowToPlayHost/HowToPlayPanel" unique_id=974917922]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 40.0
-offset_top = 0.0
 offset_right = -40.0
 offset_bottom = -28.0
 grow_horizontal = 2
@@ -433,28 +430,27 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
 bbcode_enabled = true
 scroll_active = false
-fit_content = false
 
-[node name="NavRow" type="HBoxContainer" parent="UILayer/HowToPlayHost"]
+[node name="NavRow" type="HBoxContainer" parent="UILayer/HowToPlayHost" unique_id=419191493]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 40.0
-offset_top = -140.0
+offset_top = -400.0
 offset_right = -40.0
-offset_bottom = -20.0
+offset_bottom = -300.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_constants/separation = 20
 alignment = 1
 
-[node name="PrevSlot" type="Control" parent="UILayer/HowToPlayHost/NavRow"]
+[node name="PrevSlot" type="Control" parent="UILayer/HowToPlayHost/NavRow" unique_id=1842332726]
 custom_minimum_size = Vector2(240, 100)
 layout_mode = 2
 
-[node name="PrevButton" type="Button" parent="UILayer/HowToPlayHost/NavRow/PrevSlot"]
+[node name="PrevButton" type="Button" parent="UILayer/HowToPlayHost/NavRow/PrevSlot" unique_id=2110578758]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -470,7 +466,7 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 text = "UI_PREVIOUS"
 
-[node name="CloseButton" type="Button" parent="UILayer/HowToPlayHost/NavRow"]
+[node name="CloseButton" type="Button" parent="UILayer/HowToPlayHost/NavRow" unique_id=2119051309]
 layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
@@ -481,11 +477,11 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 text = "UI_CLOSE"
 
-[node name="NextSlot" type="Control" parent="UILayer/HowToPlayHost/NavRow"]
+[node name="NextSlot" type="Control" parent="UILayer/HowToPlayHost/NavRow" unique_id=2131443103]
 custom_minimum_size = Vector2(240, 100)
 layout_mode = 2
 
-[node name="NextButton" type="Button" parent="UILayer/HowToPlayHost/NavRow/NextSlot"]
+[node name="NextButton" type="Button" parent="UILayer/HowToPlayHost/NavRow/NextSlot" unique_id=316120215]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -501,18 +497,16 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 text = "UI_NEXT"
 
-[node name="TutorialIntroBlocker" type="ColorRect" parent="UILayer"]
+[node name="TutorialIntroBlocker" type="ColorRect" parent="UILayer" unique_id=1935914228]
 visible = false
-layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 0
 color = Color(0, 0, 0, 0.72)
 
-[node name="CenterContainer" type="CenterContainer" parent="UILayer/TutorialIntroBlocker"]
+[node name="CenterContainer" type="CenterContainer" parent="UILayer/TutorialIntroBlocker" unique_id=1720947937]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -521,12 +515,12 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Panel" type="Panel" parent="UILayer/TutorialIntroBlocker/CenterContainer"]
+[node name="Panel" type="Panel" parent="UILayer/TutorialIntroBlocker/CenterContainer" unique_id=641576668]
 custom_minimum_size = Vector2(680, 380)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="UILayer/TutorialIntroBlocker/CenterContainer/Panel"]
+[node name="VBoxContainer" type="VBoxContainer" parent="UILayer/TutorialIntroBlocker/CenterContainer/Panel" unique_id=1664941516]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -540,7 +534,7 @@ grow_vertical = 2
 theme_override_constants/separation = 28
 alignment = 1
 
-[node name="PromptLabel" type="Label" parent="UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer"]
+[node name="PromptLabel" type="Label" parent="UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer" unique_id=303453963]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(1, 0.92, 0.55, 1)
@@ -552,12 +546,12 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="HBoxContainer" type="HBoxContainer" parent="UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer" unique_id=1198744488]
 layout_mode = 2
 theme_override_constants/separation = 40
 alignment = 1
 
-[node name="YesButton" type="Button" parent="UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer"]
+[node name="YesButton" type="Button" parent="UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer" unique_id=1264660209]
 layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
@@ -568,7 +562,7 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 text = "UI_YES"
 
-[node name="NoButton" type="Button" parent="UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer"]
+[node name="NoButton" type="Button" parent="UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer" unique_id=1453727808]
 layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8

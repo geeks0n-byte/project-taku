@@ -26,13 +26,6 @@ UiSfx="*uid://c8uisfxclick001"
 SpaceBackground="*uid://bjs0g2pap4nsi"
 AdsManager="*uid://cadsmanager0001"
 
-[admob]
-
-general/android/enabled=true
-general/android/app_id="ca-app-pub-3940256099942544~3347511713"
-general/ios/enabled=false
-general/ios/app_id="ca-app-pub-3940256099942544~1458002511"
-
 [display]
 
 window/size/viewport_width=1080
@@ -47,7 +40,7 @@ project/assembly_name="project-taku"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/admob/plugin.cfg")
+enabled=PackedStringArray()
 
 [internationalization]
 
