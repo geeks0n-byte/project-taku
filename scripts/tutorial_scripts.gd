@@ -84,7 +84,7 @@ static func _icon_path(token: String) -> String:
 			return ""
 
 static func _level_1() -> Array:
-	# 4x3: locks + tap-to-cycle. Empties (1,1)=Y and (2,2)=B.
+	# 4x4: locks + tap-to-cycle. Empties (1,1)=Y and (2,2)=B.
 	var y := GameConstants.TileState.YELLOW
 	var b := GameConstants.TileState.BLUE
 	return [
@@ -135,7 +135,7 @@ static func _level_1() -> Array:
 	]
 
 static func _level_2() -> Array:
-	# 4x3: Rule of Two then Equal Balance. Empties (2,0) and (2,1).
+	# 4x4: Rule of Two then Equal Balance. Empties (2,0)=B and (2,1)=Y.
 	var y := GameConstants.TileState.YELLOW
 	var b := GameConstants.TileState.BLUE
 	return [
@@ -275,7 +275,7 @@ static func _level_4() -> Array:
 	]
 
 static func _level_5() -> Array:
-	# 4x3 constraints: vertical = and horizontal ×. Empties (1,0), (2,1), (3,0).
+	# 4x4 constraints: vertical = and horizontal ×. Empties (1,0), (2,1), (3,0).
 	var y := GameConstants.TileState.YELLOW
 	var b := GameConstants.TileState.BLUE
 	return [
