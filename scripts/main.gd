@@ -708,7 +708,9 @@ func _on_pause():
 		pause_menu.show()
 
 func _on_how_to_play():
-	# Always open the guide (never consumed as a tutorial teach tap).
+	# During HUD teach: tapping the glowing Rules button advances the tip.
+	if tutorial_director and tutorial_director.consume_hud_action("how_to_play"):
+		return
 	if not is_game_active or is_paused:
 		return
 	is_paused = true
@@ -743,7 +745,9 @@ func _on_resume():
 		tutorial_director.refresh_tool_gates()
 
 func _on_reset():
-	# Reset always offers restart/new-puzzle confirm (never consumed as a tutorial teach tap).
+	# During HUD teach: tapping the glowing Reset button advances the tip.
+	if tutorial_director and tutorial_director.consume_hud_action("reset"):
+		return
 	if not is_game_active or is_paused:
 		return
 	is_paused = true

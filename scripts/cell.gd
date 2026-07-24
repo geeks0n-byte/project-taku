@@ -139,9 +139,12 @@ func update_visuals():
 		lock_icon.visible = is_locked and state != GameConstants.TileState.WALL
 
 	if link_highlight:
-		# Tutorial white mask only on empty (or locked demo) cells — hide once a tile is placed.
+		# Tutorial white mask: empties, locked clues, and active purple hoppers.
+		# Hide once the player places a normal color on an empty cell.
 		var show_guide := guide_active and (
-			state == GameConstants.TileState.EMPTY or is_locked
+			state == GameConstants.TileState.EMPTY
+			or is_locked
+			or state == GameConstants.TileState.SHIFTER
 		)
 		if show_guide:
 			var alpha: float = (
@@ -226,7 +229,11 @@ func set_guide_highlight(enabled: bool) -> void:
 	guide_active = enabled
 	_stop_guide_breathe()
 	update_visuals()
-	if enabled and (state == GameConstants.TileState.EMPTY or is_locked):
+	if enabled and (
+		state == GameConstants.TileState.EMPTY
+		or is_locked
+		or state == GameConstants.TileState.SHIFTER
+	):
 		_start_guide_breathe()
 
 func set_focus_highlight(enabled: bool) -> void:
@@ -257,7 +264,11 @@ func clear_highlight():
 func _start_guide_breathe() -> void:
 	if link_highlight == null or not guide_active:
 		return
-	if state != GameConstants.TileState.EMPTY and not is_locked:
+	if (
+		state != GameConstants.TileState.EMPTY
+		and not is_locked
+		and state != GameConstants.TileState.SHIFTER
+	):
 		return
 	_stop_guide_breathe()
 	link_highlight.visible = true
@@ -275,7 +286,9 @@ func _stop_guide_breathe() -> void:
 		_guide_breathe_tween.kill()
 		_guide_breathe_tween = null
 	if link_highlight and guide_active and (
-		state == GameConstants.TileState.EMPTY or is_locked
+		state == GameConstants.TileState.EMPTY
+		or is_locked
+		or state == GameConstants.TileState.SHIFTER
 	):
 		link_highlight.color = GUIDE_COLOR
 

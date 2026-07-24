@@ -2,15 +2,15 @@ class_name TutorialScripts
 extends RefCounted
 
 ## Step kinds:
-## message — tip with Next; board stays interactive (optional focus)
-## practice — interactive focus cell; status updates on wrong/right, Next on success
-## hud_button — highlight a HUD tool (red), Next or tapping it advances
+## message — tip with Next; board frozen (optional white masks / borders)
+## practice — only highlighted cells clickable; status updates on wrong/right
+## hud_button — glow a top-bar tool; tap it or Next to advance
 ## wait_cell / wait_shifter — legacy auto-advance waits
-## done — unlock tools / clear gates (victory can follow)
+## done — unlock tools, clear gates, keep a free-play tip until solved
 ##
 ## Focus fields:
-## mask / highlight — white cell masks (LinkHighlight)
-## red — red cell borders (ErrorHighlight / focus)
+## mask / highlight — white breathing cell masks (LinkHighlight)
+## red / border — white breathing focus borders
 
 const ICON_SIZE := 44
 const LOCK_ICON_SIZE := 56
@@ -85,16 +85,26 @@ static func _icon_path(token: String) -> String:
 
 static func _level_1() -> Array:
 	# YYEE / BBEE / BYYB / YBBY — empties (2,0)(3,0)=Blue, (2,1)(3,1)=Yellow.
-	# Cycle first; after the first correct place, teach Rule of Two + Equal Balance.
 	var y := GameConstants.TileState.YELLOW
 	var b := GameConstants.TileState.BLUE
+	var locked: Array = [
+		Vector2i(0, 0), Vector2i(1, 0),
+		Vector2i(0, 1), Vector2i(1, 1),
+		Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2),
+		Vector2i(0, 3), Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3),
+	]
 	return [
+		{
+			"type": "message",
+			"text_key": "TUT1_WELCOME",
+			"icons": ["yellow", "blue"],
+		},
 		{
 			"type": "message",
 			"text_key": "TUT1_LOCKS",
 			"icons": ["lock"],
-			"mask": [Vector2i(0, 0)],
-			"red": [Vector2i(0, 0)],
+			"mask": locked,
+			"red": locked,
 		},
 		{
 			"type": "practice",
@@ -108,16 +118,25 @@ static func _level_1() -> Array:
 			"state": b,
 			"cycle": [y, b],
 			"mask": [Vector2i(2, 0)],
+			"red": [Vector2i(2, 0)],
 		},
 		{
 			"type": "message",
 			"text_key": "TUT1_RULE_OF_TWO",
 			"icons": ["yellow", "blue"],
+			"mask": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
+			"red": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
 		},
 		{
 			"type": "message",
 			"text_key": "TUT1_BALANCE",
 			"icons": ["yellow", "blue"],
+			"mask": [
+				Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0),
+			],
+			"red": [
+				Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0),
+			],
 		},
 		{
 			"type": "practice",
@@ -130,6 +149,7 @@ static func _level_1() -> Array:
 			"state": b,
 			"cycle": [y, b],
 			"mask": [Vector2i(3, 0)],
+			"red": [Vector2i(3, 0)],
 		},
 		{
 			"type": "practice",
@@ -142,6 +162,7 @@ static func _level_1() -> Array:
 			"state": y,
 			"cycle": [y, b],
 			"mask": [Vector2i(2, 1)],
+			"red": [Vector2i(2, 1)],
 		},
 		{
 			"type": "practice",
@@ -155,10 +176,11 @@ static func _level_1() -> Array:
 			"state": y,
 			"cycle": [y, b],
 			"mask": [Vector2i(3, 1)],
+			"red": [Vector2i(3, 1)],
 		},
 		{
 			"type": "done",
-			"text_key": "TUT_COMPLETE",
+			"text_key": "TUT_PLAY_FREE",
 		},
 	]
 
@@ -171,8 +193,8 @@ static func _level_2() -> Array:
 			"type": "message",
 			"text_key": "TUT2_RULE_INTRO",
 			"icons": ["yellow", "blue"],
-			"red": [Vector2i(0, 0), Vector2i(1, 0)],
-			"mask": [Vector2i(2, 0)],
+			"mask": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
+			"red": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
 		},
 		{
 			"type": "practice",
@@ -192,8 +214,8 @@ static func _level_2() -> Array:
 			"type": "message",
 			"text_key": "TUT2_BALANCE_INTRO",
 			"icons": ["yellow", "blue"],
-			"red": [Vector2i(0, 1), Vector2i(1, 1), Vector2i(3, 1)],
-			"mask": [Vector2i(2, 1)],
+			"mask": [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)],
+			"red": [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)],
 		},
 		{
 			"type": "practice",
@@ -207,16 +229,17 @@ static func _level_2() -> Array:
 			"state": y,
 			"cycle": [y, b],
 			"mask": [Vector2i(2, 1)],
-			"red": [Vector2i(2, 1)],
+			"red": [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)],
 		},
 		{
 			"type": "done",
-			"text_key": "TUT_COMPLETE",
+			"text_key": "TUT_PLAY_FREE",
 		},
 	]
 
 static func _level_3() -> Array:
-	# 3x3 green joker lesson. Empty center (1,1).
+	# 3x3 green lesson. Solved: YBG / BGY / GYB.
+	# Empties: (1,0)=Blue (dual-as-yellow), (1,1)=Green (max-one + balance).
 	var g := GameConstants.TileState.JOKER
 	var y := GameConstants.TileState.YELLOW
 	var b := GameConstants.TileState.BLUE
@@ -225,21 +248,43 @@ static func _level_3() -> Array:
 			"type": "message",
 			"text_key": "TUT3_INTRO",
 			"icons": ["green"],
-			"red": [Vector2i(2, 0), Vector2i(0, 2)],
 			"mask": [Vector2i(2, 0), Vector2i(0, 2)],
+			"red": [Vector2i(2, 0), Vector2i(0, 2)],
 		},
 		{
 			"type": "message",
 			"text_key": "TUT3_GREEN_DUAL",
-			"icons": ["green", "yellow", "blue"],
+			"icons": ["green", "yellow"],
+			"mask": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
+			"red": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
+		},
+		{
+			"type": "practice",
+			"text_key": "TUT3_DUAL_PRACTICE",
+			"wrong_key": "TUT3_DUAL_WRONG",
+			"success_key": "TUT3_DUAL_GOOD",
+			"icons": ["blue", "yellow", "green"],
+			"wrong_icons": ["green", "yellow", "blue"],
+			"success_icons": ["blue"],
+			"coord": Vector2i(1, 0),
+			"state": b,
+			"cycle": [y, b, g],
+			"mask": [Vector2i(1, 0)],
+			"red": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
+		},
+		{
+			"type": "message",
+			"text_key": "TUT3_GREEN_MAX",
+			"icons": ["green"],
+			"mask": [Vector2i(2, 0), Vector2i(0, 2)],
 			"red": [Vector2i(2, 0), Vector2i(0, 2)],
 		},
 		{
 			"type": "practice",
-			"text_key": "TUT3_GREEN_MAX",
+			"text_key": "TUT3_MAX_PRACTICE",
 			"wrong_key": "TUT3_WRONG_COLOR",
 			"success_key": "TUT3_GOOD_GREEN",
-			"icons": ["green", "green"],
+			"icons": ["green"],
 			"wrong_icons": ["green", "yellow", "blue"],
 			"success_icons": ["green"],
 			"coord": Vector2i(1, 1),
@@ -250,20 +295,30 @@ static func _level_3() -> Array:
 		},
 		{
 			"type": "done",
-			"text_key": "TUT_COMPLETE",
+			"text_key": "TUT_PLAY_FREE",
 		},
 	]
 
 static func _level_4() -> Array:
-	# 3x3 shifter lesson (bottom row walls). Active at (2,1); hop to (2,0), fill with green.
+	# 3x3 with two purple pairs. Solved: SBY / BYG / YSB.
+	# Pair1 (0,0)-(1,0) active at (1,0); Pair2 (1,2)-(2,2) active at (2,2).
+	# After hops: fill (1,0)=Blue and (2,2)=Blue.
+	var y := GameConstants.TileState.YELLOW
+	var b := GameConstants.TileState.BLUE
 	var g := GameConstants.TileState.JOKER
 	return [
 		{
 			"type": "message",
 			"text_key": "TUT4_INTRO",
 			"icons": ["shifter"],
-			"red": [Vector2i(2, 0), Vector2i(2, 1)],
-			"mask": [Vector2i(2, 0), Vector2i(2, 1)],
+			"mask": [
+				Vector2i(0, 0), Vector2i(1, 0),
+				Vector2i(1, 2), Vector2i(2, 2),
+			],
+			"red": [
+				Vector2i(0, 0), Vector2i(1, 0),
+				Vector2i(1, 2), Vector2i(2, 2),
+			],
 		},
 		{
 			"type": "practice",
@@ -273,32 +328,57 @@ static func _level_4() -> Array:
 			"icons": ["shifter"],
 			"wrong_icons": ["shifter"],
 			"success_icons": ["shifter"],
-			"coord": Vector2i(2, 0),
+			"coord": Vector2i(0, 0),
+			"from": Vector2i(1, 0),
 			"wait_shifter": true,
-			"mask": [Vector2i(2, 1)],
-			"red": [Vector2i(2, 1)],
+			"mask": [Vector2i(1, 0)],
+			"red": [Vector2i(1, 0)],
 		},
 		{
 			"type": "practice",
 			"text_key": "TUT4_PLACE_FILL",
 			"wrong_key": "TUT4_WRONG_FILL",
 			"success_key": "TUT4_GOOD_FILL",
-			"icons": ["green"],
-			"wrong_icons": ["yellow", "blue", "green"],
-			"success_icons": ["green"],
-			"coord": Vector2i(2, 1),
-			"state": g,
-			"cycle": [
-				GameConstants.TileState.YELLOW,
-				GameConstants.TileState.BLUE,
-				g,
-			],
-			"mask": [Vector2i(2, 1)],
-			"red": [Vector2i(2, 1)],
+			"icons": ["blue"],
+			"wrong_icons": ["blue"],
+			"success_icons": ["blue"],
+			"coord": Vector2i(1, 0),
+			"state": b,
+			"cycle": [y, b, g],
+			"mask": [Vector2i(1, 0)],
+			"red": [Vector2i(1, 0)],
+		},
+		{
+			"type": "practice",
+			"text_key": "TUT4_MOVE_SHIFTER_2",
+			"wrong_key": "TUT4_MOVE_SHIFTER_2",
+			"success_key": "TUT4_GOOD_SHIFTER",
+			"icons": ["shifter"],
+			"wrong_icons": ["shifter"],
+			"success_icons": ["shifter"],
+			"coord": Vector2i(1, 2),
+			"from": Vector2i(2, 2),
+			"wait_shifter": true,
+			"mask": [Vector2i(2, 2)],
+			"red": [Vector2i(2, 2)],
+		},
+		{
+			"type": "practice",
+			"text_key": "TUT4_PLACE_FILL_2",
+			"wrong_key": "TUT4_WRONG_FILL",
+			"success_key": "TUT4_GOOD_FILL",
+			"icons": ["blue"],
+			"wrong_icons": ["blue"],
+			"success_icons": ["blue"],
+			"coord": Vector2i(2, 2),
+			"state": b,
+			"cycle": [y, b, g],
+			"mask": [Vector2i(2, 2)],
+			"red": [Vector2i(2, 2)],
 		},
 		{
 			"type": "done",
-			"text_key": "TUT_COMPLETE",
+			"text_key": "TUT_PLAY_FREE",
 		},
 	]
 
@@ -310,8 +390,8 @@ static func _level_5() -> Array:
 		{
 			"type": "message",
 			"text_key": "TUT5_EQUALS_INTRO",
-			"red": [Vector2i(1, 0), Vector2i(1, 1)],
 			"mask": [Vector2i(1, 0), Vector2i(1, 1)],
+			"red": [Vector2i(1, 0), Vector2i(1, 1)],
 		},
 		{
 			"type": "practice",
@@ -330,8 +410,8 @@ static func _level_5() -> Array:
 		{
 			"type": "message",
 			"text_key": "TUT5_NOTEQUALS_INTRO",
-			"red": [Vector2i(2, 1), Vector2i(3, 1)],
 			"mask": [Vector2i(2, 1), Vector2i(3, 1)],
+			"red": [Vector2i(2, 1), Vector2i(3, 1)],
 		},
 		{
 			"type": "practice",
@@ -363,12 +443,12 @@ static func _level_5() -> Array:
 		},
 		{
 			"type": "done",
-			"text_key": "TUT_COMPLETE",
+			"text_key": "TUT_PLAY_FREE",
 		},
 	]
 
 static func _level_6() -> Array:
-	# Teach HUD tools one by one with red button highlight. Board is playable after done.
+	# Teach each top-bar tool with a glowing highlight. Tools unlock after done.
 	return [
 		{
 			"type": "message",

@@ -197,7 +197,7 @@ func clear_guide_cells() -> void:
 		if board_cells[coord].guide_active:
 			board_cells[coord].set_guide_highlight(false)
 
-## Red cell borders for tutorial attention (independent of white masks).
+## White breathing borders for tutorial attention (independent of white masks).
 func set_focus_cells(coords: Array) -> void:
 	clear_focus_cells()
 	for c in coords:
