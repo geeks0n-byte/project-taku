@@ -97,12 +97,9 @@ func on_board_solved() -> void:
 		board_manager.clear_guide_cells()
 		board_manager.clear_focus_cells()
 		board_manager.restore_cell_cycle_tiles(available_tiles)
-	if _tools_locked:
-		_tools_locked = false
-		refresh_tool_gates()
-		tools_unlocked.emit()
-	else:
-		refresh_tool_gates()
+	# Keep HUD tools locked until Next finishes the tutorial (prevents undo after solve).
+	_tools_locked = true
+	refresh_tool_gates()
 	_show_message_key("TUT_COMPLETE", [], true)
 
 ## Returns true when the HUD action was consumed by the current tutorial step.
@@ -273,15 +270,50 @@ func _show_message_key(key: String, icons: Variant, show_next: bool) -> void:
 	_last_status_icons = icons.duplicate() if icons is Array else []
 	_last_status_show_next = show_next
 	var text := tr(key) if not key.is_empty() else ""
-	var icon_list: Array = _last_status_icons
-	if not icon_list.is_empty():
-		var args: Array = []
-		for token in icon_list:
-			args.append(TutorialScripts.icon_bbcode(String(token)))
-		text = text % args
+	text = _apply_icon_placeholders(text, _last_status_icons)
+	# Always put the Next prompt on its own line so "Tap Next" never wraps mid-phrase.
+	if show_next:
+		text = _strip_inline_next_prompt(text)
+		var tap_next := String(tr("TUT_TAP_NEXT")).strip_edges()
+		if not tap_next.is_empty():
+			text = "%s\n%s" % [text.strip_edges(), tap_next]
 	if ui_manager:
 		ui_manager.show_tutorial_status(text)
 	_set_next_visible(show_next)
+
+## Replace each `%s` in order with an icon. Avoids leftover `%s` when counts mismatch.
+func _apply_icon_placeholders(text: String, icons: Array) -> String:
+	var result := text
+	for token in icons:
+		var needle := "%s"
+		var idx := result.find(needle)
+		if idx < 0:
+			break
+		var img := TutorialScripts.icon_bbcode(String(token))
+		result = result.substr(0, idx) + img + result.substr(idx + needle.length())
+	return result
+
+func _strip_inline_next_prompt(text: String) -> String:
+	var cleaned := text.strip_edges()
+	# Remove a trailing "Tap Next..." style sentence if a translation still inlines it.
+	var markers: Array[String] = [
+		"Tap Next",
+		"Pulsa Siguiente",
+		"Tippe Weiter",
+		"Touchez Suivant",
+		"Dotknij Dalej",
+		"დააჭირეთ შემდეგს",
+		"Натисніть Далі",
+	]
+	for marker in markers:
+		var idx := cleaned.rfind(marker)
+		if idx >= 0:
+			# Only strip when the marker starts the final sentence-ish chunk.
+			var before := cleaned.substr(0, idx).strip_edges()
+			if before.is_empty() or before.ends_with(".") or before.ends_with("!") or before.ends_with("—") or before.ends_with("-"):
+				cleaned = before
+				break
+	return cleaned.strip_edges()
 
 func refresh_for_locale() -> void:
 	if not _active:
@@ -341,11 +373,13 @@ func _position_next_button() -> void:
 	if not _next_button:
 		return
 	var half_w := GameConstants.UI_BTN_NAV_SIZE.x * 0.5
+	# Keep clear of the screen bottom so Next sits under the tip, not on the bezel.
+	var bottom_margin := 96.0
 	_next_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_next_button.offset_left = -half_w
 	_next_button.offset_right = half_w
-	_next_button.offset_top = -(GameConstants.UI_BTN_NAV_SIZE.y + 24.0)
-	_next_button.offset_bottom = -24.0
+	_next_button.offset_top = -(GameConstants.UI_BTN_NAV_SIZE.y + bottom_margin)
+	_next_button.offset_bottom = -bottom_margin
 	_next_button.z_index = 8
 
 func _apply_menu_button_styles(button: Button) -> void:

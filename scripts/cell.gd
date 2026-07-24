@@ -14,10 +14,18 @@ var allowed_cycle_tiles: Array[int] = [0, 1, 2]
 var tutorial_blocked: bool = false
 ## Soft white mask for tutorial focus cells.
 var guide_active: bool = false
-## Persistent red border for tutorial focus (survives validation clears).
+## Persistent white border for tutorial focus (survives validation clears).
 var focus_active: bool = false
+## Transient validation error border (red); cleared each validation pass.
+var validation_error_active: bool = false
 
 const GUIDE_COLOR := Color(1.0, 1.0, 1.0, 0.45)
+const GUIDE_ALPHA_MIN := 0.18
+const GUIDE_ALPHA_MAX := 0.58
+const FOCUS_BORDER_COLOR := Color(1.0, 1.0, 1.0, 1.0)
+const ERROR_BORDER_COLOR := Color.RED
+
+var _guide_breathe_tween: Tween
 
 @export var tex_empty: Texture2D = preload("res://resources/tiles/tile_empty.svg")
 @export var tex_empty_editor: Texture2D = preload("res://resources/tiles/tile_empty_editor.svg")
@@ -67,7 +75,10 @@ func _ready():
 
 func _draw_error_border():
 	if error_highlight:
-		error_highlight.draw_rect(Rect2(Vector2.ZERO, error_highlight.size), Color.RED, false, 10.0)
+		var border_color := (
+			ERROR_BORDER_COLOR if validation_error_active else FOCUS_BORDER_COLOR
+		)
+		error_highlight.draw_rect(Rect2(Vector2.ZERO, error_highlight.size), border_color, false, 10.0)
 
 func _stretch_node_to_parent(node: Control, margin: float = 0.0):
 	if node:
@@ -112,7 +123,8 @@ func update_visuals():
 
 	if link_highlight:
 		if guide_active:
-			link_highlight.color = GUIDE_COLOR
+			var alpha := link_highlight.color.a if link_highlight.visible else GUIDE_ALPHA_MAX
+			link_highlight.color = Color(GUIDE_COLOR.r, GUIDE_COLOR.g, GUIDE_COLOR.b, alpha)
 			link_highlight.visible = true
 		elif is_linked_pair:
 			link_highlight.color = Color(0.6, 0.36, 0.9, 0.4)
@@ -175,19 +187,23 @@ func update_visuals():
 			tile_icon.texture = null
 
 func set_error_highlight():
+	validation_error_active = true
 	if error_highlight:
 		error_highlight.visible = true
 		error_highlight.queue_redraw()
 
 func set_guide_highlight(enabled: bool) -> void:
 	guide_active = enabled
+	_stop_guide_breathe()
 	update_visuals()
+	if enabled:
+		_start_guide_breathe()
 
 func set_focus_highlight(enabled: bool) -> void:
 	focus_active = enabled
 	if error_highlight:
-		error_highlight.visible = enabled
-		if enabled:
+		error_highlight.visible = enabled or validation_error_active
+		if error_highlight.visible:
 			error_highlight.queue_redraw()
 
 func set_mask_color(mask_color: Color):
@@ -196,8 +212,29 @@ func set_mask_color(mask_color: Color):
 		link_highlight.visible = true
 
 func clear_highlight():
-	# Keep tutorial red focus borders; only clear transient validation errors.
+	# Keep tutorial focus borders; only clear transient validation errors.
+	validation_error_active = false
 	if error_highlight:
 		error_highlight.visible = focus_active
 		if focus_active:
 			error_highlight.queue_redraw()
+
+func _start_guide_breathe() -> void:
+	if link_highlight == null or not guide_active:
+		return
+	_stop_guide_breathe()
+	link_highlight.color = Color(GUIDE_COLOR.r, GUIDE_COLOR.g, GUIDE_COLOR.b, GUIDE_ALPHA_MAX)
+	_guide_breathe_tween = create_tween().set_loops()
+	_guide_breathe_tween.tween_property(
+		link_highlight, "color:a", GUIDE_ALPHA_MIN, 1.4
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_guide_breathe_tween.tween_property(
+		link_highlight, "color:a", GUIDE_ALPHA_MAX, 1.4
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+func _stop_guide_breathe() -> void:
+	if _guide_breathe_tween:
+		_guide_breathe_tween.kill()
+		_guide_breathe_tween = null
+	if link_highlight and guide_active:
+		link_highlight.color = GUIDE_COLOR

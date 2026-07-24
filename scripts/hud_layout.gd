@@ -201,7 +201,15 @@ static func apply_status_font(label: RichTextLabel, base_size: int = GameConstan
 	var locale := TranslationServer.get_locale().substr(0, 2)
 	if locale == "ka":
 		size = int(round(float(size) * 1.15))
-	label.add_theme_font_size_override("normal_font_size", size)
+	# Keep bold/italics the same size so [b]/[i]/[color] words are not smaller.
+	for size_name in [
+		"normal_font_size",
+		"bold_font_size",
+		"italics_font_size",
+		"bold_italics_font_size",
+		"mono_font_size",
+	]:
+		label.add_theme_font_size_override(size_name, size)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.fit_content = true
 	label.scroll_active = false
