@@ -779,8 +779,8 @@ func _on_next_level():
 	_begin_level_entry()
 
 func _on_play_again():
+	# Retry the current level so the player can chase remaining challenge stars.
 	SaveManager.clear_session()
-	current_level_index = 0
 	_begin_level_entry()
 
 func _apply_debug_tools_visibility() -> void:

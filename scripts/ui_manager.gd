@@ -47,6 +47,9 @@ signal locale_refresh_requested
 @onready var end_layer: CanvasLayer = $"../EndLayer"
 @onready var end_center: CenterContainer = $"../EndLayer/CenterContainer"
 
+var _play_again_button: Button
+var _play_again_label: Label
+
 var _is_last_level_completed: bool = false
 var _victory_display_num: int = 0
 var _victory_is_custom: bool = false
@@ -90,6 +93,7 @@ func _ready() -> void:
 	_ensure_resume_panel()
 	_ensure_end_dimmer()
 	_ensure_reset_confirm_panel()
+	_ensure_play_again_button()
 	_style_victory_chrome()
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
@@ -159,8 +163,8 @@ func _connect_signals() -> void:
 		undo_button.pressed.connect(_on_undo_requested)
 	if redo_button and not redo_button.pressed.is_connected(_on_redo_requested):
 		redo_button.pressed.connect(_on_redo_requested)
-	if restart_button and not restart_button.pressed.is_connected(_on_victory_button_pressed):
-		restart_button.pressed.connect(_on_victory_button_pressed)
+	if restart_button and not restart_button.pressed.is_connected(_on_victory_next_pressed):
+		restart_button.pressed.connect(_on_victory_next_pressed)
 	if main_menu_button and not main_menu_button.pressed.is_connected(_on_main_menu_pressed):
 		main_menu_button.pressed.connect(_on_main_menu_pressed)
 	if tutorial_back_button and not tutorial_back_button.pressed.is_connected(_on_tutorial_back_pressed):
@@ -193,11 +197,11 @@ func _on_tutorial_back_pressed() -> void:
 		how_to_play_container.visible = false
 	resume_from_tutorial_requested.emit()
 
-func _on_victory_button_pressed() -> void:
-	if _is_last_level_completed:
-		play_again_requested.emit()
-	else:
-		next_level_requested.emit()
+func _on_victory_next_pressed() -> void:
+	next_level_requested.emit()
+
+func _on_play_again_pressed() -> void:
+	play_again_requested.emit()
 
 func _on_main_menu_pressed() -> void:
 	get_tree().paused = false
@@ -796,12 +800,20 @@ func _refresh_victory_locale() -> void:
 		win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		win_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	if victory_restart_label:
-		victory_restart_label.text = tr("PLAY_AGAIN") if _is_last_level_completed else tr("NEXT_LEVEL")
+		victory_restart_label.text = tr("NEXT_LEVEL")
 		HudLayout.apply_locale_font_to_control(victory_restart_label)
 	elif restart_button:
-		restart_button.text = tr("PLAY_AGAIN") if _is_last_level_completed else tr("NEXT_LEVEL")
+		restart_button.text = tr("NEXT_LEVEL")
 	if restart_button:
+		restart_button.visible = not _is_last_level_completed
 		HudLayout.apply_panel_button(restart_button)
+	_ensure_play_again_button()
+	if _play_again_label:
+		_play_again_label.text = tr("PLAY_AGAIN")
+		HudLayout.apply_locale_font_to_control(_play_again_label)
+	if _play_again_button:
+		_play_again_button.visible = true
+		HudLayout.apply_panel_button(_play_again_button)
 	if main_menu_button:
 		var menu_label := main_menu_button.get_node_or_null("HBoxContainer/Label") as Label
 		if menu_label:
@@ -810,6 +822,8 @@ func _refresh_victory_locale() -> void:
 		HudLayout.apply_panel_button(main_menu_button)
 	if _victory_results_host and not _victory_star_result.is_empty():
 		_populate_victory_results(_victory_star_result)
+	if victory_panel and victory_panel.visible:
+		_layout_victory_panel(_victory_star_result)
 
 func _ensure_end_dimmer() -> void:
 	if _end_dimmer and is_instance_valid(_end_dimmer):
@@ -853,6 +867,46 @@ func _style_victory_chrome() -> void:
 		win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		win_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
+func _ensure_play_again_button() -> void:
+	if _play_again_button and is_instance_valid(_play_again_button):
+		return
+	if victory_panel == null or restart_button == null:
+		return
+	_play_again_button = Button.new()
+	_play_again_button.name = "PlayAgainButton"
+	_play_again_button.custom_minimum_size = restart_button.custom_minimum_size
+	for style_name in ["normal", "pressed", "hover", "disabled"]:
+		var style := restart_button.get_theme_stylebox(style_name)
+		if style:
+			_play_again_button.add_theme_stylebox_override(style_name, style)
+	var hbox := HBoxContainer.new()
+	hbox.name = "HBoxContainer"
+	hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	_play_again_button.add_child(hbox)
+	_play_again_label = Label.new()
+	_play_again_label.name = "Label"
+	_play_again_label.text = "PLAY AGAIN"
+	_play_again_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_play_again_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_play_again_label.add_theme_color_override("font_color", Color.WHITE)
+	_play_again_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	_play_again_label.add_theme_constant_override("outline_size", 8)
+	if victory_restart_label:
+		var font := victory_restart_label.get_theme_font("font")
+		if font:
+			_play_again_label.add_theme_font_override("font", font)
+		_play_again_label.add_theme_font_size_override(
+			"font_size",
+			victory_restart_label.get_theme_font_size("font_size")
+		)
+	hbox.add_child(_play_again_label)
+	_play_again_button.pressed.connect(_on_play_again_pressed)
+	victory_panel.add_child(_play_again_button)
+	if main_menu_button:
+		victory_panel.move_child(_play_again_button, main_menu_button.get_index())
+
 func _ensure_victory_results_host() -> Control:
 	if _victory_results_host and is_instance_valid(_victory_results_host):
 		return _victory_results_host
@@ -866,10 +920,7 @@ func _ensure_victory_results_host() -> Control:
 	_victory_results_host.offset_right = -40.0
 	if victory_panel:
 		victory_panel.add_child(_victory_results_host)
-		if restart_button:
-			victory_panel.move_child(restart_button, -1)
-		if main_menu_button:
-			victory_panel.move_child(main_menu_button, -1)
+		_raise_victory_buttons()
 	return _victory_results_host
 
 func _ensure_victory_preview() -> TextureRect:
@@ -884,11 +935,19 @@ func _ensure_victory_preview() -> TextureRect:
 	_victory_preview.visible = false
 	if victory_panel:
 		victory_panel.add_child(_victory_preview)
-		if restart_button:
-			victory_panel.move_child(restart_button, -1)
-		if main_menu_button:
-			victory_panel.move_child(main_menu_button, -1)
+		_raise_victory_buttons()
 	return _victory_preview
+
+func _raise_victory_buttons() -> void:
+	if victory_panel == null:
+		return
+	if restart_button:
+		victory_panel.move_child(restart_button, -1)
+	_ensure_play_again_button()
+	if _play_again_button:
+		victory_panel.move_child(_play_again_button, -1)
+	if main_menu_button:
+		victory_panel.move_child(main_menu_button, -1)
 
 func _set_victory_preview(texture: Texture2D) -> void:
 	var preview := _ensure_victory_preview()
@@ -925,17 +984,28 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 		cursor += preview_h
 
 	var buttons_top := cursor + 28.0
-	if restart_button:
-		restart_button.set_anchors_preset(Control.PRESET_CENTER_TOP)
-		restart_button.offset_left = -260.0
-		restart_button.offset_right = 260.0
-		restart_button.offset_top = buttons_top
-		restart_button.offset_bottom = buttons_top + 110.0
+	var row := 0
+	if restart_button and restart_button.visible:
+		_place_victory_button(restart_button, buttons_top, row)
+		row += 1
+	_ensure_play_again_button()
+	if _play_again_button:
+		_play_again_button.visible = true
+		_place_victory_button(_play_again_button, buttons_top, row)
+		row += 1
 	if main_menu_button:
-		main_menu_button.set_anchors_preset(Control.PRESET_CENTER_TOP)
-		main_menu_button.offset_left = -260.0
-		main_menu_button.offset_right = 260.0
-		main_menu_button.offset_top = buttons_top + 130.0
-		main_menu_button.offset_bottom = buttons_top + 240.0
+		_place_victory_button(main_menu_button, buttons_top, row)
+		row += 1
+	var buttons_bottom := buttons_top + float(row) * 130.0 + 20.0
 	var min_h := 980.0 if preview_h > 0.0 else (620.0 if untimed else 900.0)
-	victory_panel.custom_minimum_size = Vector2(840, maxf(min_h, buttons_top + 300.0))
+	victory_panel.custom_minimum_size = Vector2(840, maxf(min_h, buttons_bottom + 40.0))
+
+func _place_victory_button(button: Button, buttons_top: float, row: int) -> void:
+	if not button:
+		return
+	var top := buttons_top + float(row) * 130.0
+	button.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	button.offset_left = -260.0
+	button.offset_right = 260.0
+	button.offset_top = top
+	button.offset_bottom = top + 110.0
