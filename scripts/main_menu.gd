@@ -11,10 +11,19 @@ extends Control
 @onready var editor_btn = $UILayer/CenterContainer/VBoxContainer/EditorButton
 @onready var debug_bar = $UILayer/DebugBar
 @onready var debug_star_btn = $UILayer/DebugBar/DebugStarButton
-@onready var debug_comet_btn = $UILayer/DebugBar/DebugCometButton
 @onready var debug_asteroid_btn = $UILayer/DebugBar/DebugAsteroidButton
 @onready var debug_asteroid_cloud_btn = $UILayer/DebugBar/DebugAsteroidCloudButton
+@onready var debug_comet_btn = $UILayer/DebugBar/DebugCometButton
 @onready var debug_comet_shower_btn = $UILayer/DebugBar/DebugCometShowerButton
+
+const _FX_STAR := preload("res://resources/background/fx_shooting_star.svg")
+const _FX_AST_1 := preload("res://resources/background/fx_asteroid_1.svg")
+const _FX_AST_2 := preload("res://resources/background/fx_asteroid_2.svg")
+const _FX_AST_3 := preload("res://resources/background/fx_asteroid_3.svg")
+const _FX_COMET_1 := preload("res://resources/background/fx_comet_1.svg")
+const _FX_COMET_2 := preload("res://resources/background/fx_comet_2.svg")
+const _FX_COMET_3 := preload("res://resources/background/fx_comet_3.svg")
+const _DEBUG_BTN_SIZE := Vector2(96, 96)
 
 @onready var options_menu = $UILayer/OptionsMenu
 @onready var overlay_blocker = $UILayer/OverlayBlocker
@@ -104,6 +113,8 @@ func _ensure_menu_ui_visible() -> void:
 func _notification(what: int) -> void:
 	if what != NOTIFICATION_WM_GO_BACK_REQUEST:
 		return
+	if GlobalGameManager == null or not GlobalGameManager.consume_system_back():
+		return
 	if _htp_host and _htp_host.visible:
 		_on_htp_close()
 		return
@@ -111,13 +122,15 @@ func _notification(what: int) -> void:
 		_on_close_credits()
 		return
 	if options_menu and options_menu.visible:
-		if options_menu.has_method("hide_menu"):
+		if options_menu.has_method("handle_system_back"):
+			options_menu.handle_system_back()
+		elif options_menu.has_method("hide_menu"):
 			options_menu.hide_menu()
 		return
 	if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
 		_hide_tutorial_intro_prompt()
 		return
-	get_tree().quit()
+	GlobalGameManager.quit_app()
 
 func _exit_tree() -> void:
 	if SpaceBackground and SpaceBackground.has_method("set_foreground_events_enabled"):
@@ -156,16 +169,18 @@ func _fade_in_menu_ui() -> void:
 	if not tween.finished.is_connected(_ensure_menu_ui_visible):
 		tween.finished.connect(_ensure_menu_ui_visible)
 
-## Title sits under FX (layer 1); menu buttons stay above FX.
+## Title + main menu buttons sit under FX; modal overlays stay above.
 ## P/O tiles are children of TitleLabel — edit their offsets relative to the title.
 ## Move TitleCluster to move the whole title (text + tiles) together.
 func _setup_title_under_fx() -> void:
 	var ui_layer := $UILayer as CanvasLayer
 	if ui_layer:
-		ui_layer.layer = 2
+		# Same band as the title so asteroids/comets can pass over menu buttons too.
+		ui_layer.layer = 0
 	var title_layer := get_node_or_null("TitleLayer") as CanvasLayer
 	if title_layer:
 		title_layer.layer = 0
+	_ensure_overlays_above_fx()
 	var title := get_node_or_null("TitleLayer/TitleHost/TitleCluster/TitleLabel") as Label
 	if title:
 		_style_title_label(title)
@@ -178,6 +193,27 @@ func _setup_title_under_fx() -> void:
 	if menu_center:
 		# Tall enough for PLAY + 4 rows (and EDITOR when debug is on) on phone viewports.
 		HudLayout.pin_menu_body_below_header(menu_center, 1280.0)
+
+## Credits / How To Play / tutorial prompt stay above flying FX.
+func _ensure_overlays_above_fx() -> void:
+	var ui_layer := $UILayer as CanvasLayer
+	if ui_layer == null:
+		return
+	var overlay_layer := get_node_or_null("OverlayLayer") as CanvasLayer
+	if overlay_layer == null:
+		overlay_layer = CanvasLayer.new()
+		overlay_layer.name = "OverlayLayer"
+		# Above FxForeground (1); OptionsMenu uses 20 on its own.
+		overlay_layer.layer = 5
+		add_child(overlay_layer)
+	for node_name in ["OverlayBlocker", "HowToPlayHost", "TutorialIntroBlocker"]:
+		var node := ui_layer.get_node_or_null(node_name) as Node
+		if node == null:
+			continue
+		if node.get_parent() == overlay_layer:
+			continue
+		ui_layer.remove_child(node)
+		overlay_layer.add_child(node)
 
 func _style_title_label(title: Label) -> void:
 	# Brand title always uses the pixel font (even in Georgian); tiles stay title-relative.
@@ -271,7 +307,9 @@ func _fit_menu_buttons() -> void:
 	var title = get_node_or_null("TitleLayer/TitleHost/TitleCluster/TitleLabel") as Label
 	if title:
 		_style_title_label(title)
-	var credits_title = get_node_or_null("UILayer/OverlayBlocker/CreditsTitle") as Label
+	var credits_title = null
+	if credits_panel:
+		credits_title = credits_panel.get_node_or_null("VBoxContainer/CreditsTitle") as Label
 	if credits_title == null and overlay_blocker:
 		credits_title = overlay_blocker.get_node_or_null("CreditsTitle") as Label
 	if credits_title:
@@ -323,18 +361,84 @@ func _apply_main_menu_button(button: Button) -> void:
 		HudLayout.fit_text_button(button, font_size, min_font)
 
 func _fit_debug_bar_buttons() -> void:
-	for btn in [
-		debug_star_btn,
-		debug_comet_btn,
-		debug_asteroid_btn,
-		debug_asteroid_cloud_btn,
-		debug_comet_shower_btn,
-	]:
-		if btn == null:
-			continue
-		btn.custom_minimum_size = Vector2(180, 64)
-		btn.add_theme_constant_override("outline_size", 6)
-		HudLayout.fit_text_button(btn, 22, 12)
+	_position_debug_bar()
+	_setup_debug_fx_button(debug_star_btn, [_FX_STAR])
+	_setup_debug_fx_button(debug_asteroid_btn, [_FX_AST_1])
+	_setup_debug_fx_button(debug_asteroid_cloud_btn, [_FX_AST_1, _FX_AST_2, _FX_AST_3])
+	_setup_debug_fx_button(debug_comet_btn, [_FX_COMET_1])
+	_setup_debug_fx_button(debug_comet_shower_btn, [_FX_COMET_1, _FX_COMET_2, _FX_COMET_3])
+
+## Sit in the shared bottom nav band (same clearance as credits Close above the ad).
+func _position_debug_bar() -> void:
+	if debug_bar == null:
+		return
+	var bar := debug_bar as Control
+	var btn_h := _DEBUG_BTN_SIZE.y
+	bar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	bar.offset_left = 12.0
+	bar.offset_right = -12.0
+	# Align with SCREEN_BOTTOM_NAV so native AdMob cannot cover the row.
+	bar.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_BOTTOM
+	bar.offset_top = bar.offset_bottom - btn_h
+	bar.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	bar.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	bar.z_index = 8
+	bar.mouse_filter = Control.MOUSE_FILTER_STOP
+
+func _setup_debug_fx_button(button: Button, textures: Array) -> void:
+	if button == null:
+		return
+	button.text = ""
+	button.custom_minimum_size = _DEBUG_BTN_SIZE
+	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	button.focus_mode = Control.FOCUS_NONE
+	var host := button.get_node_or_null("IconHost") as Control
+	if host == null:
+		host = Control.new()
+		host.name = "IconHost"
+		host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		button.add_child(host)
+	for child in host.get_children():
+		child.queue_free()
+	var count := textures.size()
+	if count <= 0:
+		return
+	var btn_px := _DEBUG_BTN_SIZE.x
+	# Original art is 16×16 crispEdges — integer scale stays sharp with NEAREST.
+	if count == 1:
+		var pad := maxf(10.0, btn_px * 0.14)
+		var scale_i := maxi(2, int(floor((btn_px - pad * 2.0) / 16.0)))
+		var solo_px := float(16 * scale_i)
+		var inset := (btn_px - solo_px) * 0.5
+		var icon := TextureRect.new()
+		icon.texture = textures[0]
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon.position = Vector2(inset, inset)
+		icon.size = Vector2(solo_px, solo_px)
+		host.add_child(icon)
+		return
+	# Cluster of 3 small icons for cloud / shower (scaled from 72px layout).
+	var s := btn_px / 72.0
+	var icon_px := 28.0 * s
+	var offsets := [
+		Vector2(8, 10) * s,
+		Vector2(28, 22) * s,
+		Vector2(14, 34) * s,
+	]
+	for i in count:
+		var icon := TextureRect.new()
+		icon.texture = textures[i]
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon.position = offsets[mini(i, offsets.size() - 1)]
+		icon.size = Vector2(icon_px, icon_px)
+		host.add_child(icon)
 
 func _set_main_menu_chrome_visible(should_show: bool) -> void:
 	if menu_center:
@@ -383,7 +487,7 @@ func _on_start_pressed() -> void:
 	_start_game()
 
 func _start_game() -> void:
-	get_tree().change_scene_to_file("res://scenes/main.tscn")
+	GlobalGameManager.go_to_scene("res://scenes/main.tscn")
 
 func _first_level_in_dir(dir_path: String) -> LevelData:
 	var paths := LevelUtils.scan_directory(dir_path)
@@ -509,7 +613,7 @@ func _on_tutorial_intro_no() -> void:
 
 func _on_levels_pressed() -> void:
 	_apply_debug_tools_visibility()
-	get_tree().change_scene_to_file("res://scenes/level_select.tscn")
+	GlobalGameManager.go_to_scene("res://scenes/level_select.tscn")
 
 func _on_how_to_play_pressed() -> void:
 	_set_main_menu_chrome_visible(false)
@@ -550,7 +654,7 @@ func _on_close_credits() -> void:
 	_set_debug_bar_visible(true)
 
 func _on_editor_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/level_editor.tscn")
+	GlobalGameManager.go_to_scene("res://scenes/level_editor.tscn")
 
 func _on_debug_star_pressed() -> void:
 	if SpaceBackground:

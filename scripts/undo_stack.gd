@@ -44,3 +44,25 @@ func can_undo() -> bool:
 
 func can_redo() -> bool:
 	return not _redo.is_empty()
+
+## Export stacks for session save (deep copies).
+func export_history() -> Dictionary:
+	return {
+		"current": current.duplicate(true),
+		"undo": _undo.duplicate(true),
+		"redo": _redo.duplicate(true),
+	}
+
+## Restore stacks from session save.
+func import_history(data: Dictionary) -> void:
+	_undo.clear()
+	_redo.clear()
+	current = data.get("current", {}).duplicate(true)
+	var undo_src: Array = data.get("undo", [])
+	var redo_src: Array = data.get("redo", [])
+	for snap in undo_src:
+		if snap is Dictionary:
+			_undo.append(snap.duplicate(true))
+	for snap in redo_src:
+		if snap is Dictionary:
+			_redo.append(snap.duplicate(true))

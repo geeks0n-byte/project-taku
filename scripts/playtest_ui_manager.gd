@@ -244,6 +244,8 @@ func update_playtest_undo_redo_buttons(can_undo: bool, can_redo: bool) -> void:
 func show_victory_overlay(stats: Dictionary) -> void:
 	_set_playtest_buttons_disabled(true)
 	set_playtest_chrome_visible(false)
+	if _end_layer:
+		_end_layer.visible = true
 	if _end_dimmer:
 		_end_dimmer.color = Color(0, 0, 0, 0)
 		_end_dimmer.visible = true
@@ -274,6 +276,8 @@ func _ensure_victory_preview() -> void:
 		return
 
 func hide_end_overlays() -> void:
+	if _end_layer:
+		_end_layer.visible = false
 	if _end_dimmer:
 		_end_dimmer.visible = false
 		_end_dimmer.mouse_filter = Control.MOUSE_FILTER_IGNORE

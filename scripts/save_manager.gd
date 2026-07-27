@@ -339,6 +339,7 @@ static func _serialize_session(data: Dictionary) -> Dictionary:
 		"hidden_reference_constraints": _serialize_pairs(data.get("hidden_reference_constraints", [])),
 		"solved_solution_reference": _serialize_coord_dict(data.get("solved_solution_reference", {})),
 		"cells": _serialize_cells(data.get("cells", {})),
+		"undo_history": _serialize_undo_history(data.get("undo_history", {})),
 	}
 
 static func _deserialize_session(data: Dictionary) -> Dictionary:
@@ -362,4 +363,49 @@ static func _deserialize_session(data: Dictionary) -> Dictionary:
 		"hidden_reference_constraints": _deserialize_pairs(data.get("hidden_reference_constraints", [])),
 		"solved_solution_reference": _deserialize_coord_dict(data.get("solved_solution_reference", {})),
 		"cells": _deserialize_cells(data.get("cells", {})),
+		"undo_history": _deserialize_undo_history(data.get("undo_history", {})),
+	}
+
+static func _serialize_undo_history(history: Dictionary) -> Dictionary:
+	if history.is_empty():
+		return {}
+	return {
+		"current": _serialize_game_snapshot(history.get("current", {})),
+		"undo": _serialize_snapshot_list(history.get("undo", [])),
+		"redo": _serialize_snapshot_list(history.get("redo", [])),
+	}
+
+static func _deserialize_undo_history(history: Dictionary) -> Dictionary:
+	if history.is_empty():
+		return {}
+	return {
+		"current": _deserialize_game_snapshot(history.get("current", {})),
+		"undo": _deserialize_snapshot_list(history.get("undo", [])),
+		"redo": _deserialize_snapshot_list(history.get("redo", [])),
+	}
+
+static func _serialize_snapshot_list(snaps: Array) -> Array:
+	var out: Array = []
+	for snap in snaps:
+		if snap is Dictionary:
+			out.append(_serialize_game_snapshot(snap))
+	return out
+
+static func _deserialize_snapshot_list(snaps: Array) -> Array:
+	var out: Array = []
+	for snap in snaps:
+		if snap is Dictionary:
+			out.append(_deserialize_game_snapshot(snap))
+	return out
+
+static func _serialize_game_snapshot(snap: Dictionary) -> Dictionary:
+	return {
+		"moves": int(snap.get("moves", 0)),
+		"cells": _serialize_cells(snap.get("cells", {})),
+	}
+
+static func _deserialize_game_snapshot(snap: Dictionary) -> Dictionary:
+	return {
+		"moves": int(snap.get("moves", 0)),
+		"cells": _deserialize_cells(snap.get("cells", {})),
 	}

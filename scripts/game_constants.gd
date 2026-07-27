@@ -27,6 +27,8 @@ const HINT_LIMIT_EASY := 2
 const HINT_LIMIT_MEDIUM := 3
 const HINT_LIMIT_HARD := 5
 const HINT_LIMIT_UNLIMITED := -1
+## Consumable hints added to the quota after a rewarded video (used one at a time).
+const HINTS_FROM_REWARDED_AD := 3
 
 const HUD_BUTTON_WIDTH := 140
 const HUD_BUTTON_HEIGHT := 140

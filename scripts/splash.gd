@@ -35,6 +35,11 @@ func _play_intro() -> void:
 	_intro_tween.tween_interval(HOLD)
 	_intro_tween.tween_callback(_go_to_menu)
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		if GlobalGameManager and GlobalGameManager.consume_system_back():
+			_go_to_menu()
+
 func _go_to_menu() -> void:
 	if _leaving:
 		return
@@ -43,4 +48,4 @@ func _go_to_menu() -> void:
 		_intro_tween.kill()
 		_intro_tween = null
 	GlobalGameManager.main_menu_should_fade_in = true
-	get_tree().change_scene_to_file(MENU_SCENE)
+	GlobalGameManager.go_to_scene(MENU_SCENE)

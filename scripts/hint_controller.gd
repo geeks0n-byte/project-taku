@@ -8,14 +8,17 @@ const ICON_HINT_ON: Texture2D = preload("res://resources/icons/icon_hint_on.svg"
 const ICON_HINT_OFF: Texture2D = preload("res://resources/icons/icon_hint_off.svg")
 const COUNT_LABEL_NAME := "HintCountLabel"
 
-## remaining: -1 = unlimited (hide badge), 0 = hide badge, >0 = show count.
-static func update_button(button: Button, has_hints: bool, remaining: int = -1) -> void:
+## remaining: -1 = unlimited (hide badge), 0 = out of free hints (white "Ad"), >0 = show count.
+## has_action: board still has wrong cells / constraint hints (or rewarded path available).
+static func update_button(button: Button, has_action: bool, remaining: int = -1) -> void:
 	if not button:
 		return
-	button.disabled = not has_hints
+	button.disabled = not has_action
 	var icon := button.get_node_or_null("IconContainer/Icon") as TextureRect
 	if icon:
-		icon.texture = ICON_HINT_ON if has_hints else ICON_HINT_OFF
+		# Unlimited or remaining stock → on icon; exhausted free quota → off icon (ad path).
+		var use_on := remaining != 0
+		icon.texture = ICON_HINT_ON if use_on else ICON_HINT_OFF
 	HudLayout.refresh_button_icon_modulate(button)
 	_update_count_badge(button, remaining)
 
@@ -32,12 +35,17 @@ static func _update_count_badge(button: Button, remaining: int) -> void:
 	var label := _ensure_count_label(button)
 	if label == null:
 		return
-	# Hide when unlimited or exhausted.
-	if remaining <= 0:
+	# Unlimited → hide badge. Exhausted free hints → white "Ad". Stock → yellow count.
+	if remaining < 0:
 		label.visible = false
 		return
 	label.visible = true
-	label.text = str(remaining)
+	if remaining == 0:
+		label.text = String(TranslationServer.translate("UI_AD"))
+		label.add_theme_color_override("font_color", Color.WHITE)
+	else:
+		label.text = str(remaining)
+		label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.35, 1.0))
 
 static func _ensure_count_label(button: Button) -> Label:
 	if not button:

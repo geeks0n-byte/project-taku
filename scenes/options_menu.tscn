@@ -208,23 +208,14 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 autowrap_mode = 3
 text = "UI_RESET_PROGRESS"
 
-[node name="DeleteCustomButton" type="Button" parent="CenterContainer/OptionsPanel/VBoxContainer"]
+[node name="DebugButtons" type="VBoxContainer" parent="CenterContainer/OptionsPanel/VBoxContainer"]
 visible = false
-custom_minimum_size = Vector2(560, 100)
 layout_mode = 2
 size_flags_horizontal = 4
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
-theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 24
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-auto_translate_mode = 1
-autowrap_mode = 3
-text = "UI_DELETE_CUSTOM"
+theme_override_constants/separation = 10
+alignment = 1
 
-[node name="UnlockAllButton" type="Button" parent="CenterContainer/OptionsPanel/VBoxContainer"]
+[node name="UnlockAllButton" type="Button" parent="CenterContainer/OptionsPanel/VBoxContainer/DebugButtons"]
 visible = false
 custom_minimum_size = Vector2(560, 100)
 layout_mode = 2
@@ -239,6 +230,22 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 auto_translate_mode = 1
 autowrap_mode = 3
 text = "UI_UNLOCK_ALL_LEVELS"
+
+[node name="DeleteCustomButton" type="Button" parent="CenterContainer/OptionsPanel/VBoxContainer/DebugButtons"]
+visible = false
+custom_minimum_size = Vector2(560, 100)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+auto_translate_mode = 1
+autowrap_mode = 3
+text = "UI_DELETE_CUSTOM"
 
 [node name="CloseOptionsButton" type="Button" parent="CenterContainer/OptionsPanel/VBoxContainer"]
 custom_minimum_size = Vector2(280, 90)

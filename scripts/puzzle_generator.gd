@@ -23,11 +23,17 @@ static func generate_random_layout(
 ) -> Dictionary:
 	var attempt = 0
 	var punch_difficulty := clampi(difficulty, Difficulty.EASY, Difficulty.HARD)
-	
-	var solver_tiles = allowed_tiles.duplicate()
-	if not (2 in solver_tiles): solver_tiles.append(2)
-	if not (0 in solver_tiles): solver_tiles.append(0)
-	if not (1 in solver_tiles): solver_tiles.append(1)
+	var normalized := LevelUtils.normalize_available_tiles(allowed_tiles)
+	var allow_jokers := LevelUtils.tiles_allow_joker(normalized)
+
+	# Respect campaign tile sets (Y/B-only boards must not invent greens).
+	var solver_tiles: Array = []
+	for t in normalized:
+		solver_tiles.append(int(t))
+	if not LevelUtils.tiles_include(solver_tiles, GameConstants.TileState.YELLOW):
+		solver_tiles.append(GameConstants.TileState.YELLOW)
+	if not LevelUtils.tiles_include(solver_tiles, GameConstants.TileState.BLUE):
+		solver_tiles.append(GameConstants.TileState.BLUE)
 	
 	while attempt < 2500: 
 		attempt += 1
@@ -84,18 +90,20 @@ static func generate_random_layout(
 		# ==========================================
 		var shifters = []
 		var total_playable = empty_cells.size()
-		
-		var base_shifter_pairs = int(round((total_playable * 0.20) / 2.0))
+
+		# Y/B-only boards stay shifter-free; fuller tile sets can place purple pairs.
+		var base_shifter_pairs = 0 if not allow_jokers else int(round((total_playable * 0.20) / 2.0))
 		var target_shifter_pairs = base_shifter_pairs
-		
-		target_shifter_pairs += int(attempt / 75.0)
-		
-		if target_shifter_pairs <= 1 and total_playable >= 4:
-			target_shifter_pairs = randi_range(1, 2)
-		elif target_shifter_pairs < 1 and total_playable >= 2:
-			target_shifter_pairs = 1
-			
-		target_shifter_pairs = min(target_shifter_pairs, int(total_playable / 2.0))
+
+		if allow_jokers:
+			target_shifter_pairs += int(attempt / 75.0)
+
+			if target_shifter_pairs <= 1 and total_playable >= 4:
+				target_shifter_pairs = randi_range(1, 2)
+			elif target_shifter_pairs < 1 and total_playable >= 2:
+				target_shifter_pairs = 1
+
+		target_shifter_pairs = mini(target_shifter_pairs, int(total_playable / 2.0))
 		
 		var pairs_placed = 0
 		var available_starts = empty_cells.duplicate()

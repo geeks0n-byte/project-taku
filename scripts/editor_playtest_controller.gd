@@ -45,6 +45,7 @@ func enter(current_level_required_jokers: int) -> void:
 		}
 		LevelUtils.apply_playtest_cell_locks(cell)
 		cell.is_editor_mode = false
+		cell.allowed_cycle_tiles = LevelUtils.normalize_available_tiles(editor_ui.get_allowed_tiles())
 		cell.update_visuals()
 
 	playtest_start_constraints = canvas_manager.loaded_constraint_pairs.duplicate(true)
@@ -52,7 +53,7 @@ func enter(current_level_required_jokers: int) -> void:
 	playtest_hint_pool = canvas_manager.hidden_constraint_pairs.duplicate(true)
 
 	var built := LevelUtils.build_solve_layout(canvas_manager.board_cells)
-	var tiles: Array = editor_ui.get_allowed_tiles()
+	var tiles: Array = LevelUtils.normalize_available_tiles(editor_ui.get_allowed_tiles())
 	var solve_constraints: Array = []
 
 	# Match main.gd hint wiring:
@@ -190,7 +191,7 @@ func handle_cell_click(coord: Vector2i) -> void:
 	if cell.is_locked:
 		return
 
-	var allowed = editor_ui.get_allowed_tiles()
+	var allowed: Array[int] = LevelUtils.normalize_available_tiles(editor_ui.get_allowed_tiles())
 	if cell.state == GameConstants.TileState.SHIFTER:
 		var partner_coord = coord + cell.shifter_direction
 		if canvas_manager.board_cells.has(partner_coord):
@@ -211,11 +212,15 @@ func handle_cell_click(coord: Vector2i) -> void:
 		if cell.state == GameConstants.TileState.EMPTY:
 			cell.state = allowed[0]
 		else:
-			var current_idx = allowed.find(cell.state)
+			var current_idx := -1
+			for i in range(allowed.size()):
+				if int(allowed[i]) == int(cell.state):
+					current_idx = i
+					break
 			if current_idx == -1 or current_idx == allowed.size() - 1:
 				cell.state = GameConstants.TileState.EMPTY
 			else:
-				cell.state = allowed[current_idx + 1]
+				cell.state = int(allowed[current_idx + 1])
 
 	cell.update_visuals()
 	_update_joker_count()

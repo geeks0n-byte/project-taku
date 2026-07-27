@@ -5,9 +5,9 @@
 [resource]
 script = ExtResource("1")
 level_number = 34
-width = 4
-height = 4
-time_limit = 190
+width = 5
+height = 6
+time_limit = 160
 required_jokers = 0
 required_shifter_moves = 0
 is_unique_solution = false

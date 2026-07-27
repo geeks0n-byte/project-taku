@@ -622,11 +622,12 @@ func _on_main_menu():
 		return
 	if SpaceBackground:
 		SpaceBackground.visible = true
-	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
-		_on_main_menu()
+		if GlobalGameManager and GlobalGameManager.consume_system_back():
+			_on_main_menu()
 
 func _rebuild_editor_hidden_hints():
 	canvas_manager.hidden_constraint_pairs = HintSystem.rebuild_hidden_hints(

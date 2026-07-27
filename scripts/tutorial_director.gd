@@ -3,6 +3,7 @@ extends Node
 
 signal finished
 signal tools_unlocked
+signal board_layout_changed
 
 var board_manager: BoardManager
 var ui_manager: UIManager
@@ -21,6 +22,15 @@ var _solved_complete: bool = false
 var _last_status_key: String = ""
 var _last_status_icons: Array = []
 var _last_status_show_next: bool = false
+## Blocks victory while teaching rules discovered from validation errors.
+var _block_solve: bool = false
+var _discover_active: bool = false
+## 0 = idle, 1 = showing first rule tip, 2 = showing second rule tip.
+var _rule_teach_phase: int = 0
+var _rule_teach_first_key: String = ""
+var _rule_teach_second_key: String = ""
+var _rule_teach_first_icons: Array = []
+var _rule_teach_second_icons: Array = []
 
 func setup(board: BoardManager, ui: UIManager = null) -> void:
 	board_manager = board
@@ -43,6 +53,8 @@ func start(script_id: String, tiles: Array) -> void:
 	_solved_complete = false
 	_tools_locked = true
 	_index = -1
+	if ui_manager and ui_manager.has_method("set_tutorial_mode"):
+		ui_manager.set_tutorial_mode(true)
 	refresh_tool_gates()
 	_advance()
 
@@ -54,6 +66,13 @@ func stop() -> void:
 	_last_status_key = ""
 	_last_status_icons.clear()
 	_last_status_show_next = false
+	_block_solve = false
+	_discover_active = false
+	_rule_teach_phase = 0
+	_rule_teach_first_key = ""
+	_rule_teach_second_key = ""
+	_rule_teach_first_icons.clear()
+	_rule_teach_second_icons.clear()
 	_script_id = ""
 	_index = -1
 	_steps.clear()
@@ -66,11 +85,14 @@ func stop() -> void:
 		board_manager.restore_cell_cycle_tiles(available_tiles)
 	if _next_button:
 		_next_button.visible = false
+		HudLayout.stop_toggle_mask_breathe(_next_button)
 		HudLayout.apply_toggle_active_mask(_next_button, false)
 	if ui_manager:
 		ui_manager.clear_tutorial_status()
 		ui_manager.clear_hud_button_highlight()
 		ui_manager.set_tutorial_tools_locked(false)
+		if ui_manager.has_method("set_tutorial_mode"):
+			ui_manager.set_tutorial_mode(false)
 
 func on_board_changed(_coord: Vector2i = Vector2i(-1, -1)) -> void:
 	if not _active or _solved_complete:
@@ -82,11 +104,73 @@ func on_board_changed(_coord: Vector2i = Vector2i(-1, -1)) -> void:
 		return
 	if _awaiting_next:
 		return
+	if _discover_active:
+		return
 	_check_wait_condition()
+
+## After PuzzleValidator runs — used by discover_rules to teach on first break.
+func on_validation_result(results: Dictionary) -> void:
+	if not _active or _solved_complete or not _discover_active:
+		return
+	if _awaiting_next or _rule_teach_phase > 0:
+		return
+	var errors: Array = results.get("errors", [])
+	var broke_two := _errors_include_rule_of_two(errors)
+	var broke_balance := _errors_include_balance(errors)
+	if broke_two or broke_balance:
+		_start_rule_teach(broke_two, broke_balance)
+		return
+	if bool(results.get("valid", false)) and board_manager and board_manager.is_board_full():
+		# Solved without breaking — still teach both rules before tools / finish.
+		_start_rule_teach(false, false)
+
+func _errors_include_rule_of_two(errors: Array) -> bool:
+	for e in errors:
+		var s := String(e)
+		if s.find("THREE") >= 0:
+			return true
+	return false
+
+func _errors_include_balance(errors: Array) -> bool:
+	for e in errors:
+		if String(e) == "ERR_UNEQUAL_LINE":
+			return true
+	return false
+
+func _start_rule_teach(broke_two: bool, broke_balance: bool) -> void:
+	_discover_active = false
+	_block_solve = true
+	if board_manager:
+		board_manager.set_click_whitelist([])
+	var step := _current_step()
+	var two_key := String(step.get("rule_two_key", "TUT1_RULE_OF_TWO"))
+	var bal_key := String(step.get("balance_key", "TUT1_BALANCE"))
+	var two_icons: Array = step.get("rule_two_icons", ["yellow", "blue"])
+	var bal_icons: Array = step.get("balance_icons", ["yellow", "blue"])
+	if broke_two and not broke_balance:
+		_rule_teach_first_key = two_key
+		_rule_teach_first_icons = two_icons
+		_rule_teach_second_key = bal_key
+		_rule_teach_second_icons = bal_icons
+	elif broke_balance and not broke_two:
+		_rule_teach_first_key = bal_key
+		_rule_teach_first_icons = bal_icons
+		_rule_teach_second_key = two_key
+		_rule_teach_second_icons = two_icons
+	else:
+		# Both at once, or clean solve — Rule of Two then Equal Balance.
+		_rule_teach_first_key = two_key
+		_rule_teach_first_icons = two_icons
+		_rule_teach_second_key = bal_key
+		_rule_teach_second_icons = bal_icons
+	_rule_teach_phase = 1
+	_show_message_key(_rule_teach_first_key, _rule_teach_first_icons, true)
 
 ## Called when the board is valid and full. Shows the complete tip + Next; blocks the board.
 func on_board_solved() -> void:
 	if not _active or _solved_complete:
+		return
+	if _block_solve or _discover_active or _rule_teach_phase > 0:
 		return
 	_solved_complete = true
 	_awaiting_next = true
@@ -150,7 +234,43 @@ func _apply_step(step: Dictionary) -> void:
 	match kind:
 		"message":
 			_show_message_from_step(step, true)
-			_apply_focus(step)
+			# Freeze board while reading. Keep mask/border focus when the tip
+			# points at cells (e.g. locked tiles); otherwise clear guides so
+			# only NEXT breathes.
+			if (
+				step.has("mask")
+				or step.has("highlight")
+				or step.has("red")
+				or step.has("border")
+			):
+				_apply_focus(step)
+			else:
+				_clear_board_gates(false)
+		"apply_locks":
+			if board_manager and step.has("layout"):
+				board_manager.apply_locked_layout(step["layout"])
+				board_layout_changed.emit()
+			_show_message_from_step(step, true)
+			if (
+				step.has("mask")
+				or step.has("highlight")
+				or step.has("red")
+				or step.has("border")
+			):
+				_apply_focus(step)
+			else:
+				_clear_board_gates(false)
+		"discover_rules":
+			_discover_active = true
+			_block_solve = true
+			_rule_teach_phase = 0
+			_show_message_from_step(step, false)
+			if board_manager:
+				board_manager.clear_guide_cells()
+				board_manager.clear_focus_cells()
+				board_manager.clear_click_whitelist()
+				board_manager.restore_cell_cycle_tiles(available_tiles)
+			refresh_tool_gates()
 		"practice":
 			_practice_succeeded = false
 			_show_message_from_step(step, false)
@@ -158,7 +278,8 @@ func _apply_step(step: Dictionary) -> void:
 			_update_practice_feedback(step)
 		"hud_button":
 			_highlight_button_id = String(step.get("button", ""))
-			_show_message_from_step(step, true)
+			# Teach the HUD control itself — do not also require NEXT.
+			_show_message_from_step(step, false)
 			_clear_board_gates(false)
 			# Freeze board while teaching a HUD button.
 			if board_manager:
@@ -169,9 +290,25 @@ func _apply_step(step: Dictionary) -> void:
 			_apply_focus(step)
 			_check_wait_condition()
 		"done":
+			_block_solve = false
 			_enter_await_solve(String(step.get("text_key", "")), step.get("icons", []))
+			call_deferred("_try_complete_if_full")
 		_:
 			_advance()
+
+func _try_complete_if_full() -> void:
+	if not _active or _solved_complete or _block_solve:
+		return
+	if not board_manager or not board_manager.is_board_full():
+		return
+	var results := PuzzleValidator.validate_board(
+		board_manager.board_cells,
+		board_manager.cached_lines,
+		board_manager.active_constraint_pairs,
+		-1
+	)
+	if bool(results.get("valid", false)):
+		on_board_solved()
 
 func _enter_await_solve(tip_key: String = "", tip_icons: Array = []) -> void:
 	_highlight_button_id = ""
@@ -200,8 +337,21 @@ func _apply_focus(step: Dictionary) -> void:
 	if not board_manager:
 		return
 	board_manager.restore_cell_cycle_tiles(available_tiles)
-	var masks: Array = step.get("mask", step.get("highlight", []))
-	var borders: Array = step.get("red", step.get("border", []))
+	var masks: Array = step.get("mask", step.get("highlight", [])).duplicate()
+	var borders: Array = step.get("red", step.get("border", [])).duplicate()
+	# Interactive targets stay highlighted until the player acts on them.
+	if step.has("coord"):
+		var target: Vector2i = step["coord"]
+		if not masks.has(target):
+			masks.append(target)
+		if not borders.has(target):
+			borders.append(target)
+	if step.has("from"):
+		var from_c: Vector2i = step["from"]
+		if not masks.has(from_c):
+			masks.append(from_c)
+		if not borders.has(from_c):
+			borders.append(from_c)
 	board_manager.set_guide_cells(masks)
 	board_manager.set_focus_cells(borders)
 	# Gate clicks: practice → only highlighted cells; message → freeze board.
@@ -325,6 +475,8 @@ func _show_message_key(key: String, icons: Variant, show_next: bool) -> void:
 	if ui_manager:
 		ui_manager.show_tutorial_status(text)
 	_set_next_visible(show_next)
+	# Content height is ready after the label updates.
+	call_deferred("_position_next_button")
 
 ## Replace each `%s` in order with an icon. Avoids leftover `%s` when counts mismatch.
 func _apply_icon_placeholders(text: String, icons: Array) -> String:
@@ -377,8 +529,20 @@ func _set_next_visible(show_next: bool) -> void:
 			_next_button.text = tr("UI_NEXT")
 			HudLayout.apply_nav_button(_next_button)
 			_position_next_button()
-			HudLayout.apply_toggle_active_mask(_next_button, false)
+			# Only NEXT breathes while it is the required advance action.
+			if board_manager:
+				board_manager.clear_guide_cells()
+				board_manager.clear_focus_cells()
+				board_manager.set_click_whitelist([])
+			_highlight_button_id = ""
+			if ui_manager:
+				ui_manager.clear_hud_button_highlight()
+			HudLayout.apply_toggle_active_mask(
+				_next_button, true, GameConstants.TOGGLE_MASK_WHITE
+			)
+			HudLayout.start_toggle_mask_breathe(_next_button)
 		else:
+			HudLayout.stop_toggle_mask_breathe(_next_button)
 			HudLayout.apply_toggle_active_mask(_next_button, false)
 
 func _on_next_pressed() -> void:
@@ -387,6 +551,15 @@ func _on_next_pressed() -> void:
 	_awaiting_next = false
 	if _solved_complete:
 		_finish()
+		return
+	if _rule_teach_phase == 1:
+		_rule_teach_phase = 2
+		_show_message_key(_rule_teach_second_key, _rule_teach_second_icons, true)
+		return
+	if _rule_teach_phase == 2:
+		_rule_teach_phase = 0
+		_block_solve = true
+		_advance()
 		return
 	_advance()
 
@@ -415,12 +588,28 @@ func _ensure_next_button() -> void:
 func _position_next_button() -> void:
 	if not _next_button:
 		return
-	var half_w := GameConstants.UI_BTN_NAV_SIZE.x * 0.5
-	# Lower under the tip, still above bottom chrome / ad banner.
-	var bottom_margin := 400.0 + GameConstants.AD_BANNER_RESERVE
+	# Larger than standard nav buttons; sit above the ad banner.
+	var btn_size := Vector2(300, 120)
+	var half_w := btn_size.x * 0.5
+	var base_bottom := 480.0 + GameConstants.AD_BANNER_RESERVE
+	var bottom_margin := base_bottom
+	# Longer tip text grows the status strip — nudge NEXT downward so it clears the tip.
+	if ui_manager and ui_manager.status_label:
+		var status := ui_manager.status_label
+		var content_h := float(status.get_content_height())
+		var overflow := maxf(0.0, content_h - GameConstants.HUD_STATUS_MIN_HEIGHT)
+		if overflow > 0.0:
+			status.offset_bottom = status.offset_top + content_h + 12.0
+		# Smaller bottom margin = lower on screen (CENTER_BOTTOM anchors).
+		bottom_margin = maxf(
+			220.0 + GameConstants.AD_BANNER_RESERVE,
+			base_bottom - overflow
+		)
+	_next_button.custom_minimum_size = btn_size
 	_next_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_next_button.offset_left = -half_w
 	_next_button.offset_right = half_w
-	_next_button.offset_top = -(GameConstants.UI_BTN_NAV_SIZE.y + bottom_margin)
+	_next_button.offset_top = -(btn_size.y + bottom_margin)
 	_next_button.offset_bottom = -bottom_margin
 	_next_button.z_index = 8
+	_next_button.add_theme_font_size_override("font_size", 28)

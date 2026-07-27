@@ -547,7 +547,35 @@ static func apply_toggle_active_mask(button: Button, is_on: bool, tint: Color = 
 	style.set_content_margin_all(0)
 	mask.add_theme_stylebox_override("panel", style)
 	mask.visible = is_on
+	mask.modulate = Color.WHITE
 	button.modulate = Color.WHITE
+	if not is_on:
+		stop_toggle_mask_breathe(button)
+
+static func start_toggle_mask_breathe(button: Button) -> void:
+	if not button:
+		return
+	var mask := button.get_node_or_null("ActiveMask") as CanvasItem
+	if mask == null or not mask.visible:
+		return
+	stop_toggle_mask_breathe(button)
+	mask.modulate = Color(1, 1, 1, 1)
+	var tween := button.create_tween().set_loops()
+	tween.tween_property(mask, "modulate:a", 0.35, 1.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(mask, "modulate:a", 1.0, 1.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	button.set_meta("_toggle_mask_breathe", tween)
+
+static func stop_toggle_mask_breathe(button: Button) -> void:
+	if not button:
+		return
+	if button.has_meta("_toggle_mask_breathe"):
+		var tween: Tween = button.get_meta("_toggle_mask_breathe")
+		if tween:
+			tween.kill()
+		button.remove_meta("_toggle_mask_breathe")
+	var mask := button.get_node_or_null("ActiveMask") as CanvasItem
+	if mask:
+		mask.modulate = Color.WHITE
 
 static func refresh_button_icon_modulate(button: Button) -> void:
 	if not button:

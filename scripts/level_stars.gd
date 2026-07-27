@@ -79,7 +79,7 @@ static func evaluate(
 		),
 	})
 
-	var green_earned := green_target > 0 and greens_used <= green_target
+	var green_earned := green_target > 0 and greens_used == green_target
 	if green_earned:
 		bits |= BIT_GREEN
 	goals.append({

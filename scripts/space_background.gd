@@ -5,11 +5,12 @@ extends ParallaxBackground
 ## Chance that a random event draws above the main-menu title (0–1).
 @export var foreground_event_chance: float = 0.38
 ## Cap concurrent RigidBody asteroids to avoid frame spikes on phones.
-@export var max_active_asteroids: int = 10
+@export var max_active_asteroids: int = 16
 
 const ASSET_DIR = "res://resources/background/"
 const ASTEROID_POOL_SIZE := 16
-const ASTEROID_LIFETIME_SEC := 120.0
+## Extra padding past the visual edge before an asteroid may be recycled.
+const ASTEROID_OFFSCREEN_MARGIN := 64.0
 
 const ASSET_FILES = {
 	"void": "bg_0_void.svg",
@@ -68,8 +69,10 @@ func set_foreground_events_enabled(enabled: bool) -> void:
 func _build_foreground_fx_layer() -> void:
 	_fx_foreground = CanvasLayer.new()
 	_fx_foreground.name = "FxForeground"
-	# Above main-menu UI (0), below options/overlays (20+).
+	# Above title + main-menu buttons (0); below modal overlays (5) / options (20).
 	_fx_foreground.layer = 1
+	# FX must not steal clicks from menu buttons underneath.
+	_fx_foreground.follow_viewport_enabled = false
 	add_child(_fx_foreground)
 	_fg_stars = Node2D.new()
 	_fg_comets = Node2D.new()
@@ -133,6 +136,9 @@ func _make_pooled_asteroid() -> RigidBody2D:
 
 func _acquire_asteroid() -> RigidBody2D:
 	if _active_asteroid_count >= max_active_asteroids:
+		# Only recycle asteroids that have fully left the screen.
+		_release_oldest_offscreen_asteroid()
+	if _active_asteroid_count >= max_active_asteroids:
 		return null
 	var rb: RigidBody2D = null
 	if not _asteroid_pool.is_empty():
@@ -142,8 +148,39 @@ func _acquire_asteroid() -> RigidBody2D:
 	_active_asteroid_count += 1
 	return rb
 
+func _release_oldest_offscreen_asteroid() -> void:
+	var view := get_viewport().get_visible_rect()
+	for layer_node in [dyn_layer_asteroids, _fg_asteroids]:
+		if layer_node == null:
+			continue
+		for child in layer_node.get_children():
+			if child is RigidBody2D and child.has_meta("pooled_asteroid"):
+				var rb := child as RigidBody2D
+				if _asteroid_is_fully_offscreen(rb, view):
+					_release_asteroid(rb)
+					return
+
+func _asteroid_visual_radius(rb: RigidBody2D) -> float:
+	var col := rb.get_node_or_null("Collision") as CollisionShape2D
+	if col and col.shape is CircleShape2D:
+		return (col.shape as CircleShape2D).radius * maxf(absf(rb.scale.x), absf(rb.scale.y))
+	return 48.0
+
+func _asteroid_is_fully_offscreen(rb: RigidBody2D, view: Rect2) -> bool:
+	var radius := _asteroid_visual_radius(rb) + ASTEROID_OFFSCREEN_MARGIN
+	var pos := rb.global_position
+	return (
+		pos.x + radius < view.position.x
+		or pos.x - radius > view.position.x + view.size.x
+		or pos.y + radius < view.position.y
+		or pos.y - radius > view.position.y + view.size.y
+	)
+
 func _release_asteroid(rb: RigidBody2D) -> void:
 	if not is_instance_valid(rb):
+		return
+	# Already pooled — ignore duplicate release from timers / offscreen checks.
+	if rb.get_parent() == _asteroid_pool_root or _asteroid_pool.has(rb):
 		return
 	for conn in rb.body_entered.get_connections():
 		rb.body_entered.disconnect(conn["callable"])
@@ -157,10 +194,9 @@ func _release_asteroid(rb: RigidBody2D) -> void:
 		overlay.visible = false
 		overlay.texture = null
 	var parent := rb.get_parent()
-	if parent != _asteroid_pool_root:
-		if parent:
-			parent.remove_child(rb)
-		_asteroid_pool_root.add_child(rb)
+	if parent:
+		parent.remove_child(rb)
+	_asteroid_pool_root.add_child(rb)
 	_active_asteroid_count = maxi(0, _active_asteroid_count - 1)
 	if _asteroid_pool.size() < ASTEROID_POOL_SIZE:
 		_asteroid_pool.append(rb)
@@ -377,6 +413,21 @@ func _process(delta: float) -> void:
 	if _static_mode:
 		return
 	scroll_offset += base_scroll_speed * delta
+	_release_offscreen_asteroids()
+
+func _release_offscreen_asteroids() -> void:
+	if _active_asteroid_count <= 0:
+		return
+	var view := get_viewport().get_visible_rect()
+	for layer_node in [dyn_layer_asteroids, _fg_asteroids]:
+		if layer_node == null:
+			continue
+		for child in layer_node.get_children():
+			if not (child is RigidBody2D and child.has_meta("pooled_asteroid")):
+				continue
+			var rb := child as RigidBody2D
+			if _asteroid_is_fully_offscreen(rb, view):
+				_release_asteroid(rb)
 
 func _build_parallax_layer(tex: Texture2D, speed_scale: Vector2, view_size: Vector2 = Vector2.ZERO) -> ParallaxLayer:
 	if view_size == Vector2.ZERO:
@@ -653,12 +704,7 @@ func _spawn_entity(
 		var total_rotations = randf_range(1.0, 5.0) 
 		var total_spin_amount = total_rotations * (PI * 2.0) * (1.0 if randi() % 2 == 0 else -1.0)
 		entity.angular_velocity = total_spin_amount / final_duration
-		
-		get_tree().create_timer(ASTEROID_LIFETIME_SEC).timeout.connect(
-			func():
-				if is_instance_valid(entity):
-					_release_asteroid(entity as RigidBody2D)
-		)
+		# No lifetime timer — asteroids stay until fully off-screen.
 		
 	else:
 		var tween = entity.create_tween()

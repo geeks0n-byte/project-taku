@@ -7,6 +7,39 @@ static func is_shape_only_layout(layout: Dictionary) -> bool:
 			return false
 	return true
 
+## Player-cycle / generator tile set. Empty input → full Y/B/G.
+static func normalize_available_tiles(raw: Array) -> Array[int]:
+	var out: Array[int] = []
+	var seen: Dictionary = {}
+	for tile in raw:
+		var t := int(tile)
+		if t < GameConstants.TileState.YELLOW or t > GameConstants.TileState.JOKER:
+			continue
+		if seen.has(t):
+			continue
+		seen[t] = true
+		out.append(t)
+	if out.is_empty():
+		return [
+			GameConstants.TileState.YELLOW,
+			GameConstants.TileState.BLUE,
+			GameConstants.TileState.JOKER,
+		] as Array[int]
+	return out
+
+static func tiles_allow_joker(tiles: Array) -> bool:
+	for tile in tiles:
+		if int(tile) == GameConstants.TileState.JOKER:
+			return true
+	return false
+
+static func tiles_include(tiles: Array, state: int) -> bool:
+	var want := int(state)
+	for tile in tiles:
+		if int(tile) == want:
+			return true
+	return false
+
 static func make_empty_layout(width: int, height: int) -> Dictionary:
 	var layout := {}
 	for y in range(height):

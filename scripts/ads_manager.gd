@@ -1,5 +1,5 @@
 extends Node
-## AdMob wrapper: menu banners, interstitial every N wins, rewarded +1 hint.
+## AdMob wrapper: menu banners, interstitial every N wins, rewarded +3 hints.
 ## No-ops on desktop / when the Android plugin is absent.
 
 const INTERSTITIAL_EVERY_N := 3
@@ -109,7 +109,7 @@ func _rewarded_unit_id() -> String:
 
 # --- Banner (menus) -----------------------------------------------------------
 
-## Show bottom banner on menu screens.
+## Show bottom banner on menu screens / gameplay.
 func show_menu_banner() -> void:
 	_banner_wanted_visible = true
 	if not _ads_supported:
@@ -120,6 +120,17 @@ func show_menu_banner() -> void:
 	_ensure_banner_loaded()
 	if _banner and _banner_loaded:
 		_banner.show()
+
+## Recreate at AdPosition.BOTTOM after fullscreen ads or if the view drifted mid-screen.
+func refresh_banner_anchor() -> void:
+	_banner_wanted_visible = true
+	if not _ads_supported:
+		return
+	ensure_started()
+	if not _initialized:
+		return
+	_destroy_banner()
+	_ensure_banner_loaded()
 
 ## Hide banner on splash / editor (menus + gameplay keep it visible).
 func hide_menu_banner() -> void:
@@ -194,6 +205,8 @@ func _destroy_interstitial() -> void:
 func _finish_pending_after_ad() -> void:
 	var cb := _pending_after_ad
 	_pending_after_ad = Callable()
+	if _banner_wanted_visible:
+		refresh_banner_anchor()
 	if cb.is_valid():
 		cb.call()
 
@@ -280,7 +293,7 @@ func _destroy_rewarded() -> void:
 		_rewarded.destroy()
 		_rewarded = null
 
-## Shows a rewarded video for +1 hint. Returns true if the ad (or debug mock) started.
+## Shows a rewarded video for several hint uses. Returns true if the ad (or debug mock) started.
 ## `on_rewarded` is called only after the user earns the reward (then ad closes).
 func show_rewarded_for_hint(on_rewarded: Callable = Callable()) -> bool:
 	# Desktop / editor: simulate a successful rewarded watch so the flow is testable.
@@ -322,7 +335,15 @@ func show_privacy_options_form(on_done: Callable = Callable()) -> void:
 func open_privacy_policy() -> void:
 	OS.shell_open(PRIVACY_POLICY_URL)
 
-func _exit_tree() -> void:
+## Call before process quit so native AdViews are gone before the Activity dies.
+func prepare_for_app_exit() -> void:
+	_banner_wanted_visible = false
+	_pending_after_ad = Callable()
+	_pending_reward_callback = Callable()
+	_reward_earned = false
 	_destroy_banner()
 	_destroy_interstitial()
 	_destroy_rewarded()
+
+func _exit_tree() -> void:
+	prepare_for_app_exit()

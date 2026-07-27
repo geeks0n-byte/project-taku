@@ -17,8 +17,9 @@ enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM }
 @onready var sfx_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/SfxButton
 @onready var privacy_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/PrivacyPolicyButton
 @onready var del_save_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DeleteSaveButton
-@onready var del_custom_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DeleteCustomButton
-@onready var unlock_all_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/UnlockAllButton
+@onready var debug_buttons: VBoxContainer = $CenterContainer/OptionsPanel/VBoxContainer/DebugButtons
+@onready var unlock_all_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DebugButtons/UnlockAllButton
+@onready var del_custom_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DebugButtons/DeleteCustomButton
 @onready var close_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/CloseOptionsButton
 @onready var status_label: Label = $CenterContainer/OptionsPanel/VBoxContainer/StatusLabel
 @onready var _confirm_blocker: ColorRect = $ConfirmBlocker
@@ -100,6 +101,16 @@ func hide_menu() -> void:
 	visible = false
 	back_requested.emit()
 
+## Android back: dismiss confirm first, then the menu. Returns true if handled.
+func handle_system_back() -> bool:
+	if not visible:
+		return false
+	if _confirm_blocker and _confirm_blocker.visible:
+		_hide_confirm()
+		return true
+	hide_menu()
+	return true
+
 func _configure_main_menu_buttons() -> void:
 	if del_save_btn:
 		del_save_btn.visible = _from_main_menu
@@ -107,16 +118,18 @@ func _configure_main_menu_buttons() -> void:
 			del_save_btn.text = "UI_RESET_PROGRESS"
 			del_save_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
 	var show_debug := _show_debug_options
-	if del_custom_btn:
-		del_custom_btn.visible = show_debug
-		if show_debug:
-			del_custom_btn.text = "UI_DELETE_CUSTOM"
-			del_custom_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
+	if debug_buttons:
+		debug_buttons.visible = show_debug
 	if unlock_all_btn:
 		unlock_all_btn.visible = show_debug
 		if show_debug:
 			unlock_all_btn.text = "UI_UNLOCK_ALL_LEVELS"
 			unlock_all_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
+	if del_custom_btn:
+		del_custom_btn.visible = show_debug
+		if show_debug:
+			del_custom_btn.text = "UI_DELETE_CUSTOM"
+			del_custom_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
 
 func _update_lang_label() -> void:
 	if not lang_label:

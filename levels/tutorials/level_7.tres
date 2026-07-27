@@ -4,15 +4,15 @@
 
 [resource]
 script = ExtResource("1")
-level_number = 64
-width = 8
-height = 7
-time_limit = 335
+level_number = 7
+width = 4
+height = 4
+time_limit = 105
 required_jokers = 0
 required_shifter_moves = 0
 is_unique_solution = true
-keep_walls = false
-available_tiles = Array[int]([0, 1, 2])
+keep_walls = true
+available_tiles = Array[int]([0, 1])
 layout = {}
 shifter_pairs = []
 constraint_pairs = []

@@ -8,7 +8,6 @@ const COLOR_YELLOW := Color(0.95, 0.82, 0.2, 1.0)
 const COLOR_BLUE := Color(0.25, 0.55, 0.95, 1.0)
 const COLOR_JOKER := Color(0.3, 0.85, 0.45, 1.0)
 const COLOR_SHIFTER := Color(0.7, 0.35, 0.9, 1.0)
-const COLOR_GRID := Color(0.02, 0.02, 0.04, 0.55)
 
 const PATH_EMPTY := "res://resources/tiles/tile_empty.svg"
 const PATH_WALL := "res://resources/tiles/tile_wall.svg"
@@ -157,7 +156,7 @@ static func _make_silhouette_texture(layout: Dictionary, pixel_size: int) -> Ima
 	var img_w := width * cell
 	var img_h := height * cell
 	var image := Image.create(img_w, img_h, false, Image.FORMAT_RGBA8)
-	# Transparent like gameplay — wall cells stay invisible (no fill, no grid).
+	# Transparent like gameplay — wall cells stay invisible (no fill).
 	image.fill(Color(0, 0, 0, 0))
 
 	for y in height:
@@ -166,19 +165,82 @@ static func _make_silhouette_texture(layout: Dictionary, pixel_size: int) -> Ima
 			var state: int = GameConstants.TileState.EMPTY
 			if layout.has(coord):
 				state = int(layout[coord])
-			# Match gameplay: walls are invisible (no fill, no grid).
 			if state == GameConstants.TileState.WALL:
 				continue
 			var color := _color_for_state(state)
-			var rect := Rect2i(x * cell, y * cell, cell, cell)
-			image.fill_rect(rect, color)
-			if cell >= 4:
-				var inset := Rect2i(x * cell, y * cell, cell, 1)
-				image.fill_rect(inset, COLOR_GRID)
-				inset = Rect2i(x * cell, y * cell, 1, cell)
-				image.fill_rect(inset, COLOR_GRID)
+			image.fill_rect(Rect2i(x * cell, y * cell, cell, cell), color)
+
+	# Same edge rules as BoardRenderer.draw_grid (play mode), not a full inner hatch.
+	_draw_silhouette_grid_lines(image, layout, width, height, cell)
 
 	return ImageTexture.create_from_image(image)
+
+## Mirror BoardRenderer.draw_grid play-mode edges onto a preview image.
+static func _draw_silhouette_grid_lines(
+	image: Image,
+	layout: Dictionary,
+	width: int,
+	height: int,
+	cell: int
+) -> void:
+	if cell < 2:
+		return
+	# ~4px lines at typical in-game cell sizes ≈ 4% of cell.
+	var line_w := clampi(int(round(float(cell) * 0.04)), 1, maxi(1, int(cell / 4.0)))
+	var line_color := Color(0.0, 0.0, 0.0, 1.0)
+
+	for y in height:
+		for x in width:
+			var coord := Vector2i(x, y)
+			if not layout.has(coord):
+				continue
+			var is_playable := int(layout[coord]) != GameConstants.TileState.WALL
+
+			var right_playable := false
+			if layout.has(coord + Vector2i(1, 0)):
+				right_playable = int(layout[coord + Vector2i(1, 0)]) != GameConstants.TileState.WALL
+			var bot_playable := false
+			if layout.has(coord + Vector2i(0, 1)):
+				bot_playable = int(layout[coord + Vector2i(0, 1)]) != GameConstants.TileState.WALL
+
+			var draw_right := is_playable or right_playable
+			var draw_bottom := is_playable or bot_playable
+			var draw_top := is_playable and not layout.has(coord + Vector2i(0, -1))
+			var draw_left := is_playable and not layout.has(coord + Vector2i(-1, 0))
+
+			var x0 := x * cell
+			var y0 := y * cell
+			var x1 := x0 + cell
+			var y1 := y0 + cell
+
+			if draw_left:
+				_fill_v_line(image, x0, y0, y1, line_w, line_color)
+			if draw_right:
+				_fill_v_line(image, x1 - line_w, y0, y1, line_w, line_color)
+			if draw_top:
+				_fill_h_line(image, y0, x0, x1, line_w, line_color)
+			if draw_bottom:
+				_fill_h_line(image, y1 - line_w, x0, x1, line_w, line_color)
+
+static func _fill_v_line(image: Image, x: int, y0: int, y1: int, thickness: int, color: Color) -> void:
+	var w := image.get_width()
+	var h := image.get_height()
+	var px := clampi(x, 0, w - 1)
+	var tw := mini(thickness, w - px)
+	var py := clampi(mini(y0, y1), 0, h)
+	var ph := clampi(absi(y1 - y0), 0, h - py)
+	if tw > 0 and ph > 0:
+		image.fill_rect(Rect2i(px, py, tw, ph), color)
+
+static func _fill_h_line(image: Image, y: int, x0: int, x1: int, thickness: int, color: Color) -> void:
+	var w := image.get_width()
+	var h := image.get_height()
+	var py := clampi(y, 0, h - 1)
+	var th := mini(thickness, h - py)
+	var px := clampi(mini(x0, x1), 0, w)
+	var pw := clampi(absi(x1 - x0), 0, w - px)
+	if th > 0 and pw > 0:
+		image.fill_rect(Rect2i(px, py, pw, th), color)
 
 static func _shifter_cell_set(level: LevelData) -> Dictionary:
 	var shifter_cells := {}

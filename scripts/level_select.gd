@@ -7,7 +7,8 @@ const LEVEL_SELECT_HEADER_TOP := 160.0
 const PREVIEW_SIZE := 96
 const LOCK_ICON := preload("res://resources/tiles/tile_lock.svg")
 const LEVEL_LOCK_ICON_SIZE := 200.0
-const TAB_LOCK_ICON_SIZE := 36.0
+const TAB_LOCK_ICON_SIZE := 64.0
+const TAB_LOCK_ALPHA := 0.9
 
 @onready var level_grid: GridContainer = $"UILayer/CenterContainer/VBoxContainer/LevelGrid"
 @onready var back_button: Button = $"UILayer/CenterContainer/PageNav/BackButton"
@@ -26,6 +27,7 @@ const TAB_LOCK_ICON_SIZE := 36.0
 @onready var content_root: Control = $"UILayer/CenterContainer"
 @onready var content_vbox: VBoxContainer = $"UILayer/CenterContainer/VBoxContainer"
 @onready var tab_container: HBoxContainer = $"UILayer/CenterContainer/VBoxContainer/TabContainer"
+@onready var tab_list_gap: Control = $"UILayer/CenterContainer/VBoxContainer/TabListGap"
 
 enum ViewMode { TUTORIALS, EASY, MEDIUM, HARD, CUSTOM }
 var current_view: ViewMode = ViewMode.EASY
@@ -35,6 +37,10 @@ var _page_index: int = 0
 func _ready() -> void:
 	if AdsManager:
 		AdsManager.show_menu_banner()
+	# Keep templates out of the grid so they never affect layout.
+	for template in [button_template, locked_button_template, custom_button_template]:
+		if template and template.get_parent() == level_grid:
+			level_grid.remove_child(template)
 	if back_button:
 		back_button.pressed.connect(_on_back_pressed)
 	if _page_prev_button:
@@ -63,7 +69,8 @@ func _ready() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
-		_on_back_pressed()
+		if GlobalGameManager and GlobalGameManager.consume_system_back():
+			_on_back_pressed()
 
 func _fit_chrome_buttons() -> void:
 	_apply_close_button()
@@ -146,23 +153,114 @@ func _layout_level_select() -> void:
 			+ GameConstants.SCREEN_HEADER_HEIGHT
 			+ GameConstants.SCREEN_CONTENT_GAP
 		)
-		# Leave room for Prev/Close/Next (same band as How to Play nav).
-		content_vbox.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_TOP - 20.0
+		# Stop just above Prev/Close/Next (same Y band as options / credits Close).
+		content_vbox.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_TOP - 16.0
 		content_vbox.grow_horizontal = Control.GROW_DIRECTION_BOTH
 		content_vbox.grow_vertical = Control.GROW_DIRECTION_BOTH
 		content_vbox.alignment = BoxContainer.ALIGNMENT_BEGIN
-		content_vbox.add_theme_constant_override("separation", 28)
+		content_vbox.add_theme_constant_override("separation", 8)
+		content_vbox.clip_contents = true
 
-	if level_grid:
-		level_grid.columns = 3
-		level_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		level_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		level_grid.add_theme_constant_override("h_separation", 30)
-		level_grid.add_theme_constant_override("v_separation", 30)
+	if tab_container:
+		tab_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tab_container.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+
+	if tab_list_gap:
+		tab_list_gap.custom_minimum_size = Vector2(0, 4)
+		tab_list_gap.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+
+	_ensure_level_list_host()
 
 	_ensure_page_nav()
 	_position_bottom_nav()
 	_position_custom_tab_button()
+
+## Expanding plain Control under the tabs. Grid is top-anchored inside it (not a
+## BoxContainer child), so leftover height cannot shift or stretch the list.
+func _ensure_level_list_host() -> void:
+	if content_vbox == null or level_grid == null:
+		return
+
+	var old_spacer := content_vbox.get_node_or_null("ListBottomSpacer") as Control
+	if old_spacer:
+		old_spacer.queue_free()
+
+	var existing := content_vbox.get_node_or_null("LevelListHost") as Control
+	# Replace an older VBox host — spacer tricks still recentered short pages.
+	if existing != null and existing is VBoxContainer:
+		for child in existing.get_children():
+			existing.remove_child(child)
+			content_vbox.add_child(child)
+		existing.queue_free()
+		existing = null
+
+	var host := existing
+	if host == null:
+		host = Control.new()
+		host.name = "LevelListHost"
+		content_vbox.add_child(host)
+
+	host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	host.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if not host.resized.is_connected(_pin_level_list_to_top):
+		host.resized.connect(_pin_level_list_to_top)
+
+	# Keep host after tabs/gap (and before any leftover chrome).
+	var insert_at := 0
+	if tab_container and tab_container.get_parent() == content_vbox:
+		insert_at = maxi(insert_at, tab_container.get_index() + 1)
+	if tab_list_gap and tab_list_gap.get_parent() == content_vbox:
+		insert_at = maxi(insert_at, tab_list_gap.get_index() + 1)
+	content_vbox.move_child(host, mini(insert_at, content_vbox.get_child_count() - 1))
+
+	if level_grid.get_parent() != host:
+		var old_parent := level_grid.get_parent()
+		if old_parent:
+			old_parent.remove_child(level_grid)
+		host.add_child(level_grid)
+	level_grid.columns = 3
+	level_grid.add_theme_constant_override("h_separation", 30)
+	level_grid.add_theme_constant_override("v_separation", 30)
+
+	if empty_state_label:
+		if empty_state_label.get_parent() != host:
+			var old_parent := empty_state_label.get_parent()
+			if old_parent:
+				old_parent.remove_child(empty_state_label)
+			host.add_child(empty_state_label)
+		# Don't reserve a tall empty band that vertically centers short copy.
+		empty_state_label.custom_minimum_size = Vector2(0, 0)
+
+	_pin_level_list_to_top()
+
+func _pin_level_list_to_top() -> void:
+	var host := content_vbox.get_node_or_null("LevelListHost") as Control if content_vbox else null
+	if host == null:
+		return
+	var host_w := host.size.x
+	if host_w <= 0.0:
+		return
+
+	if level_grid and level_grid.get_parent() == host:
+		level_grid.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		level_grid.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		level_grid.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		level_grid.size_flags_horizontal = 0
+		level_grid.size_flags_vertical = 0
+		var grid_h := level_grid.get_combined_minimum_size().y
+		level_grid.position = Vector2.ZERO
+		level_grid.size = Vector2(host_w, grid_h)
+
+	if empty_state_label and empty_state_label.get_parent() == host and empty_state_label.visible:
+		empty_state_label.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		empty_state_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		empty_state_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		empty_state_label.size_flags_horizontal = 0
+		empty_state_label.size_flags_vertical = 0
+		var label_h := empty_state_label.get_combined_minimum_size().y
+		empty_state_label.position = Vector2.ZERO
+		empty_state_label.size = Vector2(host_w, maxf(label_h, 1.0))
 
 func _ensure_page_nav() -> void:
 	if content_root == null or _page_nav == null:
@@ -185,7 +283,9 @@ func _position_bottom_nav() -> void:
 	_page_nav.offset_top = GameConstants.SCREEN_BOTTOM_NAV_TOP
 	_page_nav.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_BOTTOM
 	_page_nav.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_page_nav.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	# Never grow upward into the level grid if the row is taller than the band.
+	_page_nav.grow_vertical = Control.GROW_DIRECTION_END
+	_page_nav.z_index = 4
 	_apply_close_button()
 
 ## Debug-only Custom list sits under Close (same bottom margin band).
@@ -237,18 +337,8 @@ func _first_unlocked_view() -> ViewMode:
 func _is_category_unlocked(view: ViewMode) -> bool:
 	if view == ViewMode.CUSTOM:
 		return GlobalGameManager.debug_tools_enabled
-	if view == ViewMode.TUTORIALS or view == ViewMode.EASY:
-		return true
-	var paths := LevelUtils.scan_directory(_folder_for_view(view))
-	LevelUtils.sort_level_paths(paths)
-	var found_any := false
-	for path in paths:
-		var resource = load(path)
-		if resource and resource is LevelData:
-			found_any = true
-			if SaveManager.is_level_unlocked(resource.level_number):
-				return true
-	return not found_any
+	# Campaign tabs are always browsable; individual levels stay gated by progress.
+	return true
 
 func _update_tab_button_visuals() -> void:
 	var tabs := [
@@ -289,13 +379,24 @@ func _set_tab_lock_icon(button: Button, show_lock: bool) -> void:
 		existing.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		existing.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		existing.custom_minimum_size = Vector2(TAB_LOCK_ICON_SIZE, TAB_LOCK_ICON_SIZE)
-		existing.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-		existing.offset_left = -TAB_LOCK_ICON_SIZE - 10.0
-		existing.offset_right = -10.0
-		existing.offset_top = -TAB_LOCK_ICON_SIZE * 0.5
-		existing.offset_bottom = TAB_LOCK_ICON_SIZE * 0.5
-		existing.modulate = Color(1, 1, 1, 0.9)
+		# Centered over the button face (not trailing the label).
+		existing.set_anchors_preset(Control.PRESET_CENTER)
+		var half := TAB_LOCK_ICON_SIZE * 0.5
+		existing.offset_left = -half
+		existing.offset_top = -half
+		existing.offset_right = half
+		existing.offset_bottom = half
+		existing.modulate = Color(1, 1, 1, TAB_LOCK_ALPHA)
 		button.add_child(existing)
+	else:
+		existing.custom_minimum_size = Vector2(TAB_LOCK_ICON_SIZE, TAB_LOCK_ICON_SIZE)
+		existing.set_anchors_preset(Control.PRESET_CENTER)
+		var half := TAB_LOCK_ICON_SIZE * 0.5
+		existing.offset_left = -half
+		existing.offset_top = -half
+		existing.offset_right = half
+		existing.offset_bottom = half
+		existing.modulate = Color(1, 1, 1, TAB_LOCK_ALPHA)
 	existing.visible = true
 
 func populate_level_menu() -> void:
@@ -358,8 +459,11 @@ func _refresh_page() -> void:
 		empty_state_label.visible = valid_level_count == 0
 		if empty_state_label.visible:
 			HudLayout.apply_body_label(empty_state_label, GameConstants.UI_BODY_FONT_SIZE)
+		# Keep empty-state out of the tab→list packing height when hidden.
+		empty_state_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	if level_grid:
 		level_grid.visible = valid_level_count > 0
+		level_grid.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
 	var start := _page_index * LEVELS_PER_PAGE
 	var end := mini(start + LEVELS_PER_PAGE, valid_level_count)
@@ -379,11 +483,15 @@ func _refresh_page() -> void:
 			btn = button_template.duplicate() as Button
 			btn.disabled = false
 		btn.visible = true
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		_apply_level_button_content(btn, resource, title, locked)
 		btn.pressed.connect(_on_level_selected.bind(resource))
 		level_grid.add_child(btn)
 
 	_update_page_nav_visibility()
+	# Min size changes with row count; pin again after buttons exist.
+	call_deferred("_pin_level_list_to_top")
 
 func _update_page_nav_visibility() -> void:
 	var multi_page := _level_entries.size() > LEVELS_PER_PAGE
@@ -417,6 +525,8 @@ func _folder_for_view(view: ViewMode) -> String:
 func _apply_level_button_content(btn: Button, level: LevelData, title: String, locked: bool) -> void:
 	btn.text = ""
 	btn.custom_minimum_size = Vector2(260, 240)
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	btn.clip_text = true
 
 	var content := Control.new()
@@ -494,7 +604,7 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 
 func _on_level_selected(resource: LevelData) -> void:
 	GlobalGameManager.selected_level_resource = resource
-	get_tree().change_scene_to_file("res://scenes/main.tscn")
+	GlobalGameManager.go_to_scene("res://scenes/main.tscn")
 
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")

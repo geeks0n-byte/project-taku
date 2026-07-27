@@ -110,23 +110,31 @@ func _notification(what: int) -> void:
 		_on_system_back()
 
 func _on_system_back() -> void:
+	if GlobalGameManager == null or not GlobalGameManager.consume_system_back():
+		return
 	# Never leave mid-generation — that freed the scene under an awaiting worker.
 	if _is_generating_board or (_loading_overlay and _loading_overlay.is_busy()):
 		return
 	if options_menu and options_menu.visible:
-		if options_menu.has_method("hide_menu"):
+		if options_menu.has_method("handle_system_back"):
+			options_menu.handle_system_back()
+		elif options_menu.has_method("hide_menu"):
 			options_menu.hide_menu()
 		return
 	if ui_manager and ui_manager.how_to_play_container and ui_manager.how_to_play_container.visible:
 		_on_resume()
 		return
-	if ui_manager and ui_manager.has_method("hide_reset_confirm"):
-		# Cancel confirm dialogs back into play / pause.
-		pass
+	if ui_manager and ui_manager.reset_confirm_panel and ui_manager.reset_confirm_panel.visible:
+		ui_manager.hide_reset_confirm()
+		_on_reset_cancelled()
+		return
+	if ui_manager and ui_manager.resume_panel and ui_manager.resume_panel.visible:
+		_on_session_back()
+		return
+	if ui_manager and ui_manager.victory_panel and ui_manager.victory_panel.visible:
+		_on_quit_to_menu()
+		return
 	if is_paused:
-		if pause_menu and pause_menu.visible:
-			_on_resume()
-			return
 		_on_resume()
 		return
 	if is_game_active:
@@ -153,6 +161,8 @@ func _bind_submanager_signals():
 		tutorial_director.finished.connect(_on_tutorial_finished)
 	if tutorial_director and not tutorial_director.tools_unlocked.is_connected(_on_tutorial_tools_unlocked):
 		tutorial_director.tools_unlocked.connect(_on_tutorial_tools_unlocked)
+	if tutorial_director and not tutorial_director.board_layout_changed.is_connected(_on_tutorial_board_layout_changed):
+		tutorial_director.board_layout_changed.connect(_on_tutorial_board_layout_changed)
 	if pause_menu:
 		pause_menu.resume_pressed.connect(_on_resume)
 		pause_menu.restart_pressed.connect(_on_restart_level)
@@ -181,6 +191,7 @@ func _on_invalid_move_attempted(msg: String):
 	if not combined_errors.has(msg):
 		combined_errors.append(msg)
 	ui_manager.show_status_errors(combined_errors)
+	board_manager.refresh_error_bridges()
 
 func _load_all_levels_from_storage() -> void:
 	core_levels.clear()
@@ -275,9 +286,12 @@ func generate_board():
 		timer_node.stop()
 	board_manager.process_mode = Node.PROCESS_MODE_INHERIT
 
-	var tiles_list: Array = [0, 1, 2]
-	if "available_tiles" in current_level_resource and current_level_resource.available_tiles.size() > 0:
-		tiles_list = current_level_resource.available_tiles
+	var tiles_list: Array = LevelUtils.normalize_available_tiles(
+		current_level_resource.available_tiles if (
+			"available_tiles" in current_level_resource
+			and current_level_resource.available_tiles.size() > 0
+		) else [0, 1, 2]
+	)
 
 	var s_pairs := LevelUtils.get_shifter_pairs(current_level_resource)
 	var solve_constraints: Array = []
@@ -454,6 +468,12 @@ func _on_tutorial_tools_unlocked() -> void:
 	ui_manager.update_undo_redo_buttons(game_undo.can_undo(), game_undo.can_redo())
 	_refresh_hint_button()
 
+func _on_tutorial_board_layout_changed() -> void:
+	# Mid-tutorial lock injection — drop undo history so Undo can't restore the empty board.
+	game_undo.reset(_create_game_snapshot())
+	if ui_manager:
+		ui_manager.update_undo_redo_buttons(game_undo.can_undo(), game_undo.can_redo())
+
 func _solve_layout(
 	layout: Dictionary,
 	tiles_list: Array,
@@ -528,7 +548,7 @@ func _on_hint_requested():
 	if not is_game_active or is_paused:
 		return
 	if hints_remaining == 0:
-		# Free quota exhausted — offer a rewarded video for +1 hint.
+		# Free quota exhausted — offer a rewarded video for more hints.
 		if AdsManager and AdsManager.show_rewarded_for_hint(_on_rewarded_hint_earned):
 			return
 		if ui_manager:
@@ -538,8 +558,8 @@ func _on_hint_requested():
 	_apply_hint()
 
 func _on_rewarded_hint_earned() -> void:
-	# Grant one consumable hint use, then reveal immediately.
-	hints_remaining = 1
+	# Bank several uses; apply one now so the tap that opened the ad still feels useful.
+	hints_remaining = GameConstants.HINTS_FROM_REWARDED_AD
 	_apply_hint()
 
 func _apply_hint() -> void:
@@ -548,7 +568,9 @@ func _apply_hint() -> void:
 	if not board_manager or levels.is_empty() or current_level_index < 0:
 		return
 	var current_res = levels[current_level_index]
-	var tiles_list = current_res.available_tiles if current_res.available_tiles.size() > 0 else [0, 1, 2]
+	var tiles_list: Array = LevelUtils.normalize_available_tiles(
+		current_res.available_tiles if current_res.available_tiles.size() > 0 else [0, 1, 2]
+	)
 	if solved_solution_reference.is_empty():
 		solved_solution_reference = HintSystem.attempt_dynamic_solve(
 			board_manager.board_cells,
@@ -627,9 +649,12 @@ func _run_validation_pass():
 		ui_manager.update_undo_redo_buttons(game_undo.can_undo(), game_undo.can_redo())
 	if not results["valid"]:
 		ui_manager.show_status_errors(results["errors"])
+		board_manager.refresh_error_bridges()
 	else:
 		# Keeps the tutorial tip when active; skips the default "fill the board" line.
 		ui_manager.show_status_valid()
+	if tutorial_running:
+		tutorial_director.on_validation_result(results)
 	if results["valid"] and board_manager.is_board_full():
 		if tutorial_running:
 			tutorial_director.on_board_solved()
@@ -868,8 +893,7 @@ func _on_quit_to_menu():
 	if _is_generating_board or (_loading_overlay and _loading_overlay.is_busy()):
 		return
 	_autosave_session()
-	get_tree().paused = false
-	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")
 
 func _begin_level_entry() -> void:
 	if levels.is_empty() or current_level_index < 0 or current_level_index >= levels.size():
@@ -917,8 +941,7 @@ func _finish_session_restart() -> void:
 
 func _on_session_back() -> void:
 	# Keep the in-progress session so Continue still works next time.
-	get_tree().paused = false
-	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")
 
 func _on_locale_refresh() -> void:
 	if tutorial_director and tutorial_director.is_active():
@@ -988,7 +1011,9 @@ func restore_session() -> void:
 	var is_custom = current_level_resource.resource_path.begins_with("user://")
 	_run_layout = data.get("layout", {}).duplicate(true)
 	_run_shifter_pairs = data.get("shifter_pairs", []).duplicate(true)
-	_run_available_tiles = data.get("available_tiles", [0, 1, 2]).duplicate()
+	_run_available_tiles = LevelUtils.normalize_available_tiles(
+		data.get("available_tiles", [0, 1, 2])
+	)
 	if _run_layout.is_empty():
 		SaveManager.clear_session()
 		generate_board()

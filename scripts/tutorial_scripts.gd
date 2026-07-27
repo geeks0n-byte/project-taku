@@ -3,8 +3,10 @@ extends RefCounted
 
 ## Step kinds:
 ## message — tip with Next; board frozen (optional white masks / borders)
+## apply_locks — set locked cells mid-tutorial, then tip with Next
+## discover_rules — free fill; on first validation break teach that rule then the other
 ## practice — only highlighted cells clickable; status updates on wrong/right
-## hud_button — glow a top-bar tool; tap it or Next to advance
+## hud_button — highlight a top-bar tool; tap it or Next to advance
 ## wait_cell / wait_shifter — legacy auto-advance waits
 ## done — unlock tools, clear gates, keep a free-play tip until solved
 ##
@@ -37,12 +39,6 @@ static func steps_for(script_id: String) -> Array:
 			return _level_2()
 		"level_3":
 			return _level_3()
-		"level_4":
-			return _level_4()
-		"level_5":
-			return _level_5()
-		"level_6":
-			return _level_6()
 		_:
 			return []
 
@@ -84,10 +80,16 @@ static func _icon_path(token: String) -> String:
 			return ""
 
 static func _level_1() -> Array:
-	# YYEE / BBEE / BYYB / YBBY — empties (2,0)(3,0)=Blue, (2,1)(3,1)=Yellow.
+	# Empty 4×4 → place Y/B → lock clues like old L1 → discover rules on red errors → HUD → finish.
 	var y := GameConstants.TileState.YELLOW
 	var b := GameConstants.TileState.BLUE
-	var locked: Array = [
+	var locked_layout := {
+		Vector2i(0, 0): y, Vector2i(1, 0): y, Vector2i(2, 0): GameConstants.TileState.EMPTY, Vector2i(3, 0): GameConstants.TileState.EMPTY,
+		Vector2i(0, 1): b, Vector2i(1, 1): b, Vector2i(2, 1): GameConstants.TileState.EMPTY, Vector2i(3, 1): GameConstants.TileState.EMPTY,
+		Vector2i(0, 2): b, Vector2i(1, 2): y, Vector2i(2, 2): y, Vector2i(3, 2): b,
+		Vector2i(0, 3): y, Vector2i(1, 3): b, Vector2i(2, 3): b, Vector2i(3, 3): y,
+	}
+	var locked_cells: Array = [
 		Vector2i(0, 0), Vector2i(1, 0),
 		Vector2i(0, 1), Vector2i(1, 1),
 		Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2),
@@ -100,359 +102,38 @@ static func _level_1() -> Array:
 			"icons": ["yellow", "blue"],
 		},
 		{
-			"type": "message",
-			"text_key": "TUT1_LOCKS",
-			"icons": ["lock"],
-			"mask": locked,
-			"red": locked,
-		},
-		{
 			"type": "practice",
 			"text_key": "TUT1_CYCLE",
 			"wrong_key": "TUT1_WRONG_PLACE",
 			"success_key": "TUT_GOOD",
 			"icons": ["yellow", "blue"],
-			"wrong_icons": ["blue"],
+			"wrong_icons": [],
 			"success_icons": [],
-			"coord": Vector2i(2, 0),
-			"state": b,
-			"cycle": [y, b],
-			"mask": [Vector2i(2, 0)],
-			"red": [Vector2i(2, 0)],
-		},
-		{
-			"type": "message",
-			"text_key": "TUT1_RULE_OF_TWO",
-			"icons": ["yellow", "blue"],
-			"mask": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
-			"red": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
-		},
-		{
-			"type": "message",
-			"text_key": "TUT1_BALANCE",
-			"icons": ["yellow", "blue"],
-			"mask": [
-				Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0),
-			],
-			"red": [
-				Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0),
-			],
-		},
-		{
-			"type": "practice",
-			"text_key": "TUT1_PLACE_NEXT",
-			"wrong_key": "TUT1_WRONG_PLACE",
-			"success_key": "TUT_GOOD",
-			"icons": ["blue"],
-			"wrong_icons": ["blue"],
-			"coord": Vector2i(3, 0),
-			"state": b,
-			"cycle": [y, b],
-			"mask": [Vector2i(3, 0)],
-			"red": [Vector2i(3, 0)],
-		},
-		{
-			"type": "practice",
-			"text_key": "TUT1_PLACE_NEXT",
-			"wrong_key": "TUT1_WRONG_PLACE",
-			"success_key": "TUT_GOOD",
-			"icons": ["yellow"],
-			"wrong_icons": ["yellow"],
-			"coord": Vector2i(2, 1),
-			"state": y,
-			"cycle": [y, b],
-			"mask": [Vector2i(2, 1)],
-			"red": [Vector2i(2, 1)],
-		},
-		{
-			"type": "practice",
-			"text_key": "TUT1_PLACE_NEXT",
-			"wrong_key": "TUT1_WRONG_PLACE",
-			"success_key": "TUT1_GOOD_BOARD",
-			"icons": ["yellow"],
-			"wrong_icons": ["yellow"],
-			"success_icons": ["yellow", "blue"],
-			"coord": Vector2i(3, 1),
-			"state": y,
-			"cycle": [y, b],
-			"mask": [Vector2i(3, 1)],
-			"red": [Vector2i(3, 1)],
-		},
-		{
-			"type": "done",
-			"text_key": "TUT_PLAY_FREE",
-		},
-	]
-
-static func _level_2() -> Array:
-	# 4x4: Rule of Two then Equal Balance. Empties (2,0)=B and (2,1)=Y.
-	var y := GameConstants.TileState.YELLOW
-	var b := GameConstants.TileState.BLUE
-	return [
-		{
-			"type": "message",
-			"text_key": "TUT2_RULE_INTRO",
-			"icons": ["yellow", "blue"],
-			"mask": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
-			"red": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
-		},
-		{
-			"type": "practice",
-			"text_key": "TUT2_RULE_PRACTICE",
-			"wrong_key": "TUT2_WRONG_THREE",
-			"success_key": "TUT2_GOOD_RULE",
-			"icons": ["blue"],
-			"wrong_icons": ["yellow", "blue"],
-			"success_icons": ["blue"],
-			"coord": Vector2i(2, 0),
-			"state": b,
-			"cycle": [y, b],
-			"mask": [Vector2i(2, 0)],
-			"red": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
-		},
-		{
-			"type": "message",
-			"text_key": "TUT2_BALANCE_INTRO",
-			"icons": ["yellow", "blue"],
-			"mask": [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)],
-			"red": [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)],
-		},
-		{
-			"type": "practice",
-			"text_key": "TUT2_BALANCE_PRACTICE",
-			"wrong_key": "TUT2_WRONG_BALANCE",
-			"success_key": "TUT2_GOOD_BALANCE",
-			"icons": ["yellow"],
-			"wrong_icons": ["yellow"],
-			"success_icons": ["yellow", "blue"],
-			"coord": Vector2i(2, 1),
-			"state": y,
-			"cycle": [y, b],
-			"mask": [Vector2i(2, 1)],
-			"red": [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)],
-		},
-		{
-			"type": "done",
-			"text_key": "TUT_PLAY_FREE",
-		},
-	]
-
-static func _level_3() -> Array:
-	# 3x3 green lesson. Solved: YBG / BGY / GYB.
-	# Empties: (1,0)=Blue (dual-as-yellow), (1,1)=Green (max-one + balance).
-	var g := GameConstants.TileState.JOKER
-	var y := GameConstants.TileState.YELLOW
-	var b := GameConstants.TileState.BLUE
-	return [
-		{
-			"type": "message",
-			"text_key": "TUT3_INTRO",
-			"icons": ["green"],
-			"mask": [Vector2i(2, 0), Vector2i(0, 2)],
-			"red": [Vector2i(2, 0), Vector2i(0, 2)],
-		},
-		{
-			"type": "message",
-			"text_key": "TUT3_GREEN_DUAL",
-			"icons": ["green", "yellow"],
-			"mask": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
-			"red": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
-		},
-		{
-			"type": "practice",
-			"text_key": "TUT3_DUAL_PRACTICE",
-			"wrong_key": "TUT3_DUAL_WRONG",
-			"success_key": "TUT3_DUAL_GOOD",
-			"icons": ["blue", "yellow", "green"],
-			"wrong_icons": ["green", "yellow", "blue"],
-			"success_icons": ["blue"],
-			"coord": Vector2i(1, 0),
-			"state": b,
-			"cycle": [y, b, g],
-			"mask": [Vector2i(1, 0)],
-			"red": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
-		},
-		{
-			"type": "message",
-			"text_key": "TUT3_GREEN_MAX",
-			"icons": ["green"],
-			"mask": [Vector2i(2, 0), Vector2i(0, 2)],
-			"red": [Vector2i(2, 0), Vector2i(0, 2)],
-		},
-		{
-			"type": "practice",
-			"text_key": "TUT3_MAX_PRACTICE",
-			"wrong_key": "TUT3_WRONG_COLOR",
-			"success_key": "TUT3_GOOD_GREEN",
-			"icons": ["green"],
-			"wrong_icons": ["green", "yellow", "blue"],
-			"success_icons": ["green"],
 			"coord": Vector2i(1, 1),
-			"state": g,
-			"cycle": [y, b, g],
+			"state": b,
+			"cycle": [y, b],
 			"mask": [Vector2i(1, 1)],
 			"red": [Vector2i(1, 1)],
 		},
 		{
-			"type": "done",
-			"text_key": "TUT_PLAY_FREE",
-		},
-	]
-
-static func _level_4() -> Array:
-	# 3x3 with two purple pairs. Solved: SBY / BYG / YSB.
-	# Pair1 (0,0)-(1,0) active at (1,0); Pair2 (1,2)-(2,2) active at (2,2).
-	# After hops: fill (1,0)=Blue and (2,2)=Blue.
-	var y := GameConstants.TileState.YELLOW
-	var b := GameConstants.TileState.BLUE
-	var g := GameConstants.TileState.JOKER
-	return [
-		{
-			"type": "message",
-			"text_key": "TUT4_INTRO",
-			"icons": ["shifter"],
-			"mask": [
-				Vector2i(0, 0), Vector2i(1, 0),
-				Vector2i(1, 2), Vector2i(2, 2),
-			],
-			"red": [
-				Vector2i(0, 0), Vector2i(1, 0),
-				Vector2i(1, 2), Vector2i(2, 2),
-			],
+			"type": "apply_locks",
+			"text_key": "TUT1_LOCKS",
+			"icons": ["lock"],
+			"layout": locked_layout,
+			"mask": locked_cells,
+			"red": locked_cells,
 		},
 		{
-			"type": "practice",
-			"text_key": "TUT4_MOVE_SHIFTER",
-			"wrong_key": "TUT4_MOVE_SHIFTER",
-			"success_key": "TUT4_GOOD_SHIFTER",
-			"icons": ["shifter"],
-			"wrong_icons": ["shifter"],
-			"success_icons": ["shifter"],
-			"coord": Vector2i(0, 0),
-			"from": Vector2i(1, 0),
-			"wait_shifter": true,
-			"mask": [Vector2i(1, 0)],
-			"red": [Vector2i(1, 0)],
-		},
-		{
-			"type": "practice",
-			"text_key": "TUT4_PLACE_FILL",
-			"wrong_key": "TUT4_WRONG_FILL",
-			"success_key": "TUT4_GOOD_FILL",
-			"icons": ["blue"],
-			"wrong_icons": ["blue"],
-			"success_icons": ["blue"],
-			"coord": Vector2i(1, 0),
-			"state": b,
-			"cycle": [y, b, g],
-			"mask": [Vector2i(1, 0)],
-			"red": [Vector2i(1, 0)],
-		},
-		{
-			"type": "practice",
-			"text_key": "TUT4_MOVE_SHIFTER_2",
-			"wrong_key": "TUT4_MOVE_SHIFTER_2",
-			"success_key": "TUT4_GOOD_SHIFTER",
-			"icons": ["shifter"],
-			"wrong_icons": ["shifter"],
-			"success_icons": ["shifter"],
-			"coord": Vector2i(1, 2),
-			"from": Vector2i(2, 2),
-			"wait_shifter": true,
-			"mask": [Vector2i(2, 2)],
-			"red": [Vector2i(2, 2)],
-		},
-		{
-			"type": "practice",
-			"text_key": "TUT4_PLACE_FILL_2",
-			"wrong_key": "TUT4_WRONG_FILL",
-			"success_key": "TUT4_GOOD_FILL",
-			"icons": ["blue"],
-			"wrong_icons": ["blue"],
-			"success_icons": ["blue"],
-			"coord": Vector2i(2, 2),
-			"state": b,
-			"cycle": [y, b, g],
-			"mask": [Vector2i(2, 2)],
-			"red": [Vector2i(2, 2)],
-		},
-		{
-			"type": "done",
-			"text_key": "TUT_PLAY_FREE",
-		},
-	]
-
-static func _level_5() -> Array:
-	# 4x4 constraints: vertical = and horizontal ×. Empties (1,0), (2,1), (3,0).
-	var y := GameConstants.TileState.YELLOW
-	var b := GameConstants.TileState.BLUE
-	return [
-		{
-			"type": "message",
-			"text_key": "TUT5_EQUALS_INTRO",
-			"mask": [Vector2i(1, 0), Vector2i(1, 1)],
-			"red": [Vector2i(1, 0), Vector2i(1, 1)],
-		},
-		{
-			"type": "practice",
-			"text_key": "TUT5_EQUALS_PRACTICE",
-			"wrong_key": "TUT5_WRONG_EQUALS",
-			"success_key": "TUT5_GOOD_EQUALS",
-			"icons": ["yellow"],
-			"wrong_icons": ["yellow"],
-			"success_icons": ["yellow"],
-			"coord": Vector2i(1, 0),
-			"state": y,
-			"cycle": [y, b],
-			"mask": [Vector2i(1, 0)],
-			"red": [Vector2i(1, 0), Vector2i(1, 1)],
+			"type": "discover_rules",
+			"text_key": "TUT1_FILL_TRY",
+			"rule_two_key": "TUT1_RULE_OF_TWO",
+			"balance_key": "TUT1_BALANCE",
+			"rule_two_icons": ["yellow", "blue"],
+			"balance_icons": ["yellow", "blue"],
 		},
 		{
 			"type": "message",
-			"text_key": "TUT5_NOTEQUALS_INTRO",
-			"mask": [Vector2i(2, 1), Vector2i(3, 1)],
-			"red": [Vector2i(2, 1), Vector2i(3, 1)],
-		},
-		{
-			"type": "practice",
-			"text_key": "TUT5_NOTEQUALS_PRACTICE",
-			"wrong_key": "TUT5_WRONG_NOTEQUALS",
-			"success_key": "TUT5_GOOD_NOTEQUALS",
-			"icons": ["yellow", "blue"],
-			"wrong_icons": ["blue"],
-			"success_icons": ["blue"],
-			"coord": Vector2i(2, 1),
-			"state": b,
-			"cycle": [y, b],
-			"mask": [Vector2i(2, 1)],
-			"red": [Vector2i(2, 1), Vector2i(3, 1)],
-		},
-		{
-			"type": "practice",
-			"text_key": "TUT5_FINISH",
-			"wrong_key": "TUT5_WRONG_FINISH",
-			"success_key": "TUT5_GOOD_FINISH",
-			"icons": ["blue"],
-			"wrong_icons": ["blue"],
-			"success_icons": ["yellow", "blue"],
-			"coord": Vector2i(3, 0),
-			"state": b,
-			"cycle": [y, b],
-			"mask": [Vector2i(3, 0)],
-			"red": [Vector2i(3, 0)],
-		},
-		{
-			"type": "done",
-			"text_key": "TUT_PLAY_FREE",
-		},
-	]
-
-static func _level_6() -> Array:
-	# Teach each top-bar tool with a glowing highlight. Tools unlock after done.
-	return [
-		{
-			"type": "message",
-			"text_key": "TUT6_INTRO",
+			"text_key": "TUT6_TOOLS_INTRO",
 		},
 		{
 			"type": "hud_button",
@@ -487,5 +168,203 @@ static func _level_6() -> Array:
 		{
 			"type": "done",
 			"text_key": "TUT6_COMPLETE",
+		},
+	]
+
+static func _level_2() -> Array:
+	# Green lesson (former level_4).
+	var g := GameConstants.TileState.JOKER
+	var y := GameConstants.TileState.YELLOW
+	var b := GameConstants.TileState.BLUE
+	var greens := [
+		Vector2i(3, 0), Vector2i(2, 1), Vector2i(0, 3),
+	]
+	return [
+		{
+			"type": "message",
+			"text_key": "TUT4_INTRO",
+			"icons": ["green", "yellow", "blue"],
+			"mask": greens.duplicate(),
+			"red": greens.duplicate(),
+		},
+		{
+			"type": "message",
+			"text_key": "TUT4_GREEN_DUAL",
+			"icons": ["green", "yellow"],
+			"mask": [
+				Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1), Vector2i(4, 1),
+			],
+			"red": [
+				Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1), Vector2i(4, 1),
+			],
+		},
+		{
+			"type": "practice",
+			"text_key": "TUT4_DUAL_PRACTICE",
+			"wrong_key": "TUT4_DUAL_WRONG",
+			"success_key": "TUT4_DUAL_GOOD",
+			"icons": ["blue", "yellow", "green"],
+			"wrong_icons": ["green", "yellow", "blue"],
+			"success_icons": ["blue"],
+			"coord": Vector2i(3, 1),
+			"state": b,
+			"cycle": [y, b, g],
+			"mask": [Vector2i(3, 1)],
+			"red": [
+				Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1), Vector2i(4, 1),
+			],
+		},
+		{
+			"type": "message",
+			"text_key": "TUT4_GREEN_MAX",
+			"icons": ["green"],
+			"mask": greens.duplicate(),
+			"red": greens.duplicate(),
+		},
+		{
+			"type": "message",
+			"text_key": "TUT4_ODD_BALANCE",
+			"icons": ["green"],
+			"mask": [
+				Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2), Vector2i(4, 2),
+			],
+			"red": [
+				Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2), Vector2i(4, 2),
+			],
+		},
+		{
+			"type": "practice",
+			"text_key": "TUT4_MAX_PRACTICE",
+			"wrong_key": "TUT4_WRONG_COLOR",
+			"success_key": "TUT4_GOOD_GREEN",
+			"icons": ["green"],
+			"wrong_icons": ["green", "yellow", "blue"],
+			"success_icons": ["green"],
+			"coord": Vector2i(1, 2),
+			"state": g,
+			"cycle": [y, b, g],
+			"mask": [Vector2i(1, 2)],
+			"red": [
+				Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2), Vector2i(4, 2),
+			],
+		},
+		{
+			"type": "message",
+			"text_key": "TUT4_GREEN_MAX_2",
+			"icons": ["green"],
+			"mask": [
+				Vector2i(3, 0), Vector2i(2, 1), Vector2i(1, 2), Vector2i(0, 3), Vector2i(4, 4),
+			],
+			"red": [
+				Vector2i(3, 0), Vector2i(2, 1), Vector2i(1, 2), Vector2i(0, 3), Vector2i(4, 4),
+			],
+		},
+		{
+			"type": "practice",
+			"text_key": "TUT4_MAX_PRACTICE_2",
+			"wrong_key": "TUT4_WRONG_COLOR",
+			"success_key": "TUT4_GOOD_GREEN",
+			"icons": ["green"],
+			"wrong_icons": ["green", "yellow", "blue"],
+			"success_icons": ["green"],
+			"coord": Vector2i(4, 4),
+			"state": g,
+			"cycle": [y, b, g],
+			"mask": [Vector2i(4, 4)],
+			"red": [
+				Vector2i(0, 4), Vector2i(1, 4), Vector2i(2, 4), Vector2i(3, 4), Vector2i(4, 4),
+			],
+		},
+		{
+			"type": "done",
+			"text_key": "TUT_PLAY_FREE",
+		},
+	]
+
+static func _level_3() -> Array:
+	# Purple hop + fill (former level_5).
+	var y := GameConstants.TileState.YELLOW
+	var b := GameConstants.TileState.BLUE
+	var g := GameConstants.TileState.JOKER
+	return [
+		{
+			"type": "message",
+			"text_key": "TUT5_INTRO",
+			"icons": ["shifter"],
+			"mask": [
+				Vector2i(0, 0), Vector2i(1, 0),
+				Vector2i(1, 2), Vector2i(2, 2),
+			],
+			"red": [
+				Vector2i(0, 0), Vector2i(1, 0),
+				Vector2i(1, 2), Vector2i(2, 2),
+			],
+		},
+		{
+			"type": "message",
+			"text_key": "TUT5_ODD_BALANCE",
+			"icons": ["green", "shifter"],
+			"mask": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
+			"red": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
+		},
+		{
+			"type": "practice",
+			"text_key": "TUT5_MOVE_SHIFTER",
+			"wrong_key": "TUT5_MOVE_SHIFTER",
+			"success_key": "TUT5_GOOD_SHIFTER",
+			"icons": ["shifter"],
+			"wrong_icons": ["shifter"],
+			"success_icons": ["shifter"],
+			"coord": Vector2i(0, 0),
+			"from": Vector2i(1, 0),
+			"wait_shifter": true,
+			"mask": [Vector2i(1, 0)],
+			"red": [Vector2i(1, 0)],
+		},
+		{
+			"type": "practice",
+			"text_key": "TUT5_PLACE_FILL",
+			"wrong_key": "TUT5_WRONG_FILL",
+			"success_key": "TUT5_GOOD_FILL",
+			"icons": ["blue"],
+			"wrong_icons": ["blue"],
+			"success_icons": ["blue"],
+			"coord": Vector2i(1, 0),
+			"state": b,
+			"cycle": [y, b, g],
+			"mask": [Vector2i(1, 0)],
+			"red": [Vector2i(1, 0)],
+		},
+		{
+			"type": "practice",
+			"text_key": "TUT5_MOVE_SHIFTER_2",
+			"wrong_key": "TUT5_MOVE_SHIFTER_2",
+			"success_key": "TUT5_GOOD_SHIFTER",
+			"icons": ["shifter"],
+			"wrong_icons": ["shifter"],
+			"success_icons": ["shifter"],
+			"coord": Vector2i(1, 2),
+			"from": Vector2i(2, 2),
+			"wait_shifter": true,
+			"mask": [Vector2i(2, 2)],
+			"red": [Vector2i(2, 2)],
+		},
+		{
+			"type": "practice",
+			"text_key": "TUT5_PLACE_FILL_2",
+			"wrong_key": "TUT5_WRONG_FILL",
+			"success_key": "TUT5_GOOD_FILL",
+			"icons": ["blue"],
+			"wrong_icons": ["blue"],
+			"success_icons": ["blue"],
+			"coord": Vector2i(2, 2),
+			"state": b,
+			"cycle": [y, b, g],
+			"mask": [Vector2i(2, 2)],
+			"red": [Vector2i(2, 2)],
+		},
+		{
+			"type": "done",
+			"text_key": "TUT_PLAY_FREE",
 		},
 	]

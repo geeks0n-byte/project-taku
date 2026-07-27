@@ -16,6 +16,9 @@ var active_constraint_pairs: Array = []
 
 var grid_drawer: Node2D
 var constraint_drawer: Node2D
+var focus_bridge_drawer: Node2D
+var _focus_bridge_coords: Array = []
+var _error_bridge_coords: Array = []
 
 func _ready():
 	grid_drawer = Node2D.new()
@@ -24,9 +27,15 @@ func _ready():
 	add_child(grid_drawer)
 
 	constraint_drawer = Node2D.new()
-	constraint_drawer.z_index = 4096
+	constraint_drawer.z_index = 4095
 	constraint_drawer.draw.connect(_draw_constraints)
 	add_child(constraint_drawer)
+
+	focus_bridge_drawer = Node2D.new()
+	# Stay within Godot's canvas Z range (-4096..4096); sit above constraints.
+	focus_bridge_drawer.z_index = 4096
+	focus_bridge_drawer.draw.connect(_draw_highlight_bridges)
+	add_child(focus_bridge_drawer)
 
 func trigger_redraw():
 	queue_redraw()
@@ -34,12 +43,14 @@ func trigger_redraw():
 		grid_drawer.queue_redraw()
 	if constraint_drawer:
 		constraint_drawer.queue_redraw()
+	if focus_bridge_drawer:
+		focus_bridge_drawer.queue_redraw()
 
 func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shifter_pairs: Array = [], constraint_pairs: Array = []):
 	board_cells.clear()
 	var pool_index = 0
 
-	var allowed_tiles = available_tiles if available_tiles.size() > 0 else [0, 1, 2]
+	var int_allowed_tiles: Array[int] = LevelUtils.normalize_available_tiles(available_tiles)
 	var max_x = 0
 	for coord in layout_data:
 		if coord.x > max_x:
@@ -67,10 +78,7 @@ func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shi
 		cell.coord = coord
 		cell.position = Vector2(float(coord.x * GameConstants.CELL_SIZE), float(coord.y * GameConstants.CELL_SIZE))
 
-		var int_allowed_tiles: Array[int] = []
-		for tile in allowed_tiles:
-			int_allowed_tiles.append(int(tile))
-		cell.allowed_cycle_tiles = int_allowed_tiles
+		cell.allowed_cycle_tiles = int_allowed_tiles.duplicate()
 
 		cell.is_linked_pair = false
 		cell.shifter_direction = Vector2i.ZERO
@@ -135,6 +143,8 @@ func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shi
 
 	move_child(grid_drawer, -1)
 	move_child(constraint_drawer, -1)
+	if focus_bridge_drawer:
+		move_child(focus_bridge_drawer, -1)
 
 	cached_lines = BoardRenderer.cache_board_lines(board_cells)
 	trigger_redraw()
@@ -171,6 +181,19 @@ func _on_shifter_tile_toggled(clicked_coord: Vector2i):
 
 func clear_highlights():
 	BoardRenderer.clear_highlights(board_cells)
+	_error_bridge_coords.clear()
+	if focus_bridge_drawer:
+		focus_bridge_drawer.queue_redraw()
+
+## After validation, bridge wall cutouts between error-bordered playable cells.
+func refresh_error_bridges() -> void:
+	_error_bridge_coords.clear()
+	for coord in board_cells:
+		var cell = board_cells[coord]
+		if cell.validation_error_active and cell.state != GameConstants.TileState.WALL:
+			_error_bridge_coords.append(coord)
+	if focus_bridge_drawer:
+		focus_bridge_drawer.queue_redraw()
 
 func set_click_whitelist(coords: Array) -> void:
 	var allowed := {}
@@ -189,40 +212,73 @@ func clear_click_whitelist() -> void:
 func set_guide_cells(coords: Array) -> void:
 	clear_guide_cells()
 	for c in coords:
-		if board_cells.has(c):
-			board_cells[c].set_guide_highlight(true)
+		if not board_cells.has(c):
+			continue
+		if board_cells[c].state == GameConstants.TileState.WALL:
+			continue
+		board_cells[c].set_guide_highlight(true)
 
 func clear_guide_cells() -> void:
 	for coord in board_cells:
 		if board_cells[coord].guide_active:
 			board_cells[coord].set_guide_highlight(false)
 
-## White breathing borders for tutorial attention (independent of white masks).
+## Focus borders on playable cells; red bridge lines span wall cutouts between them.
 func set_focus_cells(coords: Array) -> void:
 	clear_focus_cells()
+	_focus_bridge_coords.clear()
 	for c in coords:
-		if board_cells.has(c):
-			board_cells[c].set_focus_highlight(true)
+		if not board_cells.has(c):
+			continue
+		_focus_bridge_coords.append(c)
+		var cell = board_cells[c]
+		if cell.state == GameConstants.TileState.WALL:
+			continue
+		cell.set_focus_highlight(true)
+	if focus_bridge_drawer:
+		focus_bridge_drawer.queue_redraw()
 
 func clear_focus_cells() -> void:
 	for coord in board_cells:
 		if board_cells[coord].focus_active:
 			board_cells[coord].set_focus_highlight(false)
+	_focus_bridge_coords.clear()
+	if focus_bridge_drawer:
+		focus_bridge_drawer.queue_redraw()
 
 func set_cell_cycle_tiles(coord: Vector2i, tiles: Array) -> void:
 	if not board_cells.has(coord):
 		return
-	var typed: Array[int] = []
-	for t in tiles:
-		typed.append(int(t))
-	board_cells[coord].allowed_cycle_tiles = typed
+	board_cells[coord].allowed_cycle_tiles = LevelUtils.normalize_available_tiles(tiles)
 
 func restore_cell_cycle_tiles(tiles: Array) -> void:
-	var typed: Array[int] = []
-	for t in tiles:
-		typed.append(int(t))
+	var typed: Array[int] = LevelUtils.normalize_available_tiles(tiles)
 	for coord in board_cells:
 		board_cells[coord].allowed_cycle_tiles = typed.duplicate()
+
+## Mid-tutorial: set cell states and lock non-empty tiles (empties stay playable).
+func apply_locked_layout(layout: Dictionary) -> void:
+	for coord in layout.keys():
+		if not board_cells.has(coord):
+			continue
+		var state := int(layout[coord])
+		var cell = board_cells[coord]
+		cell.state = state
+		cell.guide_active = false
+		if state == GameConstants.TileState.WALL:
+			cell.is_playable = false
+			cell.is_locked = true
+		elif state == GameConstants.TileState.EMPTY:
+			cell.is_playable = true
+			cell.is_locked = false
+		else:
+			cell.is_playable = true
+			cell.is_locked = true
+		cell.update_visuals()
+	clear_highlights()
+	clear_guide_cells()
+	clear_focus_cells()
+	trigger_redraw()
 
 func is_board_full() -> bool:
 	return BoardRenderer.is_board_full(board_cells)
@@ -232,3 +288,17 @@ func _draw_grid():
 
 func _draw_constraints():
 	BoardRenderer.draw_constraints(constraint_drawer, board_cells, active_constraint_pairs, GameConstants.CELL_SIZE)
+
+func _draw_highlight_bridges() -> void:
+	BoardRenderer.draw_highlight_bridges(
+		focus_bridge_drawer,
+		board_cells,
+		_focus_bridge_coords,
+		GameConstants.CELL_SIZE
+	)
+	BoardRenderer.draw_highlight_bridges(
+		focus_bridge_drawer,
+		board_cells,
+		_error_bridge_coords,
+		GameConstants.CELL_SIZE
+	)

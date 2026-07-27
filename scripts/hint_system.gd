@@ -18,7 +18,8 @@ static func count_usable_hints(
 	grid_size: Vector2i = Vector2i.ZERO,
 	prefer_hidden_pool: bool = false
 ) -> int:
-	return _collect_candidates(
+	var n := count_wrong_cells(board_cells, solved_reference)
+	n += _collect_candidates(
 		board_cells,
 		active_constraints,
 		solved_reference,
@@ -26,6 +27,32 @@ static func count_usable_hints(
 		grid_size,
 		prefer_hidden_pool
 	).size()
+	return n
+
+## Filled playable cells that disagree with the solved reference.
+static func count_wrong_cells(board_cells: Dictionary, solved_reference: Dictionary) -> int:
+	return find_wrong_cells(board_cells, solved_reference).size()
+
+static func find_wrong_cells(board_cells: Dictionary, solved_reference: Dictionary) -> Array:
+	var wrong: Array = []
+	if solved_reference.is_empty():
+		return wrong
+	for coord in board_cells:
+		var cell = board_cells[coord]
+		if not cell.is_playable or cell.is_locked:
+			continue
+		if cell.state == GameConstants.TileState.EMPTY or cell.state == GameConstants.TileState.WALL:
+			continue
+		if cell.state == GameConstants.TileState.SHIFTER:
+			continue
+		if not solved_reference.has(coord):
+			continue
+		var expected = int(solved_reference[coord])
+		if expected < 0:
+			continue
+		if int(cell.state) != expected:
+			wrong.append({"type": "fix_cell", "coord": coord, "state": expected})
+	return wrong
 
 static func pick_hint(
 	board_cells: Dictionary,
@@ -35,6 +62,10 @@ static func pick_hint(
 	grid_size: Vector2i = Vector2i.ZERO,
 	prefer_hidden_pool: bool = false
 ) -> Variant:
+	# Highest priority: correct a wrongly filled cell.
+	var wrong := find_wrong_cells(board_cells, solved_reference)
+	if not wrong.is_empty():
+		return wrong.pick_random()
 	var candidates: Array = _collect_candidates(
 		board_cells,
 		active_constraints,

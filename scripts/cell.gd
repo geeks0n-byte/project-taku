@@ -122,14 +122,25 @@ func _perform_action():
 	if state == GameConstants.TileState.SHIFTER:
 		shifter_toggled.emit(coord)
 	else:
+		var cycle: Array[int] = allowed_cycle_tiles
+		if cycle.is_empty():
+			cycle = [
+				GameConstants.TileState.YELLOW,
+				GameConstants.TileState.BLUE,
+				GameConstants.TileState.JOKER,
+			]
 		if state == GameConstants.TileState.EMPTY:
-			state = allowed_cycle_tiles[0]
+			state = cycle[0]
 		else:
-			var current_idx = allowed_cycle_tiles.find(state)
-			if current_idx == -1 or current_idx == allowed_cycle_tiles.size() - 1:
+			var current_idx := -1
+			for i in range(cycle.size()):
+				if int(cycle[i]) == int(state):
+					current_idx = i
+					break
+			if current_idx == -1 or current_idx == cycle.size() - 1:
 				state = GameConstants.TileState.EMPTY
 			else:
-				state = allowed_cycle_tiles[current_idx + 1]
+				state = int(cycle[current_idx + 1])
 
 		update_visuals()
 		cell_clicked.emit(coord)
@@ -139,13 +150,10 @@ func update_visuals():
 		lock_icon.visible = is_locked and state != GameConstants.TileState.WALL
 
 	if link_highlight:
-		# Tutorial white mask: empties, locked clues, and active purple hoppers.
-		# Hide once the player places a normal color on an empty cell.
-		var show_guide := guide_active and (
-			state == GameConstants.TileState.EMPTY
-			or is_locked
-			or state == GameConstants.TileState.SHIFTER
-		)
+		# Tutorial white mask stays on while the director marks this cell —
+		# including empties, locked tiles, shifters, and wrong practice fills
+		# the player still needs to keep tapping.
+		var show_guide := guide_active and state != GameConstants.TileState.WALL
 		if show_guide:
 			var alpha: float = (
 				float(link_highlight.color.a) if link_highlight.visible else GUIDE_ALPHA_MAX
@@ -264,11 +272,7 @@ func clear_highlight():
 func _start_guide_breathe() -> void:
 	if link_highlight == null or not guide_active:
 		return
-	if (
-		state != GameConstants.TileState.EMPTY
-		and not is_locked
-		and state != GameConstants.TileState.SHIFTER
-	):
+	if state == GameConstants.TileState.WALL:
 		return
 	_stop_guide_breathe()
 	link_highlight.visible = true
@@ -285,11 +289,7 @@ func _stop_guide_breathe() -> void:
 	if _guide_breathe_tween:
 		_guide_breathe_tween.kill()
 		_guide_breathe_tween = null
-	if link_highlight and guide_active and (
-		state == GameConstants.TileState.EMPTY
-		or is_locked
-		or state == GameConstants.TileState.SHIFTER
-	):
+	if link_highlight and guide_active and state != GameConstants.TileState.WALL:
 		link_highlight.color = GUIDE_COLOR
 
 func _start_focus_breathe() -> void:

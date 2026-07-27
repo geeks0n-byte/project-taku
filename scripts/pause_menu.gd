@@ -6,8 +6,9 @@ signal settings_pressed
 signal auto_win_pressed
 signal quit_pressed
 
+const _TILE_TEX := preload("res://resources/buttons/button_tile_gray_dark.svg")
+const MENU_BTN_SIZE := Vector2(720, 150)
 const MENU_BTN_FONT := 64
-const MENU_BTN_OUTLINE := GameConstants.MENU_TEXT_OUTLINE
 
 @onready var resume_btn: Button = $CenterContainer/VBoxContainer/ResumeButton
 @onready var restart_btn: Button = $CenterContainer/VBoxContainer/RestartButton
@@ -40,7 +41,6 @@ func _ready() -> void:
 func _mount_header() -> void:
 	if not title_label:
 		return
-	# Match Options / other screen headers (72), not the smaller default 64.
 	title_label.set_meta("_screen_header_font_size", 72)
 	title_label.set_meta("_screen_header_outline", GameConstants.SCREEN_HEADER_OUTLINE)
 	HudLayout.mount_screen_header(self, title_label)
@@ -57,53 +57,58 @@ func _fit_menu_buttons() -> void:
 	if quit_btn:
 		quit_btn.text = "UI_MAIN_MENU"
 	for btn in [resume_btn, restart_btn, settings_btn, quit_btn, auto_win_btn]:
-		_apply_pause_menu_button(btn)
+		_apply_pause_button(btn)
 	if title_label:
 		title_label.set_meta("_screen_header_font_size", 72)
 		title_label.set_meta("_screen_header_outline", GameConstants.SCREEN_HEADER_OUTLINE)
 		HudLayout.apply_screen_header_style(title_label)
 
-## Text-only rows matching the updated main menu / options style.
-func _apply_pause_menu_button(button: Button) -> void:
+## Gray tile chrome like Options, fixed equal size for every row.
+func _apply_pause_button(button: Button) -> void:
+	if not button or not button.visible:
+		return
+	_clear_pause_icon(button)
+	button.flat = false
+	_apply_button_tile_styles(button)
+	button.custom_minimum_size = MENU_BTN_SIZE
+	button.add_theme_color_override("font_outline_color", Color.BLACK)
+	button.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
+	button.autowrap_mode = TextServer.AUTOWRAP_OFF
+	button.clip_text = false
+	HudLayout.fit_text_button(button, MENU_BTN_FONT, 32)
+
+func _apply_button_tile_styles(button: Button) -> void:
 	if not button:
 		return
-	var empty := StyleBoxEmpty.new()
 	for style_name in ["normal", "pressed", "hover", "disabled", "focus"]:
-		button.add_theme_stylebox_override(style_name, empty)
-	button.flat = true
-	var is_resume: bool = button == resume_btn
-	var is_main_menu: bool = button == quit_btn
-	var row_h := 180.0 if is_resume else 150.0
-	var row_w := 780.0 if is_resume else 720.0
-	var font_size := 76 if is_resume else MENU_BTN_FONT
-	var min_font := 36 if is_resume else 32
-	button.custom_minimum_size = Vector2(row_w, row_h)
-	button.add_theme_constant_override("outline_size", MENU_BTN_OUTLINE + (2 if is_resume else 0))
-	button.add_theme_color_override("font_outline_color", Color.BLACK)
-	if is_main_menu:
-		# Keep MAIN MENU on one line.
-		button.autowrap_mode = TextServer.AUTOWRAP_OFF
-		button.clip_text = false
-		HudLayout.apply_locale_font_to_control(button)
-		var font: Font = HudLayout.ui_font()
-		var display := String(TranslationServer.translate(button.text))
-		var fitted := HudLayout.scaled_font_size(font_size)
-		var min_font_size := HudLayout.scaled_font_size(min_font)
-		var target_w := maxf(40.0, button.custom_minimum_size.x - 28.0)
-		while fitted > min_font_size:
-			var measured := font.get_string_size(display, HORIZONTAL_ALIGNMENT_CENTER, -1, fitted)
-			if measured.x <= target_w + 2.0:
-				break
-			fitted -= 2
-		button.add_theme_font_size_override("font_size", fitted)
-	else:
-		HudLayout.fit_text_button(button, font_size, min_font)
+		var box := StyleBoxTexture.new()
+		box.texture = _TILE_TEX
+		box.texture_margin_left = 16.0
+		box.texture_margin_top = 16.0
+		box.texture_margin_right = 16.0
+		box.texture_margin_bottom = 16.0
+		box.content_margin_left = 8.0
+		box.content_margin_top = 8.0
+		box.content_margin_right = 8.0
+		box.content_margin_bottom = 8.0
+		if style_name == "hover":
+			box.modulate_color = Color(1.2, 1.2, 1.2, 1.0)
+		elif style_name == "pressed":
+			box.modulate_color = Color(0.8, 0.8, 0.8, 1.0)
+		elif style_name == "disabled":
+			box.modulate_color = Color(0.55, 0.55, 0.55, 1.0)
+		button.add_theme_stylebox_override(style_name, box)
+
+func _clear_pause_icon(button: Button) -> void:
+	var host := button.get_node_or_null("PauseIcon") as TextureRect
+	if host:
+		host.queue_free()
 
 func set_restart_label_key(key: String) -> void:
 	_restart_label_key = key if not key.is_empty() else "UI_NEW_LAYOUT"
 	if restart_btn:
 		restart_btn.text = _restart_label_key
-		_apply_pause_menu_button(restart_btn)
+		_apply_pause_button(restart_btn)
 
 func _on_language_changed() -> void:
 	_fit_menu_buttons()
@@ -113,6 +118,7 @@ func set_debug_tools_visible(visible_state: bool) -> void:
 		auto_win_btn.visible = visible_state
 	if auto_lose_btn:
 		auto_lose_btn.visible = false
+	_fit_menu_buttons()
 
 func _on_resume() -> void:
 	resume_pressed.emit()

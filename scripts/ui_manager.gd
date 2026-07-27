@@ -68,6 +68,7 @@ var _htp_header: Label
 var _tutorial_tools_locked: bool = false
 var _highlighted_hud_button: String = ""
 var _tutorial_status_body: String = ""
+var _tutorial_mode: bool = false
 ## Tutorial levels: reset restarts the board; other levels: new puzzle.
 var _reset_is_restart: bool = false
 const _ICON_RESET: Texture2D = preload("res://resources/icons/icon_reset.svg")
@@ -215,8 +216,7 @@ func _on_play_again_pressed() -> void:
 	play_again_requested.emit()
 
 func _on_main_menu_pressed() -> void:
-	get_tree().paused = false
-	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")
 
 func update_undo_redo_buttons(can_undo: bool, can_redo: bool) -> void:
 	if _tutorial_tools_locked and _highlighted_hud_button != "undo" and _highlighted_hud_button != "redo":
@@ -313,10 +313,17 @@ func set_tutorial_tools_locked(locked: bool) -> void:
 
 func highlight_hud_button(button_id: String) -> void:
 	_highlighted_hud_button = button_id
+	# While teaching Reset, show the campaign (random/new-puzzle) icon; otherwise
+	# restore the normal reset/restart glyph as soon as focus leaves Reset.
+	if button_id == "reset":
+		_set_reset_button_texture(_ICON_RANDOM)
+	else:
+		_apply_reset_button_icon()
 	_apply_tutorial_tool_state()
 
 func clear_hud_button_highlight() -> void:
 	_highlighted_hud_button = ""
+	_apply_reset_button_icon()
 	_apply_tutorial_tool_state()
 
 ## Tutorial: reset icon + restart confirm. Campaign/other: random icon + new puzzle.
@@ -325,11 +332,14 @@ func set_reset_mode_restart(is_restart: bool) -> void:
 	_apply_reset_button_icon()
 
 func _apply_reset_button_icon() -> void:
+	_set_reset_button_texture(_ICON_RESET if _reset_is_restart else _ICON_RANDOM)
+
+func _set_reset_button_texture(tex: Texture2D) -> void:
 	if not reset_button:
 		return
 	var icon := reset_button.get_node_or_null("IconContainer/Icon") as TextureRect
 	if icon:
-		icon.texture = _ICON_RESET if _reset_is_restart else _ICON_RANDOM
+		icon.texture = tex
 
 func get_hud_button(button_id: String) -> Button:
 	match button_id:
@@ -465,23 +475,30 @@ func set_top_bar_visible(should_show: bool) -> void:
 	if counter_container:
 		counter_container.visible = should_show
 
+func set_tutorial_mode(active: bool) -> void:
+	_tutorial_mode = active
+	if not active:
+		_tutorial_status_body = ""
+	_refresh_status_label()
+
 func _refresh_status_label() -> void:
 	if not status_label:
 		return
 	status_label.modulate = Color.WHITE
 	HudLayout.apply_status_font(status_label, GameConstants.HUD_STATUS_FONT_SIZE)
 	var lines: PackedStringArray = []
-	if not _tutorial_status_body.is_empty():
-		lines.append(HudLayout.break_after_sentences(_tutorial_status_body))
-	for e in _status_error_keys:
-		var translated := HudLayout.translate_status_text(str(e))
-		if not translated.is_empty():
-			lines.append(translated)
-	# Default fill prompt only when there is no tutorial tip and no errors.
-	if lines.is_empty():
+	# Tutorials: tip only — hide default fill prompt and validation noise.
+	if _tutorial_mode:
+		if not _tutorial_status_body.is_empty():
+			lines.append(HudLayout.break_after_sentences(_tutorial_status_body))
+	elif not _status_error_keys.is_empty():
+		for e in _status_error_keys:
+			var translated := HudLayout.translate_status_text(str(e))
+			if not translated.is_empty():
+				lines.append(translated)
+	else:
 		lines.append(HudLayout.break_after_sentences(tr("MSG_FILL_EMPTY")))
 	status_label.text = "[center]" + "\n".join(lines) + "[/center]"
-	# Keep status visible once content is driven by gameplay / tutorial.
 	status_label.visible = true
 
 func set_overlays_hidden() -> void:

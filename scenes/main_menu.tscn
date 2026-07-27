@@ -146,7 +146,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="UILayer" type="CanvasLayer" parent="." unique_id=116812140]
-layer = 2
+layer = 0
 
 [node name="CenterContainer" type="CenterContainer" parent="UILayer" unique_id=669949293]
 anchors_preset = 15
@@ -241,83 +241,59 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 12.0
-offset_top = -210.0
+offset_top = -396.0
 offset_right = -12.0
-offset_bottom = -152.0
+offset_bottom = -300.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_constants/separation = 8
 alignment = 1
+z_index = 8
 
 [node name="DebugStarButton" type="Button" parent="UILayer/DebugBar" unique_id=1125842216]
 auto_translate_mode = 2
-custom_minimum_size = Vector2(160, 52)
+custom_minimum_size = Vector2(96, 96)
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 14
+size_flags_horizontal = 0
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-text = "STAR"
-
-[node name="DebugCometButton" type="Button" parent="UILayer/DebugBar" unique_id=1125842217]
-auto_translate_mode = 2
-custom_minimum_size = Vector2(160, 52)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 14
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-text = "COMET"
 
 [node name="DebugAsteroidButton" type="Button" parent="UILayer/DebugBar" unique_id=1125842218]
 auto_translate_mode = 2
-custom_minimum_size = Vector2(160, 52)
+custom_minimum_size = Vector2(96, 96)
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 14
+size_flags_horizontal = 0
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-text = "AST"
 
 [node name="DebugAsteroidCloudButton" type="Button" parent="UILayer/DebugBar" unique_id=1125842219]
 auto_translate_mode = 2
-custom_minimum_size = Vector2(160, 52)
+custom_minimum_size = Vector2(96, 96)
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 14
+size_flags_horizontal = 0
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-text = "CLOUD"
+
+[node name="DebugCometButton" type="Button" parent="UILayer/DebugBar" unique_id=1125842217]
+auto_translate_mode = 2
+custom_minimum_size = Vector2(96, 96)
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 
 [node name="DebugCometShowerButton" type="Button" parent="UILayer/DebugBar" unique_id=1125842220]
 auto_translate_mode = 2
-custom_minimum_size = Vector2(160, 52)
+custom_minimum_size = Vector2(96, 96)
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 14
+size_flags_horizontal = 0
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-text = "SHOWER"
 
 [node name="OverlayBlocker" type="Panel" parent="UILayer" unique_id=1317697056]
 visible = false
