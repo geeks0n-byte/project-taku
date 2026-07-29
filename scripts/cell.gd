@@ -29,7 +29,9 @@ const ERROR_BORDER_COLOR := Color.RED
 
 var _guide_breathe_tween: Tween
 var _focus_breathe_tween: Tween
+var _shake_tween: Tween
 var _focus_border_alpha: float = 1.0
+var _shake_rest_position: Vector2 = Vector2.ZERO
 
 @export var tex_empty: Texture2D = preload("res://resources/tiles/tile_empty.svg")
 @export var tex_empty_editor: Texture2D = preload("res://resources/tiles/tile_empty_editor.svg")
@@ -232,6 +234,26 @@ func set_error_highlight():
 	if error_highlight:
 		error_highlight.visible = true
 		error_highlight.queue_redraw()
+
+## Short rumble along the hop axis when a Purple move is blocked.
+func play_blocked_shake() -> void:
+	if _shake_tween and _shake_tween.is_valid():
+		_shake_tween.kill()
+		position = _shake_rest_position
+	_shake_rest_position = position
+	# Shake along intended hop direction (horizontal vs vertical).
+	var axis := Vector2(1.0, 0.0)
+	if abs(shifter_direction.y) > abs(shifter_direction.x):
+		axis = Vector2(0.0, 1.0)
+	_shake_tween = create_tween()
+	var amp := 7.0
+	for i in 5:
+		var dir := 1.0 if (i % 2) == 0 else -1.0
+		_shake_tween.tween_property(
+			self, "position", _shake_rest_position + axis * (dir * amp), 0.035
+		).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		amp *= 0.65
+	_shake_tween.tween_property(self, "position", _shake_rest_position, 0.04)
 
 func set_guide_highlight(enabled: bool) -> void:
 	guide_active = enabled

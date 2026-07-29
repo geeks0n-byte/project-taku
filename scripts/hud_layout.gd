@@ -577,6 +577,38 @@ static func stop_toggle_mask_breathe(button: Button) -> void:
 	if mask:
 		mask.modulate = Color.WHITE
 
+## Soft scale + brightness pulse for tutorial NEXT (clearer than a white mask).
+static func start_button_attention_pulse(button: Button) -> void:
+	if not button:
+		return
+	stop_button_attention_pulse(button)
+	_sync_button_attention_pivot(button)
+	button.scale = Vector2.ONE
+	button.modulate = Color.WHITE
+	var tween := button.create_tween().set_loops()
+	tween.tween_property(button, "scale", Vector2(1.12, 1.12), 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.parallel().tween_property(
+		button, "modulate", Color(1.22, 1.22, 1.1, 1.0), 0.5
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(button, "scale", Vector2.ONE, 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.parallel().tween_property(button, "modulate", Color.WHITE, 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	button.set_meta("_attention_pulse", tween)
+
+static func stop_button_attention_pulse(button: Button) -> void:
+	if not button:
+		return
+	if button.has_meta("_attention_pulse"):
+		var tween: Tween = button.get_meta("_attention_pulse")
+		if tween:
+			tween.kill()
+		button.remove_meta("_attention_pulse")
+	button.scale = Vector2.ONE
+	button.modulate = Color.WHITE
+
+static func _sync_button_attention_pivot(button: Button) -> void:
+	if button:
+		button.pivot_offset = button.size * 0.5
+
 static func refresh_button_icon_modulate(button: Button) -> void:
 	if not button:
 		return

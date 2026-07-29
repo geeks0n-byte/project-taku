@@ -1,7 +1,7 @@
 class_name HowToPlayContent
 extends RefCounted
 
-const PAGE_COUNT := 5
+const PAGE_COUNT := 6
 
 static func get_rules_text(force_english: bool = false) -> String:
 	return get_page_text(0, force_english)
@@ -16,7 +16,9 @@ static func get_page_title_key(page_index: int) -> String:
 		2:
 			return "HTP_GREEN_TITLE"
 		3:
-			return "HTP_SPECIALS_TITLE"
+			return "HTP_PURPLE_TITLE"
+		4:
+			return "HTP_LINKS_TITLE"
 		_:
 			return "HTP_STARS_TITLE"
 
@@ -30,7 +32,9 @@ static func get_page_text(page_index: int, force_english: bool = false) -> Strin
 		2:
 			return _page_green(force_english)
 		3:
-			return _page_specials(force_english)
+			return _page_purple(force_english)
+		4:
+			return _page_links(force_english)
 		_:
 			return _page_stars(force_english)
 
@@ -47,8 +51,6 @@ static func _page_goal(force_english: bool) -> String:
 		"• %s" % _t("HTP_GOAL_TAP", force_english) % [img_y, img_b, img_g],
 		"",
 		"• %s" % _t("HTP_GOAL_WIN", force_english),
-		"",
-		"• %s" % _t("HTP_GOAL_TIMER", force_english),
 		"[/font_size]",
 	]
 	return "\n".join(lines)
@@ -101,9 +103,8 @@ static func _page_green(force_english: bool) -> String:
 	]
 	return "\n".join(lines)
 
-static func _page_specials(force_english: bool) -> String:
+static func _page_purple(force_english: bool) -> String:
 	var img_s := _tile_img(GameConstants.TILE_SHIFTER)
-	var img_lock := "[img height=80 region=16,0,96,128]%s[/img]" % GameConstants.TILE_LOCK
 	var shifter_arrows := "".join([
 		_tile_img(GameConstants.TILE_SHIFTER_UP, 64),
 		_tile_img(GameConstants.TILE_SHIFTER_DOWN, 64),
@@ -115,7 +116,23 @@ static func _page_specials(force_english: bool) -> String:
 		"[font_size=%d]" % body_sz,
 		"• %s %s" % [img_s, _t("HTP_SHIFTER_TILES_DESC", force_english) % shifter_arrows],
 		"",
-		"• %s [b]%s[/b] %s" % [img_lock, _t("HTP_LOCKS_LABEL", force_english), _t("HTP_LOCKS_DESC", force_english)],
+		"• %s" % _t("HTP_SHIFTER_BLOCK_NOTE", force_english),
+		"",
+		"• %s" % _t("HTP_SHIFTER_BALANCE_NOTE", force_english),
+		"[/font_size]",
+	]
+	return "\n".join(lines)
+
+static func _page_links(force_english: bool) -> String:
+	var img_lock := "[img height=80 region=16,0,96,128]%s[/img]" % GameConstants.TILE_LOCK
+	var body_sz := _body_size()
+	var lines: PackedStringArray = [
+		"[font_size=%d]" % body_sz,
+		"• %s [b]%s[/b] %s" % [
+			img_lock,
+			_t("HTP_LOCKS_LABEL", force_english),
+			_t("HTP_LOCKS_DESC", force_english),
+		],
 		"",
 		"• %s" % _t("HTP_EQUALS_RULE", force_english),
 		"",
@@ -130,11 +147,20 @@ static func _page_stars(force_english: bool) -> String:
 		"[font_size=%d]" % body_sz,
 		"• %s" % _t("HTP_STARS_INTRO", force_english),
 		"",
-		"• [b]%s[/b] %s" % [_t("HTP_STARS_TIME_LABEL", force_english), _t("HTP_STARS_TIME_DESC", force_english)],
+		"• [b]%s[/b] %s" % [
+			_t("HTP_STARS_TIME_LABEL", force_english),
+			_t("HTP_STARS_TIME_DESC", force_english),
+		],
 		"",
-		"• [b]%s[/b] %s" % [_t("HTP_STARS_GREEN_LABEL", force_english), _t("HTP_STARS_GREEN_DESC", force_english)],
+		"• [b]%s[/b] %s" % [
+			_t("HTP_STARS_GREEN_LABEL", force_english),
+			_t("HTP_STARS_GREEN_DESC", force_english),
+		],
 		"",
-		"• [b]%s[/b] %s" % [_t("HTP_STARS_MOVES_LABEL", force_english), _t("HTP_STARS_MOVES_DESC", force_english)],
+		"• [b]%s[/b] %s" % [
+			_t("HTP_STARS_MOVES_LABEL", force_english),
+			_t("HTP_STARS_MOVES_DESC", force_english),
+		],
 		"[/font_size]",
 	]
 	return "\n".join(lines)

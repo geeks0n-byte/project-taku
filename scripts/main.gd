@@ -181,6 +181,9 @@ func _bind_submanager_signals():
 func _on_invalid_move_attempted(msg: String):
 	if not is_game_active or is_paused:
 		return
+	if tutorial_director and tutorial_director.is_active():
+		if tutorial_director.on_invalid_move(msg):
+			return
 	var results = PuzzleValidator.validate_board(
 		board_manager.board_cells,
 		board_manager.cached_lines,

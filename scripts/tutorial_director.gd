@@ -98,6 +98,7 @@ func stop() -> void:
 		board_manager.restore_cell_cycle_tiles(available_tiles)
 	if _next_button:
 		_next_button.visible = false
+		HudLayout.stop_button_attention_pulse(_next_button)
 		HudLayout.stop_toggle_mask_breathe(_next_button)
 		HudLayout.apply_toggle_active_mask(_next_button, false)
 	if ui_manager:
@@ -115,11 +116,28 @@ func on_board_changed(_coord: Vector2i = Vector2i(-1, -1)) -> void:
 	if kind == "practice":
 		_update_practice_feedback(step)
 		return
+	# Free-place steps keep Next + board open together — do not freeze on tap.
+	if kind == "message" and bool(step.get("free_place", false)):
+		return
 	if _awaiting_next:
 		return
 	if _discover_active:
 		return
 	_check_wait_condition()
+
+## Returns true when the tutorial consumed the invalid-move feedback.
+func on_invalid_move(msg: String) -> bool:
+	if not _active or _solved_complete:
+		return false
+	var step := _current_step()
+	if String(step.get("type", "")) != "practice":
+		return false
+	if not bool(step.get("wait_blocked_shifter", false)):
+		return false
+	if msg != "ERR_SHIFTER_BLOCKED":
+		return false
+	_on_practice_success(step)
+	return true
 
 ## After PuzzleValidator runs — used by discover_rules to teach on first break.
 func on_validation_result(results: Dictionary) -> void:
@@ -249,7 +267,12 @@ func _apply_step(step: Dictionary) -> void:
 	_suppress_validation_errors = bool(step.get("suppress_errors", false))
 	match kind:
 		"message":
+			var allow_board := bool(step.get("allow_board", false))
+			var free_place := bool(step.get("free_place", false))
+			# Next and board interaction are mutually exclusive, except free_place practice.
 			var show_next := bool(step.get("show_next", true))
+			if allow_board and not free_place:
+				show_next = false
 			_show_message_from_step(step, show_next)
 			var has_focus := (
 				step.has("mask")
@@ -259,11 +282,12 @@ func _apply_step(step: Dictionary) -> void:
 			)
 			if has_focus:
 				_apply_focus(step)
+			elif show_next and not free_place:
+				_freeze_board_input()
 			else:
 				_clear_board_gates(false)
-			if bool(step.get("allow_board", false)):
-				if board_manager:
-					board_manager.clear_click_whitelist()
+			if (allow_board or free_place) and board_manager:
+				board_manager.clear_click_whitelist()
 		"apply_locks":
 			if board_manager and step.has("layout"):
 				board_manager.apply_locked_layout(step["layout"])
@@ -276,13 +300,16 @@ func _apply_step(step: Dictionary) -> void:
 				or step.has("border")
 			):
 				_apply_focus(step)
-			else:
-				_clear_board_gates(false)
+			_freeze_board_input()
 		"rebuild_board":
-			# Show the tip on the current board; swap only after Next.
+			# Teaser on the current board; swap only after Next.
 			_pending_rebuild = step.has("layout")
-			_show_message_from_step(step, true)
+			var pending_key := String(step.get("pending_key", ""))
+			if pending_key.is_empty():
+				pending_key = String(step.get("text_key", ""))
+			_show_message_key(pending_key, step.get("icons", []), true, false)
 			_clear_board_gates(false)
+			_freeze_board_input()
 		"discover_rules":
 			_discover_active = true
 			_block_solve = true
@@ -305,9 +332,7 @@ func _apply_step(step: Dictionary) -> void:
 			var hud_next := bool(step.get("show_next", true))
 			_show_message_from_step(step, hud_next)
 			_clear_board_gates(false)
-			# Freeze board while teaching a HUD button.
-			if board_manager:
-				board_manager.set_click_whitelist([])
+			_freeze_board_input()
 			refresh_tool_gates()
 		"wait_cell", "wait_shifter", "wait_full_valid":
 			_show_message_from_step(step, false)
@@ -366,6 +391,10 @@ func _clear_board_gates(restore_cycles: bool) -> void:
 	if restore_cycles:
 		board_manager.restore_cell_cycle_tiles(available_tiles)
 
+func _freeze_board_input() -> void:
+	if board_manager:
+		board_manager.set_click_whitelist([])
+
 func _apply_focus(step: Dictionary) -> void:
 	if not board_manager:
 		return
@@ -387,18 +416,22 @@ func _apply_focus(step: Dictionary) -> void:
 			borders.append(from_c)
 	board_manager.set_guide_cells(masks)
 	board_manager.set_focus_cells(borders)
-	# Gate clicks: practice → only highlighted cells; message → freeze board.
+	# Gate clicks: practice → only highlighted cells; Next-only steps → freeze.
 	var kind := String(step.get("type", ""))
-	if kind == "practice":
+	if _awaiting_next:
+		board_manager.set_click_whitelist([])
+	elif kind == "practice":
 		var allowed: Array = masks.duplicate() if not masks.is_empty() else []
 		if allowed.is_empty() and step.has("coord"):
 			allowed = [step["coord"]]
 		# Shifter hops from the active purple cell — allow that too.
-		if step.get("wait_shifter", false) and step.has("from"):
+		if (
+			(step.get("wait_shifter", false) or step.get("wait_blocked_shifter", false))
+			and step.has("from")
+		):
 			allowed.append(step["from"])
 		board_manager.set_click_whitelist(allowed)
 	elif kind == "message":
-		# Read-only tip: no accidental fills while reading.
 		board_manager.set_click_whitelist([])
 	else:
 		board_manager.clear_click_whitelist()
@@ -414,6 +447,13 @@ func _update_practice_feedback(step: Dictionary) -> void:
 		return
 	var cell = board_manager.board_cells[coord]
 	var target := int(step.get("state", -999))
+
+	if step.get("wait_blocked_shifter", false):
+		# Success comes from on_invalid_move when the blocked hop is attempted.
+		_practice_succeeded = false
+		_show_message_from_step(step, false)
+		_apply_focus(step)
+		return
 
 	if step.get("wait_shifter", false):
 		if cell.state == GameConstants.TileState.SHIFTER:
@@ -458,13 +498,20 @@ func _on_practice_success(step: Dictionary) -> void:
 		return
 	_practice_succeeded = true
 	# Lock input on success while we show feedback.
-	if board_manager:
-		board_manager.set_click_whitelist([])
+	_freeze_board_input()
 	var success_key := String(step.get("success_key", ""))
 	var require_next := bool(step.get("require_next_after_success", false))
 	if not success_key.is_empty():
-		_show_message_key(success_key, step.get("success_icons", []), require_next)
+		_show_message_key(
+			success_key,
+			step.get("success_icons", []),
+			require_next,
+			false
+		)
+	elif require_next:
+		_set_next_visible(true)
 	if require_next:
+		_freeze_board_input()
 		return
 	# Deferred so a full-board solve can mark _solved_complete first.
 	call_deferred("_advance_after_practice")
@@ -511,16 +558,16 @@ func _check_wait_condition() -> void:
 			_set_next_visible(true)
 
 func _show_message_from_step(step: Dictionary, show_next: bool) -> void:
-	var append_next_prompt := (
-		show_next
-		and String(step.get("type", "")) == "message"
-		and not bool(step.get("allow_board", false))
-	)
+	var allow_board := bool(step.get("allow_board", false))
+	var free_place := bool(step.get("free_place", false))
+	# Never show Next while the board is free to tap — except free_place practice.
+	if allow_board and show_next and not free_place:
+		show_next = false
 	_show_message_key(
 		String(step.get("text_key", "")),
 		step.get("icons", []),
 		show_next,
-		append_next_prompt
+		false
 	)
 
 func _show_message_key(
@@ -535,11 +582,8 @@ func _show_message_key(
 	_last_status_append_next_prompt = append_next_prompt
 	var text := tr(key) if not key.is_empty() else ""
 	text = _apply_icon_placeholders(text, _last_status_icons)
-	# Strip leftover inline prompts only when we are not adding our own.
-	if not append_next_prompt:
-		text = _strip_inline_next_prompt(text)
-	elif not tr("TUT_TAP_NEXT").is_empty():
-		text += "\n" + tr("TUT_TAP_NEXT")
+	# NEXT button pulse is enough — never append "Tap Next" copy.
+	text = _strip_inline_next_prompt(text)
 	if ui_manager:
 		ui_manager.show_tutorial_status(text)
 	_set_next_visible(show_next)
@@ -602,19 +646,32 @@ func _set_next_visible(show_next: bool) -> void:
 			_next_button.text = tr("UI_NEXT")
 			HudLayout.apply_nav_button(_next_button)
 			_position_next_button()
-			# Only NEXT breathes while it is the required advance action.
+			var step := _current_step()
+			var free_place := (
+				String(step.get("type", "")) == "message"
+				and bool(step.get("free_place", false))
+			)
+			var teaching_hud := String(step.get("type", "")) == "hud_button"
 			if board_manager:
 				board_manager.clear_guide_cells()
 				board_manager.clear_focus_cells()
-				board_manager.set_click_whitelist([])
-			_highlight_button_id = ""
-			if ui_manager:
-				ui_manager.clear_hud_button_highlight()
-			HudLayout.apply_toggle_active_mask(
-				_next_button, true, GameConstants.TOGGLE_MASK_WHITE
-			)
-			HudLayout.start_toggle_mask_breathe(_next_button)
+				if free_place:
+					# Keep placing freely while Next is available.
+					board_manager.clear_click_whitelist()
+				else:
+					board_manager.set_click_whitelist([])
+			# Keep HUD teach highlight; only clear it on non-HUD Next tips.
+			if not teaching_hud:
+				_highlight_button_id = ""
+				if ui_manager:
+					ui_manager.clear_hud_button_highlight()
+			else:
+				refresh_tool_gates()
+			HudLayout.stop_toggle_mask_breathe(_next_button)
+			HudLayout.apply_toggle_active_mask(_next_button, false)
+			HudLayout.start_button_attention_pulse(_next_button)
 		else:
+			HudLayout.stop_button_attention_pulse(_next_button)
 			HudLayout.stop_toggle_mask_breathe(_next_button)
 			HudLayout.apply_toggle_active_mask(_next_button, false)
 
@@ -638,10 +695,29 @@ func _on_next_pressed() -> void:
 		_execute_pending_rebuild()
 		return
 	var step := _current_step()
+	if String(step.get("type", "")) == "message" and bool(step.get("free_place", false)):
+		_clear_unlocked_player_tiles()
 	if String(step.get("type", "")) == "practice" and _practice_succeeded:
 		_advance()
 		return
 	_advance()
+
+func _clear_unlocked_player_tiles() -> void:
+	if not board_manager:
+		return
+	for coord in board_manager.board_cells:
+		var cell = board_manager.board_cells[coord]
+		if cell == null or cell.is_locked:
+			continue
+		if cell.state == GameConstants.TileState.EMPTY:
+			continue
+		if cell.state == GameConstants.TileState.SHIFTER:
+			continue
+		cell.state = GameConstants.TileState.EMPTY
+		if cell.has_method("update_visuals"):
+			cell.update_visuals()
+	board_manager.clear_highlights()
+	board_manager.trigger_redraw()
 
 func _execute_pending_rebuild() -> void:
 	_pending_rebuild = false
@@ -664,6 +740,7 @@ func _execute_pending_rebuild() -> void:
 		_apply_focus(step)
 	else:
 		_clear_board_gates(false)
+	_freeze_board_input()
 	if bool(step.get("allow_board", false)) and board_manager:
 		board_manager.clear_click_whitelist()
 
@@ -692,8 +769,8 @@ func _ensure_next_button() -> void:
 func _position_next_button() -> void:
 	if not _next_button:
 		return
-	# Larger than standard nav buttons; sit above the ad banner.
-	var btn_size := Vector2(300, 120)
+	# Large tutorial CTA; sit above the ad banner.
+	var btn_size := Vector2(420, 150)
 	var half_w := btn_size.x * 0.5
 	var base_bottom := 480.0 + GameConstants.AD_BANNER_RESERVE
 	var bottom_margin := base_bottom
@@ -716,4 +793,5 @@ func _position_next_button() -> void:
 	_next_button.offset_top = -(btn_size.y + bottom_margin)
 	_next_button.offset_bottom = -bottom_margin
 	_next_button.z_index = 8
-	_next_button.add_theme_font_size_override("font_size", 28)
+	_next_button.add_theme_font_size_override("font_size", 40)
+	_next_button.pivot_offset = btn_size * 0.5

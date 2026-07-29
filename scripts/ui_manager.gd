@@ -366,6 +366,10 @@ func _apply_tutorial_tool_state() -> void:
 			continue
 		var is_focus: bool = _highlighted_hud_button == id
 		HudLayout.apply_toggle_active_mask(button, is_focus, GameConstants.TOGGLE_MASK_WHITE)
+		if is_focus:
+			HudLayout.start_toggle_mask_breathe(button)
+		else:
+			HudLayout.stop_toggle_mask_breathe(button)
 		# Reset and How to Play stay usable during tutorials.
 		if id == "reset" or id == "how_to_play":
 			button.disabled = false

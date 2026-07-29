@@ -76,39 +76,63 @@ static func _level_1() -> Array:
 		Vector2i(1, 3), Vector2i(2, 3),
 	]
 
-	# Part 2a board: Green behavior and one-Green-per-line.
+	# Part 2a board: Green behavior — sparse fixed Y/B, only what the lessons need.
+	# Greens at (3,0), (2,1), (0,3). Row 1 teaches Rule of Two; row 2 odd balance.
 	var green_layout := {
-		Vector2i(0, 0): y, Vector2i(1, 0): b, Vector2i(2, 0): y, Vector2i(3, 0): g, Vector2i(4, 0): e,
-		Vector2i(0, 1): b, Vector2i(1, 1): y, Vector2i(2, 1): g, Vector2i(3, 1): e, Vector2i(4, 1): y,
+		Vector2i(0, 0): e, Vector2i(1, 0): e, Vector2i(2, 0): e, Vector2i(3, 0): g, Vector2i(4, 0): e,
+		Vector2i(0, 1): e, Vector2i(1, 1): y, Vector2i(2, 1): g, Vector2i(3, 1): e, Vector2i(4, 1): y,
 		Vector2i(0, 2): y, Vector2i(1, 2): e, Vector2i(2, 2): b, Vector2i(3, 2): y, Vector2i(4, 2): b,
-		Vector2i(0, 3): g, Vector2i(1, 3): b, Vector2i(2, 3): e, Vector2i(3, 3): b, Vector2i(4, 3): y,
-		Vector2i(0, 4): b, Vector2i(1, 4): y, Vector2i(2, 4): b, Vector2i(3, 4): y, Vector2i(4, 4): e,
+		Vector2i(0, 3): g, Vector2i(1, 3): e, Vector2i(2, 3): e, Vector2i(3, 3): e, Vector2i(4, 3): e,
+		Vector2i(0, 4): e, Vector2i(1, 4): e, Vector2i(2, 4): e, Vector2i(3, 4): e, Vector2i(4, 4): e,
 	}
 	var greens_on_board := [Vector2i(3, 0), Vector2i(2, 1), Vector2i(0, 3)]
 	var row_green_dual := [Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1), Vector2i(4, 1)]
 	var row_odd_balance := [Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2), Vector2i(4, 2)]
 
-	# Part 2b board: Shifter behavior.
+	# Part 2b board: Purple (shifter) behavior — 5x5, sparse fixed tiles.
+	# Independent pairs (practice hops):
+	#   A: active (1,0) ↔ home (0,0)   horizontal
+	#   B: active (2,2) ↔ home (1,2)   horizontal
+	# Shared-cell L (block demo): horizontal + vertical share (3,1)
+	#   C: active on shared (3,1) ↔ home (2,1)   horizontal
+	#   D: active (3,2) ↔ shared home (3,1)      vertical — blocked until C moves
 	var shifter_layout := {
-		Vector2i(0, 0): e, Vector2i(1, 0): e, Vector2i(2, 0): y,
-		Vector2i(0, 1): b, Vector2i(1, 1): y, Vector2i(2, 1): g,
-		Vector2i(0, 2): y, Vector2i(1, 2): e, Vector2i(2, 2): e,
+		Vector2i(0, 0): e, Vector2i(1, 0): e, Vector2i(2, 0): e, Vector2i(3, 0): y, Vector2i(4, 0): e,
+		Vector2i(0, 1): e, Vector2i(1, 1): e, Vector2i(2, 1): e, Vector2i(3, 1): e, Vector2i(4, 1): b,
+		Vector2i(0, 2): e, Vector2i(1, 2): e, Vector2i(2, 2): e, Vector2i(3, 2): e, Vector2i(4, 2): e,
+		Vector2i(0, 3): y, Vector2i(1, 3): e, Vector2i(2, 3): e, Vector2i(3, 3): e, Vector2i(4, 3): e,
+		Vector2i(0, 4): e, Vector2i(1, 4): e, Vector2i(2, 4): b, Vector2i(3, 4): e, Vector2i(4, 4): y,
 	}
 	var shifter_pairs := [
 		{"a": Vector2i(0, 0), "b": Vector2i(1, 0), "active": Vector2i(1, 0), "home": Vector2i(0, 0)},
 		{"a": Vector2i(1, 2), "b": Vector2i(2, 2), "active": Vector2i(2, 2), "home": Vector2i(1, 2)},
+		{"a": Vector2i(2, 1), "b": Vector2i(3, 1), "active": Vector2i(3, 1), "home": Vector2i(2, 1)},
+		{"a": Vector2i(3, 1), "b": Vector2i(3, 2), "active": Vector2i(3, 2), "home": Vector2i(3, 1)},
 	]
+	var shifter_highlight := [
+		Vector2i(0, 0), Vector2i(1, 0),
+		Vector2i(1, 2), Vector2i(2, 2),
+		Vector2i(2, 1), Vector2i(3, 1), Vector2i(3, 2),
+	]
+	var shifter_shared_highlight := [Vector2i(2, 1), Vector2i(3, 1), Vector2i(3, 2)]
 
-	# Part 2c board: Constraints (= and x).
+	# Part 2c board: Constraints (= and ×) — 4x4 even, solvable with Y/B only.
+	# = links (1,0) empty to (1,1)=Y → place Yellow.
+	# × links (2,1) empty to (3,1)=Y → place Blue.
+	# Remaining empty (3,0) is for free play (solution: Blue).
 	var constraint_layout := {
 		Vector2i(0, 0): y, Vector2i(1, 0): e, Vector2i(2, 0): b, Vector2i(3, 0): e,
 		Vector2i(0, 1): b, Vector2i(1, 1): y, Vector2i(2, 1): e, Vector2i(3, 1): y,
 		Vector2i(0, 2): y, Vector2i(1, 2): b, Vector2i(2, 2): y, Vector2i(3, 2): b,
+		Vector2i(0, 3): b, Vector2i(1, 3): b, Vector2i(2, 3): y, Vector2i(3, 3): y,
 	}
 	var constraint_pairs := [
 		{"a": Vector2i(1, 0), "b": Vector2i(1, 1), "type": "equals"},
 		{"a": Vector2i(2, 1), "b": Vector2i(3, 1), "type": "not_equals"},
 	]
+	var constraint_all_links := [Vector2i(1, 0), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)]
+	var constraint_equals := [Vector2i(1, 0), Vector2i(1, 1)]
+	var constraint_not_equals := [Vector2i(2, 1), Vector2i(3, 1)]
 
 	return [
 		# Step 1 — explain locks first.
@@ -120,12 +144,13 @@ static func _level_1() -> Array:
 			"mask": locked_part1.duplicate(),
 			"red": locked_part1.duplicate(),
 		},
-		# Step 2 — tap anything (free practice on one cell to learn controls).
+		# Step 2 — free placement practice. Next stays available; clears tiles on Next.
 		{
 			"type": "message",
 			"text_key": "TUT_INTRO_TAP",
-			"show_next": true,
+			"free_place": true,
 			"allow_board": true,
+			"show_next": true,
 			"suppress_errors": true,
 		},
 		# Step 2 — Rule of Two: row 1 already has two Yellows, place Blue.
@@ -166,14 +191,10 @@ static func _level_1() -> Array:
 			"mask": [Vector2i(0, 3)],
 			"red": [Vector2i(0, 3)],
 		},
-		# --- Part 2: Green + Shifter + Constraints ---
-		{
-			"type": "message",
-			"text_key": "TUT_PART2_INTRO",
-			"show_next": true,
-		},
+		# --- Part 2: Green + Purple + Constraints ---
 		{
 			"type": "rebuild_board",
+			"pending_key": "TUT_NEXT_GREEN",
 			"text_key": "TUT_GREEN_INTRO",
 			"show_next": true,
 			"layout": green_layout,
@@ -201,7 +222,7 @@ static func _level_1() -> Array:
 		},
 		{
 			"type": "message",
-			"text_key": "TUT_GREEN_LIMIT",
+			"text_key": "TUT_GREEN_ODD_BALANCE",
 			"show_next": true,
 			"mask": row_odd_balance.duplicate(),
 			"red": row_odd_balance.duplicate(),
@@ -218,21 +239,62 @@ static func _level_1() -> Array:
 			"red": [Vector2i(1, 2)],
 		},
 		{
+			"type": "message",
+			"text_key": "TUT_GREEN_LIMIT",
+			"show_next": true,
+			"mask": [Vector2i(1, 2), Vector2i(3, 0), Vector2i(2, 1), Vector2i(0, 3)],
+			"red": [Vector2i(1, 2), Vector2i(3, 0), Vector2i(2, 1), Vector2i(0, 3)],
+		},
+		{
 			"type": "rebuild_board",
+			"pending_key": "TUT_NEXT_PURPLE",
 			"text_key": "TUT_SHIFTER_INTRO",
 			"show_next": true,
 			"layout": shifter_layout,
 			"tiles": [y, b, g],
 			"shifter_pairs": shifter_pairs,
-			"mask": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(1, 2), Vector2i(2, 2)],
-			"red": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(1, 2), Vector2i(2, 2)],
+			"mask": shifter_highlight.duplicate(),
+			"red": shifter_highlight.duplicate(),
 		},
 		{
 			"type": "message",
 			"text_key": "TUT_SHIFTER_BLOCK",
 			"show_next": true,
-			"mask": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(1, 2), Vector2i(2, 2)],
-			"red": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(1, 2), Vector2i(2, 2)],
+			"mask": shifter_shared_highlight.duplicate(),
+			"red": shifter_shared_highlight.duplicate(),
+		},
+		{
+			"type": "practice",
+			"text_key": "TUT_SHIFTER_TRY_BLOCK",
+			"wrong_key": "TUT_SHIFTER_TRY_BLOCK",
+			"wait_blocked_shifter": true,
+			"coord": Vector2i(3, 2),
+			"from": Vector2i(3, 2),
+			"mask": [Vector2i(3, 2)],
+			"red": [Vector2i(3, 2)],
+		},
+		# Move the blocking Purple off the shared cell, then the freed one can hop.
+		{
+			"type": "practice",
+			"text_key": "TUT_SHIFTER_MOVE_BLOCKER",
+			"wrong_key": "TUT_SHIFTER_MOVE_BLOCKER",
+			"success_key": "TUT_GOOD",
+			"coord": Vector2i(2, 1),
+			"from": Vector2i(3, 1),
+			"wait_shifter": true,
+			"mask": [Vector2i(3, 1)],
+			"red": [Vector2i(3, 1)],
+		},
+		{
+			"type": "practice",
+			"text_key": "TUT_SHIFTER_MOVE_UNBLOCKED",
+			"wrong_key": "TUT_SHIFTER_MOVE_UNBLOCKED",
+			"success_key": "TUT_GOOD",
+			"coord": Vector2i(3, 1),
+			"from": Vector2i(3, 2),
+			"wait_shifter": true,
+			"mask": [Vector2i(3, 2)],
+			"red": [Vector2i(3, 2)],
 		},
 		{
 			"type": "practice",
@@ -280,20 +342,21 @@ static func _level_1() -> Array:
 		},
 		{
 			"type": "rebuild_board",
+			"pending_key": "TUT_NEXT_CONSTRAINTS",
 			"text_key": "TUT_CONSTRAINTS_INTRO",
 			"show_next": true,
 			"layout": constraint_layout,
 			"tiles": [y, b],
 			"constraint_pairs": constraint_pairs,
-			"mask": [Vector2i(1, 0), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)],
-			"red": [Vector2i(1, 0), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)],
+			"mask": constraint_all_links.duplicate(),
+			"red": constraint_all_links.duplicate(),
 		},
 		{
 			"type": "message",
 			"text_key": "TUT_EQUALS_RULE",
 			"show_next": true,
-			"mask": [Vector2i(1, 0), Vector2i(1, 1)],
-			"red": [Vector2i(1, 0), Vector2i(1, 1)],
+			"mask": constraint_equals.duplicate(),
+			"red": constraint_equals.duplicate(),
 		},
 		{
 			"type": "practice",
@@ -310,8 +373,8 @@ static func _level_1() -> Array:
 			"type": "message",
 			"text_key": "TUT_NOTEQUALS_RULE",
 			"show_next": true,
-			"mask": [Vector2i(2, 1), Vector2i(3, 1)],
-			"red": [Vector2i(2, 1), Vector2i(3, 1)],
+			"mask": constraint_not_equals.duplicate(),
+			"red": constraint_not_equals.duplicate(),
 		},
 		{
 			"type": "practice",

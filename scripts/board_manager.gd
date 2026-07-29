@@ -163,6 +163,7 @@ func _on_shifter_tile_toggled(clicked_coord: Vector2i):
 	var partner_cell = board_cells[partner_coord]
 	if partner_cell.state == GameConstants.TileState.SHIFTER:
 		partner_cell.set_error_highlight()
+		clicked_cell.play_blocked_shake()
 		invalid_move_attempted.emit("ERR_SHIFTER_BLOCKED")
 		return
 
