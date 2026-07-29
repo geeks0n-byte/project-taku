@@ -135,9 +135,16 @@ func _make_pooled_asteroid() -> RigidBody2D:
 	return rb
 
 func _acquire_asteroid() -> RigidBody2D:
+	_sync_active_asteroid_count()
 	if _active_asteroid_count >= max_active_asteroids:
 		# Only recycle asteroids that have fully left the screen.
 		_release_oldest_offscreen_asteroid()
+		_sync_active_asteroid_count()
+	if _active_asteroid_count >= max_active_asteroids:
+		# Debug spam can keep many asteroids colliding on-screen forever.
+		# Fallback: recycle the oldest active asteroid so spawns never deadlock.
+		_release_oldest_active_asteroid()
+		_sync_active_asteroid_count()
 	if _active_asteroid_count >= max_active_asteroids:
 		return null
 	var rb: RigidBody2D = null
@@ -160,6 +167,33 @@ func _release_oldest_offscreen_asteroid() -> void:
 					_release_asteroid(rb)
 					return
 
+func _release_oldest_active_asteroid() -> void:
+	var oldest: RigidBody2D = null
+	var oldest_stamp: int = Time.get_ticks_msec()
+	for layer_node in [dyn_layer_asteroids, _fg_asteroids]:
+		if layer_node == null:
+			continue
+		for child in layer_node.get_children():
+			if not (child is RigidBody2D and child.has_meta("pooled_asteroid")):
+				continue
+			var rb := child as RigidBody2D
+			var stamp := int(rb.get_meta("spawn_msec", Time.get_ticks_msec()))
+			if oldest == null or stamp < oldest_stamp:
+				oldest = rb
+				oldest_stamp = stamp
+	if oldest:
+		_release_asteroid(oldest)
+
+func _sync_active_asteroid_count() -> void:
+	var live_count := 0
+	for layer_node in [dyn_layer_asteroids, _fg_asteroids]:
+		if layer_node == null:
+			continue
+		for child in layer_node.get_children():
+			if child is RigidBody2D and child.has_meta("pooled_asteroid"):
+				live_count += 1
+	_active_asteroid_count = live_count
+
 func _asteroid_visual_radius(rb: RigidBody2D) -> float:
 	var col := rb.get_node_or_null("Collision") as CollisionShape2D
 	if col and col.shape is CircleShape2D:
@@ -170,6 +204,16 @@ func _asteroid_is_fully_offscreen(rb: RigidBody2D, view: Rect2) -> bool:
 	var radius := _asteroid_visual_radius(rb) + ASTEROID_OFFSCREEN_MARGIN
 	var pos := rb.global_position
 	return (
+		pos.x + radius < view.position.x
+		or pos.x - radius > view.position.x + view.size.x
+		or pos.y + radius < view.position.y
+		or pos.y - radius > view.position.y + view.size.y
+	)
+
+func _asteroid_intersects_view(rb: RigidBody2D, view: Rect2) -> bool:
+	var radius := _asteroid_visual_radius(rb)
+	var pos := rb.global_position
+	return not (
 		pos.x + radius < view.position.x
 		or pos.x - radius > view.position.x + view.size.x
 		or pos.y + radius < view.position.y
@@ -426,7 +470,12 @@ func _release_offscreen_asteroids() -> void:
 			if not (child is RigidBody2D and child.has_meta("pooled_asteroid")):
 				continue
 			var rb := child as RigidBody2D
-			if _asteroid_is_fully_offscreen(rb, view):
+			var seen := bool(rb.get_meta("entered_view", false))
+			if not seen and _asteroid_intersects_view(rb, view):
+				rb.set_meta("entered_view", true)
+				seen = true
+			# Do not recycle right-edge spawns before they appear on screen.
+			if seen and _asteroid_is_fully_offscreen(rb, view):
 				_release_asteroid(rb)
 
 func _build_parallax_layer(tex: Texture2D, speed_scale: Vector2, view_size: Vector2 = Vector2.ZERO) -> ParallaxLayer:
@@ -498,13 +547,20 @@ func debug_spawn_comet() -> void:
 
 func debug_spawn_asteroid() -> void:
 	if tex_asteroids.is_empty():
+		_load_fx_assets()
+	if tex_asteroids.is_empty():
 		return
 	var target := _fg_asteroids if _use_foreground_layer() else dyn_layer_asteroids
 	# Rare: a drifting puzzle tile instead of a rock.
 	if randi() % 100 < 2:
-		_spawn_tile_asteroid(target)
+		_spawn_debug_tile_asteroid_standard_motion(target)
 		return
-	_spawn_entity(tex_asteroids.pick_random(), target, Vector2(64, 64), 15.0, 25.0, "asteroid")
+	var tex: Texture2D = tex_asteroids.pick_random()
+	if tex == null and not tex_asteroids.is_empty():
+		tex = tex_asteroids[0]
+	if tex == null:
+		return
+	_spawn_debug_asteroid_standard_motion(target, tex, Vector2(64, 64))
 
 ## Yellow / blue / green tiles, or purple tile with a random board-style arrow overlay.
 func _spawn_tile_asteroid(target: Node2D) -> void:
@@ -531,6 +587,102 @@ func _spawn_tile_asteroid(target: Node2D) -> void:
 	var tex := load(paths[roll]) as Texture2D
 	if tex:
 		_spawn_entity(tex, target, size, 15.0, 25.0, "asteroid")
+
+func _spawn_debug_tile_asteroid_standard_motion(target: Node2D) -> void:
+	var size := Vector2(36, 36)
+	var roll := randi() % 4
+	if roll == 3:
+		var base := load(GameConstants.TILE_SHIFTER) as Texture2D
+		if base == null:
+			return
+		var arrows: Array[String] = [
+			GameConstants.TILE_SHIFTER_UP,
+			GameConstants.TILE_SHIFTER_DOWN,
+			GameConstants.TILE_SHIFTER_LEFT,
+			GameConstants.TILE_SHIFTER_RIGHT,
+		]
+		var arrow := load(arrows[randi() % arrows.size()]) as Texture2D
+		_spawn_debug_asteroid_standard_motion(target, base, size, arrow)
+		return
+	var paths: Array[String] = [
+		GameConstants.TILE_YELLOW,
+		GameConstants.TILE_BLUE,
+		GameConstants.TILE_GREEN,
+	]
+	var tex := load(paths[roll]) as Texture2D
+	if tex:
+		_spawn_debug_asteroid_standard_motion(target, tex, size)
+
+func _spawn_debug_asteroid_standard_motion(
+	target_layer: Node2D,
+	tex: Texture2D,
+	size: Vector2,
+	overlay_tex: Texture2D = null
+) -> void:
+	if tex == null or target_layer == null:
+		return
+	var rb := _acquire_asteroid()
+	if rb == null:
+		return
+	rb.set_meta("spawn_msec", Time.get_ticks_msec())
+	rb.set_meta("entered_view", false)
+	rb.freeze = false
+	rb.process_mode = Node.PROCESS_MODE_INHERIT
+	rb.visible = true
+	rb.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	if not rb.body_entered.is_connected(_on_asteroid_collided):
+		rb.body_entered.connect(_on_asteroid_collided.bind(rb))
+
+	var sprite := rb.get_node("Sprite") as Sprite2D
+	sprite.texture = tex
+	var base_scale := size.x / maxf(1.0, float(tex.get_width()))
+	sprite.scale = Vector2.ONE * base_scale
+
+	var overlay := rb.get_node("Overlay") as Sprite2D
+	if overlay_tex:
+		overlay.texture = overlay_tex
+		overlay.visible = true
+		var overlay_w := maxf(1.0, float(overlay_tex.get_width()))
+		overlay.scale = Vector2.ONE * (size.x * 0.72 / overlay_w)
+	else:
+		overlay.visible = false
+		overlay.texture = null
+
+	var col := rb.get_node("Collision") as CollisionShape2D
+	if col and col.shape is CircleShape2D:
+		(col.shape as CircleShape2D).radius = size.x * 0.4
+
+	rb.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	var viewport_size := get_viewport().get_visible_rect().size
+	var max_dim: float = maxf(size.x, size.y)
+	var start_x: float = viewport_size.x + max_dim + 50.0
+	var end_x: float = -max_dim - 100.0
+	var travel_x: float = start_x - end_x
+	var start_y: float = randf_range(-100.0, viewport_size.y * 0.8)
+	var end_y: float = start_y + (travel_x * randf_range(0.1, 1.2))
+
+	rb.position = Vector2(start_x, start_y)
+	rb.rotation = randf_range(0.0, PI * 2.0)
+	var random_scale := randf_range(0.8, 1.2)
+	for child in rb.get_children():
+		if child is Sprite2D:
+			(child as Sprite2D).scale *= random_scale
+	if col and col.shape is CircleShape2D:
+		(col.shape as CircleShape2D).radius = size.x * 0.4 * random_scale
+	rb.mass = random_scale * 1.5
+
+	var base_duration := remap(random_scale, 0.8, 1.2, 25.0, 15.0)
+	var final_duration := base_duration * randf_range(0.85, 1.15)
+	var travel_vector := Vector2(end_x - start_x, end_y - start_y)
+	rb.linear_velocity = travel_vector / final_duration
+	var total_rotations := randf_range(1.0, 5.0)
+	var spin_dir := 1.0 if randi() % 2 == 0 else -1.0
+	var total_spin_amount := total_rotations * (PI * 2.0) * spin_dir
+	rb.angular_velocity = total_spin_amount / final_duration
+
+	if rb.get_parent() != null:
+		rb.get_parent().remove_child(rb)
+	target_layer.add_child(rb)
 
 func debug_spawn_asteroid_cloud() -> void:
 	var spawn_count := randi_range(3, 6)
@@ -601,6 +753,8 @@ func _spawn_entity(
 		var rb := _acquire_asteroid()
 		if rb == null:
 			return
+		rb.set_meta("spawn_msec", Time.get_ticks_msec())
+		rb.set_meta("entered_view", false)
 		rb.freeze = false
 		rb.process_mode = Node.PROCESS_MODE_INHERIT
 		rb.visible = true

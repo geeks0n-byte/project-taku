@@ -471,6 +471,14 @@ func _on_tutorial_tools_unlocked() -> void:
 func _on_tutorial_board_layout_changed() -> void:
 	# Mid-tutorial lock injection — drop undo history so Undo can't restore the empty board.
 	game_undo.reset(_create_game_snapshot())
+	# Keep rebuilt tutorial boards aligned like normal level loads.
+	var dims := LevelUtils.get_dimensions_from_cells(board_manager.board_cells)
+	var centered_board_y := LevelUtils.center_board_y(
+		dims.y, GameConstants.CELL_SIZE, get_viewport_rect().size.y
+	)
+	board_manager.position.y = centered_board_y
+	if ui_manager:
+		ui_manager.update_dynamic_layout(centered_board_y, dims.y * GameConstants.CELL_SIZE)
 	if ui_manager:
 		ui_manager.update_undo_redo_buttons(game_undo.can_undo(), game_undo.can_redo())
 
@@ -648,8 +656,14 @@ func _run_validation_pass():
 		_refresh_hint_button()
 		ui_manager.update_undo_redo_buttons(game_undo.can_undo(), game_undo.can_redo())
 	if not results["valid"]:
-		ui_manager.show_status_errors(results["errors"])
-		board_manager.refresh_error_bridges()
+		var suppress_tutorial_errors := (
+			tutorial_running
+			and tutorial_director
+			and tutorial_director.suppress_validation_errors()
+		)
+		if not suppress_tutorial_errors:
+			ui_manager.show_status_errors(results["errors"])
+			board_manager.refresh_error_bridges()
 	else:
 		# Keeps the tutorial tip when active; skips the default "fill the board" line.
 		ui_manager.show_status_valid()
@@ -691,13 +705,17 @@ func trigger_victory():
 		star_result["goals"] = []
 		star_result["total_count"] = 0
 		star_result["earned_count"] = 0
+	var won_tutorial := _is_campaign_tutorial(levels[current_level_index])
 	if not is_custom:
-		SaveManager.unlock_level(unlock_num + 1)
+		if won_tutorial:
+			# Tutorials are outside normal numbering — unlock the first campaign level.
+			SaveManager.unlock_level(LevelUtils.first_campaign_level_number())
+		else:
+			SaveManager.unlock_level(unlock_num + 1)
 		if not _challenges_disabled:
 			SaveManager.record_level_stars(unlock_num, int(star_result.get("bits", 0)))
 	_set_board_and_hud_visible(false)
 	var solved_preview := LevelPreview.make_texture_from_board_cells(board_manager.board_cells, 320)
-	var won_tutorial := _is_campaign_tutorial(levels[current_level_index])
 	if AdsManager:
 		AdsManager.record_level_win(won_tutorial)
 	ui_manager.show_victory(

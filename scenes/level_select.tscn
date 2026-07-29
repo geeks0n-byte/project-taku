@@ -98,20 +98,6 @@ layout_mode = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="TutorialsTabButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer/TabContainer"]
-modulate = Color(0.55, 0.85, 1, 1)
-custom_minimum_size = Vector2(200, 90)
-layout_mode = 2
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
-theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
-text = "DIFF_TUTORIALS"
-
 [node name="EasyTabButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer/TabContainer"]
 modulate = Color(0.45, 1, 0.45, 1)
 custom_minimum_size = Vector2(180, 90)

@@ -194,6 +194,7 @@ def main() -> None:
 	icon_256 = scale_nn(base, 64, 64, 256, 256)
 	write_png(os.path.join(ROOT, "app_icon_cosmos_256.png"), 256, 256, icon_256)
 	print("wrote launcher icons from app_icon_cosmos.svg pixel art")
+	print("Play Store PNGs: run tools/render_store_assets.gd in Godot")
 
 
 if __name__ == "__main__":

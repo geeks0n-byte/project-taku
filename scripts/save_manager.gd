@@ -26,26 +26,15 @@ func _ready() -> void:
 		get_tree().node_added.connect(_on_tree_node_added)
 	call_deferred("apply_locale_fonts")
 
-## Tutorials are free; Easy starts unlocked at its first level.
+## Tutorials are optional (main menu); Easy starts unlocked at its first level.
 func get_campaign_start_unlock() -> int:
-	var highest_tutorial := 0
-	var tut_paths := LevelUtils.scan_directory(GameConstants.CAMPAIGN_TUTORIALS_DIR)
-	for path in tut_paths:
-		var resource = load(path)
-		if resource is LevelData:
-			highest_tutorial = maxi(highest_tutorial, int(resource.level_number))
-	var lowest_easy := 0
 	var easy_paths := LevelUtils.scan_directory(GameConstants.CAMPAIGN_EASY_DIR)
 	LevelUtils.sort_level_paths(easy_paths)
 	for path in easy_paths:
 		var resource = load(path)
 		if resource is LevelData:
-			lowest_easy = int(resource.level_number)
-			break
-	var start := maxi(1, highest_tutorial)
-	if lowest_easy > 0:
-		start = maxi(start, lowest_easy)
-	return start
+			return int(resource.level_number)
+	return 1
 
 func _ensure_campaign_start_unlock() -> void:
 	var start := get_campaign_start_unlock()

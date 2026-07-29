@@ -22,6 +22,7 @@ var _solved_complete: bool = false
 var _last_status_key: String = ""
 var _last_status_icons: Array = []
 var _last_status_show_next: bool = false
+var _last_status_append_next_prompt: bool = false
 ## Blocks victory while teaching rules discovered from validation errors.
 var _block_solve: bool = false
 var _discover_active: bool = false
@@ -31,6 +32,11 @@ var _rule_teach_first_key: String = ""
 var _rule_teach_second_key: String = ""
 var _rule_teach_first_icons: Array = []
 var _rule_teach_second_icons: Array = []
+var _suppress_validation_errors: bool = false
+## True only after a `done` step — mid-tutorial full boards must not end the script.
+var _awaiting_solve: bool = false
+## rebuild_board waits for Next before swapping the grid.
+var _pending_rebuild: bool = false
 
 func setup(board: BoardManager, ui: UIManager = null) -> void:
 	board_manager = board
@@ -39,6 +45,9 @@ func setup(board: BoardManager, ui: UIManager = null) -> void:
 
 func is_active() -> bool:
 	return _active
+
+func suppress_validation_errors() -> bool:
+	return _suppress_validation_errors
 
 func start(script_id: String, tiles: Array) -> void:
 	stop()
@@ -66,6 +75,7 @@ func stop() -> void:
 	_last_status_key = ""
 	_last_status_icons.clear()
 	_last_status_show_next = false
+	_last_status_append_next_prompt = false
 	_block_solve = false
 	_discover_active = false
 	_rule_teach_phase = 0
@@ -73,6 +83,9 @@ func stop() -> void:
 	_rule_teach_second_key = ""
 	_rule_teach_first_icons.clear()
 	_rule_teach_second_icons.clear()
+	_suppress_validation_errors = false
+	_awaiting_solve = false
+	_pending_rebuild = false
 	_script_id = ""
 	_index = -1
 	_steps.clear()
@@ -170,6 +183,8 @@ func _start_rule_teach(broke_two: bool, broke_balance: bool) -> void:
 func on_board_solved() -> void:
 	if not _active or _solved_complete:
 		return
+	if not _awaiting_solve:
+		return
 	if _block_solve or _discover_active or _rule_teach_phase > 0:
 		return
 	_solved_complete = true
@@ -231,21 +246,24 @@ func _advance() -> void:
 
 func _apply_step(step: Dictionary) -> void:
 	var kind := String(step.get("type", ""))
+	_suppress_validation_errors = bool(step.get("suppress_errors", false))
 	match kind:
 		"message":
-			_show_message_from_step(step, true)
-			# Freeze board while reading. Keep mask/border focus when the tip
-			# points at cells (e.g. locked tiles); otherwise clear guides so
-			# only NEXT breathes.
-			if (
+			var show_next := bool(step.get("show_next", true))
+			_show_message_from_step(step, show_next)
+			var has_focus := (
 				step.has("mask")
 				or step.has("highlight")
 				or step.has("red")
 				or step.has("border")
-			):
+			)
+			if has_focus:
 				_apply_focus(step)
 			else:
 				_clear_board_gates(false)
+			if bool(step.get("allow_board", false)):
+				if board_manager:
+					board_manager.clear_click_whitelist()
 		"apply_locks":
 			if board_manager and step.has("layout"):
 				board_manager.apply_locked_layout(step["layout"])
@@ -260,6 +278,11 @@ func _apply_step(step: Dictionary) -> void:
 				_apply_focus(step)
 			else:
 				_clear_board_gates(false)
+		"rebuild_board":
+			# Show the tip on the current board; swap only after Next.
+			_pending_rebuild = step.has("layout")
+			_show_message_from_step(step, true)
+			_clear_board_gates(false)
 		"discover_rules":
 			_discover_active = true
 			_block_solve = true
@@ -278,16 +301,25 @@ func _apply_step(step: Dictionary) -> void:
 			_update_practice_feedback(step)
 		"hud_button":
 			_highlight_button_id = String(step.get("button", ""))
-			# Teach the HUD control itself — do not also require NEXT.
-			_show_message_from_step(step, false)
+			# Teach the HUD control — tap the glowing button or press Next.
+			var hud_next := bool(step.get("show_next", true))
+			_show_message_from_step(step, hud_next)
 			_clear_board_gates(false)
 			# Freeze board while teaching a HUD button.
 			if board_manager:
 				board_manager.set_click_whitelist([])
 			refresh_tool_gates()
-		"wait_cell", "wait_shifter":
+		"wait_cell", "wait_shifter", "wait_full_valid":
 			_show_message_from_step(step, false)
-			_apply_focus(step)
+			if (
+				step.has("mask")
+				or step.has("highlight")
+				or step.has("red")
+				or step.has("border")
+			):
+				_apply_focus(step)
+			elif board_manager:
+				board_manager.clear_click_whitelist()
 			_check_wait_condition()
 		"done":
 			_block_solve = false
@@ -311,6 +343,7 @@ func _try_complete_if_full() -> void:
 		on_board_solved()
 
 func _enter_await_solve(tip_key: String = "", tip_icons: Array = []) -> void:
+	_awaiting_solve = true
 	_highlight_button_id = ""
 	_clear_board_gates(true)
 	if _tools_locked:
@@ -424,12 +457,15 @@ func _on_practice_success(step: Dictionary) -> void:
 	if _practice_succeeded:
 		return
 	_practice_succeeded = true
-	# Lock input briefly, then auto-advance — no Next tap after a correct place.
+	# Lock input on success while we show feedback.
 	if board_manager:
 		board_manager.set_click_whitelist([])
 	var success_key := String(step.get("success_key", ""))
+	var require_next := bool(step.get("require_next_after_success", false))
 	if not success_key.is_empty():
-		_show_message_key(success_key, step.get("success_icons", []), false)
+		_show_message_key(success_key, step.get("success_icons", []), require_next)
+	if require_next:
+		return
 	# Deferred so a full-board solve can mark _solved_complete first.
 	call_deferred("_advance_after_practice")
 
@@ -460,18 +496,50 @@ func _check_wait_condition() -> void:
 		var coord: Vector2i = step["coord"]
 		if board_manager.board_cells.has(coord) and board_manager.board_cells[coord].state == GameConstants.TileState.SHIFTER:
 			_advance()
+	elif kind == "wait_full_valid":
+		if not board_manager:
+			return
+		if not board_manager.is_board_full():
+			return
+		var results := PuzzleValidator.validate_board(
+			board_manager.board_cells,
+			board_manager.cached_lines,
+			board_manager.active_constraint_pairs,
+			-1
+		)
+		if bool(results.get("valid", false)):
+			_set_next_visible(true)
 
 func _show_message_from_step(step: Dictionary, show_next: bool) -> void:
-	_show_message_key(String(step.get("text_key", "")), step.get("icons", []), show_next)
+	var append_next_prompt := (
+		show_next
+		and String(step.get("type", "")) == "message"
+		and not bool(step.get("allow_board", false))
+	)
+	_show_message_key(
+		String(step.get("text_key", "")),
+		step.get("icons", []),
+		show_next,
+		append_next_prompt
+	)
 
-func _show_message_key(key: String, icons: Variant, show_next: bool) -> void:
+func _show_message_key(
+	key: String,
+	icons: Variant,
+	show_next: bool,
+	append_next_prompt: bool = false
+) -> void:
 	_last_status_key = key
 	_last_status_icons = icons.duplicate() if icons is Array else []
 	_last_status_show_next = show_next
+	_last_status_append_next_prompt = append_next_prompt
 	var text := tr(key) if not key.is_empty() else ""
 	text = _apply_icon_placeholders(text, _last_status_icons)
-	# Strip leftover "Tap Next" phrases from older translations if present.
-	text = _strip_inline_next_prompt(text)
+	# Strip leftover inline prompts only when we are not adding our own.
+	if not append_next_prompt:
+		text = _strip_inline_next_prompt(text)
+	elif not tr("TUT_TAP_NEXT").is_empty():
+		text += "\n" + tr("TUT_TAP_NEXT")
 	if ui_manager:
 		ui_manager.show_tutorial_status(text)
 	_set_next_visible(show_next)
@@ -516,7 +584,12 @@ func refresh_for_locale() -> void:
 	if not _active:
 		return
 	if not _last_status_key.is_empty():
-		_show_message_key(_last_status_key, _last_status_icons, _last_status_show_next)
+		_show_message_key(
+			_last_status_key,
+			_last_status_icons,
+			_last_status_show_next,
+			_last_status_append_next_prompt
+		)
 	elif _awaiting_next:
 		_set_next_visible(true)
 
@@ -561,7 +634,38 @@ func _on_next_pressed() -> void:
 		_block_solve = true
 		_advance()
 		return
+	if _pending_rebuild:
+		_execute_pending_rebuild()
+		return
+	var step := _current_step()
+	if String(step.get("type", "")) == "practice" and _practice_succeeded:
+		_advance()
+		return
 	_advance()
+
+func _execute_pending_rebuild() -> void:
+	_pending_rebuild = false
+	var step := _current_step()
+	if board_manager and step.has("layout"):
+		var layout: Dictionary = step.get("layout", {})
+		var tiles: Array = step.get("tiles", available_tiles)
+		var shifters: Array = step.get("shifter_pairs", [])
+		var constraints: Array = step.get("constraint_pairs", [])
+		board_manager.build_grid(layout, tiles, shifters, constraints)
+		available_tiles = tiles.duplicate()
+		board_layout_changed.emit()
+	_show_message_from_step(step, true)
+	if (
+		step.has("mask")
+		or step.has("highlight")
+		or step.has("red")
+		or step.has("border")
+	):
+		_apply_focus(step)
+	else:
+		_clear_board_gates(false)
+	if bool(step.get("allow_board", false)) and board_manager:
+		board_manager.clear_click_whitelist()
 
 func _finish() -> void:
 	var was_active := _active

@@ -15,7 +15,6 @@ const TAB_LOCK_ALPHA := 0.9
 @onready var _page_nav: HBoxContainer = $"UILayer/CenterContainer/PageNav"
 @onready var _page_prev_button: Button = $"UILayer/CenterContainer/PageNav/PrevSlot/PrevButton"
 @onready var _page_next_button: Button = $"UILayer/CenterContainer/PageNav/NextSlot/NextButton"
-@onready var tutorials_tab_button: Button = $"UILayer/CenterContainer/VBoxContainer/TabContainer/TutorialsTabButton"
 @onready var easy_tab_button: Button = $"UILayer/CenterContainer/VBoxContainer/TabContainer/EasyTabButton"
 @onready var medium_tab_button: Button = $"UILayer/CenterContainer/VBoxContainer/TabContainer/MediumTabButton"
 @onready var hard_tab_button: Button = $"UILayer/CenterContainer/VBoxContainer/TabContainer/HardTabButton"
@@ -29,7 +28,7 @@ const TAB_LOCK_ALPHA := 0.9
 @onready var tab_container: HBoxContainer = $"UILayer/CenterContainer/VBoxContainer/TabContainer"
 @onready var tab_list_gap: Control = $"UILayer/CenterContainer/VBoxContainer/TabListGap"
 
-enum ViewMode { TUTORIALS, EASY, MEDIUM, HARD, CUSTOM }
+enum ViewMode { EASY, MEDIUM, HARD, CUSTOM }
 var current_view: ViewMode = ViewMode.EASY
 var _level_entries: Array = []
 var _page_index: int = 0
@@ -47,8 +46,6 @@ func _ready() -> void:
 		_page_prev_button.pressed.connect(_on_page_prev)
 	if _page_next_button:
 		_page_next_button.pressed.connect(_on_page_next)
-	if tutorials_tab_button:
-		tutorials_tab_button.pressed.connect(func(): _switch_view(ViewMode.TUTORIALS))
 	if easy_tab_button:
 		easy_tab_button.pressed.connect(func(): _switch_view(ViewMode.EASY))
 	if medium_tab_button:
@@ -76,7 +73,6 @@ func _fit_chrome_buttons() -> void:
 	_apply_close_button()
 	_configure_custom_tab()
 	for btn in [
-		tutorials_tab_button,
 		easy_tab_button,
 		medium_tab_button,
 		hard_tab_button,
@@ -329,10 +325,10 @@ func _switch_view(new_mode: ViewMode) -> void:
 	populate_level_menu()
 
 func _first_unlocked_view() -> ViewMode:
-	for view in [ViewMode.TUTORIALS, ViewMode.EASY, ViewMode.MEDIUM, ViewMode.HARD]:
+	for view in [ViewMode.EASY, ViewMode.MEDIUM, ViewMode.HARD]:
 		if _is_category_unlocked(view):
 			return view
-	return ViewMode.TUTORIALS
+	return ViewMode.EASY
 
 func _is_category_unlocked(view: ViewMode) -> bool:
 	if view == ViewMode.CUSTOM:
@@ -342,7 +338,6 @@ func _is_category_unlocked(view: ViewMode) -> bool:
 
 func _update_tab_button_visuals() -> void:
 	var tabs := [
-		[tutorials_tab_button, ViewMode.TUTORIALS, Color(0.55, 0.85, 1.0)],
 		[easy_tab_button, ViewMode.EASY, Color(0.45, 1.0, 0.45)],
 		[medium_tab_button, ViewMode.MEDIUM, Color(1.0, 0.85, 0.35)],
 		[hard_tab_button, ViewMode.HARD, Color(1.0, 0.45, 0.4)],
@@ -411,7 +406,6 @@ func populate_level_menu() -> void:
 		paths = LevelUtils.scan_directory(_folder_for_view(current_view))
 	LevelUtils.sort_level_paths(paths)
 
-	var tutorial_index := 0
 	for path in paths:
 		var resource = load(path)
 		if resource == null or not (resource is LevelData):
@@ -420,9 +414,6 @@ func populate_level_menu() -> void:
 		var locked := false
 		if current_view == ViewMode.CUSTOM:
 			title = tr("CUSTOM_LVL") + " " + str(resource.level_number)
-		elif current_view == ViewMode.TUTORIALS:
-			tutorial_index += 1
-			title = tr("TUTORIAL") + " " + str(tutorial_index)
 		else:
 			var display_num := LevelUtils.get_display_level_number(resource)
 			title = tr("LEVEL") + " " + str(display_num)
@@ -513,8 +504,6 @@ func _update_page_nav_visibility() -> void:
 
 func _folder_for_view(view: ViewMode) -> String:
 	match view:
-		ViewMode.TUTORIALS:
-			return GameConstants.CAMPAIGN_TUTORIALS_DIR
 		ViewMode.MEDIUM:
 			return GameConstants.CAMPAIGN_MEDIUM_DIR
 		ViewMode.HARD:
@@ -576,7 +565,7 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 		label.add_theme_color_override("font_color", btn.get_theme_color("font_color"))
 	vbox.add_child(label)
 
-	if not locked and current_view != ViewMode.TUTORIALS:
+	if not locked:
 		var earned_bits := SaveManager.get_level_star_bits(level.level_number)
 		var star_row := LevelStars.make_select_star_row(level, earned_bits)
 		vbox.add_child(star_row)

@@ -4,6 +4,7 @@ extends Control
 
 @onready var menu_center = $UILayer/CenterContainer
 @onready var start_btn = $UILayer/CenterContainer/VBoxContainer/StartButton
+@onready var tutorial_btn = $UILayer/CenterContainer/VBoxContainer/TutorialButton
 @onready var levels_btn = $UILayer/CenterContainer/VBoxContainer/LevelSelectButton
 @onready var how_to_play_btn = $UILayer/CenterContainer/VBoxContainer/HowToPlayButton
 @onready var options_btn = $UILayer/CenterContainer/VBoxContainer/OptionsButton
@@ -76,6 +77,7 @@ func _ready() -> void:
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
 	if start_btn: start_btn.pressed.connect(_on_start_pressed)
+	if tutorial_btn: tutorial_btn.pressed.connect(_on_tutorial_pressed)
 	if levels_btn: levels_btn.pressed.connect(_on_levels_pressed)
 	if how_to_play_btn: how_to_play_btn.pressed.connect(_on_how_to_play_pressed)
 	if options_btn: options_btn.pressed.connect(_on_options_pressed)
@@ -191,7 +193,7 @@ func _setup_title_under_fx() -> void:
 	if vbox:
 		vbox.add_theme_constant_override("separation", 22)
 	if menu_center:
-		# Tall enough for PLAY + 4 rows (and EDITOR when debug is on) on phone viewports.
+		# Tall enough for PLAY + Tutorial + rows (and EDITOR when debug is on) on phone viewports.
 		HudLayout.pin_menu_body_below_header(menu_center, 1280.0)
 
 ## Credits / How To Play / tutorial prompt stay above flying FX.
@@ -300,7 +302,7 @@ func _on_save_deleted() -> void:
 	_fit_menu_buttons()
 
 func _fit_menu_buttons() -> void:
-	for btn in [start_btn, levels_btn, how_to_play_btn, options_btn, credits_btn, editor_btn]:
+	for btn in [start_btn, tutorial_btn, levels_btn, how_to_play_btn, options_btn, credits_btn, editor_btn]:
 		_apply_main_menu_button(btn)
 	_fit_debug_bar_buttons()
 	HudLayout.apply_secondary_button(close_credits_btn)
@@ -479,8 +481,16 @@ func _set_debug_bar_visible(should_show: bool) -> void:
 	if debug_bar:
 		debug_bar.visible = show_debug_tools and should_show
 
+func _on_tutorial_pressed() -> void:
+	_apply_debug_tools_visibility()
+	if SaveManager:
+		SaveManager.set_tutorial_intro_answered(true)
+	_ensure_easy_unlocked()
+	_launch_tutorial()
+
 func _on_start_pressed() -> void:
 	_apply_debug_tools_visibility()
+	_ensure_easy_unlocked()
 	if SaveManager and not SaveManager.tutorial_intro_answered:
 		_show_tutorial_intro_prompt()
 		return
@@ -488,6 +498,12 @@ func _on_start_pressed() -> void:
 
 func _start_game() -> void:
 	GlobalGameManager.go_to_scene("res://scenes/main.tscn")
+
+func _launch_tutorial() -> void:
+	var tutorial := _first_level_in_dir(GameConstants.CAMPAIGN_TUTORIALS_DIR)
+	if tutorial:
+		GlobalGameManager.selected_level_resource = tutorial
+	_start_game()
 
 func _first_level_in_dir(dir_path: String) -> LevelData:
 	var paths := LevelUtils.scan_directory(dir_path)
@@ -598,21 +614,26 @@ func _hide_tutorial_intro_prompt() -> void:
 func _on_tutorial_intro_yes() -> void:
 	_hide_tutorial_intro_prompt()
 	SaveManager.set_tutorial_intro_answered(true)
-	var tutorial := _first_level_in_dir(GameConstants.CAMPAIGN_TUTORIALS_DIR)
-	if tutorial:
-		GlobalGameManager.selected_level_resource = tutorial
-	_start_game()
+	_ensure_easy_unlocked()
+	_launch_tutorial()
 
 func _on_tutorial_intro_no() -> void:
 	_hide_tutorial_intro_prompt()
 	SaveManager.set_tutorial_intro_answered(true)
+	_ensure_easy_unlocked()
 	var easy := _first_level_in_dir(GameConstants.CAMPAIGN_EASY_DIR)
 	if easy:
 		GlobalGameManager.selected_level_resource = easy
 	_start_game()
 
+func _ensure_easy_unlocked() -> void:
+	if SaveManager == null:
+		return
+	SaveManager.unlock_level(LevelUtils.first_campaign_level_number())
+
 func _on_levels_pressed() -> void:
 	_apply_debug_tools_visibility()
+	_ensure_easy_unlocked()
 	GlobalGameManager.go_to_scene("res://scenes/level_select.tscn")
 
 func _on_how_to_play_pressed() -> void:

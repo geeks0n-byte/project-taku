@@ -17,8 +17,8 @@ general/ios/enabled=false
 
 config/name="Spaceblox"
 run/main_scene="res://scenes/splash.tscn"
-config/features=PackedStringArray("4.7", "GL Compatibility")
 config/quit_on_go_back=false
+config/features=PackedStringArray("4.7", "GL Compatibility")
 boot_splash/bg_color=Color(0, 0, 0, 1)
 boot_splash/show_image=false
 config/icon="res://resources/icons/app_icon_cosmos_256.png"

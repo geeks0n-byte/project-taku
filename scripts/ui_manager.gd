@@ -689,7 +689,7 @@ func _refresh_victory_locale() -> void:
 		elif _victory_is_custom:
 			win_label.text = (tr("CUSTOM_COMPLETED") % _victory_display_num) + "\n" + tr("COMPLETED")
 		elif _victory_is_tutorial:
-			win_label.text = (tr("TUTORIAL_COMPLETED") % _victory_display_num) + "\n" + tr("COMPLETED")
+			win_label.text = tr("TUTORIAL") + "\n" + tr("COMPLETED")
 		else:
 			win_label.text = (tr("LEVEL_COMPLETED") % _victory_display_num) + "\n" + tr("COMPLETED")
 		HudLayout.apply_end_screen_header_style(win_label, 48)

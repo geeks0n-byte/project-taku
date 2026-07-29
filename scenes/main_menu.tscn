@@ -175,6 +175,17 @@ theme_override_font_sizes/font_size = 56
 text = "UI_PLAY"
 flat = true
 
+[node name="TutorialButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=19078217]
+custom_minimum_size = Vector2(640, 140)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 14
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 56
+text = "TUTORIAL"
+flat = true
+
 [node name="LevelSelectButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=732738076]
 custom_minimum_size = Vector2(640, 140)
 layout_mode = 2
@@ -236,6 +247,7 @@ flat = true
 
 [node name="DebugBar" type="HBoxContainer" parent="UILayer" unique_id=1125842300]
 visible = false
+z_index = 8
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
@@ -248,7 +260,6 @@ grow_horizontal = 2
 grow_vertical = 0
 theme_override_constants/separation = 8
 alignment = 1
-z_index = 8
 
 [node name="DebugStarButton" type="Button" parent="UILayer/DebugBar" unique_id=1125842216]
 auto_translate_mode = 2

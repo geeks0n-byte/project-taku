@@ -268,17 +268,24 @@ static func scan_campaign_levels() -> Array:
 		found.append_array(folder_paths)
 	return found
 
-## Highest tutorial `level_number` (0 if none). Used to map playable IDs → display 1+.
-static func highest_tutorial_level_number() -> int:
-	var highest := 0
-	for path in scan_directory(GameConstants.CAMPAIGN_TUTORIALS_DIR):
-		var resource = load(path)
-		if resource is LevelData:
-			highest = maxi(highest, int(resource.level_number))
-	return highest
+## First Easy (then Medium/Hard) `level_number` — tutorials are excluded from
+## player-facing Level 1…N counting across the normal campaign.
+static func first_campaign_level_number() -> int:
+	for folder in [
+		GameConstants.CAMPAIGN_EASY_DIR,
+		GameConstants.CAMPAIGN_MEDIUM_DIR,
+		GameConstants.CAMPAIGN_HARD_DIR,
+	]:
+		var paths := scan_directory(folder)
+		sort_level_paths(paths)
+		for path in paths:
+			var resource = load(path)
+			if resource is LevelData:
+				return int(resource.level_number)
+	return 1
 
-## Player-facing level label number. Tutorials / custom keep authored numbers;
-## campaign playable levels (easy→hard) start at 1 after tutorials.
+## Player-facing level label number. Tutorials keep authored numbers;
+## Easy→Medium→Hard display as Level 1, 2, 3… (tutorials do not count).
 static func get_display_level_number(level: LevelData) -> int:
 	if level == null:
 		return 0
@@ -290,5 +297,5 @@ static func get_display_level_number(level: LevelData) -> int:
 		or path.begins_with(GameConstants.CAMPAIGN_MEDIUM_DIR)
 		or path.begins_with(GameConstants.CAMPAIGN_HARD_DIR)
 	):
-		return maxi(1, int(level.level_number) - highest_tutorial_level_number())
+		return maxi(1, int(level.level_number) - first_campaign_level_number() + 1)
 	return int(level.level_number)
