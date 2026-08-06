@@ -1,14 +1,6 @@
 class_name HintSystem
 extends RefCounted
 
-## Hint contractions between two adjacent playable cells.
-## Priority (highest first):
-## 1) involves a fixed (locked) cell
-## 2) involves a correctly filled cell
-## 3) involves a cell that already has a hint
-## 4) both cells empty
-## Never links a wall. Type always matches the solved reference so the puzzle stays solvable.
-## Contraction tiles: Yellow, Blue, Green, Purple (shifter).
 
 static func count_usable_hints(
 	board_cells: Dictionary,
@@ -18,41 +10,26 @@ static func count_usable_hints(
 	grid_size: Vector2i = Vector2i.ZERO,
 	prefer_hidden_pool: bool = false
 ) -> int:
-	var n := count_wrong_cells(board_cells, solved_reference)
-	n += _collect_candidates(
+	var open := _collect_candidates(
 		board_cells,
 		active_constraints,
 		solved_reference,
 		hidden_reference_constraints,
 		grid_size,
-		prefer_hidden_pool
+		prefer_hidden_pool,
+		false
+	)
+	if not open.is_empty():
+		return open.size()
+	return _collect_candidates(
+		board_cells,
+		active_constraints,
+		solved_reference,
+		hidden_reference_constraints,
+		grid_size,
+		prefer_hidden_pool,
+		true
 	).size()
-	return n
-
-## Filled playable cells that disagree with the solved reference.
-static func count_wrong_cells(board_cells: Dictionary, solved_reference: Dictionary) -> int:
-	return find_wrong_cells(board_cells, solved_reference).size()
-
-static func find_wrong_cells(board_cells: Dictionary, solved_reference: Dictionary) -> Array:
-	var wrong: Array = []
-	if solved_reference.is_empty():
-		return wrong
-	for coord in board_cells:
-		var cell = board_cells[coord]
-		if not cell.is_playable or cell.is_locked:
-			continue
-		if cell.state == GameConstants.TileState.EMPTY or cell.state == GameConstants.TileState.WALL:
-			continue
-		if cell.state == GameConstants.TileState.SHIFTER:
-			continue
-		if not solved_reference.has(coord):
-			continue
-		var expected = int(solved_reference[coord])
-		if expected < 0:
-			continue
-		if int(cell.state) != expected:
-			wrong.append({"type": "fix_cell", "coord": coord, "state": expected})
-	return wrong
 
 static func pick_hint(
 	board_cells: Dictionary,
@@ -62,19 +39,30 @@ static func pick_hint(
 	grid_size: Vector2i = Vector2i.ZERO,
 	prefer_hidden_pool: bool = false
 ) -> Variant:
-	# Highest priority: correct a wrongly filled cell.
-	var wrong := find_wrong_cells(board_cells, solved_reference)
-	if not wrong.is_empty():
-		return wrong.pick_random()
-	var candidates: Array = _collect_candidates(
+	var open: Array = _collect_candidates(
 		board_cells,
 		active_constraints,
 		solved_reference,
 		hidden_reference_constraints,
 		grid_size,
-		prefer_hidden_pool
+		prefer_hidden_pool,
+		false
 	)
-	return _pick_by_priority(board_cells, active_constraints, solved_reference, candidates, prefer_hidden_pool)
+	var pick = _pick_by_priority(
+		board_cells, active_constraints, solved_reference, open, prefer_hidden_pool
+	)
+	if pick != null:
+		return pick
+	var filled: Array = _collect_candidates(
+		board_cells,
+		active_constraints,
+		solved_reference,
+		hidden_reference_constraints,
+		grid_size,
+		prefer_hidden_pool,
+		true
+	)
+	return _pick_both_filled(board_cells, active_constraints, solved_reference, filled, prefer_hidden_pool)
 
 static func attempt_dynamic_solve(
 	board_cells: Dictionary,
@@ -141,7 +129,8 @@ static func _collect_candidates(
 	solved_reference: Dictionary,
 	hidden_reference_constraints: Array,
 	grid_size: Vector2i,
-	prefer_hidden_pool: bool
+	prefer_hidden_pool: bool,
+	both_filled_only: bool
 ) -> Array:
 	var candidates: Array = []
 	var seen: Dictionary = {}
@@ -151,19 +140,18 @@ static func _collect_candidates(
 			var key := _pair_key(hidden["a"], hidden["b"])
 			if seen.has(key):
 				continue
-			if not _is_pool_hint_usable(board_cells, active_constraints, hidden):
+			if not _is_pool_hint_usable(board_cells, active_constraints, hidden, both_filled_only):
 				continue
 			seen[key] = true
 			candidates.append(hidden)
 		return candidates
 
 	if solved_reference.is_empty():
-		# Fall back to the hidden pool when we have no solved reference yet.
 		for hidden in hidden_reference_constraints:
 			var key := _pair_key(hidden["a"], hidden["b"])
 			if seen.has(key):
 				continue
-			if not _is_pool_hint_usable(board_cells, active_constraints, hidden):
+			if not _is_pool_hint_usable(board_cells, active_constraints, hidden, both_filled_only):
 				continue
 			seen[key] = true
 			candidates.append(hidden)
@@ -179,7 +167,12 @@ static func _collect_candidates(
 			for offset in [Vector2i(1, 0), Vector2i(0, 1)]:
 				var neighbor: Vector2i = coord + offset
 				var candidate: Variant = _make_candidate(
-					board_cells, active_constraints, solved_reference, coord, neighbor
+					board_cells,
+					active_constraints,
+					solved_reference,
+					coord,
+					neighbor,
+					both_filled_only
 				)
 				if candidate == null:
 					continue
@@ -189,12 +182,11 @@ static func _collect_candidates(
 				seen[key] = true
 				candidates.append(candidate)
 
-	# Solution-consistent extras from the hidden pool as lower-priority fodder.
 	for hidden in hidden_reference_constraints:
 		var key := _pair_key(hidden["a"], hidden["b"])
 		if seen.has(key):
 			continue
-		if not _is_pool_hint_usable(board_cells, active_constraints, hidden):
+		if not _is_pool_hint_usable(board_cells, active_constraints, hidden, both_filled_only):
 			continue
 		if not _reference_satisfies(solved_reference, hidden):
 			continue
@@ -208,7 +200,8 @@ static func _make_candidate(
 	active_constraints: Array,
 	solved_reference: Dictionary,
 	coord_a: Vector2i,
-	coord_b: Vector2i
+	coord_b: Vector2i,
+	both_filled_only: bool
 ) -> Variant:
 	if not board_cells.has(coord_a) or not board_cells.has(coord_b):
 		return null
@@ -230,8 +223,10 @@ static func _make_candidate(
 
 	var a_empty: bool = cell_a.state == GameConstants.TileState.EMPTY
 	var b_empty: bool = cell_b.state == GameConstants.TileState.EMPTY
-	# Need at least one empty cell to teach; both filled is not a useful hint.
-	if not a_empty and not b_empty:
+	if both_filled_only:
+		if a_empty or b_empty:
+			return null
+	elif not a_empty and not b_empty:
 		return null
 
 	var hint_type := "equals" if sol_a == sol_b else "not_equals"
@@ -240,7 +235,8 @@ static func _make_candidate(
 static func _is_pool_hint_usable(
 	board_cells: Dictionary,
 	active_constraints: Array,
-	hint: Dictionary
+	hint: Dictionary,
+	both_filled_only: bool
 ) -> bool:
 	if not hint.has("a") or not hint.has("b") or not hint.has("type"):
 		return false
@@ -256,7 +252,10 @@ static func _is_pool_hint_usable(
 		return false
 	var a_empty: bool = cell_a.state == GameConstants.TileState.EMPTY
 	var b_empty: bool = cell_b.state == GameConstants.TileState.EMPTY
-	if not a_empty and not b_empty:
+	if both_filled_only:
+		if a_empty or b_empty:
+			return false
+	elif not a_empty and not b_empty:
 		return false
 	return true
 
@@ -284,7 +283,6 @@ static func _pick_by_priority(
 	var priority_4: Array = []
 
 	for candidate in candidates:
-		# Pool-only mode trusts the stored contractions; don't reject on a re-solved board.
 		if not prefer_hidden_pool and not solved_reference.is_empty() and not _reference_satisfies(solved_reference, candidate):
 			continue
 		_bucket_candidate(
@@ -301,6 +299,50 @@ static func _pick_by_priority(
 	if priority_4.size() > 0:
 		return priority_4.pick_random()
 	return null
+
+static func _pick_both_filled(
+	board_cells: Dictionary,
+	_active_constraints: Array,
+	solved_reference: Dictionary,
+	candidates: Array,
+	prefer_hidden_pool: bool
+) -> Variant:
+	var involving_wrong: Array = []
+	var other: Array = []
+	for candidate in candidates:
+		if not prefer_hidden_pool and not solved_reference.is_empty() and not _reference_satisfies(solved_reference, candidate):
+			continue
+		if _involves_wrong_cell(board_cells, solved_reference, candidate):
+			involving_wrong.append(candidate)
+		else:
+			other.append(candidate)
+	if involving_wrong.size() > 0:
+		return involving_wrong.pick_random()
+	if other.size() > 0:
+		return other.pick_random()
+	return null
+
+static func _involves_wrong_cell(
+	board_cells: Dictionary,
+	solved_reference: Dictionary,
+	candidate: Dictionary
+) -> bool:
+	if solved_reference.is_empty():
+		return false
+	for coord in [candidate["a"], candidate["b"]]:
+		if not board_cells.has(coord) or not solved_reference.has(coord):
+			continue
+		var cell = board_cells[coord]
+		if cell.state == GameConstants.TileState.EMPTY or cell.state == GameConstants.TileState.WALL:
+			continue
+		if cell.state == GameConstants.TileState.SHIFTER:
+			continue
+		var expected = int(solved_reference[coord])
+		if expected < 0:
+			continue
+		if int(cell.state) != expected:
+			return true
+	return false
 
 static func _bucket_candidate(
 	board_cells: Dictionary,
@@ -333,19 +375,15 @@ static func _bucket_candidate(
 	var a_has_hint := _cell_has_any_constraint(coord_a, active_constraints)
 	var b_has_hint := _cell_has_any_constraint(coord_b, active_constraints)
 
-	# 1) contraction involving a fixed cell
 	if (a_empty and b_fixed) or (b_empty and a_fixed):
 		p1.append(candidate)
 		return
-	# 2) contraction involving a correctly filled cell
 	if (a_empty and b_correct) or (b_empty and a_correct):
 		p2.append(candidate)
 		return
-	# 3) contraction involving a cell that already has a hint
 	if (a_empty or b_empty) and (a_has_hint or b_has_hint):
 		p3.append(candidate)
 		return
-	# 4) both empty
 	if a_empty and b_empty:
 		p4.append(candidate)
 

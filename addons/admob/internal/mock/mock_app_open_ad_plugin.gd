@@ -1,24 +1,3 @@
-# MIT License
-#
-# Copyright (c) 2023-present Poing Studios
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
 
 extends Node
 
@@ -115,7 +94,6 @@ func _update_ui(uid: int) -> void:
 	main_vbox.add_theme_constant_override("separation", 0)
 	ui.add_child(main_vbox)
 
-	# 1. Top Bar
 	var top_margin := MarginContainer.new()
 	top_margin.add_theme_constant_override("margin_left", int(16 * scale_factor_x))
 	top_margin.add_theme_constant_override("margin_right", int(16 * scale_factor_x))
@@ -202,7 +180,6 @@ func _update_ui(uid: int) -> void:
 		on_app_open_ad_dismissed_full_screen_content.emit(uid)
 	)
 
-	# 2. Media View (Fills remaining space)
 	var media_container := Panel.new()
 	media_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var media_style := StyleBoxFlat.new()
@@ -290,7 +267,6 @@ func _update_ui(uid: int) -> void:
 		sq.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		phone_grid.add_child(sq)
 
-	# 3. Bottom Details Section
 	var bottom_margin := MarginContainer.new()
 	bottom_margin.add_theme_constant_override("margin_left", int(20 * scale_factor_x))
 	bottom_margin.add_theme_constant_override("margin_right", int(20 * scale_factor_x))

@@ -1,6 +1,5 @@
 extends Node
 
-## Plays a short click on every BaseButton press across the game.
 
 const CLICK_CANDIDATES := [
 	"res://resources/audio/ui_click.mp3",
@@ -60,7 +59,6 @@ func _load_or_make_click() -> AudioStream:
 	return _make_procedural_click()
 
 func _make_procedural_click() -> AudioStreamWAV:
-	## Short soft tick so UI feedback works even without a click asset.
 	var sample_rate := 22050
 	var duration_sec := 0.045
 	var sample_count := int(sample_rate * duration_sec)

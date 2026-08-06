@@ -11,13 +11,11 @@ var levels: Array[LevelData] = []
 @onready var options_menu = $OptionsMenu
 @onready var hud_layer = $HUDLayer
 
-## Soft star target from LevelData.time_limit (0 = no time star).
 var star_time_limit: int = 0
 var elapsed_seconds: int = 0
 var shifter_move_count: int = 0
 var required_shifter_moves: int = 0
 var _has_shifters: bool = false
-## Campaign tutorials: no star challenges, HUD timer shows infinity.
 var _challenges_disabled: bool = false
 var is_game_active: bool = true
 var is_paused: bool = false
@@ -26,18 +24,15 @@ var solved_solution_reference: Dictionary = {}
 var hidden_reference_constraints: Array = []
 var prefer_hidden_hints: bool = false
 var required_jokers: int = 0
-## Remaining hint uses for this board (-1 = unlimited).
 var hints_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED
 var game_undo := UndoStack.new()
 var _is_recording_action: bool = false
 var _loading_overlay: LoadingOverlay
 var _is_generating_board: bool = false
 var tutorial_director: TutorialDirector
-## Puzzle instance for the current run (needed to resume shape-only levels).
 var _run_layout: Dictionary = {}
 var _run_shifter_pairs: Array = []
 var _run_available_tiles: Array = []
-## When true, cancelling the new-puzzle confirm returns to the pause menu.
 var _reset_confirm_return_to_pause: bool = false
 
 func _is_campaign_tutorial(level: LevelData) -> bool:
@@ -76,10 +71,11 @@ func _can_use_hint() -> bool:
 		return false
 	if hints_remaining != 0:
 		return true
-	# Out of free hints — still allow if a rewarded video can grant one.
 	return AdsManager != null and AdsManager.can_offer_rewarded_hint()
 
 func _refresh_hint_button() -> void:
+	if hints_remaining == 0 and AdsManager:
+		AdsManager.warm_rewarded_hint()
 	if ui_manager:
 		ui_manager.set_hint_remaining(hints_remaining)
 		ui_manager.set_hint_button_disabled(not _can_use_hint())
@@ -112,7 +108,6 @@ func _notification(what: int) -> void:
 func _on_system_back() -> void:
 	if GlobalGameManager == null or not GlobalGameManager.consume_system_back():
 		return
-	# Never leave mid-generation — that freed the scene under an awaiting worker.
 	if _is_generating_board or (_loading_overlay and _loading_overlay.is_busy()):
 		return
 	if options_menu and options_menu.visible:
@@ -311,8 +306,6 @@ func generate_board():
 	else:
 		hidden_reference_constraints = []
 
-	# Shape-only boards (walls + empty) always generate a fresh puzzle.
-	# Authored boards with any prefilled Y/B/G/P tiles keep their fixed puzzle.
 	var base_layout: Dictionary = current_level_resource.layout.duplicate(true)
 	if base_layout.is_empty():
 		base_layout = LevelUtils.make_empty_layout(dims.x, dims.y)
@@ -384,7 +377,6 @@ func generate_board():
 			hidden_reference_constraints = gen_hidden
 		else:
 			final_c_pairs = []
-			# Use the full hidden pool so the solved reference matches intended contractions.
 			solve_constraints = gen_hidden.duplicate(true)
 			hidden_reference_constraints = gen_hidden
 		_has_shifters = final_s_pairs.size() > 0
@@ -408,7 +400,6 @@ func generate_board():
 	_run_available_tiles = tiles_list.duplicate()
 	board_manager.build_grid(fresh_layout, tiles_list, final_s_pairs, final_c_pairs)
 
-	# Unique authored levels clear the hidden pool above — rebuild from the solved board.
 	if is_unique_solution and hidden_reference_constraints.is_empty() and not solved_solution_reference.is_empty():
 		hidden_reference_constraints = HintSystem.hidden_hints_from_solved(
 			solved_solution_reference,
@@ -416,7 +407,6 @@ func generate_board():
 			dims.x,
 			dims.y
 		)
-	# If solve failed, try once more from the live board (shifters already placed).
 	if solved_solution_reference.is_empty():
 		solved_solution_reference = HintSystem.attempt_dynamic_solve(
 			board_manager.board_cells,
@@ -439,7 +429,6 @@ func generate_board():
 	_is_generating_board = false
 	ui_manager.set_top_bar_visible(true)
 	_start_tutorial_if_needed(tiles_list)
-	# After tutorial tip is set so status can combine tip + rule errors.
 	_run_validation_pass()
 	if timer_node and is_game_active and not _challenges_disabled:
 		timer_node.start()
@@ -450,7 +439,6 @@ func _start_tutorial_if_needed(tiles_list: Array) -> void:
 	if levels.is_empty() or current_level_index < 0 or current_level_index >= levels.size():
 		return
 	var level: LevelData = levels[current_level_index]
-	# Only campaign tutorial levels run scripted tips (not easy/medium/hard with the same number).
 	if not _is_campaign_tutorial(level):
 		return
 	var script_id := TutorialScripts.script_id_from_path(String(level.resource_path))
@@ -472,9 +460,7 @@ func _on_tutorial_tools_unlocked() -> void:
 	_refresh_hint_button()
 
 func _on_tutorial_board_layout_changed() -> void:
-	# Mid-tutorial lock injection — drop undo history so Undo can't restore the empty board.
 	game_undo.reset(_create_game_snapshot())
-	# Keep rebuilt tutorial boards aligned like normal level loads.
 	var dims := LevelUtils.get_dimensions_from_cells(board_manager.board_cells)
 	var centered_board_y := LevelUtils.center_board_y(
 		dims.y, GameConstants.CELL_SIZE, get_viewport_rect().size.y
@@ -514,7 +500,6 @@ func _apply_game_snapshot(snap: Dictionary):
 		cell.state = snap["cells"][coord]["state"]
 		cell.shifter_direction = snap["cells"][coord]["shifter_direction"]
 		cell.update_visuals()
-	# Keep revealed hints; undo/redo only restores board/move state.
 	_update_joker_count()
 	board_manager.trigger_redraw()
 	_run_validation_pass()
@@ -559,8 +544,15 @@ func _on_hint_requested():
 	if not is_game_active or is_paused:
 		return
 	if hints_remaining == 0:
-		# Free quota exhausted — offer a rewarded video for more hints.
-		if AdsManager and AdsManager.show_rewarded_for_hint(_on_rewarded_hint_earned):
+		if AdsManager == null:
+			if ui_manager:
+				ui_manager.show_status_errors(["ERROR_AD_HINT_UNAVAILABLE"])
+			_refresh_hint_button()
+			return
+		AdsManager.warm_rewarded_hint()
+		if AdsManager.show_rewarded_for_hint(_on_rewarded_hint_earned):
+			if ui_manager and not AdsManager.is_rewarded_hint_ready() and AdsManager.is_rewarded_hint_loading():
+				ui_manager.show_status_errors(["ERROR_AD_HINT_LOADING"])
 			return
 		if ui_manager:
 			ui_manager.show_status_errors(["ERROR_AD_HINT_UNAVAILABLE"])
@@ -569,7 +561,6 @@ func _on_hint_requested():
 	_apply_hint()
 
 func _on_rewarded_hint_earned() -> void:
-	# Bank several uses; apply one now so the tap that opened the ad still feels useful.
 	hints_remaining = GameConstants.HINTS_FROM_REWARDED_AD
 	_apply_hint()
 
@@ -668,7 +659,6 @@ func _run_validation_pass():
 			ui_manager.show_status_errors(results["errors"])
 			board_manager.refresh_error_bridges()
 	else:
-		# Keeps the tutorial tip when active; skips the default "fill the board" line.
 		ui_manager.show_status_valid()
 	if tutorial_running:
 		tutorial_director.on_validation_result(results)
@@ -711,7 +701,6 @@ func trigger_victory():
 	var won_tutorial := _is_campaign_tutorial(levels[current_level_index])
 	if not is_custom:
 		if won_tutorial:
-			# Tutorials are outside normal numbering — unlock the first campaign level.
 			SaveManager.unlock_level(LevelUtils.first_campaign_level_number())
 		else:
 			SaveManager.unlock_level(unlock_num + 1)
@@ -754,7 +743,6 @@ func _on_pause():
 		pause_menu.show()
 
 func _on_how_to_play():
-	# During HUD teach: tapping the glowing Rules button advances the tip.
 	if tutorial_director and tutorial_director.consume_hud_action("how_to_play"):
 		return
 	if not is_game_active or is_paused:
@@ -791,7 +779,6 @@ func _on_resume():
 		tutorial_director.refresh_tool_gates()
 
 func _on_reset():
-	# During HUD teach: tapping the glowing Reset button advances the tip.
 	if tutorial_director and tutorial_director.consume_hud_action("reset"):
 		return
 	if not is_game_active or is_paused:
@@ -841,7 +828,6 @@ func _on_reset_cancelled() -> void:
 	_on_resume()
 
 func _on_restart_level():
-	# NEW PUZZLE from pause — same confirm as the HUD reset button.
 	if pause_menu:
 		pause_menu.hide()
 	_reset_confirm_return_to_pause = true
@@ -882,7 +868,6 @@ func _do_next_level() -> void:
 	_begin_level_entry()
 
 func _on_play_again():
-	# Retry the current level so the player can chase remaining challenge stars.
 	SaveManager.clear_session()
 	var skip_ad := (
 		not levels.is_empty()
@@ -961,7 +946,6 @@ func _finish_session_restart() -> void:
 	generate_board()
 
 func _on_session_back() -> void:
-	# Keep the in-progress session so Continue still works next time.
 	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")
 
 func _on_locale_refresh() -> void:
@@ -1007,7 +991,6 @@ func _autosave_session() -> void:
 		return
 	if _is_generating_board:
 		return
-	# Don't snapshot mid-tutorial — resume can't restore scripted tip state yet.
 	if tutorial_director and tutorial_director.is_active():
 		return
 	var payload := _build_session_payload()

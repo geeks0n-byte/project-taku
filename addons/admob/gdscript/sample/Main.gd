@@ -1,24 +1,3 @@
-# MIT License
-#
-# Copyright (c) 2023-present Poing Studios
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
 
 extends Control
 
@@ -104,10 +83,8 @@ func _apply_resize() -> void:
 	var window_factor: float = (float(win_size.x) + float(win_size.y)) / 1140.0
 	var total_factor: float = window_factor * scale_factor
 
-	# Use the centralized UI scaling utility to recursively scale all controls
 	UIScaler.scale_ui(self, total_factor, scale_factor)
 
-	# Correctly hide the support card in landscape modes based on physical window height
 	_support_card.visible = win_size.y >= 500
 
 
@@ -138,33 +115,26 @@ func _on_initialization_complete(status: InitializationStatus) -> void:
 
 
 func _setup_mediation_adapters() -> void:
-	# Vungle setup example
 	Vungle.update_ccpa_status(Vungle.Consent.OPTED_OUT)
 	Vungle.update_consent_status(Vungle.Consent.OPTED_IN, "consent_message")
 
-	# IronSource setup example
 	IronSource.set_consent(true)
 	IronSource.set_metadata("do_not_sell", "false")
 	IronSource.set_user_id("unique_user_id_123")
 
-	# AppLovin setup example
 	AppLovin.set_has_user_consent(true)
 	AppLovin.set_do_not_sell(false)
 	AppLovin.set_muted(true)
 
-	# BidMachine setup example
 	BidMachine.set_subject_to_gdpr(true)
 	BidMachine.set_consent_status(true)
 	BidMachine.set_us_privacy_string("1YNN")
 
-	# Unity Ads setup example
 	UnityAds.set_consent(true)
 	UnityAds.set_privacy_consent("user_privacy_data", true)
 
-	# Chartboost setup example
 	Chartboost.set_consent(true)
 
-	# DT Exchange setup example
 	DTExchange.set_gdpr_consent(true)
 	DTExchange.set_gdpr_consent_string("consent_string_example")
 	DTExchange.set_ccpa_string("1YNN")

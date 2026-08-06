@@ -10,7 +10,6 @@ enum TileState {
 	SHIFTER = 3,
 }
 
-## Editor link brushes (not tile states).
 enum BrushTool {
 	EQUALS = 4,
 	NOT_EQUALS = 5,
@@ -19,15 +18,12 @@ enum BrushTool {
 const CELL_SIZE := 120
 const TOP_HUD_BOTTOM := 236.0
 const BOARD_GAP := 40.0
-## 0 = unlimited undo/redo history.
 const UNDO_STACK_LIMIT := 0
 
-## Soft hint quotas by difficulty (-1 = unlimited). Harder levels get more hints.
 const HINT_LIMIT_EASY := 2
 const HINT_LIMIT_MEDIUM := 3
 const HINT_LIMIT_HARD := 5
 const HINT_LIMIT_UNLIMITED := -1
-## Consumable hints added to the quota after a rewarded video (used one at a time).
 const HINTS_FROM_REWARDED_AD := 3
 
 const HUD_BUTTON_WIDTH := 140
@@ -62,8 +58,6 @@ const HUD_SIDE_MARGIN := 24.0
 const HUD_TOP_BAR_ICON_NUDGE := 2
 const LEVEL_PREVIEW_SIZE := 112
 
-## Shared screen headers (Options, Level Select, Credits, Pause, …).
-## Vertical slot matches the main menu title label.
 const SCREEN_HEADER_FONT_SIZE := 64
 const SCREEN_HEADER_OUTLINE := 12
 const SCREEN_HEADER_TOP := 260.0
@@ -71,14 +65,10 @@ const SCREEN_HEADER_HEIGHT := 152.0
 const SCREEN_CONTENT_GAP := 36.0
 const SCREEN_HEADER_COLOR := Color(1.0, 0.84, 0.0, 1.0)
 
-## Shared bottom Close / Prev / Next band (matches level-select Close height).
-## Raised so an adaptive AdMob banner (~90–140px) fits under the nav.
 const AD_BANNER_RESERVE := 140.0
 const SCREEN_BOTTOM_NAV_TOP := -260.0 - AD_BANNER_RESERVE
 const SCREEN_BOTTOM_NAV_BOTTOM := -160.0 - AD_BANNER_RESERVE
 
-## Shared menu / dialog button tiers.
-## Font bases are for the pixel UI font (English); HudLayout scales them for default-font locales.
 const UI_BTN_PRIMARY_SIZE := Vector2(560, 120)
 const UI_BTN_PRIMARY_FONT := 32
 const UI_BTN_PRIMARY_FONT_MIN := 16
@@ -103,10 +93,8 @@ const UI_BTN_TAB_SIZE := Vector2(240, 110)
 const UI_BTN_TAB_FONT := 42
 const UI_BTN_TAB_FONT_MIN := 26
 
-## Shared black outline for menu / dialog text rows.
 const MENU_TEXT_OUTLINE := 10
 
-## Always-default-font body copy (credits, HTP, dialogs, resume prompt).
 const UI_BODY_FONT_SIZE := 26
 const UI_BODY_FONT_SIZE_LARGE := 28
 const UI_BODY_TITLE_FONT_SIZE := 46
@@ -141,11 +129,9 @@ static func is_basic_tile(state: int) -> bool:
 static func is_solvable_tile(state: int) -> bool:
 	return state in [TileState.YELLOW, TileState.BLUE, TileState.JOKER, TileState.SHIFTER]
 
-## Tiles that can appear in equals/not-equals contractions (Y/B/G/P).
 static func is_hintable_tile(state: int) -> bool:
 	return is_solvable_tile(state)
 
-## Hint quota for PuzzleGenerator.Difficulty (-1 = unlimited).
 static func hint_limit_for_difficulty(difficulty: int) -> int:
 	match difficulty:
 		PuzzleGenerator.Difficulty.EASY:

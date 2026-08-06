@@ -23,19 +23,15 @@ var _last_status_key: String = ""
 var _last_status_icons: Array = []
 var _last_status_show_next: bool = false
 var _last_status_append_next_prompt: bool = false
-## Blocks victory while teaching rules discovered from validation errors.
 var _block_solve: bool = false
 var _discover_active: bool = false
-## 0 = idle, 1 = showing first rule tip, 2 = showing second rule tip.
 var _rule_teach_phase: int = 0
 var _rule_teach_first_key: String = ""
 var _rule_teach_second_key: String = ""
 var _rule_teach_first_icons: Array = []
 var _rule_teach_second_icons: Array = []
 var _suppress_validation_errors: bool = false
-## True only after a `done` step — mid-tutorial full boards must not end the script.
 var _awaiting_solve: bool = false
-## rebuild_board waits for Next before swapping the grid.
 var _pending_rebuild: bool = false
 
 func setup(board: BoardManager, ui: UIManager = null) -> void:
@@ -116,7 +112,6 @@ func on_board_changed(_coord: Vector2i = Vector2i(-1, -1)) -> void:
 	if kind == "practice":
 		_update_practice_feedback(step)
 		return
-	# Free-place steps keep Next + board open together — do not freeze on tap.
 	if kind == "message" and bool(step.get("free_place", false)):
 		return
 	if _awaiting_next:
@@ -125,7 +120,6 @@ func on_board_changed(_coord: Vector2i = Vector2i(-1, -1)) -> void:
 		return
 	_check_wait_condition()
 
-## Returns true when the tutorial consumed the invalid-move feedback.
 func on_invalid_move(msg: String) -> bool:
 	if not _active or _solved_complete:
 		return false
@@ -139,7 +133,6 @@ func on_invalid_move(msg: String) -> bool:
 	_on_practice_success(step)
 	return true
 
-## After PuzzleValidator runs — used by discover_rules to teach on first break.
 func on_validation_result(results: Dictionary) -> void:
 	if not _active or _solved_complete or not _discover_active:
 		return
@@ -152,7 +145,6 @@ func on_validation_result(results: Dictionary) -> void:
 		_start_rule_teach(broke_two, broke_balance)
 		return
 	if bool(results.get("valid", false)) and board_manager and board_manager.is_board_full():
-		# Solved without breaking — still teach both rules before tools / finish.
 		_start_rule_teach(false, false)
 
 func _errors_include_rule_of_two(errors: Array) -> bool:
@@ -189,7 +181,6 @@ func _start_rule_teach(broke_two: bool, broke_balance: bool) -> void:
 		_rule_teach_second_key = two_key
 		_rule_teach_second_icons = two_icons
 	else:
-		# Both at once, or clean solve — Rule of Two then Equal Balance.
 		_rule_teach_first_key = two_key
 		_rule_teach_first_icons = two_icons
 		_rule_teach_second_key = bal_key
@@ -197,7 +188,6 @@ func _start_rule_teach(broke_two: bool, broke_balance: bool) -> void:
 	_rule_teach_phase = 1
 	_show_message_key(_rule_teach_first_key, _rule_teach_first_icons, true)
 
-## Called when the board is valid and full. Shows the complete tip + Next; blocks the board.
 func on_board_solved() -> void:
 	if not _active or _solved_complete:
 		return
@@ -210,17 +200,14 @@ func on_board_solved() -> void:
 	_practice_succeeded = false
 	_highlight_button_id = ""
 	if board_manager:
-		# Only now may the board be locked — tutorial is over except for Next.
 		board_manager.set_click_whitelist([])
 		board_manager.clear_guide_cells()
 		board_manager.clear_focus_cells()
 		board_manager.restore_cell_cycle_tiles(available_tiles)
-	# Keep HUD tools locked until Next finishes the tutorial (prevents undo after solve).
 	_tools_locked = true
 	refresh_tool_gates()
 	_show_message_key("TUT_COMPLETE", [], true)
 
-## Returns true when the HUD action was consumed by the current tutorial step.
 func consume_hud_action(button_id: String) -> bool:
 	if not _active or _solved_complete:
 		return false
@@ -269,7 +256,6 @@ func _apply_step(step: Dictionary) -> void:
 		"message":
 			var allow_board := bool(step.get("allow_board", false))
 			var free_place := bool(step.get("free_place", false))
-			# Next and board interaction are mutually exclusive, except free_place practice.
 			var show_next := bool(step.get("show_next", true))
 			if allow_board and not free_place:
 				show_next = false
@@ -302,7 +288,6 @@ func _apply_step(step: Dictionary) -> void:
 				_apply_focus(step)
 			_freeze_board_input()
 		"rebuild_board":
-			# Teaser on the current board; swap only after Next.
 			_pending_rebuild = step.has("layout")
 			var pending_key := String(step.get("pending_key", ""))
 			if pending_key.is_empty():
@@ -328,7 +313,6 @@ func _apply_step(step: Dictionary) -> void:
 			_update_practice_feedback(step)
 		"hud_button":
 			_highlight_button_id = String(step.get("button", ""))
-			# Teach the HUD control — tap the glowing button or press Next.
 			var hud_next := bool(step.get("show_next", true))
 			_show_message_from_step(step, hud_next)
 			_clear_board_gates(false)
@@ -401,7 +385,6 @@ func _apply_focus(step: Dictionary) -> void:
 	board_manager.restore_cell_cycle_tiles(available_tiles)
 	var masks: Array = step.get("mask", step.get("highlight", [])).duplicate()
 	var borders: Array = step.get("red", step.get("border", [])).duplicate()
-	# Interactive targets stay highlighted until the player acts on them.
 	if step.has("coord"):
 		var target: Vector2i = step["coord"]
 		if not masks.has(target):
@@ -416,7 +399,6 @@ func _apply_focus(step: Dictionary) -> void:
 			borders.append(from_c)
 	board_manager.set_guide_cells(masks)
 	board_manager.set_focus_cells(borders)
-	# Gate clicks: practice → only highlighted cells; Next-only steps → freeze.
 	var kind := String(step.get("type", ""))
 	if _awaiting_next:
 		board_manager.set_click_whitelist([])
@@ -424,7 +406,6 @@ func _apply_focus(step: Dictionary) -> void:
 		var allowed: Array = masks.duplicate() if not masks.is_empty() else []
 		if allowed.is_empty() and step.has("coord"):
 			allowed = [step["coord"]]
-		# Shifter hops from the active purple cell — allow that too.
 		if (
 			(step.get("wait_shifter", false) or step.get("wait_blocked_shifter", false))
 			and step.has("from")
@@ -449,7 +430,6 @@ func _update_practice_feedback(step: Dictionary) -> void:
 	var target := int(step.get("state", -999))
 
 	if step.get("wait_blocked_shifter", false):
-		# Success comes from on_invalid_move when the blocked hop is attempted.
 		_practice_succeeded = false
 		_show_message_from_step(step, false)
 		_apply_focus(step)
@@ -473,18 +453,15 @@ func _update_practice_feedback(step: Dictionary) -> void:
 	if cell.state == GameConstants.TileState.EMPTY:
 		_clear_practice_error(cell)
 		_show_message_from_step(step, false)
-		# Keep white guides/borders visible while the cell is empty again.
 		_apply_focus(step)
 		return
 
-	# Wrong tile: keep trying — restore guides after validation clears errors.
 	if cell.has_method("set_error_highlight"):
 		cell.set_error_highlight()
 	var wrong_key := String(step.get("wrong_key", ""))
 	if wrong_key.is_empty():
 		wrong_key = String(step.get("text_key", ""))
 	_show_message_key(wrong_key, step.get("wrong_icons", step.get("icons", [])), false)
-	# Re-apply masks/borders next frame so they survive validation clear_highlights.
 	call_deferred("_reapply_practice_focus")
 
 func _clear_practice_error(cell) -> void:
@@ -497,7 +474,6 @@ func _on_practice_success(step: Dictionary) -> void:
 	if _practice_succeeded:
 		return
 	_practice_succeeded = true
-	# Lock input on success while we show feedback.
 	_freeze_board_input()
 	var success_key := String(step.get("success_key", ""))
 	var require_next := bool(step.get("require_next_after_success", false))
@@ -513,7 +489,6 @@ func _on_practice_success(step: Dictionary) -> void:
 	if require_next:
 		_freeze_board_input()
 		return
-	# Deferred so a full-board solve can mark _solved_complete first.
 	call_deferred("_advance_after_practice")
 
 func _advance_after_practice() -> void:
@@ -560,7 +535,6 @@ func _check_wait_condition() -> void:
 func _show_message_from_step(step: Dictionary, show_next: bool) -> void:
 	var allow_board := bool(step.get("allow_board", false))
 	var free_place := bool(step.get("free_place", false))
-	# Never show Next while the board is free to tap — except free_place practice.
 	if allow_board and show_next and not free_place:
 		show_next = false
 	_show_message_key(
@@ -582,15 +556,12 @@ func _show_message_key(
 	_last_status_append_next_prompt = append_next_prompt
 	var text := tr(key) if not key.is_empty() else ""
 	text = _apply_icon_placeholders(text, _last_status_icons)
-	# NEXT button pulse is enough — never append "Tap Next" copy.
 	text = _strip_inline_next_prompt(text)
 	if ui_manager:
 		ui_manager.show_tutorial_status(text)
 	_set_next_visible(show_next)
-	# Content height is ready after the label updates.
 	call_deferred("_position_next_button")
 
-## Replace each `%s` in order with an icon. Avoids leftover `%s` when counts mismatch.
 func _apply_icon_placeholders(text: String, icons: Array) -> String:
 	var result := text
 	for token in icons:
@@ -604,7 +575,6 @@ func _apply_icon_placeholders(text: String, icons: Array) -> String:
 
 func _strip_inline_next_prompt(text: String) -> String:
 	var cleaned := text.strip_edges()
-	# Remove a trailing "Tap Next..." style sentence if a translation still inlines it.
 	var markers: Array[String] = [
 		"Tap Next",
 		"Pulsa Siguiente",
@@ -617,7 +587,6 @@ func _strip_inline_next_prompt(text: String) -> String:
 	for marker in markers:
 		var idx := cleaned.rfind(marker)
 		if idx >= 0:
-			# Only strip when the marker starts the final sentence-ish chunk.
 			var before := cleaned.substr(0, idx).strip_edges()
 			if before.is_empty() or before.ends_with(".") or before.ends_with("!") or before.ends_with("—") or before.ends_with("-"):
 				cleaned = before
@@ -656,11 +625,9 @@ func _set_next_visible(show_next: bool) -> void:
 				board_manager.clear_guide_cells()
 				board_manager.clear_focus_cells()
 				if free_place:
-					# Keep placing freely while Next is available.
 					board_manager.clear_click_whitelist()
 				else:
 					board_manager.set_click_whitelist([])
-			# Keep HUD teach highlight; only clear it on non-HUD Next tips.
 			if not teaching_hud:
 				_highlight_button_id = ""
 				if ui_manager:
@@ -769,19 +736,16 @@ func _ensure_next_button() -> void:
 func _position_next_button() -> void:
 	if not _next_button:
 		return
-	# Large tutorial CTA; sit above the ad banner.
 	var btn_size := Vector2(420, 150)
 	var half_w := btn_size.x * 0.5
 	var base_bottom := 480.0 + GameConstants.AD_BANNER_RESERVE
 	var bottom_margin := base_bottom
-	# Longer tip text grows the status strip — nudge NEXT downward so it clears the tip.
 	if ui_manager and ui_manager.status_label:
 		var status := ui_manager.status_label
 		var content_h := float(status.get_content_height())
 		var overflow := maxf(0.0, content_h - GameConstants.HUD_STATUS_MIN_HEIGHT)
 		if overflow > 0.0:
 			status.offset_bottom = status.offset_top + content_h + 12.0
-		# Smaller bottom margin = lower on screen (CENTER_BOTTOM anchors).
 		bottom_margin = maxf(
 			220.0 + GameConstants.AD_BANNER_RESERVE,
 			base_bottom - overflow

@@ -1,16 +1,13 @@
 extends RefCounted
 class_name StoreAssetRenderer
 
-## Renders Google Play store images using the real main-menu TitleCluster.
 
 const OUTPUT_DIR := "res://docs/store-assets/"
 const MAIN_MENU_SCENE := preload("res://scenes/main_menu.tscn")
 const ICON_TEXTURE: Texture2D = preload("res://resources/icons/app_icon_cosmos.svg")
 
 const SPACE_BG := Color(0.0, 0.0705882, 0.227451, 1.0) # #00123a
-## TitleCluster in main_menu.tscn is 1080 x 420 (offsets -540..540, 0..420).
 const CLUSTER_SIZE := Vector2(1080.0, 420.0)
-## Crop to the title band so store banners aren't mostly empty header space.
 const TITLE_CROP := Rect2(0.0, 220.0, 1080.0, 180.0)
 
 
@@ -97,7 +94,6 @@ static func _build_app_icon() -> Control:
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_SCALE
 	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	# Full-bleed square icon — no transparent rounded corners.
 	icon.position = Vector2.ZERO
 	icon.size = Vector2(512, 512)
 	root.add_child(icon)
@@ -108,7 +104,6 @@ static func _build_feature_landscape() -> Control:
 	var root := Control.new()
 	_add_star_field(root, Vector2(1024, 500))
 	var cluster := _instantiate_title_cluster()
-	# Fit the cropped title band into the feature graphic with margin.
 	var scale := minf(960.0 / TITLE_CROP.size.x, 360.0 / TITLE_CROP.size.y)
 	cluster.scale = Vector2(scale, scale)
 	var drawn := TITLE_CROP.size * scale
@@ -136,7 +131,6 @@ static func _build_feature_portrait() -> Control:
 
 
 static func _instantiate_title_cluster() -> Control:
-	## Duplicate the real TitleCluster so tile offsets/sizes match the menu exactly.
 	var menu: Node = MAIN_MENU_SCENE.instantiate()
 	var cluster: Control = menu.get_node("TitleLayer/TitleHost/TitleCluster")
 	cluster.owner = null
@@ -145,7 +139,6 @@ static func _instantiate_title_cluster() -> Control:
 	cluster.get_parent().remove_child(cluster)
 	menu.free()
 
-	# Scene uses centered anchors (-540..540). Flatten to a fixed 1080x420 box for capture.
 	cluster.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	cluster.anchor_left = 0.0
 	cluster.anchor_top = 0.0
@@ -158,13 +151,11 @@ static func _instantiate_title_cluster() -> Control:
 
 	var label := cluster.get_node_or_null("TitleLabel") as Label
 	if label:
-		# Match runtime brand styling (same as main_menu._style_title_label).
 		label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.0, 1.0))
 		label.add_theme_color_override("font_outline_color", Color.BLACK)
 		label.add_theme_constant_override("outline_size", 14)
 		label.add_theme_font_size_override("font_size", 96)
 
-	# Ensure tiles keep their authored pixel size (SVG imports are larger than the rect).
 	var tile_host := cluster.get_node_or_null("TitleTileHost") as Control
 	if tile_host:
 		for child in tile_host.get_children():

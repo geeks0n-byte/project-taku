@@ -1,24 +1,3 @@
-# MIT License
-#
-# Copyright (c) 2023-present Poing Studios
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
 
 class_name NativeOverlayAd
 extends MobileSingletonPlugin
@@ -53,11 +32,6 @@ func get_media_content() -> MediaContent:
 	return _media_content
 
 
-## Loads a native overlay ad.
-## [param ad_unit_id]: An ad unit ID created in the AdMob UI.
-## [param ad_request]: An ad request object containing targeting information.
-## [param options]: Native Ad Options for configuring rendering settings.
-## [param ad_load_callback]: Callback function with signature (ad: NativeOverlayAd, error: LoadAdError).
 static func load(
 	ad_unit_id: String, ad_request: AdRequest, options: NativeAdOptions, ad_load_callback: Callable
 ) -> void:
@@ -84,7 +58,6 @@ static func load(
 		)
 
 
-## Renders the native overlay ad at provided AdPosition.
 func render_template(
 	style: NativeTemplateStyle, ad_position: AdPosition, ad_size: AdSize = null
 ) -> void:
@@ -107,7 +80,6 @@ func render_template(
 			)
 
 
-## Sets the position of the native overlay ad.
 func set_template_position(ad_position: AdPosition) -> void:
 	if _plugin:
 		if ad_position.value == AdPosition.Values.CUSTOM:
@@ -116,7 +88,6 @@ func set_template_position(ad_position: AdPosition) -> void:
 			_plugin.update_position(_uid, ad_position.value)
 
 
-## Destroys the native overlay ad.
 func destroy() -> void:
 	if _plugin:
 		_plugin.destroy(_uid)
@@ -129,13 +100,11 @@ func get_response_info() -> ResponseInfo:
 	return null
 
 
-## Hides the ad from being shown.
 func hide() -> void:
 	if _plugin:
 		_plugin.hide(_uid)
 
 
-## Shows the previously hidden ad.
 func show() -> void:
 	if _plugin:
 		_plugin.show(_uid)
@@ -153,7 +122,6 @@ func get_template_height_in_pixels() -> float:
 	return 0.0
 
 
-#region Internal Callbacks
 func _on_ad_loaded(uid: int) -> void:
 	if uid == _uid:
 		safe_disconnect(_plugin, "on_native_overlay_ad_loaded", _on_ad_loaded)
@@ -241,4 +209,3 @@ func _on_video_mute(uid: int, is_muted: bool) -> void:
 func _on_template_rendered(uid: int) -> void:
 	if uid == _uid and on_template_rendered.is_valid():
 		on_template_rendered.call_deferred()
-#endregion

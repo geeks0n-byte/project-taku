@@ -1,16 +1,9 @@
 class_name PuzzleSolver
 extends RefCounted
 
-## Public solvability / uniqueness facade over PuzzleGenerator's backtracker.
-## solution_count: 0 | 1 | 2+ (capped) | SOLUTIONS_UNKNOWN (-1)
-##
-## Shifter pairs may occupy either linked cell; the other cell is filled with a color.
-## Analysis tries every combination of shifter sides under one shared iteration budget.
 
 const SOLUTIONS_UNKNOWN := PuzzleGenerator.SOLUTIONS_UNKNOWN
-## Shared across all shifter-side configs (not reset per mask).
 const MOBILITY_ITER_BUDGET := 120000
-## Soft cap so 2^n stays bounded (8 pairs → 256 configs).
 const MAX_SHIFTER_PAIRS_FOR_MOBILITY := 8
 
 static func analyze(
@@ -81,7 +74,6 @@ static func _analyze_with_shifter_mobility(
 	var shared_iter := {
 		"count": 0,
 		"budget": MOBILITY_ITER_BUDGET,
-		# Solvable-only stops at 1; uniqueness needs to prove 2+.
 		"max_needed": 1 if not require_unique else 2,
 	}
 
@@ -127,7 +119,6 @@ static func _analyze_with_shifter_mobility(
 		if branch >= 1 and first_solution.is_empty() and shared_iter.has("solution"):
 			first_solution = shared_iter["solution"]
 		total += branch
-		# Solvable-only: stop at first solution. Unique: stop once multi is proven.
 		if not require_unique and total >= 1:
 			break
 		if total > 1:
@@ -137,7 +128,6 @@ static func _analyze_with_shifter_mobility(
 	if timed_out and total < 1:
 		return _result(SOLUTIONS_UNKNOWN, first_solution, true)
 	if timed_out and require_unique and total == 1:
-		# Could not prove uniqueness within budget.
 		return _result(SOLUTIONS_UNKNOWN, first_solution, true)
 	return _result(total, first_solution, false)
 
@@ -164,7 +154,6 @@ static func _analyze_prepared(
 		)
 	return _result(count, solution, false)
 
-## Ensure pair endpoints are empty so each config can place the shifter on either side.
 static func _layout_with_pair_cells_cleared(layout: Dictionary, pairs: Array) -> Dictionary:
 	var out: Dictionary = layout.duplicate()
 	for pair in pairs:
@@ -189,7 +178,6 @@ static func _normalized_shifter_pairs(shifter_pairs: Array) -> Array:
 		var cell_b: Vector2i = raw["b"]
 		if cell_a == cell_b:
 			continue
-		# Skip pairs whose endpoints are locked to a non-empty color.
 		pairs.append({"a": cell_a, "b": cell_b})
 	return pairs
 

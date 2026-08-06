@@ -1,22 +1,17 @@
 class_name HintController
 extends RefCounted
 
-## Gameplay-facing hint API + hint button visuals.
-## Constraint selection / priority lives in HintSystem.
 
 const ICON_HINT_ON: Texture2D = preload("res://resources/icons/icon_hint_on.svg")
 const ICON_HINT_OFF: Texture2D = preload("res://resources/icons/icon_hint_off.svg")
 const COUNT_LABEL_NAME := "HintCountLabel"
 
-## remaining: -1 = unlimited (hide badge), 0 = out of free hints (white "Ad"), >0 = show count.
-## has_action: board still has wrong cells / constraint hints (or rewarded path available).
 static func update_button(button: Button, has_action: bool, remaining: int = -1) -> void:
 	if not button:
 		return
 	button.disabled = not has_action
 	var icon := button.get_node_or_null("IconContainer/Icon") as TextureRect
 	if icon:
-		# Unlimited or remaining stock → on icon; exhausted free quota → off icon (ad path).
 		var use_on := remaining != 0
 		icon.texture = ICON_HINT_ON if use_on else ICON_HINT_OFF
 	HudLayout.refresh_button_icon_modulate(button)
@@ -35,7 +30,6 @@ static func _update_count_badge(button: Button, remaining: int) -> void:
 	var label := _ensure_count_label(button)
 	if label == null:
 		return
-	# Unlimited → hide badge. Exhausted free hints → white "Ad". Stock → yellow count.
 	if remaining < 0:
 		label.visible = false
 		return
@@ -96,9 +90,6 @@ static func has_usable_hints(
 		prefer_hidden_pool
 	) > 0
 
-## Returns {"hint": Variant, "solved_reference": Dictionary}.
-## When prefer_hidden_pool is true, only reveal from hidden_reference_constraints
-## (used for non-unique levels so hints stay solution-pool consistent).
 static func reveal_hint(
 	board_cells: Dictionary,
 	active_constraints: Array,

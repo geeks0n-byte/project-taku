@@ -1,6 +1,4 @@
 extends Node
-## AdMob wrapper: menu banners, interstitial every N wins, rewarded +3 hints.
-## No-ops on desktop / when the Android plugin is absent.
 
 const INTERSTITIAL_EVERY_N := 3
 
@@ -8,7 +6,6 @@ const TEST_BANNER_UNIT_ID := "ca-app-pub-3940256099942544/6300978111"
 const TEST_INTERSTITIAL_UNIT_ID := "ca-app-pub-3940256099942544/1033173712"
 const TEST_REWARDED_UNIT_ID := "ca-app-pub-3940256099942544/5224354917"
 
-## Replace with production unit IDs before Play release.
 const PROD_BANNER_UNIT_ID := "ca-app-pub-1624206851803206/6555942665"
 const PROD_INTERSTITIAL_UNIT_ID := "ca-app-pub-1624206851803206/8878973813"
 const PROD_REWARDED_UNIT_ID := "ca-app-pub-1624206851803206/1850531037"
@@ -33,6 +30,9 @@ var _rewarded_loader: RewardedAdLoader = null
 var _loading_rewarded: bool = false
 var _pending_reward_callback: Callable = Callable()
 var _reward_earned: bool = false
+var _queued_reward_callback: Callable = Callable()
+var _rewarded_retry_timer: Timer = null
+const REWARDED_RETRY_SEC := 15.0
 
 func _ready() -> void:
 	_ads_supported = _detect_ads_support()
@@ -107,9 +107,7 @@ func _interstitial_unit_id() -> String:
 func _rewarded_unit_id() -> String:
 	return TEST_REWARDED_UNIT_ID if _use_test_units() else PROD_REWARDED_UNIT_ID
 
-# --- Banner (menus) -----------------------------------------------------------
 
-## Show bottom banner on menu screens / gameplay.
 func show_menu_banner() -> void:
 	_banner_wanted_visible = true
 	if not _ads_supported:
@@ -121,7 +119,6 @@ func show_menu_banner() -> void:
 	if _banner and _banner_loaded:
 		_banner.show()
 
-## Recreate at AdPosition.BOTTOM after fullscreen ads or if the view drifted mid-screen.
 func refresh_banner_anchor() -> void:
 	_banner_wanted_visible = true
 	if not _ads_supported:
@@ -132,7 +129,6 @@ func refresh_banner_anchor() -> void:
 	_destroy_banner()
 	_ensure_banner_loaded()
 
-## Hide banner on splash / editor (menus + gameplay keep it visible).
 func hide_menu_banner() -> void:
 	_banner_wanted_visible = false
 	if _banner:
@@ -165,7 +161,6 @@ func _destroy_banner() -> void:
 		_banner = null
 	_banner_loaded = false
 
-# --- Interstitial -------------------------------------------------------------
 
 func _load_interstitial() -> void:
 	if not _initialized or _loading_interstitial or _interstitial != null:
@@ -210,7 +205,6 @@ func _finish_pending_after_ad() -> void:
 	if cb.is_valid():
 		cb.call()
 
-## Count a non-tutorial win or puzzle restart toward the interstitial cadence.
 func record_level_win(is_tutorial: bool) -> void:
 	_record_interstitial_progress(is_tutorial)
 
@@ -223,7 +217,6 @@ func _record_interstitial_progress(is_tutorial: bool) -> void:
 	if SaveManager:
 		SaveManager.record_ad_win()
 
-## Shows interstitial when due; always invokes `on_done` (immediately if no ad).
 func show_interstitial_if_ready(on_done: Callable = Callable()) -> void:
 	if not _ads_supported or not _initialized:
 		if on_done.is_valid():
@@ -241,16 +234,26 @@ func show_interstitial_if_ready(on_done: Callable = Callable()) -> void:
 		SaveManager.consume_interstitial_wins()
 	_interstitial.show()
 
-# --- Rewarded (extra hint) ----------------------------------------------------
 
 func can_offer_rewarded_hint() -> bool:
-	## Always offer the out-of-hints path; desktop/debug uses a mock reward.
 	return true
 
 func is_rewarded_hint_ready() -> bool:
 	if not _ads_supported:
 		return OS.is_debug_build()
 	return _initialized and _rewarded != null
+
+func is_rewarded_hint_loading() -> bool:
+	if not _ads_supported:
+		return false
+	return _initializing or _loading_rewarded or _queued_reward_callback.is_valid()
+
+func warm_rewarded_hint() -> void:
+	if not _ads_supported:
+		return
+	ensure_started()
+	if _initialized:
+		_load_rewarded()
 
 func _load_rewarded() -> void:
 	if not _initialized or _loading_rewarded or _rewarded != null:
@@ -263,9 +266,12 @@ func _load_rewarded() -> void:
 		_loading_rewarded = false
 		_rewarded = ad
 		_bind_rewarded_callbacks()
+		_cancel_rewarded_retry()
+		_flush_queued_rewarded_show()
 	callback.on_ad_failed_to_load = func(_error: LoadAdError) -> void:
 		_loading_rewarded = false
 		_rewarded = null
+		_schedule_rewarded_retry()
 	_rewarded_loader.load(_rewarded_unit_id(), AdRequest.new(), callback)
 
 func _bind_rewarded_callbacks() -> void:
@@ -293,10 +299,32 @@ func _destroy_rewarded() -> void:
 		_rewarded.destroy()
 		_rewarded = null
 
-## Shows a rewarded video for several hint uses. Returns true if the ad (or debug mock) started.
-## `on_rewarded` is called only after the user earns the reward (then ad closes).
+func _schedule_rewarded_retry() -> void:
+	if not _ads_supported or not _initialized:
+		return
+	if _rewarded_retry_timer == null:
+		_rewarded_retry_timer = Timer.new()
+		_rewarded_retry_timer.one_shot = true
+		_rewarded_retry_timer.timeout.connect(_on_rewarded_retry_timeout)
+		add_child(_rewarded_retry_timer)
+	if _rewarded_retry_timer.is_stopped():
+		_rewarded_retry_timer.start(REWARDED_RETRY_SEC)
+
+func _cancel_rewarded_retry() -> void:
+	if _rewarded_retry_timer and not _rewarded_retry_timer.is_stopped():
+		_rewarded_retry_timer.stop()
+
+func _on_rewarded_retry_timeout() -> void:
+	_load_rewarded()
+
+func _flush_queued_rewarded_show() -> void:
+	if not _queued_reward_callback.is_valid():
+		return
+	var cb := _queued_reward_callback
+	_queued_reward_callback = Callable()
+	show_rewarded_for_hint(cb)
+
 func show_rewarded_for_hint(on_rewarded: Callable = Callable()) -> bool:
-	# Desktop / editor: simulate a successful rewarded watch so the flow is testable.
 	if not _ads_supported:
 		if OS.is_debug_build() and on_rewarded.is_valid():
 			call_deferred("_invoke_rewarded_mock", on_rewarded)
@@ -304,10 +332,13 @@ func show_rewarded_for_hint(on_rewarded: Callable = Callable()) -> bool:
 		return false
 	if not _initialized:
 		ensure_started()
-		return false
+		_queued_reward_callback = on_rewarded
+		return true
 	if _rewarded == null:
+		_queued_reward_callback = on_rewarded
 		_load_rewarded()
-		return false
+		return true
+	_queued_reward_callback = Callable()
 	_pending_reward_callback = on_rewarded
 	_reward_earned = false
 	var reward_listener := OnUserEarnedRewardListener.new()
@@ -320,27 +351,44 @@ func _invoke_rewarded_mock(on_rewarded: Callable) -> void:
 	if on_rewarded.is_valid():
 		on_rewarded.call()
 
-# --- Privacy ------------------------------------------------------------------
 
-func show_privacy_options_form(on_done: Callable = Callable()) -> void:
+const PRIVACY_OPTIONS_STATE_UNAVAILABLE := 0
+const PRIVACY_OPTIONS_STATE_LOADING := 1
+const PRIVACY_OPTIONS_STATE_NOT_REQUIRED := 2
+const PRIVACY_OPTIONS_STATE_READY := 3
+
+func get_privacy_options_state() -> int:
 	if not _ads_supported:
+		return PRIVACY_OPTIONS_STATE_UNAVAILABLE
+	ensure_started()
+	if not _initialized:
+		return PRIVACY_OPTIONS_STATE_LOADING
+	var req := UserMessagingPlatform.consent_information.get_privacy_options_requirement_status()
+	if req == ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED:
+		return PRIVACY_OPTIONS_STATE_READY
+	if req == ConsentInformation.PrivacyOptionsRequirementStatus.NOT_REQUIRED:
+		return PRIVACY_OPTIONS_STATE_NOT_REQUIRED
+	return PRIVACY_OPTIONS_STATE_LOADING
+
+func show_privacy_options_form(on_done: Callable = Callable()) -> bool:
+	if get_privacy_options_state() != PRIVACY_OPTIONS_STATE_READY:
+		return false
+	UserMessagingPlatform.show_privacy_options_form(func(form_error: FormError) -> void:
 		if on_done.is_valid():
-			on_done.call()
-		return
-	UserMessagingPlatform.show_privacy_options_form(func(_error: FormError) -> void:
-		if on_done.is_valid():
-			on_done.call()
+			on_done.call(form_error)
 	)
+	return true
 
 func open_privacy_policy() -> void:
 	OS.shell_open(PRIVACY_POLICY_URL)
 
-## Call before process quit so native AdViews are gone before the Activity dies.
 func prepare_for_app_exit() -> void:
 	_banner_wanted_visible = false
 	_pending_after_ad = Callable()
 	_pending_reward_callback = Callable()
+	_queued_reward_callback = Callable()
 	_reward_earned = false
+	_cancel_rewarded_retry()
 	_destroy_banner()
 	_destroy_interstitial()
 	_destroy_rewarded()

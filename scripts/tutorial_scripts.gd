@@ -1,10 +1,6 @@
 class_name TutorialScripts
 extends RefCounted
 
-## Step kinds:
-## message — tip with Next; board frozen (optional white masks / borders)
-## practice — only highlighted cells clickable; auto-advances on correct tap
-## done — unlock tools, clear guides, let player finish freely
 
 const ICON_SIZE := 44
 const LOCK_ICON_SIZE := 56
@@ -54,20 +50,12 @@ static func _icon_path(token: String) -> String:
 		_:        return ""
 
 static func _level_1() -> Array:
-	# Part 1 board: 4x4, Yellow/Blue prefill; player can still cycle Green.
-	# Locked prefill:
-	#   (0,0)=Y  (3,0)=B
-	#   (1,1)=Y  (2,1)=Y          ← two Yellows in row 1 → Rule of Two moment
-	#   (0,2)=B  (3,2)=Y
-	#   (1,3)=B  (2,3)=B          ← two Blues in row 3 → Equal Balance moment
 	var y := GameConstants.TileState.YELLOW
 	var b := GameConstants.TileState.BLUE
 	var g := GameConstants.TileState.JOKER
 	var e := GameConstants.TileState.EMPTY
 
-	# Row 1: two Yellows locked, player fills (0,1) → must be Blue to avoid 3-in-a-row.
 	var row1_all := [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)]
-	# Row 3: two Blues locked, player fills (0,3) → must be Yellow for equal balance.
 	var row3_all := [Vector2i(0, 3), Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3)]
 	var locked_part1 := [
 		Vector2i(0, 0), Vector2i(3, 0),
@@ -76,8 +64,6 @@ static func _level_1() -> Array:
 		Vector2i(1, 3), Vector2i(2, 3),
 	]
 
-	# Part 2a board: Green behavior — sparse fixed Y/B, only what the lessons need.
-	# Greens at (3,0), (2,1), (0,3). Row 1 teaches Rule of Two; row 2 odd balance.
 	var green_layout := {
 		Vector2i(0, 0): e, Vector2i(1, 0): e, Vector2i(2, 0): e, Vector2i(3, 0): g, Vector2i(4, 0): e,
 		Vector2i(0, 1): e, Vector2i(1, 1): y, Vector2i(2, 1): g, Vector2i(3, 1): e, Vector2i(4, 1): y,
@@ -89,13 +75,6 @@ static func _level_1() -> Array:
 	var row_green_dual := [Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1), Vector2i(4, 1)]
 	var row_odd_balance := [Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2), Vector2i(4, 2)]
 
-	# Part 2b board: Purple (shifter) behavior — 5x5, sparse fixed tiles.
-	# Independent pairs (practice hops):
-	#   A: active (1,0) ↔ home (0,0)   horizontal
-	#   B: active (2,2) ↔ home (1,2)   horizontal
-	# Shared-cell L (block demo): horizontal + vertical share (3,1)
-	#   C: active on shared (3,1) ↔ home (2,1)   horizontal
-	#   D: active (3,2) ↔ shared home (3,1)      vertical — blocked until C moves
 	var shifter_layout := {
 		Vector2i(0, 0): e, Vector2i(1, 0): e, Vector2i(2, 0): e, Vector2i(3, 0): y, Vector2i(4, 0): e,
 		Vector2i(0, 1): e, Vector2i(1, 1): e, Vector2i(2, 1): e, Vector2i(3, 1): e, Vector2i(4, 1): b,
@@ -116,10 +95,6 @@ static func _level_1() -> Array:
 	]
 	var shifter_shared_highlight := [Vector2i(2, 1), Vector2i(3, 1), Vector2i(3, 2)]
 
-	# Part 2c board: Constraints (= and ×) — 4x4 even, solvable with Y/B only.
-	# = links (1,0) empty to (1,1)=Y → place Yellow.
-	# × links (2,1) empty to (3,1)=Y → place Blue.
-	# Remaining empty (3,0) is for free play (solution: Blue).
 	var constraint_layout := {
 		Vector2i(0, 0): y, Vector2i(1, 0): e, Vector2i(2, 0): b, Vector2i(3, 0): e,
 		Vector2i(0, 1): b, Vector2i(1, 1): y, Vector2i(2, 1): e, Vector2i(3, 1): y,
@@ -135,7 +110,6 @@ static func _level_1() -> Array:
 	var constraint_not_equals := [Vector2i(2, 1), Vector2i(3, 1)]
 
 	return [
-		# Step 1 — explain locks first.
 		{
 			"type": "message",
 			"text_key": "TUT1_LOCKS",
@@ -144,7 +118,6 @@ static func _level_1() -> Array:
 			"mask": locked_part1.duplicate(),
 			"red": locked_part1.duplicate(),
 		},
-		# Step 2 — free placement practice. Next stays available; clears tiles on Next.
 		{
 			"type": "message",
 			"text_key": "TUT_INTRO_TAP",
@@ -153,7 +126,6 @@ static func _level_1() -> Array:
 			"show_next": true,
 			"suppress_errors": true,
 		},
-		# Step 2 — Rule of Two: row 1 already has two Yellows, place Blue.
 		{
 			"type": "message",
 			"text_key": "TUT_RULE_TWO",
@@ -172,7 +144,6 @@ static func _level_1() -> Array:
 			"mask": [Vector2i(0, 1)],
 			"red": [Vector2i(0, 1)],
 		},
-		# Step 3 — Equal Balance: row 3 has two Blues, place Yellow.
 		{
 			"type": "message",
 			"text_key": "TUT_BALANCE",
@@ -191,7 +162,6 @@ static func _level_1() -> Array:
 			"mask": [Vector2i(0, 3)],
 			"red": [Vector2i(0, 3)],
 		},
-		# --- Part 2: Green + Purple + Constraints ---
 		{
 			"type": "rebuild_board",
 			"pending_key": "TUT_NEXT_GREEN",
@@ -273,7 +243,6 @@ static func _level_1() -> Array:
 			"mask": [Vector2i(3, 2)],
 			"red": [Vector2i(3, 2)],
 		},
-		# Move the blocking Purple off the shared cell, then the freed one can hop.
 		{
 			"type": "practice",
 			"text_key": "TUT_SHIFTER_MOVE_BLOCKER",
@@ -387,7 +356,6 @@ static func _level_1() -> Array:
 			"mask": [Vector2i(2, 1)],
 			"red": [Vector2i(2, 1)],
 		},
-		# --- Part 3: Top bar UI ---
 		{
 			"type": "message",
 			"text_key": "TUT_PART3_INTRO",
@@ -418,7 +386,6 @@ static func _level_1() -> Array:
 			"button": "redo",
 			"text_key": "TUT_UI_REDO",
 		},
-		# Done — final free play until solved.
 		{
 			"type": "done",
 			"text_key": "TUT_FINAL_FREE_PLAY",

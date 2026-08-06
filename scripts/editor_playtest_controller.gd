@@ -56,9 +56,6 @@ func enter(current_level_required_jokers: int) -> void:
 	var tiles: Array = LevelUtils.normalize_available_tiles(editor_ui.get_allowed_tiles())
 	var solve_constraints: Array = []
 
-	# Match main.gd hint wiring:
-	# - unique: show start constraints; hidden pool feeds fallbacks / rebuild if empty
-	# - non-unique: hide constraints and use them only as the hint pool
 	if prefer_hidden_hints:
 		if playtest_hint_pool.is_empty() and not playtest_start_constraints.is_empty():
 			playtest_hint_pool = playtest_start_constraints.duplicate(true)
@@ -76,7 +73,6 @@ func enter(current_level_required_jokers: int) -> void:
 		solve_constraints
 	)
 
-	# Always ensure a hidden hint pool for unique / loaded boards.
 	if playtest_hint_pool.is_empty() and not solved_solution_reference.is_empty():
 		playtest_hint_pool = HintSystem.hidden_hints_from_solved(
 			solved_solution_reference,
@@ -94,7 +90,6 @@ func enter(current_level_required_jokers: int) -> void:
 		)
 
 	if not prefer_hidden_hints:
-		# Unique: solve with shown + hidden so the reference matches the intended unique board.
 		var full_constraints: Array = playtest_start_constraints.duplicate(true)
 		full_constraints.append_array(playtest_hint_pool)
 		var full_solved := LevelUtils.solve_reference(
@@ -151,14 +146,12 @@ func exit() -> void:
 		cell.update_visuals()
 
 	canvas_manager.loaded_constraint_pairs = playtest_start_constraints.duplicate(true)
-	# Keep grid/constraints above cell controls after playtest.
 	canvas_manager.move_child(canvas_manager.grid_drawer, -1)
 	canvas_manager.move_child(canvas_manager.constraint_drawer, -1)
 	canvas_manager.trigger_redraw()
 	pt_ui.toggle_playtest_visibility(false)
 
 func reset() -> void:
-	# Allow restart from victory overlay (is_active is false there).
 	if not canvas_manager.is_playtesting:
 		return
 	is_active = true
@@ -255,7 +248,6 @@ func request_hint() -> void:
 		prefer_hidden_hints
 	)
 	solved_solution_reference = result["solved_reference"]
-	# Refresh pool once we have a newly solved reference.
 	if playtest_hint_pool.is_empty() and not solved_solution_reference.is_empty():
 		playtest_hint_pool = HintSystem.hidden_hints_from_solved(
 			solved_solution_reference,
@@ -275,7 +267,6 @@ func request_hint() -> void:
 	var hint = result["hint"]
 	if hint != null:
 		canvas_manager.loaded_constraint_pairs.append(hint)
-		# Revealed hints leave the hidden pool.
 		for i in range(playtest_hint_pool.size() - 1, -1, -1):
 			var pooled = playtest_hint_pool[i]
 			if (pooled["a"] == hint["a"] and pooled["b"] == hint["b"]) or (pooled["a"] == hint["b"] and pooled["b"] == hint["a"]):

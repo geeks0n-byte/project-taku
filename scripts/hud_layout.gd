@@ -23,8 +23,6 @@ static func position_editor_status_below_panel(control_panel: Control, status: C
 	status.offset_right = -bottom_margin
 	status.offset_bottom = -bottom_margin
 	status.offset_top = status_top
-	# Extend panel to the screen bottom so the status strip sits on the same dark fill
-	# (avoids a brighter EditorBackground band under the panel).
 	control_panel.offset_bottom = 0.0
 
 static func position_counter_row(counter_row: Control) -> void:
@@ -36,7 +34,6 @@ static func position_counter_row(counter_row: Control) -> void:
 	)
 	align_counter_row(counter_row)
 
-## Keep counter HBox centered; hidden slots collapse so a solo timer spans the row.
 static func align_counter_row(counter_row: Control) -> void:
 	if counter_row == null:
 		return
@@ -59,7 +56,6 @@ static func position_top_bar(top_bar: Control) -> void:
 static var _screen_header_font: Font
 static var _screen_header_font_default: Font
 
-## Brand / English headers use the pixel font; other locales use the default UI font.
 static func screen_header_font(force_pixel: bool = false) -> Font:
 	if force_pixel or uses_pixel_font():
 		if _screen_header_font == null:
@@ -86,7 +82,6 @@ static func apply_screen_header_style(label: Label) -> void:
 		"_screen_header_outline",
 		GameConstants.SCREEN_HEADER_OUTLINE
 	))
-	# Brand title stays pixel-sized; localized headers scale for the default font.
 	if force_pixel or uses_pixel_font():
 		label.add_theme_font_size_override("font_size", header_size)
 	else:
@@ -100,14 +95,12 @@ static func apply_screen_header_style(label: Label) -> void:
 	label.clip_text = false
 	label.clip_contents = false
 
-## Victory / defeat titles — safer outlines on mobile (stretch can clip glyph edges into a hard line).
 static func apply_end_screen_header_style(label: Label, base_size: int = 48) -> void:
 	if not label:
 		return
 	var size := base_size
 	var outline := 8
 	if OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios"):
-		# Keep sizes on the pixel grid; lighter outline avoids atlas/edge clipping on GL.
 		size = 40
 		outline = 6
 	label.set_meta("_brand_title", true)
@@ -119,7 +112,6 @@ static func apply_end_screen_header_style(label: Label, base_size: int = 48) -> 
 	label.clip_contents = false
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 
-## Moves a header label onto `host` and pins it to the shared top-of-screen slot.
 static func mount_screen_header(host: Node, label: Label) -> void:
 	if not host or not label:
 		return
@@ -137,7 +129,6 @@ static func mount_screen_header(host: Node, label: Label) -> void:
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	apply_screen_header_style(label)
 
-## How-to-play: page titles sit on the shared header band; nav stays screen-bottom.
 static func layout_how_to_play(host: Control, panel: Control, nav: Control) -> void:
 	if host == null or panel == null or nav == null:
 		return
@@ -168,7 +159,6 @@ static func layout_how_to_play(host: Control, panel: Control, nav: Control) -> v
 	var panel_w := 950.0
 	if panel.custom_minimum_size.x > 0.0:
 		panel_w = panel.custom_minimum_size.x
-	# Stretch body between the shared header band and bottom nav (stops truncation).
 	panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	panel.anchor_left = 0.5
 	panel.anchor_top = 0.0
@@ -192,11 +182,9 @@ static func layout_how_to_play(host: Control, panel: Control, nav: Control) -> v
 		if rules is RichTextLabel:
 			var rtl := rules as RichTextLabel
 			rtl.fit_content = false
-			# Avoid a useless 1px scrollbar; pages are laid out to fit the panel.
 			rtl.scroll_active = false
 			rtl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
-## Shared Label header for How to Play pages (same band/style as other screens).
 static func ensure_how_to_play_page_header(host: Control) -> Label:
 	if host == null:
 		return null
@@ -209,7 +197,6 @@ static func ensure_how_to_play_page_header(host: Control) -> Label:
 	mount_screen_header(host, header)
 	return header
 
-## Keep Close centered when Prev/Next are hidden by reserving fixed side slots.
 static func ensure_how_to_play_nav_slots(nav: HBoxContainer, prev: Button, next: Button) -> void:
 	if nav == null:
 		return
@@ -247,7 +234,6 @@ static func _ensure_htp_side_slot(
 	if slot.get_index() != target_index:
 		nav.move_child(slot, target_index)
 
-## Pull menu body up under the shared header (CenterContainer otherwise leaves a large gap).
 static func pin_menu_body_below_header(
 	body: Control,
 	approx_body_height: float = 980.0,
@@ -281,8 +267,6 @@ static func english(key: String) -> String:
 static func translate_status_text(msg: String, force_english: bool = false) -> String:
 	if msg.is_empty():
 		return ""
-	# Keep intentional multi-message breaks; do not force mid-sentence wraps.
-	# RichTextLabel autowrap handles line breaks by available width.
 	var translated := ""
 	if msg.contains("\n"):
 		var translated_lines: PackedStringArray = []
@@ -295,8 +279,6 @@ static func translate_status_text(msg: String, force_english: bool = false) -> S
 		translated = _tr(msg, force_english)
 	return break_after_sentences(translated)
 
-## After a sentence ends (. ! ?), put the following text on its own line.
-## Skips digit-after-abbrev cases like "Max. 1".
 static func break_after_sentences(text: String) -> String:
 	if text.is_empty():
 		return text
@@ -310,10 +292,8 @@ static func break_after_sentences(text: String) -> String:
 			var j := i + 1
 			while j < n and (text[j] == " " or text[j] == "\t"):
 				j += 1
-			# Only break when there was whitespace and more content on the same line.
 			if j > i + 1 and j < n and text[j] != "\n":
 				var next_c := text[j]
-				# Keep "Max. 1 ..." on one line; break for real next sentences.
 				if next_c < "0" or next_c > "9":
 					out += "\n"
 					i = j
@@ -336,7 +316,6 @@ static func font_scale() -> float:
 static func scaled_font_size(base: int) -> int:
 	return int(round(float(base) * font_scale()))
 
-## Body/status copy always uses the default font — scale even for English.
 static func body_font_size(base: int) -> int:
 	var scale := GameConstants.DEFAULT_FONT_SCALE
 	var locale := TranslationServer.get_locale().substr(0, 2)
@@ -344,7 +323,6 @@ static func body_font_size(base: int) -> int:
 		scale *= 1.15
 	return int(round(float(base) * scale))
 
-## Temporary: pixel font for English only; all other locales use the default font.
 const PIXEL_FONT: Font = preload("res://resources/fonts/PressStart2P-vaV7.ttf")
 
 static func uses_pixel_font() -> bool:
@@ -368,12 +346,10 @@ static func apply_status_font(label: RichTextLabel, base_size: int = GameConstan
 	label.add_theme_font_override("italics_font", font)
 	label.add_theme_font_override("bold_italics_font", font)
 	label.add_theme_font_override("mono_font", font)
-	# Status always uses the default font; keep size readable but not oversized.
 	var size := int(round(float(base_size) * 1.2))
 	var locale := TranslationServer.get_locale().substr(0, 2)
 	if locale == "ka":
 		size = int(round(float(size) * 1.15))
-	# Keep bold/italics the same size so [b]/[i]/[color] words are not smaller.
 	for size_name in [
 		"normal_font_size",
 		"bold_font_size",
@@ -396,7 +372,6 @@ static func apply_locale_font_to_control(node: Node) -> void:
 		apply_status_font(node as RichTextLabel)
 		return
 	var use_default := bool(node.get_meta("_use_default_font", false))
-	# Constraint brush glyphs (= / ×) always need the default font.
 	if not use_default and node is Label:
 		var label_text := (node as Label).text
 		if label_text == "=" or label_text == "×":
@@ -486,7 +461,6 @@ static func apply_tab_button(button: Button) -> void:
 	button.custom_minimum_size = GameConstants.UI_BTN_TAB_SIZE
 	fit_text_button(button, GameConstants.UI_BTN_TAB_FONT, GameConstants.UI_BTN_TAB_FONT_MIN)
 
-## Popup body copy: pixel font in English, default font elsewhere.
 static func apply_popup_label(label: Label, base_size: int = GameConstants.UI_BODY_FONT_SIZE) -> void:
 	if not label:
 		return
@@ -495,7 +469,6 @@ static func apply_popup_label(label: Label, base_size: int = GameConstants.UI_BO
 	var size := base_size if uses_pixel_font() else body_font_size(base_size)
 	label.add_theme_font_size_override("font_size", size)
 
-## Shared dialog / confirm panel chrome (dark fill + soft yellow border).
 static func make_dialog_panel_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.08, 0.08, 0.1, 0.98)
@@ -524,7 +497,6 @@ static func apply_body_richtext(
 static func apply_toggle_active_mask(button: Button, is_on: bool, tint: Color = GameConstants.TOGGLE_MASK_AMBER) -> void:
 	if not button:
 		return
-	# Replace legacy full-bleed ColorRect if present.
 	var legacy := button.get_node_or_null("ActiveMask")
 	if legacy is ColorRect:
 		legacy.queue_free()
@@ -535,7 +507,6 @@ static func apply_toggle_active_mask(button: Button, is_on: bool, tint: Color = 
 		mask.name = "ActiveMask"
 		mask.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		mask.set_anchors_preset(Control.PRESET_FULL_RECT)
-		# Inset so the tint sits inside the 9-slice button art.
 		mask.offset_left = 12.0
 		mask.offset_top = 12.0
 		mask.offset_right = -12.0
@@ -577,7 +548,6 @@ static func stop_toggle_mask_breathe(button: Button) -> void:
 	if mask:
 		mask.modulate = Color.WHITE
 
-## Soft scale + brightness pulse for tutorial NEXT (clearer than a white mask).
 static func start_button_attention_pulse(button: Button) -> void:
 	if not button:
 		return
@@ -620,7 +590,6 @@ static func format_mode_label(translation_key: String, force_english: bool = fal
 	var text := _tr(translation_key, force_english)
 	return format_outlined_center_text(text.replace(" ", "\n"))
 
-## Pads top/bottom so RichTextLabel font outlines are not clipped by fit_content bounds.
 static func format_outlined_center_text(body: String) -> String:
 	var pad := GameConstants.HUD_LEVEL_OUTLINE_PAD
 	return "[center][font_size=%d][color=#00000000].[/color][/font_size]\n%s\n[font_size=%d][color=#00000000].[/color][/font_size][/center]" % [
@@ -653,7 +622,6 @@ static func nudge_button_icon_up(button: Button, pixels: int = 1) -> void:
 		icon_container.add_theme_constant_override("margin_bottom", pixels * 2)
 		icon_container.add_theme_constant_override("margin_top", 0)
 	elif icon_container is CenterContainer:
-		# CenterContainer resets child positions; wrap content with bottom margin.
 		for child in icon_container.get_children():
 			if child is MarginContainer and child.has_meta("_icon_nudge"):
 				child.add_theme_constant_override("margin_bottom", pixels * 2)
@@ -668,7 +636,6 @@ static func nudge_button_icon_up(button: Button, pixels: int = 1) -> void:
 				wrapper.add_child(child)
 				icon_container.add_child(wrapper)
 				icon_container.move_child(wrapper, idx)
-	# Text-only buttons (- / +): bias via stylebox content margins.
 	if button.text != "" and icon_container == null:
 		_nudge_button_text_up(button, pixels)
 
@@ -685,8 +652,6 @@ static func apply_top_bar_row(top_bar_row: HBoxContainer) -> void:
 	if not top_bar_row:
 		return
 
-	# Desired layout:
-	# [expand][left buttons][small gap][label][small gap][right buttons][expand]
 	var left_buttons := top_bar_row.get_node_or_null("LeftButtons") as Control
 	var right_buttons := top_bar_row.get_node_or_null("RightButtons") as Control
 	var label_wrap: Control = null
@@ -717,7 +682,6 @@ static func apply_top_bar_row(top_bar_row: HBoxContainer) -> void:
 	left_edge.size_flags_stretch_ratio = 1.0
 	right_edge.size_flags_stretch_ratio = 1.0
 
-	# Force final child order every time.
 	var ordered: Array[Node] = []
 	ordered.append(left_edge)
 	if left_buttons:
@@ -752,7 +716,6 @@ static func _ensure_named_spacer(top_bar_row: HBoxContainer, spacer_name: String
 static func apply_top_bar_mode_label(label: RichTextLabel) -> void:
 	if not label:
 		return
-	# Non-English locales: default font (pixel font is English-only for now).
 	label.set_meta("_use_default_font", not uses_pixel_font())
 	apply_locale_font_to_control(label)
 	label.custom_minimum_size = Vector2(220, 0)
@@ -825,7 +788,6 @@ static func format_icon_ratio_counter(
 		return "[center][img=%dx%d]%s[/img] [font_size=%d][color=#%s]%d/%d[/color][/font_size][/center]" % [
 			icon_size, icon_size, icon_path, num_size, hex, current, required
 		]
-	# Icon + caption clarifies what is counted (green tiles vs shifter moves).
 	return "[center][img=%dx%d]%s[/img] [font_size=%d][color=#%s]%s[/color][/font_size] [font_size=%d][color=#%s]%d/%d[/color][/font_size][/center]" % [
 		icon_size, icon_size, icon_path, label_size, hex, caption, num_size, hex, current, required
 	]

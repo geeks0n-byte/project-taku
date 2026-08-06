@@ -1,6 +1,5 @@
 extends Node
 
-## Global looping BGM. Persists across scene changes via autoload.
 
 const BGM_PATH := "res://resources/audio/bgm.mp3"
 
@@ -14,7 +13,6 @@ func _ready() -> void:
 	_player.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(_player)
 	_load_stream()
-	# SaveManager loads first in autoload order; apply after both are ready.
 	call_deferred("apply_enabled")
 
 func _load_stream() -> void:

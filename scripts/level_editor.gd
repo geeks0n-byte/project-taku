@@ -124,7 +124,6 @@ func _bind_signals():
 	canvas_manager.canvas_cell_clicked.connect(_on_canvas_cell_clicked)
 
 func _on_editor_hint_toggled(_is_on: bool):
-	# Edit-mode hint button is disabled.
 	canvas_manager.show_editor_hints = false
 	canvas_manager.trigger_redraw()
 
@@ -229,7 +228,6 @@ func _on_random_board_requested():
 	canvas_manager.generate_blank_canvas(target_w, target_h)
 	canvas_manager.load_layout(target_w, target_h, generated_dict["layout"], generated_dict["shifters"], generated_dict["constraints"])
 	canvas_manager.hidden_constraint_pairs = generated_dict.get("hidden_hints", []).duplicate(true)
-	# Keep generator par for shifter moves on the loaded pairs (home already set).
 	_recenter_editor_layout(target_w, target_h)
 	editor_ui.update_status("", Color.WHITE)
 	_update_editor_joker_counter_display()
@@ -267,8 +265,6 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 		_handle_link_brush_click(coord)
 		return
 
-	# Single clicks are handled by _input painting to avoid double-apply.
-	# Keep click path for compatibility when paint state isn't active.
 	if not _is_painting:
 		_last_painted_coord = Vector2i(-9999, -9999)
 		if _apply_paint_brush(coord, true):

@@ -1,8 +1,6 @@
 class_name LevelStars
 extends RefCounted
 
-## Star challenges (time / greens / shifter moves).
-## End screen and level select always show all three slots.
 
 const BIT_TIME := 1
 const BIT_GREEN := 2
@@ -28,7 +26,6 @@ static func count_earned_bits(bits: int) -> int:
 		n += 1
 	return n
 
-## Compact on/off star row for level-select buttons (always 3 slots).
 static func make_select_star_row(_level: LevelData, earned_bits: int) -> Control:
 	var row := HBoxContainer.new()
 	row.name = "StarRow"
@@ -52,7 +49,6 @@ static func format_clock(total_seconds: int) -> String:
 	var secs := maxi(0, total_seconds)
 	return "%02d:%02d" % [int(secs / 60.0), secs % 60]
 
-## Always returns three goals (time / green / moves), earned or not.
 static func evaluate(
 	elapsed_sec: int,
 	time_limit: int,
@@ -122,7 +118,6 @@ static func evaluate(
 		"elapsed_sec": elapsed_sec,
 	}
 
-## Requirements preview for level select (targets + earned stars from save).
 static func build_requirements(level: LevelData, earned_bits: int = 0) -> Dictionary:
 	if level == null:
 		return {
@@ -177,7 +172,6 @@ static func build_requirements(level: LevelData, earned_bits: int = 0) -> Dictio
 		"untimed": false,
 	}
 
-## Builds star challenge rows into `host` (clears previous children).
 static func populate_results(host: Control, star_result: Dictionary) -> void:
 	if host == null:
 		return
@@ -204,7 +198,6 @@ static func populate_results(host: Control, star_result: Dictionary) -> void:
 	for g in goals:
 		stars_box.add_child(_make_star_row(g))
 
-## Level-select challenge preview: star rows only (no completion time).
 static func populate_requirements(host: Control, level: LevelData, earned_bits: int = 0) -> void:
 	if host == null:
 		return

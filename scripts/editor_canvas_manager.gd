@@ -101,7 +101,6 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 		cell_pool[i]["cell"].visible = false
 		cell_pool[i]["interceptor"].visible = false
 
-	# Ensure empty cells refresh with the editor clear icon after all cells exist.
 	if not is_playtesting:
 		for coord in board_cells:
 			var cell = board_cells[coord]
@@ -163,7 +162,6 @@ func is_board_full() -> bool:
 	return BoardRenderer.is_board_full(board_cells)
 
 func _draw_grid():
-	# Full cell grid in editor (including walls); wall-aware outline while playtesting.
 	BoardRenderer.draw_grid(grid_drawer, board_cells, GameConstants.CELL_SIZE, not is_playtesting)
 
 func _draw_constraints():

@@ -2,14 +2,11 @@ extends ParallaxBackground
 
 @export var base_scroll_speed: Vector2 = Vector2(-15, -5)
 @export var event_spawn_interval: Vector2 = Vector2(0.2, 12.0)
-## Chance that a random event draws above the main-menu title (0–1).
 @export var foreground_event_chance: float = 0.38
-## Cap concurrent RigidBody asteroids to avoid frame spikes on phones.
 @export var max_active_asteroids: int = 16
 
 const ASSET_DIR = "res://resources/background/"
 const ASTEROID_POOL_SIZE := 16
-## Extra padding past the visual edge before an asteroid may be recycled.
 const ASTEROID_OFFSCREEN_MARGIN := 64.0
 
 const ASSET_FILES = {
@@ -32,7 +29,6 @@ var dyn_layer_stars: Node2D
 var dyn_layer_comets: Node2D
 var dyn_layer_asteroids: Node2D
 
-## Overlay above default UI (layer 0) so events can pass over the menu title.
 var _fx_foreground: CanvasLayer
 var _fg_stars: Node2D
 var _fg_comets: Node2D
@@ -69,9 +65,7 @@ func set_foreground_events_enabled(enabled: bool) -> void:
 func _build_foreground_fx_layer() -> void:
 	_fx_foreground = CanvasLayer.new()
 	_fx_foreground.name = "FxForeground"
-	# Above title + main-menu buttons (0); below modal overlays (5) / options (20).
 	_fx_foreground.layer = 1
-	# FX must not steal clicks from menu buttons underneath.
 	_fx_foreground.follow_viewport_enabled = false
 	add_child(_fx_foreground)
 	_fg_stars = Node2D.new()
@@ -137,12 +131,9 @@ func _make_pooled_asteroid() -> RigidBody2D:
 func _acquire_asteroid() -> RigidBody2D:
 	_sync_active_asteroid_count()
 	if _active_asteroid_count >= max_active_asteroids:
-		# Only recycle asteroids that have fully left the screen.
 		_release_oldest_offscreen_asteroid()
 		_sync_active_asteroid_count()
 	if _active_asteroid_count >= max_active_asteroids:
-		# Debug spam can keep many asteroids colliding on-screen forever.
-		# Fallback: recycle the oldest active asteroid so spawns never deadlock.
 		_release_oldest_active_asteroid()
 		_sync_active_asteroid_count()
 	if _active_asteroid_count >= max_active_asteroids:
@@ -223,7 +214,6 @@ func _asteroid_intersects_view(rb: RigidBody2D, view: Rect2) -> bool:
 func _release_asteroid(rb: RigidBody2D) -> void:
 	if not is_instance_valid(rb):
 		return
-	# Already pooled — ignore duplicate release from timers / offscreen checks.
 	if rb.get_parent() == _asteroid_pool_root or _asteroid_pool.has(rb):
 		return
 	for conn in rb.body_entered.get_connections():
@@ -278,7 +268,6 @@ func _show_static_composite() -> void:
 	for p_layer in _parallax_layer_nodes:
 		if is_instance_valid(p_layer):
 			p_layer.visible = false
-	# Hide non-parallax tiled void rects that aren't the static rect.
 	for child in get_children():
 		if child is TextureRect and child != _static_rect:
 			child.visible = false
@@ -310,7 +299,6 @@ func _hide_static_composite() -> void:
 			child.visible = true
 		elif child is ColorRect:
 			child.visible = true
-	# Rebuild twinkle if missing.
 	if _twinkle_tween == null and _parallax_layer_nodes.size() >= 2:
 		_start_twinkle_on_mid_layers()
 
@@ -425,8 +413,6 @@ func _load_fx_assets() -> void:
 		tex_asteroids.append(load(ASSET_DIR + "fx_asteroid_3.svg"))
 
 func _cover_size() -> Vector2:
-	# With stretch aspect=expand, phones taller than 9:16 grow the viewport.
-	# Always cover the live viewport (plus margin for parallax scroll).
 	var view := get_viewport().get_visible_rect().size
 	if view.x <= 1.0 or view.y <= 1.0:
 		view = Vector2(1080.0, 1920.0)
@@ -437,7 +423,6 @@ func _apply_cover_rect(rect: Control, view_size: Vector2) -> void:
 	if viewport_size.x <= 1.0 or viewport_size.y <= 1.0:
 		viewport_size = Vector2(1080.0, 1920.0)
 	rect.size = view_size
-	# Center overflow so expand-aspect letterboxing never shows empty edges.
 	rect.position = (viewport_size - view_size) * 0.5
 
 func _on_viewport_size_changed() -> void:
@@ -474,7 +459,6 @@ func _release_offscreen_asteroids() -> void:
 			if not seen and _asteroid_intersects_view(rb, view):
 				rb.set_meta("entered_view", true)
 				seen = true
-			# Do not recycle right-edge spawns before they appear on screen.
 			if seen and _asteroid_is_fully_offscreen(rb, view):
 				_release_asteroid(rb)
 
@@ -527,7 +511,6 @@ func _on_event_timeout() -> void:
 		debug_spawn_comet()
 	elif roll <= 351:
 		var spawn_count = 1
-		# Occasional clusters so asteroids can collide without crowding the sky.
 		if randi() % 100 < 30:
 			spawn_count = randi_range(3, 5)
 		for i in range(spawn_count):
@@ -551,7 +534,6 @@ func debug_spawn_asteroid() -> void:
 	if tex_asteroids.is_empty():
 		return
 	var target := _fg_asteroids if _use_foreground_layer() else dyn_layer_asteroids
-	# Rare: a drifting puzzle tile instead of a rock.
 	if randi() % 100 < 2:
 		_spawn_debug_tile_asteroid_standard_motion(target)
 		return
@@ -562,7 +544,6 @@ func debug_spawn_asteroid() -> void:
 		return
 	_spawn_debug_asteroid_standard_motion(target, tex, Vector2(64, 64))
 
-## Yellow / blue / green tiles, or purple tile with a random board-style arrow overlay.
 func _spawn_tile_asteroid(target: Node2D) -> void:
 	var size := Vector2(36, 36)
 	var roll := randi() % 4
@@ -832,7 +813,6 @@ func _spawn_entity(
 		entity.rotation = randf_range(0.0, PI * 2.0) 
 		var random_scale = randf_range(0.8, 1.2)
 		
-		# Scale every visual child (base tile + optional arrow overlay).
 		for child in entity.get_children():
 			if child is Sprite2D:
 				(child as Sprite2D).scale *= random_scale
@@ -858,7 +838,6 @@ func _spawn_entity(
 		var total_rotations = randf_range(1.0, 5.0) 
 		var total_spin_amount = total_rotations * (PI * 2.0) * (1.0 if randi() % 2 == 0 else -1.0)
 		entity.angular_velocity = total_spin_amount / final_duration
-		# No lifetime timer — asteroids stay until fully off-screen.
 		
 	else:
 		var tween = entity.create_tween()

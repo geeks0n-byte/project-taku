@@ -16,6 +16,7 @@ enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM }
 @onready var bgm_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/BgmButton
 @onready var sfx_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/SfxButton
 @onready var privacy_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/PrivacyPolicyButton
+@onready var privacy_options_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/PrivacyOptionsButton
 @onready var del_save_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DeleteSaveButton
 @onready var debug_buttons: VBoxContainer = $CenterContainer/OptionsPanel/VBoxContainer/DebugButtons
 @onready var unlock_all_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DebugButtons/UnlockAllButton
@@ -28,7 +29,6 @@ enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM }
 @onready var _confirm_no_btn: Button = $ConfirmBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/NoButton
 
 var _pending_confirm: ConfirmAction = ConfirmAction.NONE
-## Main-menu-only rows (reset progress + debug tools).
 var _from_main_menu: bool = false
 var _show_debug_options: bool = false
 
@@ -45,6 +45,8 @@ func _ready() -> void:
 		sfx_btn.pressed.connect(_on_toggle_sfx)
 	if privacy_btn:
 		privacy_btn.pressed.connect(_on_privacy_policy_pressed)
+	if privacy_options_btn:
+		privacy_options_btn.pressed.connect(_on_privacy_options_pressed)
 	if del_save_btn:
 		del_save_btn.pressed.connect(_on_delete_save_pressed)
 	if del_custom_btn:
@@ -79,13 +81,13 @@ func _mount_header() -> void:
 	HudLayout.mount_screen_header(host, title_label)
 	var center := get_node_or_null("CenterContainer") as Control
 	if center:
-		# Extra gap so option rows clear the OPTIONS header (includes SFX row).
 		HudLayout.pin_menu_body_below_header(center, 1100.0, 120.0)
 
 func show_menu(from_main_menu: bool = false) -> void:
 	_from_main_menu = from_main_menu
 	_show_debug_options = from_main_menu and GlobalGameManager.debug_tools_enabled
 	_configure_main_menu_buttons()
+	_refresh_privacy_options_visibility()
 	_update_lang_label()
 	_update_background_label()
 	_update_bgm_label()
@@ -101,7 +103,6 @@ func hide_menu() -> void:
 	visible = false
 	back_requested.emit()
 
-## Android back: dismiss confirm first, then the menu. Returns true if handled.
 func handle_system_back() -> bool:
 	if not visible:
 		return false
@@ -131,6 +132,16 @@ func _configure_main_menu_buttons() -> void:
 			del_custom_btn.text = "UI_DELETE_CUSTOM"
 			del_custom_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
 
+func _refresh_privacy_options_visibility() -> void:
+	if not privacy_options_btn:
+		return
+	var show_privacy_options := false
+	if AdsManager:
+		show_privacy_options = (
+			AdsManager.get_privacy_options_state() == AdsManager.PRIVACY_OPTIONS_STATE_READY
+		)
+	privacy_options_btn.visible = show_privacy_options
+
 func _update_lang_label() -> void:
 	if not lang_label:
 		return
@@ -139,7 +150,6 @@ func _update_lang_label() -> void:
 	if idx == -1:
 		idx = 0
 	lang_label.text = LANG_NAMES[idx]
-	# ENGLISH keeps the pixel font; other language names need default font coverage.
 	if current_locale == "en":
 		lang_label.add_theme_font_override("font", HudLayout.PIXEL_FONT)
 	else:
@@ -156,11 +166,12 @@ func _fit_option_buttons() -> void:
 		HudLayout.apply_screen_header_style(title_label)
 	if privacy_btn:
 		privacy_btn.text = tr("UI_PRIVACY_POLICY")
-	for btn in [del_save_btn, bg_btn, bgm_btn, sfx_btn, privacy_btn, del_custom_btn, unlock_all_btn]:
+	if privacy_options_btn:
+		privacy_options_btn.text = tr("UI_PRIVACY_OPTIONS")
+	for btn in [del_save_btn, bg_btn, bgm_btn, sfx_btn, privacy_btn, privacy_options_btn, del_custom_btn, unlock_all_btn]:
 		_apply_option_button(btn)
 	_position_close_button()
 	HudLayout.apply_secondary_button(close_btn)
-	# Language arrows keep tile chrome.
 	if prev_btn:
 		prev_btn.custom_minimum_size = Vector2(100, 100)
 		prev_btn.flat = false
@@ -180,7 +191,6 @@ func _fit_option_buttons() -> void:
 	_update_lang_label()
 	_refresh_confirm_texts()
 
-## Option rows with the shared gray tile button art; size follows caption text.
 func _apply_option_button(button: Button) -> void:
 	if not button or not button.visible:
 		return
@@ -248,7 +258,6 @@ func _apply_button_tile_styles(button: Button) -> void:
 func _position_close_button() -> void:
 	if close_btn == null:
 		return
-	# OptionsMenu is a CanvasLayer — Close must live on a Control host.
 	var host := get_node_or_null("CloseButtonHost") as Control
 	if host == null:
 		host = Control.new()
@@ -277,7 +286,6 @@ func _set_toggle_button_caption(button: Button, full_text: String) -> void:
 	if not button:
 		return
 	button.text = ""
-	# Remove legacy full-rect caption from earlier layout.
 	var legacy := button.get_node_or_null("ToggleCaption")
 	if legacy:
 		legacy.queue_free()
@@ -305,12 +313,10 @@ func _set_toggle_button_caption(button: Button, full_text: String) -> void:
 		caption.add_theme_color_override("font_outline_color", Color.BLACK)
 		caption.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
 		host.add_child(caption)
-	# Keep caption above the tile chrome.
 	button.move_child(host, -1)
 	HudLayout.apply_locale_font_to_control(caption)
 	var font_size := HudLayout.scaled_font_size(GameConstants.UI_BTN_PRIMARY_FONT)
 	caption.add_theme_font_size_override("normal_font_size", font_size)
-	# Highlight ON / OFF / DYNAMIC / STATIC (and locale equivalents) in gold.
 	var accent := _TOGGLE_ACCENT.to_html(false)
 	var tokens: Array[String] = [
 		"DYNAMICZNE", "STATYCZNE", "DYNAMISCH", "STATISCH", "DYNAMIQUE", "STATIQUE",
@@ -324,7 +330,6 @@ func _set_toggle_button_caption(button: Button, full_text: String) -> void:
 			colored = colored.replace(token, "[color=#%s]%s[/color]" % [accent, token])
 			break
 	caption.text = "[center]%s[/center]" % colored
-	# Resize tile to the new caption immediately.
 	_apply_option_button(button)
 
 func _update_background_label() -> void:
@@ -382,6 +387,15 @@ func _on_toggle_sfx() -> void:
 	_update_sfx_label()
 
 func _on_privacy_policy_pressed() -> void:
+	if AdsManager:
+		AdsManager.open_privacy_policy()
+	else:
+		OS.shell_open("https://geeks0n-byte.github.io/project-taku/privacy-policy.html")
+
+func _on_privacy_options_pressed() -> void:
+	if AdsManager and AdsManager.get_privacy_options_state() == AdsManager.PRIVACY_OPTIONS_STATE_READY:
+		AdsManager.show_privacy_options_form()
+		return
 	if AdsManager:
 		AdsManager.open_privacy_policy()
 	else:

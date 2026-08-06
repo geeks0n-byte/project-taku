@@ -1,15 +1,12 @@
 class_name PuzzleGenerator
 extends RefCounted
 
-## Solution-count result when the solver hits its iteration budget (unknown, not multi).
 const SOLUTIONS_UNKNOWN := -1
 const SOLVE_ITER_BUDGET := 60000
 const COUNT_ITER_BUDGET := 80000
 
-## Controls how strictly hole-punching preserves an obvious (naked-single) move.
 enum Difficulty { EASY, MEDIUM, HARD }
 
-## Medium may skip the obvious-move check on at most this fraction of punches.
 const MEDIUM_SKIP_OBVIOUS_FRACTION := 0.30
 
 static func generate_random_layout(
@@ -26,7 +23,6 @@ static func generate_random_layout(
 	var normalized := LevelUtils.normalize_available_tiles(allowed_tiles)
 	var allow_jokers := LevelUtils.tiles_allow_joker(normalized)
 
-	# Respect campaign tile sets (Y/B-only boards must not invent greens).
 	var solver_tiles: Array = []
 	for t in normalized:
 		solver_tiles.append(int(t))
@@ -39,9 +35,6 @@ static func generate_random_layout(
 		attempt += 1
 		var force_no_walls = (attempt > 2000)
 		
-		# ==========================================
-		# STEP 1: Generate board & respect existing walls
-		# ==========================================
 		var layout = {}
 		for y in range(height):
 			for x in range(width):
@@ -85,13 +78,9 @@ static func generate_random_layout(
 			if layout[c] == -1: empty_cells.append(c)
 		empty_cells.shuffle()
 
-		# ==========================================
-		# STEP 2: Fill remaining cells with Shifters
-		# ==========================================
 		var shifters = []
 		var total_playable = empty_cells.size()
 
-		# Y/B-only boards stay shifter-free; fuller tile sets can place purple pairs.
 		var base_shifter_pairs = 0 if not allow_jokers else int(round((total_playable * 0.20) / 2.0))
 		var target_shifter_pairs = base_shifter_pairs
 
@@ -167,19 +156,11 @@ static func generate_random_layout(
 			
 		var solved_layout = layout.duplicate()
 		
-		# Greens on the solved board. Shifter home cells hold a shifter (not a green),
-		# so any green that would have occupied those cells is already excluded —
-		# i.e. "solved greens minus greens converted into shifter tiles".
 		var total_jokers_generated = 0
 		for c in solved_layout.keys():
 			if solved_layout[c] == GameConstants.TileState.JOKER:
 				total_jokers_generated += 1
 
-		# ==========================================
-		# STEP 3: Identify ALL Possible Constraints
-		# ==========================================
-		# Contractions across Y/B/G/P per rules:
-		# Y=Y Y=G B=B B=G G=G P=P | YxB YxG YxP BxG BxP GxP
 		var all_possible_constraints = []
 		for y in range(height):
 			for x in range(width):
@@ -197,9 +178,6 @@ static func generate_random_layout(
 					var type_d = "equals" if solved_layout[c] == solved_layout[down] else "not_equals"
 					all_possible_constraints.append({"a": c, "b": down, "type": type_d})
 
-		# ==========================================
-		# STEP 4: Smart Hole Punching
-		# ==========================================
 		for pair in shifters:
 			layout[pair.inactive] = -1
 			
@@ -260,7 +238,6 @@ static func generate_random_layout(
 			if require_unique:
 				var sols = _count_solutions(layout, current_empty, width, height, solver_tiles, all_possible_constraints, {"count": 0})
 				if sols == SOLUTIONS_UNKNOWN:
-					# Uniqueness unknown — keep the cell filled and retry another board.
 					layout[c] = original_val
 					current_empty.erase(c)
 					count_budget_exhausted = true
@@ -295,19 +272,14 @@ static func generate_random_layout(
 
 		if count_budget_exhausted:
 			continue
-		# Reject nearly-full unique boards that never reached the clear target.
 		if require_unique and min_clear_count > 0 and cleared_count < min_clear_count:
 			continue
-		# Easy boards must still have a teachable single after punching.
 		if punch_difficulty == Difficulty.EASY and not current_empty.is_empty():
 			if not _has_obvious_move(
 				layout, current_empty, width, height, solver_tiles, all_possible_constraints
 			):
 				continue
 
-		# ==========================================
-		# STEP 5: Constraint Minimizer
-		# ==========================================
 		var final_constraints = []
 		var hidden_hints = []
 		
@@ -321,7 +293,6 @@ static func generate_random_layout(
 				
 				var sols = _count_solutions(layout, current_empty, width, height, solver_tiles, current_constraints, {"count": 0})
 				if sols == SOLUTIONS_UNKNOWN or sols != 1:
-					# Keep constraint if removing it breaks uniqueness or is inconclusive.
 					current_constraints.insert(i, test_constraint)
 				else:
 					hidden_hints.append(test_constraint)
@@ -332,11 +303,9 @@ static func generate_random_layout(
 
 		var required_shifter_moves := 0
 		for pair in shifters:
-			# Home = resting cell in the solved layout (shifter sat here while colors filled).
 			pair["home"] = pair.active
 			layout[pair.a] = -1
 			layout[pair.b] = -1
-			# Scramble starting side so some pairs need a move to reach home.
 			if randi() % 2 == 0:
 				var temp = pair.active
 				pair.active = pair.inactive
@@ -344,7 +313,6 @@ static func generate_random_layout(
 			if pair.active != pair.home:
 				required_shifter_moves += 1
 
-		# Final gate: respect shifter mobility (same semantics as editor save / PuzzleSolver).
 		var verify_constraints: Array = final_constraints if require_unique else []
 		if not require_unique:
 			verify_constraints = hidden_hints
@@ -376,7 +344,6 @@ static func generate_random_layout(
 	push_error("Generator failed: Generated walls may be mathematically impossible with the strict parity rules.")
 	return {} 
 
-## True if any empty cell has exactly one legal color (naked single).
 static func _has_obvious_move(
 	layout: Dictionary,
 	empty_cells: Array,
@@ -400,7 +367,6 @@ static func _has_obvious_move(
 			return true
 	return false
 
-## Whether this punch is allowed under the difficulty's obvious-move policy.
 static func _punch_keeps_obvious_move(
 	difficulty: int,
 	layout: Dictionary,
@@ -414,22 +380,17 @@ static func _punch_keeps_obvious_move(
 ) -> bool:
 	if difficulty == Difficulty.HARD:
 		return true
-	# No empties yet means this is the first hole — allow it.
 	if empty_cells.is_empty():
 		return true
 	var has_obvious := _has_obvious_move(layout, empty_cells, w, h, allowed, constraints)
 	if difficulty == Difficulty.EASY:
 		return has_obvious
-	# Medium: at most ~30% of accepted punches may lack an obvious move.
 	if has_obvious:
 		return true
 	var next_accepted := accepted_punches + 1
 	var next_without := punches_without_obvious + 1
 	return float(next_without) / float(maxi(1, next_accepted)) <= MEDIUM_SKIP_OBVIOUS_FRACTION
 
-## Returns 0, 1, 2+ (capped once >1), or SOLUTIONS_UNKNOWN on iteration timeout.
-## `iter` may include:
-##   count (int), budget (int, optional), solution (Dictionary, optional first leaf)
 static func _count_solutions(
 	layout: Dictionary,
 	empty_cells: Array,
@@ -506,7 +467,6 @@ static func _solve(
 	empty_cells.insert(best_idx, best_coord)
 	return false
 
-## Returns {"idx": int, "vals": Array} or {} if some cell has zero options.
 static func _pick_mrv_cell(
 	layout: Dictionary,
 	empty_cells: Array,
@@ -537,7 +497,6 @@ static func _pick_mrv_cell(
 		return {}
 	return {"idx": best_idx, "vals": best_valid_vals}
 
-# --- STRICT PARITY VALIDATION ---
 static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w: int, h: int, constraints: Array) -> bool:
 	layout[coord] = val 
 	
@@ -607,7 +566,6 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 			var other_val = layout.get(other_coord, -1)
 			if other_val < 0:
 				continue
-			# Green is wild for both equals and not-equals.
 			if val == GameConstants.TileState.JOKER or other_val == GameConstants.TileState.JOKER:
 				continue
 			if c.type == "equals" and val != other_val:

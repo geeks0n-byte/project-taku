@@ -7,7 +7,6 @@ static func is_shape_only_layout(layout: Dictionary) -> bool:
 			return false
 	return true
 
-## Player-cycle / generator tile set. Empty input → full Y/B/G.
 static func normalize_available_tiles(raw: Array) -> Array[int]:
 	var out: Array[int] = []
 	var seen: Dictionary = {}
@@ -105,7 +104,6 @@ static func count_unlocked_jokers(board_cells: Dictionary) -> int:
 			count += 1
 	return count
 
-## Absolute green-tile quota for a finished board (not "remaining to place").
 static func resolve_required_jokers(saved_required: int, grid_w: int, grid_h: int) -> int:
 	if saved_required < 0:
 		return mini(grid_w, grid_h)
@@ -127,13 +125,11 @@ static func build_solve_layout(board_cells: Dictionary) -> Dictionary:
 	var empty_cells: Array = []
 	for coord in board_cells:
 		var cell = board_cells[coord]
-		# Keep shifters fixed in place — they occupy a cell and are not color-filled.
 		solve_layout[coord] = cell.state
 		if cell.state == GameConstants.TileState.EMPTY:
 			empty_cells.append(coord)
 	return {"layout": solve_layout, "empty_cells": empty_cells}
 
-## Place shifters on their home cells so the solver fills only true empties.
 static func layout_with_shifters_for_solve(layout: Dictionary, shifter_pairs: Array) -> Dictionary:
 	var solve_layout: Dictionary = layout.duplicate()
 	for pair in shifter_pairs:
@@ -167,8 +163,6 @@ static func solve_reference(
 		return test_layout
 	return {}
 
-## Returns 0, 1, 2+ (capped), or PuzzleGenerator.SOLUTIONS_UNKNOWN on timeout.
-## Pass a shared `iter` Dictionary to accumulate budget across multiple calls.
 static func count_solutions(
 	layout: Dictionary,
 	empty_cells: Array,
@@ -254,7 +248,6 @@ static func sort_level_paths(paths: Array) -> void:
 		return num_a < num_b
 	)
 
-## Campaign levels in progression order: tutorials → easy → medium → hard.
 static func scan_campaign_levels() -> Array:
 	var found: Array = []
 	for folder in [
@@ -268,8 +261,6 @@ static func scan_campaign_levels() -> Array:
 		found.append_array(folder_paths)
 	return found
 
-## First Easy (then Medium/Hard) `level_number` — tutorials are excluded from
-## player-facing Level 1…N counting across the normal campaign.
 static func first_campaign_level_number() -> int:
 	for folder in [
 		GameConstants.CAMPAIGN_EASY_DIR,
@@ -284,8 +275,6 @@ static func first_campaign_level_number() -> int:
 				return int(resource.level_number)
 	return 1
 
-## Player-facing level label number. Tutorials keep authored numbers;
-## Easy→Medium→Hard display as Level 1, 2, 3… (tutorials do not count).
 static func get_display_level_number(level: LevelData) -> int:
 	if level == null:
 		return 0

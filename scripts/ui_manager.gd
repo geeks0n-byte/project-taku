@@ -69,7 +69,6 @@ var _tutorial_tools_locked: bool = false
 var _highlighted_hud_button: String = ""
 var _tutorial_status_body: String = ""
 var _tutorial_mode: bool = false
-## Tutorial levels: reset restarts the board; other levels: new puzzle.
 var _reset_is_restart: bool = false
 const _ICON_RESET: Texture2D = preload("res://resources/icons/icon_reset.svg")
 const _ICON_RANDOM: Texture2D = preload("res://resources/icons/icon_random.svg")
@@ -104,7 +103,6 @@ func _on_language_changed() -> void:
 	HudLayout.apply_locale_fonts_to_tree(self)
 	if _level_display_set:
 		display_level(_level_display_num, _level_display_custom, _level_display_tutorial)
-	# Tutorial tips first so status refresh uses the new language body.
 	locale_refresh_requested.emit()
 	_refresh_status_label()
 	_refresh_how_to_play_text()
@@ -122,7 +120,6 @@ func _on_language_changed() -> void:
 func _setup_how_to_play_font() -> void:
 	if not rules_label:
 		return
-	# How-to-play body text always uses the default font (not the pixel UI font).
 	rules_label.set_meta("_use_default_font", true)
 	HudLayout.apply_locale_font_to_control(rules_label)
 
@@ -313,8 +310,6 @@ func set_tutorial_tools_locked(locked: bool) -> void:
 
 func highlight_hud_button(button_id: String) -> void:
 	_highlighted_hud_button = button_id
-	# While teaching Reset, show the campaign (random/new-puzzle) icon; otherwise
-	# restore the normal reset/restart glyph as soon as focus leaves Reset.
 	if button_id == "reset":
 		_set_reset_button_texture(_ICON_RANDOM)
 	else:
@@ -326,7 +321,6 @@ func clear_hud_button_highlight() -> void:
 	_apply_reset_button_icon()
 	_apply_tutorial_tool_state()
 
-## Tutorial: reset icon + restart confirm. Campaign/other: random icon + new puzzle.
 func set_reset_mode_restart(is_restart: bool) -> void:
 	_reset_is_restart = is_restart
 	_apply_reset_button_icon()
@@ -370,14 +364,12 @@ func _apply_tutorial_tool_state() -> void:
 			HudLayout.start_toggle_mask_breathe(button)
 		else:
 			HudLayout.stop_toggle_mask_breathe(button)
-		# Reset and How to Play stay usable during tutorials.
 		if id == "reset" or id == "how_to_play":
 			button.disabled = false
 			HudLayout.refresh_button_icon_modulate(button)
 			continue
 		if not _tutorial_tools_locked:
 			if id == "hint":
-				# Caller restores enabled state via set_hint_button_disabled.
 				pass
 			elif id == "undo" or id == "redo":
 				pass
@@ -438,7 +430,6 @@ func display_level(num: int, is_custom: bool = false, is_tutorial: bool = false)
 	_level_display_custom = is_custom
 	_level_display_tutorial = is_tutorial
 	_level_display_set = true
-	# Keep LevelLabelWrap in the top-bar layout so button positions stay fixed.
 	var label_wrap: Control = level_label.get_parent() as Control
 	if label_wrap:
 		label_wrap = label_wrap.get_parent() as Control
@@ -455,7 +446,6 @@ func display_level(num: int, is_custom: bool = false, is_tutorial: bool = false)
 		prefix = String(tr("DEV"))
 	else:
 		prefix = String(tr("LVL"))
-	# Pixel font is English-only for now; other locales use the default font.
 	level_label.set_meta("_use_default_font", not HudLayout.uses_pixel_font())
 	HudLayout.apply_locale_font_to_control(level_label)
 	level_label.add_theme_font_size_override("normal_font_size", HudLayout.scaled_font_size(GameConstants.HUD_LEVEL_FONT_SIZE))
@@ -491,7 +481,6 @@ func _refresh_status_label() -> void:
 	status_label.modulate = Color.WHITE
 	HudLayout.apply_status_font(status_label, GameConstants.HUD_STATUS_FONT_SIZE)
 	var lines: PackedStringArray = []
-	# Tutorials: tip only — hide default fill prompt and validation noise.
 	if _tutorial_mode:
 		if not _tutorial_status_body.is_empty():
 			lines.append(HudLayout.break_after_sentences(_tutorial_status_body))
@@ -516,7 +505,6 @@ func set_overlays_hidden() -> void:
 	set_hud_buttons_disabled(false)
 
 func show_reset_confirm() -> void:
-	# Match pause / how-to-play: clear view of the space background (board already hidden).
 	if end_dimmer:
 		end_dimmer.color = Color(0, 0, 0, 0)
 	_set_end_dimmer_visible(true)
@@ -557,7 +545,6 @@ func _on_reset_confirm_no() -> void:
 	reset_cancelled.emit()
 
 func show_session_resume_prompt() -> void:
-	# Keep space background undimmed (same as reset confirm / pause).
 	if end_dimmer:
 		end_dimmer.color = Color(0, 0, 0, 0)
 	_set_end_dimmer_visible(true)
@@ -605,19 +592,16 @@ func _on_session_back_pressed() -> void:
 func _make_end_screen_panel_style() -> StyleBoxFlat:
 	return HudLayout.make_dialog_panel_style()
 
-## Wider than generic dialog buttons so "NEW PUZZLE" doesn't wrap / clip on mobile.
 func _style_resume_button(button: Button) -> void:
 	if not button:
 		return
 	button.custom_minimum_size = Vector2(460, 110)
 	var outline := 8
 	if OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios"):
-		# Lighter outline avoids Press Start glyph-edge clipping (same as end-screen headers).
 		outline = 5
 	button.add_theme_color_override("font_outline_color", Color.BLACK)
 	button.add_theme_constant_override("outline_size", outline)
 	HudLayout.fit_text_button(button, 28, 18)
-	# fit_text_button enables wrap — keep one line so glyphs don't clip into each other.
 	button.autowrap_mode = TextServer.AUTOWRAP_OFF
 	button.clip_text = false
 
@@ -697,7 +681,6 @@ func _refresh_victory_locale() -> void:
 		else:
 			win_label.text = (tr("LEVEL_COMPLETED") % _victory_display_num) + "\n" + tr("COMPLETED")
 		HudLayout.apply_end_screen_header_style(win_label, 48)
-		# Explicit two-line title: "LEVEL 1" / "COMPLETED!"
 		win_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		win_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -727,7 +710,6 @@ func _refresh_victory_locale() -> void:
 		_layout_victory_panel(_victory_star_result)
 
 func _setup_end_layer() -> void:
-	# Keep full-screen center as IGNORE so HUD stays clickable when overlays are off.
 	if end_center:
 		end_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -745,7 +727,6 @@ func _style_victory_chrome() -> void:
 		win_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
 		win_label.offset_left = 28.0
 		win_label.offset_right = -28.0
-		# Extra vertical room for two-line title + outlined glyphs on mobile.
 		win_label.offset_top = 24.0
 		win_label.offset_bottom = 220.0
 		win_label.clip_contents = false

@@ -12,9 +12,7 @@ const COLOR_SHIFTER := Color(0.7, 0.35, 0.9, 1.0)
 const PATH_EMPTY := "res://resources/tiles/tile_empty.svg"
 const PATH_WALL := "res://resources/tiles/tile_wall.svg"
 
-## path@size -> resized Image
 static var _tile_image_cache: Dictionary = {}
-## layout hash + pixel_size (+ dirs) -> ImageTexture
 static var _preview_texture_cache: Dictionary = {}
 const _PREVIEW_CACHE_MAX := 64
 
@@ -23,13 +21,11 @@ static func make_texture(level: LevelData, pixel_size: int = GameConstants.LEVEL
 		return ImageTexture.create_from_image(Image.create(pixel_size, pixel_size, false, Image.FORMAT_RGBA8))
 
 	var layout: Dictionary = level.layout if level.layout != null else {}
-	# Generated campaign levels often store only width/height with an empty layout.
 	if layout.is_empty():
 		var dims := LevelUtils.get_dimensions_from_level(level)
 		layout = LevelUtils.make_empty_layout(maxi(1, dims.x), maxi(1, dims.y))
 	if LevelUtils.is_shape_only_layout(layout):
 		return _make_silhouette_texture(layout, pixel_size)
-	# Apply authored shifter homes so previews match the starting board.
 	var preview_layout := layout.duplicate()
 	var active_shifters := _active_shifter_set(level)
 	var shifter_cells := _shifter_cell_set(level)
@@ -41,9 +37,6 @@ static func make_texture(level: LevelData, pixel_size: int = GameConstants.LEVEL
 			preview_layout[coord] = GameConstants.TileState.EMPTY
 	return make_texture_from_layout(preview_layout, pixel_size)
 
-## Renders an arbitrary coord -> TileState layout (e.g. a solved board).
-## Walls are omitted (transparent like gameplay) — no wall tiles or wall grid lines.
-## Optional `shifter_dirs`: coord -> Vector2i direction for purple-tile arrow overlays.
 static func make_texture_from_layout(
 	layout: Dictionary,
 	pixel_size: int = GameConstants.LEVEL_PREVIEW_SIZE,
@@ -67,7 +60,6 @@ static func make_texture_from_layout(
 	var img_w := width * cell
 	var img_h := height * cell
 	var image := Image.create(img_w, img_h, false, Image.FORMAT_RGBA8)
-	# Transparent like gameplay — wall cells stay invisible (no fill, no grid).
 	image.fill(Color(0, 0, 0, 0))
 
 	for y in height:
@@ -106,12 +98,10 @@ static func _layout_cache_key(layout: Dictionary, pixel_size: int, shifter_dirs:
 
 static func _store_preview_texture(key: String, tex: ImageTexture) -> void:
 	if _preview_texture_cache.size() >= _PREVIEW_CACHE_MAX:
-		# Drop an arbitrary oldest-ish entry (Dictionary keeps insertion order in Godot 4).
 		var first_key = _preview_texture_cache.keys()[0]
 		_preview_texture_cache.erase(first_key)
 	_preview_texture_cache[key] = tex
 
-## Snapshot board cells including purple-tile arrow directions for solved previews.
 static func make_texture_from_board_cells(
 	board_cells: Dictionary,
 	pixel_size: int = GameConstants.LEVEL_PREVIEW_SIZE
@@ -156,7 +146,6 @@ static func _make_silhouette_texture(layout: Dictionary, pixel_size: int) -> Ima
 	var img_w := width * cell
 	var img_h := height * cell
 	var image := Image.create(img_w, img_h, false, Image.FORMAT_RGBA8)
-	# Transparent like gameplay — wall cells stay invisible (no fill).
 	image.fill(Color(0, 0, 0, 0))
 
 	for y in height:
@@ -170,12 +159,10 @@ static func _make_silhouette_texture(layout: Dictionary, pixel_size: int) -> Ima
 			var color := _color_for_state(state)
 			image.fill_rect(Rect2i(x * cell, y * cell, cell, cell), color)
 
-	# Same edge rules as BoardRenderer.draw_grid (play mode), not a full inner hatch.
 	_draw_silhouette_grid_lines(image, layout, width, height, cell)
 
 	return ImageTexture.create_from_image(image)
 
-## Mirror BoardRenderer.draw_grid play-mode edges onto a preview image.
 static func _draw_silhouette_grid_lines(
 	image: Image,
 	layout: Dictionary,
@@ -185,7 +172,6 @@ static func _draw_silhouette_grid_lines(
 ) -> void:
 	if cell < 2:
 		return
-	# ~4px lines at typical in-game cell sizes ≈ 4% of cell.
 	var line_w := clampi(int(round(float(cell) * 0.04)), 1, maxi(1, int(cell / 4.0)))
 	var line_color := Color(0.0, 0.0, 0.0, 1.0)
 
@@ -298,7 +284,6 @@ static func _blit_shifter_arrow(image: Image, cell_pos: Vector2i, cell: int, dir
 	var path := _path_for_shifter_dir(dir as Vector2i)
 	if path.is_empty():
 		return
-	# Match in-game chevron: slightly smaller than the purple tile, centered.
 	var arrow_size := maxi(4, int(round(float(cell) * 0.72)))
 	var arrow_img := _resized_tile(path, arrow_size)
 	if arrow_img == null:
@@ -320,7 +305,6 @@ static func _resized_tile(path: String, size: int) -> Image:
 		return null
 	var src := tex.get_image()
 	if src == null:
-		# SVG / compressed textures may need a GPU readback fallback.
 		var img_tex := tex as ImageTexture
 		if img_tex:
 			src = img_tex.get_image()

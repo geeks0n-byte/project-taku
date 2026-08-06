@@ -2,7 +2,6 @@ extends Control
 
 const DEV_DIR = GameConstants.DEV_LEVELS_DIR
 const LEVELS_PER_PAGE := 12
-## Higher than the shared menu band so title + tabs sit closer to the top.
 const LEVEL_SELECT_HEADER_TOP := 160.0
 const PREVIEW_SIZE := 96
 const LOCK_ICON := preload("res://resources/tiles/tile_lock.svg")
@@ -36,7 +35,6 @@ var _page_index: int = 0
 func _ready() -> void:
 	if AdsManager:
 		AdsManager.show_menu_banner()
-	# Keep templates out of the grid so they never affect layout.
 	for template in [button_template, locked_button_template, custom_button_template]:
 		if template and template.get_parent() == level_grid:
 			level_grid.remove_child(template)
@@ -88,7 +86,6 @@ func _fit_chrome_buttons() -> void:
 		HudLayout.fit_text_button(
 			btn, GameConstants.UI_BTN_TAB_FONT, GameConstants.UI_BTN_TAB_FONT_MIN
 		)
-		# Prefer keeping the larger category type; only shrink when truly needed.
 		btn.autowrap_mode = TextServer.AUTOWRAP_OFF
 	if custom_tab_button and custom_tab_button.visible:
 		custom_tab_button.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
@@ -119,7 +116,6 @@ func _layout_level_select() -> void:
 	if ui_layer == null or content_root == null:
 		return
 
-	# Full-rect host (was a CenterContainer).
 	content_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	content_root.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	content_root.grow_vertical = Control.GROW_DIRECTION_BOTH
@@ -138,7 +134,6 @@ func _layout_level_select() -> void:
 		title.offset_bottom = LEVEL_SELECT_HEADER_TOP + GameConstants.SCREEN_HEADER_HEIGHT
 		HudLayout.apply_screen_header_style(title)
 
-	# Content column under the raised header.
 	if content_vbox:
 		content_vbox.set_anchors_preset(Control.PRESET_TOP_WIDE)
 		content_vbox.anchor_bottom = 1.0
@@ -149,7 +144,6 @@ func _layout_level_select() -> void:
 			+ GameConstants.SCREEN_HEADER_HEIGHT
 			+ GameConstants.SCREEN_CONTENT_GAP
 		)
-		# Stop just above Prev/Close/Next (same Y band as options / credits Close).
 		content_vbox.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_TOP - 16.0
 		content_vbox.grow_horizontal = Control.GROW_DIRECTION_BOTH
 		content_vbox.grow_vertical = Control.GROW_DIRECTION_BOTH
@@ -171,8 +165,6 @@ func _layout_level_select() -> void:
 	_position_bottom_nav()
 	_position_custom_tab_button()
 
-## Expanding plain Control under the tabs. Grid is top-anchored inside it (not a
-## BoxContainer child), so leftover height cannot shift or stretch the list.
 func _ensure_level_list_host() -> void:
 	if content_vbox == null or level_grid == null:
 		return
@@ -182,7 +174,6 @@ func _ensure_level_list_host() -> void:
 		old_spacer.queue_free()
 
 	var existing := content_vbox.get_node_or_null("LevelListHost") as Control
-	# Replace an older VBox host — spacer tricks still recentered short pages.
 	if existing != null and existing is VBoxContainer:
 		for child in existing.get_children():
 			existing.remove_child(child)
@@ -202,7 +193,6 @@ func _ensure_level_list_host() -> void:
 	if not host.resized.is_connected(_pin_level_list_to_top):
 		host.resized.connect(_pin_level_list_to_top)
 
-	# Keep host after tabs/gap (and before any leftover chrome).
 	var insert_at := 0
 	if tab_container and tab_container.get_parent() == content_vbox:
 		insert_at = maxi(insert_at, tab_container.get_index() + 1)
@@ -225,7 +215,6 @@ func _ensure_level_list_host() -> void:
 			if old_parent:
 				old_parent.remove_child(empty_state_label)
 			host.add_child(empty_state_label)
-		# Don't reserve a tall empty band that vertically centers short copy.
 		empty_state_label.custom_minimum_size = Vector2(0, 0)
 
 	_pin_level_list_to_top()
@@ -279,12 +268,10 @@ func _position_bottom_nav() -> void:
 	_page_nav.offset_top = GameConstants.SCREEN_BOTTOM_NAV_TOP
 	_page_nav.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_BOTTOM
 	_page_nav.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	# Never grow upward into the level grid if the row is taller than the band.
 	_page_nav.grow_vertical = Control.GROW_DIRECTION_END
 	_page_nav.z_index = 4
 	_apply_close_button()
 
-## Debug-only Custom list sits under Close (same bottom margin band).
 func _position_custom_tab_button() -> void:
 	if custom_tab_button == null or content_root == null:
 		return
@@ -297,7 +284,6 @@ func _position_custom_tab_button() -> void:
 	var half_w := GameConstants.UI_BTN_SECONDARY_SIZE.x * 0.5
 	custom_tab_button.offset_left = -half_w
 	custom_tab_button.offset_right = half_w
-	# Directly under the Close / Prev / Next band.
 	custom_tab_button.offset_top = GameConstants.SCREEN_BOTTOM_NAV_BOTTOM + 10.0
 	custom_tab_button.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_BOTTOM + 110.0
 	custom_tab_button.grow_horizontal = Control.GROW_DIRECTION_BOTH
@@ -333,7 +319,6 @@ func _first_unlocked_view() -> ViewMode:
 func _is_category_unlocked(view: ViewMode) -> bool:
 	if view == ViewMode.CUSTOM:
 		return GlobalGameManager.debug_tools_enabled
-	# Campaign tabs are always browsable; individual levels stay gated by progress.
 	return true
 
 func _update_tab_button_visuals() -> void:
@@ -374,7 +359,6 @@ func _set_tab_lock_icon(button: Button, show_lock: bool) -> void:
 		existing.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		existing.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		existing.custom_minimum_size = Vector2(TAB_LOCK_ICON_SIZE, TAB_LOCK_ICON_SIZE)
-		# Centered over the button face (not trailing the label).
 		existing.set_anchors_preset(Control.PRESET_CENTER)
 		var half := TAB_LOCK_ICON_SIZE * 0.5
 		existing.offset_left = -half
@@ -450,7 +434,6 @@ func _refresh_page() -> void:
 		empty_state_label.visible = valid_level_count == 0
 		if empty_state_label.visible:
 			HudLayout.apply_body_label(empty_state_label, GameConstants.UI_BODY_FONT_SIZE)
-		# Keep empty-state out of the tab→list packing height when hidden.
 		empty_state_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	if level_grid:
 		level_grid.visible = valid_level_count > 0
@@ -481,7 +464,6 @@ func _refresh_page() -> void:
 		level_grid.add_child(btn)
 
 	_update_page_nav_visibility()
-	# Min size changes with row count; pin again after buttons exist.
 	call_deferred("_pin_level_list_to_top")
 
 func _update_page_nav_visibility() -> void:

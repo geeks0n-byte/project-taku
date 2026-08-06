@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Rasterize app_icon_cosmos.svg (64x64 pixel art) into Android launcher PNGs."""
 from __future__ import annotations
 
@@ -54,7 +53,6 @@ def parse_path_pixels(d: str) -> list[tuple[int, int]]:
 def in_rounded_rect(x: int, y: int, size: int = 64, rx: int = 14) -> bool:
 	if x < 0 or y < 0 or x >= size or y >= size:
 		return False
-	# Corners: outside circle of radius rx centered at (rx,rx) etc.
 	corners = [
 		(rx, rx, x < rx and y < rx),
 		(size - 1 - rx, rx, x > size - 1 - rx and y < rx),
@@ -78,7 +76,6 @@ def render_base_64() -> list[tuple[int, int, int, int]]:
 		if 0 <= x < 64 and 0 <= y < 64 and in_rounded_rect(x, y):
 			px[y * 64 + x] = (rgb[0], rgb[1], rgb[2], a)
 
-	# Base + stars (clipped)
 	for y in range(64):
 		for x in range(64):
 			if in_rounded_rect(x, y):
@@ -166,14 +163,12 @@ def scale_nn(
 
 def make_adaptive_fg(base64: list[tuple[int, int, int, int]]) -> list[tuple[int, int, int, int]]:
 	"""432 adaptive FG: place 288px (safe) icon in center on transparent."""
-	# Scale 64 -> 288 (nearest), center on 432 canvas.
 	inner = scale_nn(base64, 64, 64, 288, 288)
 	out = [(0, 0, 0, 0)] * (432 * 432)
 	ox = (432 - 288) // 2
 	oy = (432 - 288) // 2
 	for y in range(288):
 		for x in range(288):
-			# Drop fully outside rounded corners → keep alpha from source
 			out[(oy + y) * 432 + (ox + x)] = inner[y * 288 + x]
 	return out
 
@@ -190,7 +185,6 @@ def main() -> None:
 	write_png(os.path.join(ROOT, "launcher_192.png"), 192, 192, icon_192)
 	write_png(os.path.join(ROOT, "launcher_adaptive_fg_432.png"), 432, 432, make_adaptive_fg(base))
 	write_png(os.path.join(ROOT, "launcher_adaptive_bg_432.png"), 432, 432, make_adaptive_bg())
-	# Also write a 256 project icon PNG so Android/editor don't fall back oddly.
 	icon_256 = scale_nn(base, 64, 64, 256, 256)
 	write_png(os.path.join(ROOT, "app_icon_cosmos_256.png"), 256, 256, icon_256)
 	print("wrote launcher icons from app_icon_cosmos.svg pixel art")

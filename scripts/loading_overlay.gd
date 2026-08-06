@@ -1,7 +1,6 @@
 class_name LoadingOverlay
 extends CanvasLayer
 
-## Full-screen indeterminate loading UI for long generation work.
 
 var _root: Control
 var _bar: ProgressBar
@@ -71,11 +70,8 @@ func hide_loading() -> void:
 func is_busy() -> bool:
 	return _busy
 
-## Shows the overlay, runs work on a worker thread, then hides.
-## `work` must be thread-safe (no SceneTree / node access).
 func run_async(host: Node, work: Callable, message_key: String = "UI_LOADING") -> Variant:
 	show_loading(message_key)
-	# Let the overlay paint before heavy work starts.
 	if not is_instance_valid(host) or host.get_tree() == null:
 		hide_loading()
 		return null
@@ -91,7 +87,6 @@ func run_async(host: Node, work: Callable, message_key: String = "UI_LOADING") -
 	)
 	while not WorkerThreadPool.is_task_completed(task_id):
 		if not is_instance_valid(host) or host.get_tree() == null:
-			# Host left the tree (e.g. Android back). Wait for the worker, then bail.
 			WorkerThreadPool.wait_for_task_completion(task_id)
 			hide_loading()
 			return null

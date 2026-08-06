@@ -57,7 +57,6 @@ static func draw_grid(
 		var draw_left: bool
 
 		if full_grid:
-			# Editor: outline every cell, including walls.
 			draw_right = true
 			draw_bottom = true
 			draw_top = not board_cells.has(coord + Vector2i(0, -1))
@@ -142,8 +141,6 @@ static func draw_constraints(
 			canvas.draw_line(l1_s + shrink1, l1_e - shrink1, diff_color, 4.0, true)
 			canvas.draw_line(l2_s + shrink2, l2_e - shrink2, diff_color, 4.0, true)
 
-## Red bridge lines across wall cutouts between highlighted playable cells.
-## Does not box walls — only spans the gap from playable border to playable border.
 static func draw_highlight_bridges(
 	canvas: CanvasItem,
 	board_cells: Dictionary,
@@ -157,7 +154,6 @@ static func draw_highlight_bridges(
 		highlighted[raw as Vector2i] = true
 	var color := Color.RED
 	var width := 10.0
-	# Horizontal bridges: playable → walls… → playable in the same row.
 	for raw in highlight_coords:
 		var c: Vector2i = raw as Vector2i
 		if not board_cells.has(c):
@@ -167,7 +163,6 @@ static func draw_highlight_bridges(
 		var right: Vector2i = c + Vector2i(1, 0)
 		if not board_cells.has(right) or board_cells[right].state != GameConstants.TileState.WALL:
 			continue
-		# Walk through contiguous walls to the next highlighted playable.
 		var cursor: Vector2i = right
 		while board_cells.has(cursor) and board_cells[cursor].state == GameConstants.TileState.WALL:
 			cursor += Vector2i(1, 0)
@@ -179,7 +174,6 @@ static func draw_highlight_bridges(
 		var x0: float = float(c.x + 1) * cell_size
 		var x1: float = float(cursor.x) * cell_size
 		canvas.draw_line(Vector2(x0, y_mid), Vector2(x1, y_mid), color, width, true)
-	# Vertical bridges.
 	for raw in highlight_coords:
 		var c: Vector2i = raw as Vector2i
 		if not board_cells.has(c):
@@ -201,7 +195,6 @@ static func draw_highlight_bridges(
 		var y1: float = float(cursor.y) * cell_size
 		canvas.draw_line(Vector2(x_mid, y0), Vector2(x_mid, y1), color, width, true)
 
-## Alias kept for tutorial focus call sites.
 static func draw_focus_bridges(
 	canvas: CanvasItem,
 	board_cells: Dictionary,

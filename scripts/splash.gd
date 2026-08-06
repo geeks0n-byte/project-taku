@@ -11,7 +11,6 @@ func _ready() -> void:
 		AdsManager.hide_menu_banner()
 	if SpaceBackground and SpaceBackground.has_method("set_foreground_events_enabled"):
 		SpaceBackground.set_foreground_events_enabled(false)
-	# Splash is space background only — hide any credit / title chrome.
 	var content := get_node_or_null("UILayer/Content") as Control
 	if content:
 		content.visible = false

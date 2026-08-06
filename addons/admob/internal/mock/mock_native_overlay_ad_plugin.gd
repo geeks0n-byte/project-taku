@@ -1,24 +1,7 @@
-# MIT License
 
-# Copyright (c) 2023-present Poing Studios
 
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
 
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
 
 extends Node
 
@@ -387,7 +370,6 @@ func _update_ui_position(uid: int) -> void:
 		vbox.add_theme_constant_override("separation", int(10 * scale_factor_y))
 		margin.add_child(vbox)
 
-		# 1. Media content panel (Top)
 		var media_panel := ColorRect.new()
 		var media_bg := Color.BLACK
 		if tertiary_style.get("background_color", "") != "":
@@ -475,7 +457,6 @@ func _update_ui_position(uid: int) -> void:
 				sq.custom_minimum_size = Vector2(8 * scale_factor_x, 8 * scale_factor_y)
 				grid.add_child(sq)
 
-		# 2. Metadata row (Middle)
 		var meta_hbox := HBoxContainer.new()
 		meta_hbox.add_theme_constant_override("separation", int(10 * scale_factor_x))
 		vbox.add_child(meta_hbox)
@@ -551,7 +532,6 @@ func _update_ui_position(uid: int) -> void:
 		_apply_text_style(stars, secondary_style, Color(1.0, 0.76, 0.03), 12.0, scale_factor_y)
 		sub_hbox.add_child(stars)
 
-		# 3. Description Label
 		var desc := Label.new()
 		desc.text = "Install Flood-It App for free! Free Popular Casual Game"
 		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -560,7 +540,6 @@ func _update_ui_position(uid: int) -> void:
 		_apply_text_style(desc, tertiary_style, Color.DARK_GRAY, 10.0, scale_factor_y)
 		vbox.add_child(desc)
 
-		# 4. CTA Button (INSTALL) - Full Width
 		var cta_btn := Button.new()
 		cta_btn.text = "INSTALL"
 		cta_btn.custom_minimum_size = Vector2(1, 36 * scale_factor_y)

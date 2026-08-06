@@ -10,13 +10,9 @@ var is_locked: bool = false
 var is_linked_pair: bool = false
 var shifter_direction: Vector2i = Vector2i.ZERO
 var allowed_cycle_tiles: Array[int] = [0, 1, 2]
-## When true, clicks are ignored (used by scripted tutorials).
 var tutorial_blocked: bool = false
-## Soft white mask for tutorial focus cells.
 var guide_active: bool = false
-## Persistent white border for tutorial focus (survives validation clears).
 var focus_active: bool = false
-## Transient validation error border (red); cleared each validation pass.
 var validation_error_active: bool = false
 
 const GUIDE_COLOR := Color(1.0, 1.0, 1.0, 0.45)
@@ -72,8 +68,6 @@ func _ready():
 
 	if error_highlight:
 		error_highlight.z_index = 100
-		# Panel StyleBox must stay borderless — custom draw owns the border.
-		# A leftover red StyleBox border was flashing through white focus breathe.
 		var clear_style := StyleBoxFlat.new()
 		clear_style.bg_color = Color(0, 0, 0, 0)
 		clear_style.set_border_width_all(0)
@@ -152,9 +146,6 @@ func update_visuals():
 		lock_icon.visible = is_locked and state != GameConstants.TileState.WALL
 
 	if link_highlight:
-		# Tutorial white mask stays on while the director marks this cell —
-		# including empties, locked tiles, shifters, and wrong practice fills
-		# the player still needs to keep tapping.
 		var show_guide := guide_active and state != GameConstants.TileState.WALL
 		if show_guide:
 			var alpha: float = (
@@ -235,13 +226,11 @@ func set_error_highlight():
 		error_highlight.visible = true
 		error_highlight.queue_redraw()
 
-## Short rumble along the hop axis when a Purple move is blocked.
 func play_blocked_shake() -> void:
 	if _shake_tween and _shake_tween.is_valid():
 		_shake_tween.kill()
 		position = _shake_rest_position
 	_shake_rest_position = position
-	# Shake along intended hop direction (horizontal vs vertical).
 	var axis := Vector2(1.0, 0.0)
 	if abs(shifter_direction.y) > abs(shifter_direction.x):
 		axis = Vector2(0.0, 1.0)
@@ -282,7 +271,6 @@ func set_mask_color(mask_color: Color):
 		link_highlight.visible = true
 
 func clear_highlight():
-	# Keep tutorial focus borders; only clear transient validation errors.
 	validation_error_active = false
 	if error_highlight:
 		error_highlight.visible = focus_active

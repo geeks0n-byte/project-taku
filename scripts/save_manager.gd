@@ -10,23 +10,57 @@ var current_language: String = "en"
 var background_static: bool = false
 var bgm_enabled: bool = true
 var sfx_enabled: bool = true
-## True after the player answers the first-launch tutorial offer.
 var tutorial_intro_answered: bool = false
-## level_number (as String) -> star bitmask (LevelStars.BIT_*)
 var level_star_bits: Dictionary = {}
-## In-progress puzzle session (empty when none).
 var session_data: Dictionary = {}
-## Non-tutorial wins since last interstitial (AdsManager).
 var ads_wins_since_interstitial: int = 0
 
 func _ready() -> void:
+	_sync_translations_from_csv()
 	load_progress()
 	_apply_background_mode()
 	if not get_tree().node_added.is_connected(_on_tree_node_added):
 		get_tree().node_added.connect(_on_tree_node_added)
 	call_deferred("apply_locale_fonts")
 
-## Tutorials are optional (main menu); Easy starts unlocked at its first level.
+func _sync_translations_from_csv() -> void:
+	const CSV_PATH := "res://resources/localization/translations.csv"
+	if not FileAccess.file_exists(CSV_PATH):
+		return
+	var file := FileAccess.open(CSV_PATH, FileAccess.READ)
+	if file == null:
+		return
+	var headers: PackedStringArray = file.get_csv_line()
+	if headers.size() < 2 or headers[0] != "keys":
+		return
+	var locale_translations: Dictionary = {}
+	for i in range(1, headers.size()):
+		var locale := String(headers[i]).strip_edges()
+		if locale.is_empty():
+			continue
+		var translation := TranslationServer.get_translation_object(locale)
+		if translation == null:
+			translation = Translation.new()
+			translation.locale = locale
+			TranslationServer.add_translation(translation)
+		locale_translations[i] = translation
+	while not file.eof_reached():
+		var row: PackedStringArray = file.get_csv_line()
+		if row.is_empty():
+			continue
+		var key := String(row[0]).strip_edges()
+		if key.is_empty() or key == "keys":
+			continue
+		for i in locale_translations.keys():
+			var idx := int(i)
+			if idx >= row.size():
+				continue
+			var message := String(row[idx])
+			if message.is_empty():
+				continue
+			(locale_translations[idx] as Translation).add_message(key, message)
+	file.close()
+
 func get_campaign_start_unlock() -> int:
 	var easy_paths := LevelUtils.scan_directory(GameConstants.CAMPAIGN_EASY_DIR)
 	LevelUtils.sort_level_paths(easy_paths)
@@ -55,7 +89,6 @@ func load_progress() -> void:
 		if config.has_section_key("Progression", "tutorial_intro_answered"):
 			tutorial_intro_answered = bool(config.get_value("Progression", "tutorial_intro_answered", false))
 		else:
-			# Existing installs: don't re-prompt returning players.
 			tutorial_intro_answered = true
 		level_star_bits = config.get_value("Progression", "level_star_bits", {})
 		if typeof(level_star_bits) != TYPE_DICTIONARY:
@@ -171,7 +204,6 @@ func is_level_unlocked(level_num: int) -> bool:
 func get_level_star_bits(level_num: int) -> int:
 	return int(level_star_bits.get(str(level_num), 0))
 
-## Merge newly earned star bits into the best for this level.
 func record_level_stars(level_num: int, bits: int) -> int:
 	var key := str(level_num)
 	var merged := get_level_star_bits(level_num) | bits
@@ -208,7 +240,6 @@ func delete_save_file() -> void:
 	session_data = {}
 	tutorial_intro_answered = false
 	ads_wins_since_interstitial = 0
-	# Keep language and background preference across progress reset.
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(SAVE_PATH)
 	save_progress()

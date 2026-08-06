@@ -1,24 +1,3 @@
-# MIT License
-#
-# Copyright (c) 2023-present Poing Studios
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
 
 extends Node
 
@@ -197,7 +176,6 @@ func _update_ui(uid: int) -> void:
 	main_vbox.add_theme_constant_override("separation", 0)
 	ui.add_child(main_vbox)
 
-	# 1. Top Bar
 	var top_margin := MarginContainer.new()
 	top_margin.add_theme_constant_override("margin_left", int(16 * scale_factor_x))
 	top_margin.add_theme_constant_override("margin_right", int(16 * scale_factor_x))
@@ -290,7 +268,6 @@ func _update_ui(uid: int) -> void:
 
 	_close_btn_node.pressed.connect(_on_close_pressed)
 
-	# Main Area
 	var content_margin := MarginContainer.new()
 	content_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_margin.add_theme_constant_override("margin_left", int(16 * scale_factor_x))
@@ -302,7 +279,6 @@ func _update_ui(uid: int) -> void:
 	var content_control := Control.new()
 	content_margin.add_child(content_control)
 
-	# 2a. Video Screen
 	_video_screen_node = VBoxContainer.new()
 	_video_screen_node.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_video_screen_node.add_theme_constant_override("separation", int(16 * scale_factor_y))
@@ -482,7 +458,6 @@ func _update_ui(uid: int) -> void:
 	btn_lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	install_btn.add_child(btn_lbl)
 
-	# 2b. End Screen
 	_end_screen_node = VBoxContainer.new()
 	_end_screen_node.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_end_screen_node.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -522,7 +497,6 @@ func _update_ui(uid: int) -> void:
 	end_btn_lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	end_install.add_child(end_btn_lbl)
 
-	# 3. Popup Overlay
 	_popup_node = ColorRect.new()
 	_popup_node.color = Color(0, 0, 0, 0.6)
 	_popup_node.set_anchors_preset(Control.PRESET_FULL_RECT)

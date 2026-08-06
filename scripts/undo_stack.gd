@@ -33,7 +33,6 @@ func redo() -> Dictionary:
 	return current
 
 func _trim_undo_if_needed() -> void:
-	# max_size <= 0 means unlimited history.
 	if max_size <= 0:
 		return
 	while _undo.size() > max_size:
@@ -45,7 +44,6 @@ func can_undo() -> bool:
 func can_redo() -> bool:
 	return not _redo.is_empty()
 
-## Export stacks for session save (deep copies).
 func export_history() -> Dictionary:
 	return {
 		"current": current.duplicate(true),
@@ -53,7 +51,6 @@ func export_history() -> Dictionary:
 		"redo": _redo.duplicate(true),
 	}
 
-## Restore stacks from session save.
 func import_history(data: Dictionary) -> void:
 	_undo.clear()
 	_redo.clear()

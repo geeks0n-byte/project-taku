@@ -5,7 +5,6 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 	var errors = []
 	var is_valid = true
 
-	# 1. Constraints Check
 	for pair in constraint_pairs:
 		if board_cells.has(pair["a"]) and board_cells.has(pair["b"]):
 			var cell_a = board_cells[pair["a"]]
@@ -53,7 +52,6 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 				if cell_a.has_method("set_error_highlight"): cell_a.set_error_highlight()
 				if cell_b.has_method("set_error_highlight"): cell_b.set_error_highlight()
 
-	# 2. Line Checks (Rows & Columns)
 	for line_data in cached_lines:
 		var coords = line_data["coords"]
 		var count_0 = 0
@@ -71,7 +69,6 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 			elif st == 1: count_1 += 1
 			elif st == 2: count_jokers += 1
 
-		# Max 1 Green Tile per row/column
 		if count_jokers > 1:
 			is_valid = false
 			var msg = "ERR_MAX_GREEN_PER_LINE"
@@ -82,7 +79,6 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 				if cell.state == 2 and cell.has_method("set_error_highlight"):
 					cell.set_error_highlight()
 
-		# 3-in-a-row Check
 		for i in range(line_vals.size() - 2):
 			var v1 = line_vals[i]
 			var v2 = line_vals[i+1]
@@ -115,7 +111,6 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 						if cell.has_method("set_error_highlight"):
 							cell.set_error_highlight()
 
-		# Balance Check (Only validates on completed lines)
 		var playable_count = 0
 		var filled_count = 0
 		
@@ -126,7 +121,6 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 					filled_count += 1
 					
 		if playable_count > 0 and filled_count == playable_count:
-			# STRICT EQUALITY RULE: 0s and 1s must be exactly equal
 			if count_0 != count_1:
 				is_valid = false
 				var msg = "ERR_UNEQUAL_LINE"
@@ -134,9 +128,7 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 					errors.append(msg)
 				for c in coords:
 					var cell = board_cells[c]
-					# Walls (-2) are explicitly skipped from being highlighted
 					if cell.state != -2 and cell.has_method("set_error_highlight"):
 						cell.set_error_highlight()
 						
-	# Global green quota is an optional star goal, not a win requirement.
 	return {"valid": is_valid, "errors": errors}

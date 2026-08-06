@@ -63,7 +63,6 @@ func _fit_menu_buttons() -> void:
 		title_label.set_meta("_screen_header_outline", GameConstants.SCREEN_HEADER_OUTLINE)
 		HudLayout.apply_screen_header_style(title_label)
 
-## Gray tile chrome like Options, fixed equal size for every row.
 func _apply_pause_button(button: Button) -> void:
 	if not button or not button.visible:
 		return

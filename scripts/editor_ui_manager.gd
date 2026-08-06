@@ -97,7 +97,6 @@ func setup_ui(grid_width: int, grid_height: int) -> void:
 	if status_label and control_panel:
 		HudLayout.position_editor_status_below_panel(control_panel, status_label)
 	call_deferred("_emit_startup_signals")
-	# Re-apply after SaveManager's deferred locale font pass.
 	call_deferred("_apply_default_font_to_link_buttons")
 	call_deferred("_apply_star_time_label")
 	call_deferred("_disable_editor_hint_button")
@@ -117,8 +116,6 @@ func _disable_editor_hint_button() -> void:
 	HintController.update_button(editor_hint_button, false)
 
 func _apply_default_font_to_link_buttons() -> void:
-	# = / × glyphs need the default font; Press Start 2P lacks ×.
-	# Keep button size locked — default-font metrics at 56px were stretching the brush row.
 	const BRUSH_BTN := Vector2(120, 120)
 	for button in [equals_button, not_equals_button]:
 		if not button:
@@ -131,7 +128,6 @@ func _apply_default_font_to_link_buttons() -> void:
 			continue
 		label.set_meta("_use_default_font", true)
 		label.add_theme_font_override("font", ThemeDB.fallback_font)
-		# Default font reads larger than pixel font; 52 fits the locked 120×120 buttons.
 		label.add_theme_font_size_override("font_size", 52)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -145,7 +141,6 @@ func _apply_star_time_label() -> void:
 	) as Label
 	if not title:
 		return
-	# Keep the short label so the settings row width matches the old layout.
 	title.text = "TIME:"
 	title.tooltip_text = "Star time: beat this to earn the time star. Infinity = no time star."
 
@@ -196,7 +191,6 @@ func _connect_ui_signals() -> void:
 	if editor_redo_button:
 		editor_redo_button.pressed.connect(func(): editor_redo_requested.emit())
 	if editor_hint_button:
-		# Edit-mode hint is currently forced off, but keep the signal wired for later.
 		editor_hint_button.toggled.connect(func(is_on: bool): editor_hint_toggled.emit(is_on))
 
 	if width_minus:
@@ -309,7 +303,6 @@ func _update_number_labels() -> void:
 		time_label.custom_minimum_size = Vector2(140, 90)
 		if editor_time_limit == 0:
 			var infinity_size := GameConstants.EDITOR_INFINITY_ICON_SIZE
-			# Spacer below the glyph lifts it to align with nearby labels.
 			time_label.text = "[center][img=%dx%d]%s[/img]\n[font_size=3][color=#00000000].[/color][/font_size][/center]" % [
 				infinity_size, infinity_size, GameConstants.ICON_INFINITY
 			]

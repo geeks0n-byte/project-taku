@@ -106,7 +106,6 @@ func _ready() -> void:
 		GlobalGameManager.main_menu_should_fade_in = false
 		_set_menu_ui_alpha(0.0)
 		call_deferred("_fade_in_menu_ui")
-		# Hard fallback: never leave the menu invisible on device if the tween fails.
 		get_tree().create_timer(MENU_FADE_IN + 0.75).timeout.connect(_ensure_menu_ui_visible)
 
 func _ensure_menu_ui_visible() -> void:
@@ -138,7 +137,6 @@ func _exit_tree() -> void:
 	if SpaceBackground and SpaceBackground.has_method("set_foreground_events_enabled"):
 		SpaceBackground.set_foreground_events_enabled(false)
 
-## Fade title + menu chrome in over the persistent space background (post-splash).
 func _menu_fade_targets() -> Array[CanvasItem]:
 	var nodes: Array[CanvasItem] = []
 	var title_host := get_node_or_null("TitleLayer/TitleHost") as CanvasItem
@@ -167,17 +165,12 @@ func _fade_in_menu_ui() -> void:
 	tween.set_parallel(true)
 	for node in nodes:
 		tween.tween_property(node, "modulate:a", 1.0, MENU_FADE_IN).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	# Safety: never leave the menu stuck invisible if the tween is interrupted.
 	if not tween.finished.is_connected(_ensure_menu_ui_visible):
 		tween.finished.connect(_ensure_menu_ui_visible)
 
-## Title + main menu buttons sit under FX; modal overlays stay above.
-## P/O tiles are children of TitleLabel — edit their offsets relative to the title.
-## Move TitleCluster to move the whole title (text + tiles) together.
 func _setup_title_under_fx() -> void:
 	var ui_layer := $UILayer as CanvasLayer
 	if ui_layer:
-		# Same band as the title so asteroids/comets can pass over menu buttons too.
 		ui_layer.layer = 0
 	var title_layer := get_node_or_null("TitleLayer") as CanvasLayer
 	if title_layer:
@@ -193,10 +186,8 @@ func _setup_title_under_fx() -> void:
 	if vbox:
 		vbox.add_theme_constant_override("separation", 22)
 	if menu_center:
-		# Tall enough for PLAY + Tutorial + rows (and EDITOR when debug is on) on phone viewports.
 		HudLayout.pin_menu_body_below_header(menu_center, 1280.0)
 
-## Credits / How To Play / tutorial prompt stay above flying FX.
 func _ensure_overlays_above_fx() -> void:
 	var ui_layer := $UILayer as CanvasLayer
 	if ui_layer == null:
@@ -205,7 +196,6 @@ func _ensure_overlays_above_fx() -> void:
 	if overlay_layer == null:
 		overlay_layer = CanvasLayer.new()
 		overlay_layer.name = "OverlayLayer"
-		# Above FxForeground (1); OptionsMenu uses 20 on its own.
 		overlay_layer.layer = 5
 		add_child(overlay_layer)
 	for node_name in ["OverlayBlocker", "HowToPlayHost", "TutorialIntroBlocker"]:
@@ -218,7 +208,6 @@ func _ensure_overlays_above_fx() -> void:
 		overlay_layer.add_child(node)
 
 func _style_title_label(title: Label) -> void:
-	# Brand title always uses the pixel font (even in Georgian); tiles stay title-relative.
 	title.set_meta("_brand_title", true)
 	title.set_meta("_screen_header", true)
 	title.set_meta("_screen_header_font_size", TITLE_FONT_SIZE)
@@ -237,7 +226,6 @@ func _mount_credits_header() -> void:
 func _configure_credits_layout() -> void:
 	if not credits_panel:
 		return
-	# Sit lower under the larger credits header.
 	var top := (
 		GameConstants.SCREEN_HEADER_TOP
 		+ GameConstants.SCREEN_HEADER_HEIGHT
@@ -322,7 +310,6 @@ func _fit_menu_buttons() -> void:
 	if credits_text_node:
 		_apply_credits_fonts(credits_text_node)
 
-## Text-only main-menu rows (no tile backgrounds), larger type.
 func _apply_main_menu_button(button: Button) -> void:
 	if not button:
 		return
@@ -330,10 +317,8 @@ func _apply_main_menu_button(button: Button) -> void:
 	for style_name in ["normal", "pressed", "hover", "disabled", "focus"]:
 		button.add_theme_stylebox_override(style_name, empty)
 	button.flat = true
-	# Georgian (and other non-English locales): default font; English keeps pixel UI font.
 	button.set_meta("_use_default_font", not HudLayout.uses_pixel_font())
 	var is_play: bool = button == start_btn
-	# Keep rows short enough that all menu items fit on tall phone viewports.
 	var row_h := 148.0 if is_play else 118.0
 	var row_w := 780.0 if is_play else 720.0
 	var font_size := 72 if is_play else MENU_BTN_FONT
@@ -341,7 +326,6 @@ func _apply_main_menu_button(button: Button) -> void:
 	button.custom_minimum_size = Vector2(row_w, row_h)
 	button.add_theme_constant_override("outline_size", MENU_BTN_OUTLINE + (2 if is_play else 0))
 	button.add_theme_color_override("font_outline_color", Color.BLACK)
-	# Keep Level Select on one line (no mid-phrase wrap).
 	if button == levels_btn:
 		button.autowrap_mode = TextServer.AUTOWRAP_OFF
 		button.clip_text = false
@@ -370,7 +354,6 @@ func _fit_debug_bar_buttons() -> void:
 	_setup_debug_fx_button(debug_comet_btn, [_FX_COMET_1])
 	_setup_debug_fx_button(debug_comet_shower_btn, [_FX_COMET_1, _FX_COMET_2, _FX_COMET_3])
 
-## Sit in the shared bottom nav band (same clearance as credits Close above the ad).
 func _position_debug_bar() -> void:
 	if debug_bar == null:
 		return
@@ -379,7 +362,6 @@ func _position_debug_bar() -> void:
 	bar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	bar.offset_left = 12.0
 	bar.offset_right = -12.0
-	# Align with SCREEN_BOTTOM_NAV so native AdMob cannot cover the row.
 	bar.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_BOTTOM
 	bar.offset_top = bar.offset_bottom - btn_h
 	bar.grow_horizontal = Control.GROW_DIRECTION_BOTH
@@ -407,7 +389,6 @@ func _setup_debug_fx_button(button: Button, textures: Array) -> void:
 	if count <= 0:
 		return
 	var btn_px := _DEBUG_BTN_SIZE.x
-	# Original art is 16×16 crispEdges — integer scale stays sharp with NEAREST.
 	if count == 1:
 		var pad := maxf(10.0, btn_px * 0.14)
 		var scale_i := maxi(2, int(floor((btn_px - pad * 2.0) / 16.0)))
@@ -423,7 +404,6 @@ func _setup_debug_fx_button(button: Button, textures: Array) -> void:
 		icon.size = Vector2(solo_px, solo_px)
 		host.add_child(icon)
 		return
-	# Cluster of 3 small icons for cloud / shower (scaled from 72px layout).
 	var s := btn_px / 72.0
 	var icon_px := 28.0 * s
 	var offsets := [
@@ -450,7 +430,6 @@ func _set_main_menu_chrome_visible(should_show: bool) -> void:
 		title_layer.visible = should_show
 
 func _apply_credits_fonts(credits_text_node: RichTextLabel) -> void:
-	# English credits use the pixel UI font; other locales need default-font coverage.
 	if HudLayout.uses_pixel_font():
 		credits_text_node.set_meta("_use_default_font", false)
 		HudLayout.apply_locale_font_to_control(credits_text_node)
@@ -584,7 +563,6 @@ func _copy_menu_button_styles(target: Button) -> void:
 	var source: Button = start_btn if start_btn else options_btn
 	if not source or not target:
 		return
-	# Prefer tiled chrome from options close / credits close when available.
 	var style_source: Button = close_credits_btn if close_credits_btn else source
 	for style_name in ["normal", "pressed", "hover", "disabled"]:
 		var style := style_source.get_theme_stylebox(style_name)

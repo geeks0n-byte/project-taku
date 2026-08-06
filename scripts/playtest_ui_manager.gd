@@ -71,7 +71,6 @@ func _layout_how_to_play() -> void:
 func _setup_how_to_play_font() -> void:
 	if not rules_label:
 		return
-	# How-to-play body text always uses the default font (not the pixel UI font).
 	rules_label.set_meta("_use_default_font", true)
 	HudLayout.apply_locale_font_to_control(rules_label)
 
@@ -181,7 +180,6 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 	_victory_panel.custom_minimum_size = Vector2(840, maxf(min_h, buttons_top + 300.0))
 
 func _set_playtest_buttons_disabled(disabled: bool) -> void:
-	# Top-bar reset is unavailable in TEST MODE; Try Again on victory still works.
 	if reset_button:
 		reset_button.disabled = true
 		HudLayout.refresh_button_icon_modulate(reset_button)
@@ -287,7 +285,6 @@ func hide_end_overlays() -> void:
 		legacy_victory_panel.visible = false
 	_set_playtest_buttons_disabled(false)
 
-## Kept for older call sites.
 func hide_victory_overlay() -> void:
 	hide_end_overlays()
 

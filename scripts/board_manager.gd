@@ -32,7 +32,6 @@ func _ready():
 	add_child(constraint_drawer)
 
 	focus_bridge_drawer = Node2D.new()
-	# Stay within Godot's canvas Z range (-4096..4096); sit above constraints.
 	focus_bridge_drawer.z_index = 4096
 	focus_bridge_drawer.draw.connect(_draw_highlight_bridges)
 	add_child(focus_bridge_drawer)
@@ -186,7 +185,6 @@ func clear_highlights():
 	if focus_bridge_drawer:
 		focus_bridge_drawer.queue_redraw()
 
-## After validation, bridge wall cutouts between error-bordered playable cells.
 func refresh_error_bridges() -> void:
 	_error_bridge_coords.clear()
 	for coord in board_cells:
@@ -202,8 +200,6 @@ func set_click_whitelist(coords: Array) -> void:
 		allowed[c] = true
 	for coord in board_cells:
 		var cell = board_cells[coord]
-		# Never block already-locked clue tiles from the whitelist logic;
-		# only gate playable interactions.
 		cell.tutorial_blocked = not allowed.has(coord)
 
 func clear_click_whitelist() -> void:
@@ -224,7 +220,6 @@ func clear_guide_cells() -> void:
 		if board_cells[coord].guide_active:
 			board_cells[coord].set_guide_highlight(false)
 
-## Focus borders on playable cells; red bridge lines span wall cutouts between them.
 func set_focus_cells(coords: Array) -> void:
 	clear_focus_cells()
 	_focus_bridge_coords.clear()
@@ -257,7 +252,6 @@ func restore_cell_cycle_tiles(tiles: Array) -> void:
 	for coord in board_cells:
 		board_cells[coord].allowed_cycle_tiles = typed.duplicate()
 
-## Mid-tutorial: set cell states and lock non-empty tiles (empties stay playable).
 func apply_locked_layout(layout: Dictionary) -> void:
 	for coord in layout.keys():
 		if not board_cells.has(coord):
