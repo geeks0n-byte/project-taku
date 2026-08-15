@@ -37,11 +37,8 @@ func _build() -> void:
 	_label = Label.new()
 	# Left-align inside a fixed-width box so growing dots don't re-center/jitter.
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_label.add_theme_font_override("font", HudLayout.PIXEL_FONT)
 	_label.add_theme_font_size_override("font_size", 36)
 	_label.add_theme_color_override("font_color", Color.WHITE)
-	_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	_label.add_theme_constant_override("outline_size", 8)
 	_label.text = "LOADING"
 	center.add_child(_label)
 
@@ -54,9 +51,6 @@ func _build() -> void:
 func show_loading(message_key: String = "UI_LOADING") -> void:
 	_hide_scene_underlay()
 	_base_text = _loading_base_text(message_key)
-	if _label:
-		HudLayout.apply_locale_font_to_control(_label)
-		_label.add_theme_font_size_override("font_size", HudLayout.scaled_font_size(36))
 	_dot_count = 0
 	_refresh_loading_label()
 	if _dot_timer:
@@ -118,22 +112,36 @@ func _refresh_loading_label() -> void:
 	var dots := ""
 	for _i in range(_dot_count):
 		dots += "."
-	_label.text = _base_text + dots
-	_lock_loading_label_width()
+	var display := _base_text + dots
+	var font_size := 36
+	if HudLayout.needs_pixel_text_raster():
+		_lock_loading_label_width()
+		HudLayout.apply_raster_pixel_label(_label, display, font_size, Color.WHITE)
+	else:
+		_label.set_meta("_use_default_font", true)
+		HudLayout.apply_locale_font_to_control(_label)
+		_label.add_theme_font_size_override("font_size", HudLayout.scaled_font_size(font_size))
+		HudLayout.apply_safe_outline(_label, 8)
+		_label.text = display
+		_lock_loading_label_width()
 
 func _lock_loading_label_width() -> void:
 	if _label == null:
 		return
-	var font: Font = _label.get_theme_font("font")
-	if font == null:
-		font = HudLayout.PIXEL_FONT
-	var font_size := _label.get_theme_font_size("font_size")
-	if font_size <= 0:
-		font_size = 36
+	var font_size := 36
 	var full := _base_text + "..."
+	var font: Font = null
+	var pad := 8
+	if HudLayout.needs_pixel_text_raster():
+		font = HudLayout.pixel_font()
+		pad = 10
+	else:
+		font = _label.get_theme_font("font")
+		font_size = HudLayout.scaled_font_size(font_size)
+	if font == null:
+		font = ThemeDB.fallback_font
 	var measured := font.get_string_size(full, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
-	# Outline can add a little extra visual width; pad so the box never shrinks mid-anim.
-	_label.custom_minimum_size = Vector2(ceili(measured.x) + 8, 0)
+	_label.custom_minimum_size = Vector2(ceili(measured.x) + pad, 0)
 
 func _hide_scene_underlay() -> void:
 	_restore_scene_underlay()

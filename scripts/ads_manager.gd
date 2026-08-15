@@ -1,10 +1,11 @@
 extends Node
 
-const INTERSTITIAL_EVERY_N := 3
+const INTERSTITIAL_START_EVERY_N := 5
 
 const TEST_BANNER_UNIT_ID := "ca-app-pub-3940256099942544/6300978111"
 const TEST_INTERSTITIAL_UNIT_ID := "ca-app-pub-3940256099942544/1033173712"
-const TEST_REWARDED_UNIT_ID := "ca-app-pub-3940256099942544/5224354917"
+# Google sample Rewarded Interstitial (matches PROD format).
+const TEST_REWARDED_UNIT_ID := "ca-app-pub-3940256099942544/5354046379"
 
 const PROD_BANNER_UNIT_ID := "ca-app-pub-1624206851803206/6555942665"
 const PROD_INTERSTITIAL_UNIT_ID := "ca-app-pub-1624206851803206/8878973813"
@@ -23,9 +24,12 @@ var _banner_loaded: bool = false
 var _interstitial: InterstitialAd = null
 var _loading_interstitial: bool = false
 var _pending_after_ad: Callable = Callable()
+## Session-only interstitial cadence: first at 5 events, then +1 after each shown ad.
+var _interstitial_progress: int = 0
+var _interstitial_every_n: int = INTERSTITIAL_START_EVERY_N
 
-var _rewarded: RewardedAd = null
-var _rewarded_loader: RewardedAdLoader = null
+var _rewarded: RewardedInterstitialAd = null
+var _rewarded_loader: RewardedInterstitialAdLoader = null
 var _loading_rewarded: bool = false
 var _pending_reward_callback: Callable = Callable()
 var _reward_earned: bool = false
@@ -236,15 +240,14 @@ func record_level_restart(is_tutorial: bool) -> void:
 func _record_interstitial_progress(is_tutorial: bool) -> void:
 	if is_tutorial:
 		return
-	if SaveManager:
-		SaveManager.record_ad_win()
+	_interstitial_progress += 1
 
 func show_interstitial_if_ready(on_done: Callable = Callable()) -> void:
 	if not _ads_supported or not _initialized:
 		if on_done.is_valid():
 			on_done.call()
 		return
-	var due := SaveManager != null and SaveManager.should_show_interstitial(INTERSTITIAL_EVERY_N)
+	var due := _interstitial_every_n > 0 and _interstitial_progress >= _interstitial_every_n
 	if not due or _interstitial == null:
 		if on_done.is_valid():
 			on_done.call()
@@ -252,8 +255,8 @@ func show_interstitial_if_ready(on_done: Callable = Callable()) -> void:
 			_load_interstitial()
 		return
 	_pending_after_ad = on_done
-	if SaveManager:
-		SaveManager.consume_interstitial_wins()
+	_interstitial_progress = 0
+	_interstitial_every_n += 1
 	_interstitial.show()
 
 
@@ -280,21 +283,21 @@ func warm_rewarded_hint() -> void:
 		_load_rewarded()
 
 func _rewarded_native_available() -> bool:
-	return Engine.has_singleton("PoingGodotAdMobRewardedAd")
+	return Engine.has_singleton("PoingGodotAdMobRewardedInterstitialAd")
 
 func _load_rewarded() -> void:
 	if not _initialized or _loading_rewarded or _rewarded != null:
 		return
 	if not _rewarded_native_available():
-		push_warning("AdsManager: PoingGodotAdMobRewardedAd singleton missing")
+		push_warning("AdsManager: PoingGodotAdMobRewardedInterstitialAd singleton missing")
 		_loading_rewarded = false
 		return
 	_loading_rewarded = true
 	_start_rewarded_load_watchdog()
 	# New loader each request (plugin sample pattern); keep a member ref so it is not GC'd.
-	_rewarded_loader = RewardedAdLoader.new()
-	var callback := RewardedAdLoadCallback.new()
-	callback.on_ad_loaded = func(ad: RewardedAd) -> void:
+	_rewarded_loader = RewardedInterstitialAdLoader.new()
+	var callback := RewardedInterstitialAdLoadCallback.new()
+	callback.on_ad_loaded = func(ad: RewardedInterstitialAd) -> void:
 		_loading_rewarded = false
 		_stop_rewarded_load_watchdog()
 		_rewarded = ad
@@ -308,7 +311,7 @@ func _load_rewarded() -> void:
 		var msg := "unknown"
 		if error:
 			msg = str(error.message)
-		push_warning("AdsManager: rewarded load failed: %s" % msg)
+		push_warning("AdsManager: rewarded interstitial load failed: %s" % msg)
 		_schedule_rewarded_retry()
 	_rewarded_loader.load(_rewarded_unit_id(), AdRequest.new(), callback)
 
@@ -350,7 +353,7 @@ func _bind_rewarded_callbacks() -> void:
 		var msg := "unknown"
 		if error:
 			msg = str(error.message)
-		push_warning("AdsManager: rewarded show failed: %s" % msg)
+		push_warning("AdsManager: rewarded interstitial show failed: %s" % msg)
 		_pending_reward_callback = Callable()
 		_reward_earned = false
 		_destroy_rewarded()

@@ -70,6 +70,7 @@ func _style_header() -> void:
 		return
 	title_label.set_meta("_screen_header_font_size", 72)
 	title_label.set_meta("_screen_header_outline", GameConstants.SCREEN_HEADER_OUTLINE)
+	HudLayout._bind_header_translation_key(title_label, "UI_OPTIONS")
 	HudLayout.apply_screen_header_style(title_label)
 
 func show_menu(from_main_menu: bool = false) -> void:
@@ -138,25 +139,42 @@ func _update_lang_label() -> void:
 	var idx = LANGUAGES.find(current_locale)
 	if idx == -1:
 		idx = 0
-	lang_label.text = LANG_NAMES[idx]
-	if current_locale == "en":
-		lang_label.add_theme_font_override("font", HudLayout.PIXEL_FONT)
-	else:
-		lang_label.add_theme_font_override("font", ThemeDB.fallback_font)
-	lang_label.add_theme_font_size_override(
-		"font_size", HudLayout.scaled_font_size(GameConstants.UI_BODY_FONT_SIZE_LARGE)
-	)
+	# Always use the fixed display name — never a translated/baked string.
+	var name_text: String = LANG_NAMES[idx]
 	lang_label.custom_minimum_size = Vector2(380, GameConstants.UI_BTN_PRIMARY_SIZE.y)
+	lang_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lang_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lang_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	lang_label.clip_text = false
+	HudLayout._clear_pixel_raster(lang_label)
+	# Drop any scene-baked Press Start override so a poisoned atlas can't stick.
+	if lang_label.has_theme_font_override("font"):
+		lang_label.remove_theme_font_override("font")
+	var font_size := HudLayout.scaled_font_size(GameConstants.UI_BODY_FONT_SIZE_LARGE)
+	if current_locale == "en":
+		HudLayout.apply_live_pixel_label_settings(lang_label, name_text, font_size, Color.WHITE)
+		# Re-assert after settings — guards against theme/locale pass races.
+		lang_label.text = name_text
+	else:
+		HudLayout.clear_label_settings(lang_label)
+		lang_label.set_meta("_use_default_font", true)
+		lang_label.text = name_text
+		lang_label.add_theme_font_override("font", ThemeDB.fallback_font)
+		lang_label.add_theme_font_size_override("font_size", font_size)
+		HudLayout.apply_safe_outline(lang_label, GameConstants.MENU_TEXT_OUTLINE)
 
 func _fit_option_buttons() -> void:
 	if title_label:
 		title_label.set_meta("_screen_header_font_size", 72)
 		title_label.set_meta("_screen_header_outline", GameConstants.SCREEN_HEADER_OUTLINE)
+		HudLayout._bind_header_translation_key(title_label, "UI_OPTIONS")
 		HudLayout.apply_screen_header_style(title_label)
 	if privacy_btn:
-		privacy_btn.text = tr("UI_PRIVACY_POLICY")
+		privacy_btn.text = "UI_PRIVACY_POLICY"
+		privacy_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
 	if privacy_options_btn:
-		privacy_options_btn.text = tr("UI_PRIVACY_OPTIONS")
+		privacy_options_btn.text = "UI_PRIVACY_OPTIONS"
+		privacy_options_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
 	for btn in [del_save_btn, bg_btn, bgm_btn, sfx_btn, privacy_btn, privacy_options_btn, del_custom_btn, unlock_all_btn]:
 		_apply_option_button(btn)
 	_style_close_button()
@@ -164,18 +182,26 @@ func _fit_option_buttons() -> void:
 		prev_btn.custom_minimum_size = Vector2(100, 100)
 		prev_btn.flat = false
 		_apply_button_tile_styles(prev_btn)
-		prev_btn.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
+		prev_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		prev_btn.text = "<"
+		HudLayout._clear_pixel_raster(prev_btn)
+		HudLayout.apply_locale_font_to_control(prev_btn)
 		HudLayout.fit_text_button(
 			prev_btn, GameConstants.UI_BTN_PRIMARY_FONT, GameConstants.UI_BTN_PRIMARY_FONT_MIN
 		)
+		HudLayout.apply_safe_outline(prev_btn, GameConstants.MENU_TEXT_OUTLINE)
 	if next_btn:
 		next_btn.custom_minimum_size = Vector2(100, 100)
 		next_btn.flat = false
 		_apply_button_tile_styles(next_btn)
-		next_btn.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
+		next_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		next_btn.text = ">"
+		HudLayout._clear_pixel_raster(next_btn)
+		HudLayout.apply_locale_font_to_control(next_btn)
 		HudLayout.fit_text_button(
 			next_btn, GameConstants.UI_BTN_PRIMARY_FONT, GameConstants.UI_BTN_PRIMARY_FONT_MIN
 		)
+		HudLayout.apply_safe_outline(next_btn, GameConstants.MENU_TEXT_OUTLINE)
 	_update_lang_label()
 	_refresh_confirm_texts()
 
@@ -184,26 +210,36 @@ func _apply_option_button(button: Button) -> void:
 		return
 	button.flat = false
 	_apply_button_tile_styles(button)
-	button.add_theme_color_override("font_outline_color", Color.BLACK)
-	button.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
 	button.autowrap_mode = TextServer.AUTOWRAP_OFF
 	button.clip_text = false
-	HudLayout.apply_locale_font_to_control(button)
+	HudLayout._clear_pixel_raster(button)
 	var font_size := HudLayout.scaled_font_size(GameConstants.UI_BTN_PRIMARY_FONT)
-	button.add_theme_font_size_override("font_size", font_size)
 	var display := _option_button_display_text(button)
 	var font: Font = (
 		ThemeDB.fallback_font if button.get_meta("_use_default_font", false) else HudLayout.ui_font()
 	)
 	if font == null:
 		font = ThemeDB.fallback_font
-	var measured := font.get_string_size(display, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size)
+	var measured := font.get_string_size(
+		display if not display.is_empty() else "M", HORIZONTAL_ALIGNMENT_CENTER, -1, font_size
+	)
 	var pad_x := 56.0 + float(GameConstants.MENU_TEXT_OUTLINE)
 	var pad_y := 48.0 + float(GameConstants.MENU_TEXT_OUTLINE)
 	button.custom_minimum_size = Vector2(
 		maxf(220.0, measured.x + pad_x),
 		maxf(100.0, measured.y + pad_y)
 	)
+	# Toggle rows keep empty button text; caption RichTextLabel draws the label.
+	if button.get_node_or_null("ToggleCaptionHost") != null:
+		button.text = ""
+		HudLayout.apply_locale_font_to_control(button)
+		HudLayout.apply_safe_outline(button, GameConstants.MENU_TEXT_OUTLINE)
+		return
+	if not display.is_empty() and button.text.is_empty():
+		button.text = display
+	HudLayout.apply_locale_font_to_control(button)
+	button.add_theme_font_size_override("font_size", font_size)
+	HudLayout.apply_safe_outline(button, GameConstants.MENU_TEXT_OUTLINE)
 
 func _option_button_display_text(button: Button) -> String:
 	if button == null:
@@ -254,10 +290,12 @@ func _set_toggle_button_caption(button: Button, full_text: String) -> void:
 	if not button:
 		return
 	button.text = ""
+	HudLayout._clear_pixel_raster(button)
 	var legacy := button.get_node_or_null("ToggleCaption")
 	if legacy:
 		legacy.queue_free()
 	var host := button.get_node_or_null("ToggleCaptionHost") as CenterContainer
+	var font_size := HudLayout.scaled_font_size(GameConstants.UI_BTN_PRIMARY_FONT)
 	if host == null:
 		host = CenterContainer.new()
 		host.name = "ToggleCaptionHost"
@@ -278,13 +316,23 @@ func _set_toggle_button_caption(button: Button, full_text: String) -> void:
 		caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		caption.autowrap_mode = TextServer.AUTOWRAP_OFF
 		caption.add_theme_color_override("default_color", Color.WHITE)
-		caption.add_theme_color_override("font_outline_color", Color.BLACK)
-		caption.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
 		host.add_child(caption)
 	button.move_child(host, -1)
-	HudLayout.apply_locale_font_to_control(caption)
-	var font_size := HudLayout.scaled_font_size(GameConstants.UI_BTN_PRIMARY_FONT)
-	caption.add_theme_font_size_override("normal_font_size", font_size)
+	var use_pixel := HudLayout.uses_pixel_font()
+	caption.set_meta("_use_default_font", not use_pixel)
+	button.set_meta("_use_default_font", not use_pixel)
+	if use_pixel:
+		# English: Press Start, no theme outline (outline scrambles glyphs).
+		HudLayout.apply_live_pixel_richtext(caption, font_size)
+	else:
+		caption.add_theme_font_override("normal_font", ThemeDB.fallback_font)
+		caption.add_theme_font_override("bold_font", ThemeDB.fallback_font)
+		caption.add_theme_font_override("italics_font", ThemeDB.fallback_font)
+		caption.add_theme_font_override("bold_italics_font", ThemeDB.fallback_font)
+		caption.add_theme_font_override("mono_font", ThemeDB.fallback_font)
+		caption.add_theme_color_override("font_outline_color", Color.BLACK)
+		HudLayout.apply_safe_outline(caption, GameConstants.MENU_TEXT_OUTLINE)
+		caption.add_theme_font_size_override("normal_font_size", font_size)
 	var accent := _TOGGLE_ACCENT.to_html(false)
 	var tokens: Array[String] = [
 		"DYNAMICZNE", "STATYCZNE", "DYNAMISCH", "STATISCH", "DYNAMIQUE", "STATIQUE",
@@ -393,7 +441,7 @@ func _copy_button_styles(target: Button) -> void:
 		if style:
 			target.add_theme_stylebox_override(style_name, style)
 	target.add_theme_color_override("font_outline_color", Color.BLACK)
-	target.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
+	HudLayout.apply_safe_outline(target, GameConstants.MENU_TEXT_OUTLINE)
 
 func _refresh_confirm_texts() -> void:
 	if _confirm_yes_btn:
@@ -403,12 +451,15 @@ func _refresh_confirm_texts() -> void:
 		_confirm_no_btn.text = tr("UI_NO")
 		HudLayout.apply_dialog_button(_confirm_no_btn)
 	if _confirm_label:
-		HudLayout.apply_popup_label(_confirm_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
 		match _pending_confirm:
 			ConfirmAction.RESET_PROGRESS:
 				_confirm_label.text = tr("CONFIRM_RESET_PROGRESS")
 			ConfirmAction.DELETE_CUSTOM:
 				_confirm_label.text = tr("CONFIRM_DELETE_CUSTOM")
+			_:
+				if _confirm_label.text.is_empty():
+					_confirm_label.text = tr("CONFIRM_RESET_PROGRESS")
+		HudLayout.apply_popup_label(_confirm_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
 
 func _show_confirm(action: ConfirmAction, message: String) -> void:
 	_pending_confirm = action
@@ -441,10 +492,16 @@ func _on_delete_custom_pressed() -> void:
 func _on_unlock_all_pressed() -> void:
 	SaveManager.unlock_all_levels()
 	if status_label:
-		status_label.text = tr("UNLOCK_ALL_DONE")
-		status_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
+		var msg := tr("UNLOCK_ALL_DONE")
+		status_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		status_label.modulate = Color(0.45, 1.0, 0.45)
-		HudLayout.apply_body_label(status_label, GameConstants.UI_BODY_FONT_SIZE)
+		if HudLayout.needs_pixel_text_raster():
+			HudLayout.apply_raster_pixel_label(
+				status_label, msg, GameConstants.UI_BODY_FONT_SIZE, Color(0.45, 1.0, 0.45)
+			)
+		else:
+			status_label.text = msg
+			HudLayout.apply_body_label(status_label, GameConstants.UI_BODY_FONT_SIZE)
 
 func _do_delete_save() -> void:
 	SaveManager.delete_save_file()

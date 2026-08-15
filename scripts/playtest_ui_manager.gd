@@ -168,8 +168,7 @@ func _style_end_buttons() -> void:
 				var style := _button_style_source.get_theme_stylebox(style_name)
 				if style:
 					btn.add_theme_stylebox_override(style_name, style)
-		btn.add_theme_color_override("font_outline_color", Color.BLACK)
-		btn.add_theme_constant_override("outline_size", 8)
+		HudLayout.apply_safe_outline(btn, 8)
 		HudLayout.apply_panel_button(btn)
 
 func _layout_victory_panel(star_result: Dictionary) -> void:
@@ -182,14 +181,29 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 	_victory_results_host.offset_bottom = title_bottom + 8.0 + results_h
 	var cursor := title_bottom + 8.0 + results_h
 	var preview_h := 0.0
-	if _victory_preview and _victory_preview.visible and _victory_preview.texture != null:
-		preview_h = 320.0
+	var frame: PanelContainer = null
+	if _victory_preview:
+		frame = LevelPreview.ensure_preview_frame(_victory_preview)
+	var show_preview := (
+		_victory_preview
+		and _victory_preview.visible
+		and _victory_preview.texture != null
+	)
+	if show_preview:
+		var inner := 320.0
+		preview_h = LevelPreview.frame_outer_size(inner)
 		cursor += 24.0
-		_victory_preview.offset_left = -160.0
-		_victory_preview.offset_right = 160.0
-		_victory_preview.offset_top = cursor
-		_victory_preview.offset_bottom = cursor + preview_h
+		var half := preview_h * 0.5
+		var target: Control = frame
+		if target == null:
+			target = _victory_preview
+		target.offset_left = -half
+		target.offset_right = half
+		target.offset_top = cursor
+		target.offset_bottom = cursor + preview_h
 		cursor += preview_h
+	elif frame:
+		frame.visible = false
 	var buttons_top := cursor + 28.0
 	if _victory_buttons:
 		_victory_buttons.offset_top = buttons_top
@@ -275,8 +289,12 @@ func show_victory_overlay(stats: Dictionary) -> void:
 	_ensure_victory_preview()
 	var preview_tex = stats.get("solved_preview", null)
 	if _victory_preview:
+		var frame := LevelPreview.ensure_preview_frame(_victory_preview)
 		_victory_preview.texture = preview_tex if preview_tex is Texture2D else null
-		_victory_preview.visible = _victory_preview.texture != null
+		var should_show := _victory_preview.texture != null
+		_victory_preview.visible = should_show
+		if frame:
+			frame.visible = should_show
 	_layout_victory_panel(star_result)
 	if _victory_panel:
 		_victory_panel.visible = true
@@ -318,7 +336,9 @@ func _refresh_how_to_play_text() -> void:
 	if _htp_header == null and how_to_play_container:
 		_htp_header = HudLayout.ensure_how_to_play_page_header(how_to_play_container)
 	if _htp_header:
-		_htp_header.text = tr(HowToPlayContent.get_page_title_key(_htp_page))
+		HudLayout._bind_header_translation_key(
+			_htp_header, HowToPlayContent.get_page_title_key(_htp_page)
+		)
 		HudLayout.apply_screen_header_style(_htp_header)
 	if rules_label:
 		_setup_how_to_play_font()
@@ -363,10 +383,7 @@ func set_playtest_chrome_visible(should_show: bool) -> void:
 
 func update_playtest_hud(elapsed_seconds: int, moves: int, _editor_time_limit: int, required_moves: int = -1) -> void:
 	if timer_label:
-		HudLayout.prepare_timer_label(timer_label)
-		timer_label.text = HudLayout.format_time_counter(
-			LevelStars.format_clock(elapsed_seconds)
-		)
+		HudLayout.set_timer_raster_text(timer_label, LevelStars.format_clock(elapsed_seconds))
 	if moves_label:
 		HudLayout.prepare_counter_label(moves_label)
 		var target := required_moves if required_moves >= 0 else moves

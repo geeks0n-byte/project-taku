@@ -44,16 +44,21 @@ static func _update_count_badge(button: Button, remaining: int) -> void:
 		return
 	ad_icon.visible = false
 	label.visible = true
-	label.text = str(remaining)
-	label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.35, 1.0))
-	_apply_count_label_font(label)
+	# Always bake Press Start + thin outline (never live theme outline).
+	HudLayout.apply_raster_pixel_label(
+		label,
+		str(remaining),
+		COUNT_FONT_SIZE,
+		Color(1.0, 0.92, 0.35, 1.0),
+		0,
+		true
+	)
 
 static func _ensure_count_label(button: Button) -> Label:
 	if not button:
 		return null
 	var existing := button.get_node_or_null(COUNT_LABEL_NAME) as Label
 	if existing:
-		_apply_count_label_font(existing)
 		return existing
 	var label := Label.new()
 	label.name = COUNT_LABEL_NAME
@@ -61,10 +66,7 @@ static func _ensure_count_label(button: Button) -> Label:
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_apply_count_label_layout(label)
-	_apply_count_label_font(label)
 	label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.35, 1.0))
-	label.add_theme_color_override("font_outline_color", Color.BLACK)
-	label.add_theme_constant_override("outline_size", 8)
 	label.visible = false
 	button.add_child(label)
 	return label
@@ -85,15 +87,6 @@ static func _ensure_count_icon(button: Button) -> TextureRect:
 	icon.visible = false
 	button.add_child(icon)
 	return icon
-
-static func _apply_count_label_font(label: Label) -> void:
-	if not label:
-		return
-	# Always Press Start 2P at English HUD size (ignore locale font scaling).
-	label.set_meta("_force_pixel_font", true)
-	if HudLayout.PIXEL_FONT:
-		label.add_theme_font_override("font", HudLayout.PIXEL_FONT)
-	label.add_theme_font_size_override("font_size", COUNT_FONT_SIZE)
 
 static func _apply_count_label_layout(label: Label) -> void:
 	label.set_anchors_preset(Control.PRESET_TOP_RIGHT)

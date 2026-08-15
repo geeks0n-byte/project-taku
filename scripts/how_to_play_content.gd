@@ -6,8 +6,6 @@ const BODY_TILE_SIZE := 40
 const EXAMPLE_TILE_SIZE := 72
 const ARROW_TILE_SIZE := 64
 const LOCK_ICON_SIZE := 96
-const EXAMPLE_HEADER_PIXEL_SIZE := 26
-const PIXEL_FONT_PATH := "res://resources/fonts/PressStart2P-vaV7.ttf"
 
 static func get_rules_text(force_english: bool = false) -> String:
 	return get_page_text(0, force_english)
@@ -100,14 +98,8 @@ static func _page_examples(force_english: bool) -> String:
 	]
 	return "\n".join(lines)
 
-## VALID / INVALID: Press Start in English (or force_english); default bold otherwise.
-static func _example_column_label(text: String, force_english: bool) -> String:
-	if force_english or HudLayout.uses_pixel_font():
-		return "[font=%s][font_size=%d]%s[/font_size][/font]" % [
-			PIXEL_FONT_PATH,
-			EXAMPLE_HEADER_PIXEL_SIZE,
-			text,
-		]
+## VALID / INVALID: bold default font (Press Start + live outline scrambles glyphs).
+static func _example_column_label(text: String, _force_english: bool) -> String:
 	return "[b]%s[/b]" % text
 
 static func _page_purple(force_english: bool) -> String:
@@ -157,15 +149,14 @@ static func _page_links(force_english: bool) -> String:
 	return "\n".join(lines)
 
 static func _page_stars(force_english: bool) -> String:
-	var img_s := _tile_img(GameConstants.TILE_SHIFTER, BODY_TILE_SIZE)
 	var body_sz := _body_size()
 	var lines: PackedStringArray = [
 		"[font_size=%d]" % body_sz,
 		"• %s" % _t("HTP_STARS_INTRO", force_english),
 		"",
 		"• [b]%s[/b] %s" % [
-			_t("HTP_STARS_TIME_LABEL", force_english),
-			_t("HTP_STARS_TIME_DESC", force_english),
+			_t("HTP_STARS_COMPLETE_LABEL", force_english),
+			_t("HTP_STARS_COMPLETE_DESC", force_english),
 		],
 		"",
 		"• [b]%s[/b] %s" % [
@@ -174,8 +165,8 @@ static func _page_stars(force_english: bool) -> String:
 		],
 		"",
 		"• [b]%s[/b] %s" % [
-			_t("HTP_STARS_MOVES_LABEL", force_english),
-			_fill(_t("HTP_STARS_MOVES_DESC", force_english), [img_s]),
+			_t("HTP_STARS_TIME_LABEL", force_english),
+			_t("HTP_STARS_TIME_DESC", force_english),
 		],
 		"[/font_size]",
 	]

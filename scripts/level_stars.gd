@@ -2,12 +2,16 @@ class_name LevelStars
 extends RefCounted
 
 
+## Bit layout (stable for saves):
+## 1 = time, 2 = no hints, 4 = level clear (replaces legacy moves bit).
 const BIT_TIME := 1
 const BIT_NO_HINTS := 2
-const BIT_MOVES := 4
-## Legacy alias: bit 2 used to mean the green-tile star.
+const BIT_COMPLETE := 4
+## Legacy aliases.
 const BIT_GREEN := BIT_NO_HINTS
-const ALL_GOAL_MASKS: Array = [BIT_TIME, BIT_NO_HINTS, BIT_MOVES]
+const BIT_MOVES := BIT_COMPLETE
+## Display / award order: clear → no hints → time.
+const ALL_GOAL_MASKS: Array = [BIT_COMPLETE, BIT_NO_HINTS, BIT_TIME]
 
 const ICON_STAR_ON: Texture2D = preload("res://resources/icons/icon_star_on.svg")
 const ICON_STAR_OFF: Texture2D = preload("res://resources/icons/icon_star_off.svg")
@@ -20,12 +24,9 @@ const RESULTS_ROW_FONT := 28
 
 static func count_earned_bits(bits: int) -> int:
 	var n := 0
-	if bits & BIT_TIME:
-		n += 1
-	if bits & BIT_NO_HINTS:
-		n += 1
-	if bits & BIT_MOVES:
-		n += 1
+	for mask in ALL_GOAL_MASKS:
+		if bits & int(mask):
+			n += 1
 	return n
 
 static func make_select_star_row(_level: LevelData, earned_bits: int) -> Control:
@@ -55,13 +56,34 @@ static func evaluate(
 	elapsed_sec: int,
 	time_limit: int,
 	hints_used: int,
-	moves_used: int,
-	move_target: int,
-	has_shifters: bool
+	_moves_used: int = 0,
+	_move_target: int = 0,
+	_has_shifters: bool = false
 ) -> Dictionary:
 	var goals: Array = []
 	var bits := 0
 
+	# 1) Completing the level always awards the first star.
+	bits |= BIT_COMPLETE
+	goals.append({
+		"id": "complete",
+		"earned": true,
+		"title": TranslationServer.translate("STAR_COMPLETE"),
+		"detail": "",
+	})
+
+	# 2) No hints used.
+	var no_hints_earned := hints_used <= 0
+	if no_hints_earned:
+		bits |= BIT_NO_HINTS
+	goals.append({
+		"id": "no_hints",
+		"earned": no_hints_earned,
+		"title": TranslationServer.translate("STAR_HINTS"),
+		"detail": "",
+	})
+
+	# 3) Time limit (only when the level defines one).
 	var time_earned := time_limit > 0 and elapsed_sec <= time_limit
 	if time_earned:
 		bits |= BIT_TIME
@@ -73,32 +95,6 @@ static func evaluate(
 			"%s / %s" % [format_clock(elapsed_sec), format_clock(time_limit)]
 			if time_limit > 0
 			else "%s / —" % format_clock(elapsed_sec)
-		),
-	})
-
-	var no_hints_earned := hints_used <= 0
-	if no_hints_earned:
-		bits |= BIT_NO_HINTS
-	goals.append({
-		"id": "no_hints",
-		"earned": no_hints_earned,
-		"title": TranslationServer.translate("STAR_HINTS"),
-		"title_icon": GameConstants.ICON_HINT_ON,
-		"detail": "%d / 0" % maxi(0, hints_used),
-	})
-
-	var moves_earned := has_shifters and moves_used <= maxi(0, move_target)
-	if moves_earned:
-		bits |= BIT_MOVES
-	goals.append({
-		"id": "moves",
-		"earned": moves_earned,
-		"title": TranslationServer.translate("MOVES"),
-		"title_icon": GameConstants.TILE_SHIFTER,
-		"detail": (
-			"%d / %d" % [moves_used, maxi(0, move_target)]
-			if has_shifters
-			else "%d / —" % moves_used
 		),
 	})
 
@@ -126,35 +122,26 @@ static func build_requirements(level: LevelData, earned_bits: int = 0) -> Dictio
 			"untimed": true,
 		}
 	var time_limit := int(level.time_limit)
-	var move_target := int(level.required_shifter_moves)
-	var has_shifters := not LevelUtils.get_shifter_pairs(level).is_empty()
-	if move_target <= 0 and has_shifters:
-		move_target = LevelUtils.compute_required_shifter_moves(LevelUtils.get_shifter_pairs(level))
+	var bits := int(earned_bits) & (BIT_COMPLETE | BIT_NO_HINTS | BIT_TIME)
 
 	var goals: Array = []
-	var bits := int(earned_bits) & (BIT_TIME | BIT_NO_HINTS | BIT_MOVES)
-
 	goals.append({
-		"id": "time",
-		"earned": (bits & BIT_TIME) != 0,
-		"title": TranslationServer.translate("STAR_TIME"),
-		"detail": format_clock(time_limit) if time_limit > 0 else "—",
+		"id": "complete",
+		"earned": (bits & BIT_COMPLETE) != 0,
+		"title": TranslationServer.translate("STAR_COMPLETE"),
+		"detail": "",
 	})
 	goals.append({
 		"id": "no_hints",
 		"earned": (bits & BIT_NO_HINTS) != 0,
 		"title": TranslationServer.translate("STAR_HINTS"),
-		"title_icon": GameConstants.ICON_HINT_ON,
-		"detail": "0",
+		"detail": "",
 	})
 	goals.append({
-		"id": "moves",
-		"earned": (bits & BIT_MOVES) != 0,
-		"title": TranslationServer.translate("MOVES"),
-		"title_icon": GameConstants.TILE_SHIFTER,
-		"detail": (
-			str(maxi(0, move_target)) if has_shifters else "—"
-		),
+		"id": "time",
+		"earned": (bits & BIT_TIME) != 0,
+		"title": TranslationServer.translate("STAR_TIME"),
+		"detail": format_clock(time_limit) if time_limit > 0 else "—",
 	})
 
 	var earned_count := count_earned_bits(bits)
@@ -214,13 +201,9 @@ static func populate_requirements(host: Control, level: LevelData, earned_bits: 
 
 static func _make_text_row(text: String, color: Color, font_size: int) -> Label:
 	var label := Label.new()
-	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_color_override("font_color", color)
-	label.add_theme_color_override("font_outline_color", Color.BLACK)
-	label.add_theme_constant_override("outline_size", 8)
-	HudLayout.apply_popup_label(label, font_size)
+	HudLayout.apply_raster_pixel_label(label, text, font_size, color)
 	return label
 
 static func _make_star_row(goal: Dictionary) -> HBoxContainer:
@@ -235,16 +218,22 @@ static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 	icon_slot.custom_minimum_size = Vector2(STAR_ICON_SIZE + 8.0, STAR_ICON_SIZE + 8.0)
 	row.add_child(icon_slot)
 
+	var icon_lift := MarginContainer.new()
+	icon_lift.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon_lift.add_theme_constant_override("margin_bottom", 10)
+	icon_lift.add_theme_constant_override("margin_top", 0)
+	icon_slot.add_child(icon_lift)
+
 	var icon := TextureRect.new()
 	icon.custom_minimum_size = Vector2(STAR_ICON_SIZE, STAR_ICON_SIZE)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.texture = ICON_STAR_ON if earned else ICON_STAR_OFF
 	icon.modulate = Color(1, 1, 1, 1) if earned else Color(1, 1, 1, 0.5)
-	icon_slot.add_child(icon)
+	icon_lift.add_child(icon)
 
 	var title_slot := HBoxContainer.new()
-	title_slot.custom_minimum_size = Vector2(240, 0)
+	title_slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	title_slot.add_theme_constant_override("separation", 10)
 	title_slot.alignment = BoxContainer.ALIGNMENT_BEGIN
@@ -261,26 +250,31 @@ static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 		title_slot.add_child(tile_icon)
 
 	var title := Label.new()
-	title.text = str(goal.get("title", ""))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	title.add_theme_color_override("font_color", Color(1.0, 0.9, 0.45, 1.0) if earned else Color(0.72, 0.72, 0.76, 1.0))
-	title.add_theme_color_override("font_outline_color", Color.BLACK)
-	title.add_theme_constant_override("outline_size", 8)
-	HudLayout.apply_popup_label(title, RESULTS_ROW_FONT)
+	var title_color := (
+		Color(1.0, 0.9, 0.45, 1.0) if earned else Color(0.72, 0.72, 0.76, 1.0)
+	)
+	HudLayout.apply_raster_pixel_label(
+		title, str(goal.get("title", "")), RESULTS_ROW_FONT, title_color
+	)
 	title_slot.add_child(title)
 
-	var detail := Label.new()
-	detail.text = str(goal.get("detail", ""))
-	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	detail.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	detail.add_theme_color_override("font_color", Color(0.92, 0.92, 0.94, 1.0) if earned else Color(0.78, 0.78, 0.82, 1.0))
-	detail.add_theme_color_override("font_outline_color", Color.BLACK)
-	detail.add_theme_constant_override("outline_size", 8)
-	HudLayout.apply_popup_label(detail, RESULTS_ROW_FONT)
-	row.add_child(detail)
+	var detail_text := str(goal.get("detail", "")).strip_edges()
+	if not detail_text.is_empty():
+		var detail := Label.new()
+		detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		detail.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		var detail_color := (
+			Color(0.92, 0.92, 0.94, 1.0) if earned else Color(0.78, 0.78, 0.82, 1.0)
+		)
+		HudLayout.apply_raster_pixel_label(
+			detail, detail_text, RESULTS_ROW_FONT, detail_color
+		)
+		row.add_child(detail)
 
 	return row

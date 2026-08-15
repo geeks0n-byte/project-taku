@@ -81,7 +81,7 @@ func _fit_chrome_buttons() -> void:
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.custom_minimum_size = Vector2(0, GameConstants.UI_BTN_TAB_SIZE.y)
 		btn.add_theme_color_override("font_outline_color", Color.BLACK)
-		btn.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
+		HudLayout.apply_safe_outline(btn, GameConstants.MENU_TEXT_OUTLINE)
 		btn.autowrap_mode = TextServer.AUTOWRAP_OFF
 		btn.clip_text = false
 		HudLayout.fit_text_button(
@@ -89,8 +89,8 @@ func _fit_chrome_buttons() -> void:
 		)
 		btn.autowrap_mode = TextServer.AUTOWRAP_OFF
 	if custom_tab_button and custom_tab_button.visible:
-		custom_tab_button.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
 		HudLayout.apply_secondary_button(custom_tab_button)
+		HudLayout.apply_safe_outline(custom_tab_button, GameConstants.MENU_TEXT_OUTLINE)
 		custom_tab_button.text = "UI_CUSTOM"
 	if _page_prev_button:
 		HudLayout.apply_nav_button(_page_prev_button)
@@ -107,10 +107,12 @@ func _on_language_changed() -> void:
 	_update_tab_button_visuals()
 	populate_level_menu()
 	if _title_label:
+		HudLayout._bind_header_translation_key(_title_label, "UI_SELECT_LEVEL")
 		HudLayout.apply_screen_header_style(_title_label)
 
 func _layout_level_select() -> void:
 	if _title_label:
+		HudLayout._bind_header_translation_key(_title_label, "UI_SELECT_LEVEL")
 		HudLayout.apply_screen_header_style(_title_label)
 	_connect_level_list_host()
 	_pin_level_list_to_top()
@@ -148,18 +150,13 @@ func _pin_level_list_to_top() -> void:
 				btn.custom_minimum_size = Vector2(btn.custom_minimum_size.x, ROW_H)
 				btn.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		var cols := maxi(1, level_grid.columns)
-		var visible_buttons := 0
-		for child in level_grid.get_children():
-			if child is Button and (child as Button).visible:
-				visible_buttons += 1
-		var rows := int(ceili(float(maxi(visible_buttons, 1)) / float(cols)))
-		if visible_buttons == 0:
-			rows = 0
+		var page_rows := int(ceili(float(LEVELS_PER_PAGE) / float(cols)))
 		var sep := level_grid.get_theme_constant("v_separation")
-		var grid_h := rows * ROW_H + maxi(0, rows - 1) * sep
+		# Always reserve a full page so paging never shifts the list upward.
+		var reserved_h := page_rows * ROW_H + maxi(0, page_rows - 1) * sep
 		level_grid.position = Vector2.ZERO
-		level_grid.size = Vector2(host_w, grid_h)
-		host.custom_minimum_size = Vector2(0, grid_h)
+		level_grid.size = Vector2(host_w, reserved_h)
+		host.custom_minimum_size = Vector2(0, reserved_h)
 		host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
 	if empty_state_label and empty_state_label.get_parent() == host and empty_state_label.visible:
@@ -312,6 +309,7 @@ func _on_page_next() -> void:
 func _refresh_page() -> void:
 	for child in level_grid.get_children():
 		if child not in [button_template, locked_button_template, custom_button_template]:
+			level_grid.remove_child(child)
 			child.queue_free()
 
 	var valid_level_count := _level_entries.size()
@@ -349,6 +347,7 @@ func _refresh_page() -> void:
 		level_grid.add_child(btn)
 
 	_update_page_nav_visibility()
+	_pin_level_list_to_top()
 	call_deferred("_pin_level_list_to_top")
 
 func _update_page_nav_visibility() -> void:
@@ -403,16 +402,7 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 	preview_frame.name = "PreviewFrame"
 	preview_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	preview_frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var frame_style := StyleBoxFlat.new()
-	frame_style.bg_color = LevelPreview.COLOR_BG
-	frame_style.border_color = Color(0.35, 0.42, 0.55, 1.0)
-	frame_style.set_border_width_all(3)
-	frame_style.set_corner_radius_all(8)
-	frame_style.content_margin_left = 4.0
-	frame_style.content_margin_top = 4.0
-	frame_style.content_margin_right = 4.0
-	frame_style.content_margin_bottom = 4.0
-	preview_frame.add_theme_stylebox_override("panel", frame_style)
+	preview_frame.add_theme_stylebox_override("panel", LevelPreview.make_frame_style())
 
 	var preview := TextureRect.new()
 	preview.name = "Preview"
@@ -446,7 +436,7 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 		"font_size", HudLayout.scaled_font_size(GameConstants.UI_BTN_SECONDARY_FONT)
 	)
 	label.add_theme_color_override("font_outline_color", Color.BLACK)
-	label.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
+	HudLayout.apply_safe_outline(label, GameConstants.MENU_TEXT_OUTLINE)
 	if locked:
 		label.add_theme_color_override("font_color", btn.get_theme_color("font_disabled_color"))
 	else:

@@ -55,12 +55,74 @@ static func screen_header_font(force_pixel: bool = false) -> Font:
 		_screen_header_font_default = ThemeDB.fallback_font
 	return _screen_header_font_default
 
+static func _is_message_key(text: String) -> bool:
+	if text.is_empty():
+		return false
+	# Message ids are ASCII tokens like UI_OPTIONS / PAUSED / HTP_TITLE.
+	var first := text.unicode_at(0)
+	if first < 65 or first > 90:
+		return false
+	for i in text.length():
+		var c := text.unicode_at(i)
+		var is_az := c >= 65 and c <= 90
+		var is_digit := c >= 48 and c <= 57
+		if not (is_az or is_digit or c == 95):
+			return false
+	return true
+
+static func _recover_header_key_from_translated(text: String) -> String:
+	if text.is_empty() or _is_message_key(text):
+		return text
+	# Recover after a bad bake of tr() into .text (e.g. Ukrainian stuck forever).
+	for key in [
+		"UI_OPTIONS", "UI_CREDITS", "UI_SELECT_LEVEL", "PAUSED",
+		"HTP_TITLE", "HTP_EXAMPLES_TITLE", "HTP_PURPLE_TITLE", "HTP_LINKS_TITLE", "HTP_STARS_TITLE",
+		"TUTORIAL", "COMPLETED", "ED_VICTORY_SOLVABLE",
+	]:
+		if text == key:
+			return key
+		for locale in TranslationServer.get_loaded_locales():
+			var translation := TranslationServer.get_translation_object(locale)
+			if translation == null:
+				continue
+			if String(translation.get_message(key)) == text:
+				return key
+	return ""
+
+static func _header_translation_key(label: Label) -> String:
+	if label == null:
+		return ""
+	var stored := String(label.get_meta("_tr_key", ""))
+	if not stored.is_empty() and _is_message_key(stored):
+		return stored
+	var raw := label.text.strip_edges()
+	if _is_message_key(raw):
+		label.set_meta("_tr_key", raw)
+		return raw
+	var recovered := _recover_header_key_from_translated(raw)
+	if not recovered.is_empty():
+		label.set_meta("_tr_key", recovered)
+		return recovered
+	if not stored.is_empty():
+		return stored
+	return raw
+
+static func _bind_header_translation_key(label: Label, key: String) -> void:
+	if label == null or key.is_empty():
+		return
+	_clear_pixel_raster(label)
+	label.set_meta("_tr_key", key)
+	# Force auto-translate to rebind off any previously baked locale string.
+	label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	label.text = key
+	label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
+	label.notification(Node.NOTIFICATION_TRANSLATION_CHANGED)
+
 static func apply_screen_header_style(label: Label) -> void:
 	if not label:
 		return
 	label.set_meta("_screen_header", true)
 	var force_pixel := bool(label.get_meta("_brand_title", false))
-	label.add_theme_font_override("font", screen_header_font(force_pixel))
 	var header_size: int = int(label.get_meta(
 		"_screen_header_font_size",
 		GameConstants.SCREEN_HEADER_FONT_SIZE
@@ -69,35 +131,59 @@ static func apply_screen_header_style(label: Label) -> void:
 		"_screen_header_outline",
 		GameConstants.SCREEN_HEADER_OUTLINE
 	))
-	if force_pixel or uses_pixel_font():
-		label.add_theme_font_size_override("font_size", header_size)
-	else:
-		label.add_theme_font_size_override("font_size", body_font_size(header_size))
-	label.add_theme_constant_override("outline_size", outline_size)
-	label.add_theme_color_override("font_outline_color", Color.BLACK)
-	label.add_theme_color_override("font_color", GameConstants.SCREEN_HEADER_COLOR)
+	# Keep the translation key in .text — never bake tr() output (that froze
+	# Ukrainian "НАЛАШТУВАННЯ" across every language and broke Press Start glyphs).
+	var key := _header_translation_key(label)
+	if not key.is_empty() and _is_message_key(key):
+		_bind_header_translation_key(label, key)
+	elif not key.is_empty():
+		_clear_pixel_raster(label)
+		label.text = key
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	label.clip_text = false
 	label.clip_contents = false
+	label.add_theme_color_override("font_color", GameConstants.SCREEN_HEADER_COLOR)
+	if force_pixel or needs_pixel_text_raster():
+		label.set_meta("_use_default_font", false)
+		label.add_theme_font_override("font", pixel_font_clean())
+		label.add_theme_font_size_override("font_size", header_size)
+		_strip_live_pixel_outline(label)
+		return
+	label.set_meta("_use_default_font", true)
+	label.add_theme_font_override("font", screen_header_font(false))
+	label.add_theme_font_size_override("font_size", body_font_size(header_size))
+	apply_safe_outline(label, outline_size)
 
 static func apply_end_screen_header_style(label: Label, base_size: int = 48) -> void:
 	if not label:
 		return
 	var size := base_size
-	var outline := 8
-	if OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios"):
+	if _is_mobile_ui():
 		size = 40
-		outline = 6
-	label.set_meta("_brand_title", true)
 	label.set_meta("_screen_header", true)
 	label.set_meta("_screen_header_font_size", size)
-	label.set_meta("_screen_header_outline", outline)
-	apply_screen_header_style(label)
+	label.set_meta("_screen_header_outline", 8)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.clip_text = false
 	label.clip_contents = false
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	if uses_pixel_font():
+		label.set_meta("_brand_title", false)
+		apply_live_pixel_label_settings(
+			label, label.text, size, GameConstants.SCREEN_HEADER_COLOR
+		)
+		return
+	label.set_meta("_brand_title", false)
+	label.set_meta("_use_default_font", true)
+	clear_label_settings(label)
+	_clear_pixel_raster(label)
+	label.add_theme_font_override("font", ThemeDB.fallback_font)
+	label.add_theme_font_size_override("font_size", body_font_size(size))
+	label.add_theme_color_override("font_color", GameConstants.SCREEN_HEADER_COLOR)
+	apply_safe_outline(label, 8)
 
 static func ensure_how_to_play_page_header(host: Control) -> Label:
 	if host == null:
@@ -299,7 +385,7 @@ static func font_scale() -> float:
 	return scale
 
 static func scaled_font_size(base: int) -> int:
-	return int(round(float(base) * font_scale()))
+	return snap_pixel_font_size(int(round(float(base) * font_scale())))
 
 static func body_font_size(base: int) -> int:
 	var scale := GameConstants.DEFAULT_FONT_SCALE
@@ -308,19 +394,230 @@ static func body_font_size(base: int) -> int:
 		scale *= 1.15
 	return int(round(float(base) * scale))
 
+## Press Start is an 8px grid font — odd sizes create uneven gaps between letters.
+static func snap_pixel_font_size(size: int) -> int:
+	if size <= 0:
+		return size
+	if not uses_pixel_font():
+		return size
+	return maxi(8, int(round(float(size) / 8.0)) * 8)
+
+const PIXEL_FONT_PATH := "res://resources/fonts/PressStart2P-vaV7.ttf"
+## Canonical English pixel font (imported FontFile). Do not rebuild from bytes.
 const PIXEL_FONT: Font = preload("res://resources/fonts/PressStart2P-vaV7.ttf")
+const _PIXEL_MONO_TEXT_SCRIPT: Script = preload("res://scripts/pixel_mono_text.gd")
 static var _pixel_font_with_fallback: Font
 
 static func uses_pixel_font() -> bool:
 	return TranslationServer.get_locale().substr(0, 2) == "en"
 
+static func _load_press_start_font() -> Font:
+	if PIXEL_FONT != null:
+		return PIXEL_FONT
+	if ResourceLoader.exists(PIXEL_FONT_PATH):
+		var loaded := load(PIXEL_FONT_PATH) as Font
+		if loaded != null:
+			return loaded
+	return ThemeDB.fallback_font
+
 static func pixel_font() -> Font:
-	if _pixel_font_with_fallback == null and PIXEL_FONT != null:
-		_pixel_font_with_fallback = PIXEL_FONT.duplicate()
-		var fallback := ThemeDB.fallback_font
-		if fallback:
-			_pixel_font_with_fallback.fallbacks = [fallback]
-	return _pixel_font_with_fallback if _pixel_font_with_fallback else PIXEL_FONT
+	if _pixel_font_with_fallback == null:
+		_pixel_font_with_fallback = _load_press_start_font()
+	return _pixel_font_with_fallback if _pixel_font_with_fallback else ThemeDB.fallback_font
+
+static func pixel_font_clean() -> Font:
+	# Same imported face as pixel_font(). Isolation is outline_size == 0 only —
+	# runtime FontFile copies and the extra safe.ttf import produced fd-null crashes.
+	return pixel_font()
+
+static func needs_pixel_text_raster() -> bool:
+	return uses_pixel_font()
+
+static func clear_pixel_text_cache() -> void:
+	# Keep the imported FontFile reference alive; clearing it caused fd-null.
+	pass
+
+static func apply_live_pixel_label_settings(
+	label: Label,
+	text: String,
+	font_size: int,
+	color: Color = Color.WHITE
+) -> void:
+	# Press Start via theme font + outline 0. Avoid LabelSettings here — it can
+	# advance glyphs differently than the menu theme path (looks more spaced).
+	if label == null:
+		return
+	_clear_pixel_raster(label)
+	label.set_meta("_use_default_font", false)
+	label.set_meta("_safe_pixel_label", true)
+	label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	label.clip_text = false
+	label.clip_contents = false
+	label.text = text
+	label.label_settings = null
+	label.add_theme_font_override("font", pixel_font_clean())
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_constant_override("letter_spacing", 0)
+	_strip_live_pixel_outline(label)
+
+static func clear_label_settings(label: Label) -> void:
+	if label:
+		label.label_settings = null
+
+static func apply_live_pixel_richtext(label: RichTextLabel, font_size: int) -> void:
+	if label == null:
+		return
+	label.set_meta("_use_default_font", false)
+	var font := pixel_font_clean()
+	for font_name in ["normal_font", "bold_font", "italics_font", "bold_italics_font", "mono_font"]:
+		label.add_theme_font_override(font_name, font)
+	for size_name in [
+		"normal_font_size",
+		"bold_font_size",
+		"italics_font_size",
+		"bold_italics_font_size",
+		"mono_font_size",
+	]:
+		label.add_theme_font_size_override(size_name, font_size)
+	_strip_live_pixel_outline(label)
+
+static func _strip_live_pixel_outline(control: Control) -> void:
+	if control == null:
+		return
+	# Force theme outline off — Press Start + outline_size scrambles under GL Compatibility.
+	if control.has_theme_constant_override("outline_size"):
+		control.remove_theme_constant_override("outline_size")
+	control.add_theme_constant_override("outline_size", 0)
+	control.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0))
+	control.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0))
+	control.add_theme_constant_override("shadow_offset_x", 0)
+	control.add_theme_constant_override("shadow_offset_y", 0)
+	if control is Label or control is Button or control is RichTextLabel:
+		control.add_theme_constant_override("letter_spacing", 0)
+
+static func _is_live_pixel_control(control: Control) -> bool:
+	if control == null:
+		return false
+	# Brand / forced Press Start stays pixel even outside English.
+	if bool(control.get_meta("_force_pixel_font", false)) or bool(control.get_meta("_brand_title", false)):
+		return true
+	if bool(control.get_meta("_use_default_font", false)):
+		return false
+	return uses_pixel_font()
+
+static func has_pixel_text_overlay(host: Control) -> bool:
+	if host == null:
+		return false
+	return (
+		host.get_node_or_null("PixelOutlineStack") != null
+		or host.get_node_or_null("PixelTextRaster") != null
+		or host.get_node_or_null("PixelSafeCaption") != null
+		or host.get_node_or_null("PixelMonoCaption") != null
+	)
+
+static func _clear_pixel_raster(host: Control) -> void:
+	if host == null:
+		return
+	for child_name in ["PixelOutlineStack", "PixelTextRaster", "PixelSafeCaption", "PixelMonoCaption"]:
+		var holder := host.get_node_or_null(child_name)
+		if holder:
+			host.remove_child(holder)
+			holder.free()
+
+## English Press Start on a fixed cell grid (cancels uneven left bearings).
+static func apply_pixel_mono_button(
+	button: Button, text: String, font_size: int, color: Color = Color.WHITE
+) -> void:
+	if button == null:
+		return
+	_clear_pixel_raster(button)
+	button.set_meta("_use_default_font", false)
+	button.set_meta("_safe_pixel_label", true)
+	button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	button.text = ""
+	button.clip_text = false
+	if button.has_theme_font_override("font"):
+		button.remove_theme_font_override("font")
+	if button.has_theme_font_size_override("font_size"):
+		button.remove_theme_font_size_override("font_size")
+	_strip_live_pixel_outline(button)
+	var host := Control.new()
+	host.name = "PixelMonoCaption"
+	host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	host.set_script(_PIXEL_MONO_TEXT_SCRIPT)
+	button.add_child(host)
+	if host.has_method("set_mono_text"):
+		host.call("set_mono_text", text, pixel_font_clean(), font_size, color)
+	host.queue_redraw()
+
+static func apply_raster_pixel_label(
+	label: Label,
+	text: String,
+	font_size: int,
+	color: Color = Color.WHITE,
+	_max_width: int = 0,
+	_force_raster: bool = false
+) -> void:
+	if not label:
+		return
+	if uses_pixel_font():
+		apply_live_pixel_label_settings(label, text, font_size, color)
+		return
+	clear_label_settings(label)
+	_clear_pixel_raster(label)
+	label.set_meta("_use_default_font", true)
+	label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	label.text = text
+	label.clip_text = false
+	label.clip_contents = false
+	label.add_theme_font_override("font", ThemeDB.fallback_font)
+	label.add_theme_font_size_override("font_size", body_font_size(font_size))
+	label.add_theme_color_override("font_color", color)
+	apply_safe_outline(label, 8)
+
+static func apply_raster_pixel_button(
+	button: Button, text: String, font_size: int, _max_width: int = 0
+) -> void:
+	if not button:
+		return
+	_clear_pixel_raster(button)
+	button.clip_text = false
+	if uses_pixel_font():
+		# Draw Press Start on a caption label — never via Button theme font/outline.
+		button.set_meta("_use_default_font", false)
+		button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		button.text = ""
+		if button.has_theme_font_override("font"):
+			button.remove_theme_font_override("font")
+		if button.has_theme_font_size_override("font_size"):
+			button.remove_theme_font_size_override("font_size")
+		_strip_live_pixel_outline(button)
+		var host := CenterContainer.new()
+		host.name = "PixelSafeCaption"
+		host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		host.offset_left = 8.0
+		host.offset_top = 4.0
+		host.offset_right = -8.0
+		host.offset_bottom = -4.0
+		var caption := Label.new()
+		caption.name = "Caption"
+		caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		caption.autowrap_mode = TextServer.AUTOWRAP_OFF
+		host.add_child(caption)
+		button.add_child(host)
+		apply_live_pixel_label_settings(caption, text, font_size, Color.WHITE)
+		return
+	button.set_meta("_use_default_font", true)
+	button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	button.text = text
+	button.add_theme_font_override("font", ThemeDB.fallback_font)
+	button.add_theme_font_size_override("font_size", body_font_size(font_size))
+	apply_safe_outline(button, 8)
 
 static func ui_font() -> Font:
 	return pixel_font() if uses_pixel_font() else ThemeDB.fallback_font
@@ -357,19 +654,37 @@ static func apply_status_font(label: RichTextLabel, base_size: int = GameConstan
 	label.scroll_active = false
 
 static func apply_locale_font_to_control(node: Node) -> void:
-	if node == null:
+	if node == null or not is_instance_valid(node):
+		return
+	if not (node is Button or node is Label or node is LineEdit or node is OptionButton or node is RichTextLabel):
+		return
+	if bool(node.get_meta("_pixel_outline_part", false)):
+		return
+	if bool(node.get_meta("_safe_pixel_label", false)):
+		# Already styled by apply_live_pixel_label_settings / mono caption — don't re-theme.
+		return
+	if node is Control and (node as Control).get_node_or_null("PixelMonoCaption") != null:
 		return
 	if node.get_meta("_force_pixel_font", false):
 		_apply_forced_pixel_font(node)
+		_strip_live_pixel_outline(node as Control)
 		return
-	if node.get_meta("_screen_header", false) and node is Label:
-		apply_screen_header_style(node as Label)
+	# Screen headers are styled only via apply_screen_header_style. Calling it
+	# from here re-enters through apply_raster_pixel_label and overflows.
+	if node.get_meta("_screen_header", false):
+		if node is Control and _is_live_pixel_control(node as Control):
+			_strip_live_pixel_outline(node as Control)
 		return
 	if is_status_label(node) and node is RichTextLabel:
 		apply_status_font(node as RichTextLabel)
 		return
 	# Icon-only top-bar buttons: locale font metrics shift the TextureRect.
 	if _is_icon_only_button(node):
+		return
+	# LabelSettings already has a font — don't replace it (reshape can fd-null).
+	if node is Label and (node as Label).label_settings != null:
+		if _is_live_pixel_control(node as Control):
+			_strip_live_pixel_outline(node as Control)
 		return
 	var use_default := bool(node.get_meta("_use_default_font", false))
 	if not use_default and node is Label:
@@ -378,14 +693,22 @@ static func apply_locale_font_to_control(node: Node) -> void:
 			use_default = true
 			node.set_meta("_use_default_font", true)
 	var font := ThemeDB.fallback_font if use_default else ui_font()
+	if font == null:
+		font = ThemeDB.fallback_font
+	if font == null:
+		return
 	if node is Button or node is Label or node is LineEdit or node is OptionButton:
 		node.add_theme_font_override("font", font)
+		if node is Control and _is_live_pixel_control(node as Control):
+			_strip_live_pixel_outline(node as Control)
 	elif node is RichTextLabel:
 		node.add_theme_font_override("normal_font", font)
 		node.add_theme_font_override("bold_font", font)
 		node.add_theme_font_override("italics_font", font)
 		node.add_theme_font_override("bold_italics_font", font)
 		node.add_theme_font_override("mono_font", font)
+		if node is Control and _is_live_pixel_control(node as Control):
+			_strip_live_pixel_outline(node as Control)
 
 static func _is_icon_only_button(node: Node) -> bool:
 	if not node is Button:
@@ -409,16 +732,29 @@ static func _apply_forced_pixel_font(node: Node) -> void:
 static func apply_locale_fonts_to_tree(root: Node) -> void:
 	if root == null:
 		return
+	if bool(root.get_meta("_pixel_outline_part", false)):
+		return
 	apply_locale_font_to_control(root)
+	# Scenes ship Press Start + outline_size; that combo scrambles under GL Compatibility.
+	if root is Control and _is_live_pixel_control(root as Control):
+		if (
+			root is Label
+			or root is Button
+			or root is RichTextLabel
+			or root is LineEdit
+			or root is OptionButton
+		):
+			_strip_live_pixel_outline(root as Control)
 	for child in root.get_children():
 		apply_locale_fonts_to_tree(child)
 
 static func fit_text_button(button: Button, base_font_size: int = 36, min_font_size: int = 18) -> void:
 	if not button:
 		return
+	if _is_icon_only_button(button):
+		return
 	button.clip_text = false
 	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	apply_locale_font_to_control(button)
 	var font: Font = (
 		ThemeDB.fallback_font if button.get_meta("_use_default_font", false) else ui_font()
 	)
@@ -429,28 +765,32 @@ static func fit_text_button(button: Button, base_font_size: int = 36, min_font_s
 	var display := button.text
 	if button.auto_translate_mode != Node.AUTO_TRANSLATE_MODE_DISABLED:
 		display = String(TranslationServer.translate(button.text))
+	if display.is_empty():
+		return
 	var size := scaled_font_size(base_font_size)
 	var min_size := scaled_font_size(min_font_size)
+	var step := 8 if uses_pixel_font() else 2
 	while size > min_size:
 		var measured := font.get_multiline_string_size(display, HORIZONTAL_ALIGNMENT_CENTER, target_w, size)
 		if measured.x <= target_w + 2.0 and measured.y <= target_h + 2.0:
 			break
-		size -= 2
+		size = maxi(min_size, size - step)
+	size = snap_pixel_font_size(size) if uses_pixel_font() else size
+	_clear_pixel_raster(button)
+	apply_locale_font_to_control(button)
 	button.add_theme_font_size_override("font_size", size)
-	# Keep outline proportional so large outlines don't mush glyphs on mobile.
 	var base_outline := int(button.get_theme_constant("outline_size"))
 	if base_outline <= 0:
 		base_outline = GameConstants.MENU_TEXT_OUTLINE
-	var outline := int(round(float(base_outline) * float(size) / float(maxi(base_font_size, 1))))
-	outline = clampi(outline, 2, base_outline)
-	button.add_theme_constant_override("outline_size", outline)
+	apply_safe_outline(button, base_outline)
 
 static func fit_text_button_single_line(button: Button, base_font_size: int = 36, min_font_size: int = 18) -> void:
 	if not button:
 		return
+	if _is_icon_only_button(button):
+		return
 	button.clip_text = false
 	button.autowrap_mode = TextServer.AUTOWRAP_OFF
-	apply_locale_font_to_control(button)
 	var font: Font = (
 		ThemeDB.fallback_font if button.get_meta("_use_default_font", false) else ui_font()
 	)
@@ -460,20 +800,48 @@ static func fit_text_button_single_line(button: Button, base_font_size: int = 36
 	var display := button.text
 	if button.auto_translate_mode != Node.AUTO_TRANSLATE_MODE_DISABLED:
 		display = String(TranslationServer.translate(button.text))
+	if display.is_empty():
+		return
 	var size := scaled_font_size(base_font_size)
 	var min_size := scaled_font_size(min_font_size)
+	var step := 8 if uses_pixel_font() else 2
 	while size > min_size:
 		var measured := font.get_string_size(display, HORIZONTAL_ALIGNMENT_LEFT, -1, size)
 		if measured.x <= target_w + 2.0:
 			break
-		size -= 2
+		size = maxi(min_size, size - step)
+	size = snap_pixel_font_size(size) if uses_pixel_font() else size
+	_clear_pixel_raster(button)
+	apply_locale_font_to_control(button)
 	button.add_theme_font_size_override("font_size", size)
 	var base_outline := int(button.get_theme_constant("outline_size"))
 	if base_outline <= 0:
 		base_outline = GameConstants.MENU_TEXT_OUTLINE
-	var outline := int(round(float(base_outline) * float(size) / float(maxi(base_font_size, 1))))
-	outline = clampi(outline, 2, base_outline)
-	button.add_theme_constant_override("outline_size", outline)
+	apply_safe_outline(button, base_outline)
+
+static func _is_mobile_ui() -> bool:
+	if OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios"):
+		return true
+	var os_name := OS.get_name()
+	return os_name == "Android" or os_name == "iOS"
+
+static func prefer_default_font() -> bool:
+	return not uses_pixel_font()
+
+static func apply_safe_outline(control: Control, base_outline: int = GameConstants.MENU_TEXT_OUTLINE) -> void:
+	if not control:
+		return
+	# Only strip live outlines from Press Start itself. Default-font English UI
+	# (counters, HTP body, etc.) can keep theme outlines safely.
+	if _is_live_pixel_control(control):
+		# Press Start + theme outlines scramble glyphs under GL Compatibility.
+		_strip_live_pixel_outline(control)
+		return
+	control.add_theme_constant_override("shadow_offset_x", 0)
+	control.add_theme_constant_override("shadow_offset_y", 0)
+	var outline := clampi(base_outline, 0, maxi(1, base_outline))
+	control.add_theme_color_override("font_outline_color", Color.BLACK)
+	control.add_theme_constant_override("outline_size", outline)
 
 static func apply_primary_button(button: Button) -> void:
 	if not button:
@@ -495,9 +863,15 @@ static func apply_dialog_button(button: Button) -> void:
 	if not button:
 		return
 	button.custom_minimum_size = GameConstants.UI_BTN_DIALOG_SIZE
-	fit_text_button(
-		button, GameConstants.UI_BTN_DIALOG_FONT, GameConstants.UI_BTN_DIALOG_FONT_MIN
-	)
+	var display := button.text
+	if not display.is_empty() and _is_message_key(display):
+		display = String(TranslationServer.translate(display))
+	elif (
+		button.auto_translate_mode != Node.AUTO_TRANSLATE_MODE_DISABLED
+		and not display.is_empty()
+	):
+		display = String(TranslationServer.translate(display))
+	apply_raster_pixel_button(button, display, GameConstants.UI_BTN_DIALOG_FONT)
 
 static func apply_nav_button(button: Button) -> void:
 	if not button:
@@ -521,7 +895,7 @@ static func apply_nav_button(button: Button) -> void:
 	if icon_root:
 		icon_root.add_theme_constant_override(
 			"margin_bottom",
-			GameConstants.HUD_TOP_BAR_ICON_NUDGE * 2 + 1
+			GameConstants.HUD_TOP_BAR_ICON_NUDGE * 2 + 2
 		)
 	refresh_button_icon_modulate(button)
 	if not button.has_meta("_icon_disabled_hook"):
@@ -532,7 +906,79 @@ static func apply_panel_button(button: Button) -> void:
 	if not button:
 		return
 	button.custom_minimum_size = GameConstants.UI_BTN_PANEL_SIZE
+	button.set_meta("_use_default_font", not uses_pixel_font())
+	if uses_pixel_font():
+		_strip_live_pixel_outline(button)
+	else:
+		apply_safe_outline(button, 8)
 	fit_text_button(button, GameConstants.UI_BTN_PANEL_FONT, GameConstants.UI_BTN_PANEL_FONT_MIN)
+	_fit_panel_button_captions(button)
+
+static func _fit_panel_button_captions(button: Button) -> void:
+	if not button:
+		return
+	for node in button.find_children("*", "Label", true, false):
+		var label := node as Label
+		if label == null:
+			continue
+		if label.name == "Caption" or label.name == "PixelSafeCaption":
+			continue
+		if label.get_parent() != null and String(label.get_parent().name) == "PixelSafeCaption":
+			continue
+		if has_pixel_text_overlay(label):
+			continue
+		if label.label_settings != null or bool(label.get_meta("_safe_pixel_label", false)):
+			continue
+		_fit_caption_label(
+			label,
+			button.custom_minimum_size,
+			GameConstants.UI_BTN_PANEL_FONT,
+			GameConstants.UI_BTN_PANEL_FONT_MIN
+		)
+
+static func _fit_caption_label(
+	label: Label,
+	button_size: Vector2,
+	base_font_size: int,
+	min_font_size: int
+) -> void:
+	if not label:
+		return
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.clip_text = false
+	var display := label.text
+	if _is_message_key(display):
+		display = String(TranslationServer.translate(display))
+	var use_pixel := uses_pixel_font()
+	var font: Font = pixel_font_clean() if use_pixel else ThemeDB.fallback_font
+	if font == null:
+		font = ThemeDB.fallback_font
+	if font == null:
+		return
+	var target_w := maxf(40.0, button_size.x - 36.0)
+	var size := scaled_font_size(base_font_size) if use_pixel else body_font_size(base_font_size)
+	var min_size := scaled_font_size(min_font_size) if use_pixel else body_font_size(min_font_size)
+	var step := 8 if use_pixel else 2
+	while size > min_size:
+		var measured := font.get_string_size(display, HORIZONTAL_ALIGNMENT_LEFT, -1, size)
+		if measured.x <= target_w + 2.0:
+			break
+		size = maxi(min_size, size - step)
+	if use_pixel:
+		size = snap_pixel_font_size(size)
+	var color := Color.WHITE
+	if label.has_theme_color_override("font_color"):
+		color = label.get_theme_color("font_color")
+	if use_pixel:
+		apply_live_pixel_label_settings(label, display, size, color)
+		return
+	clear_label_settings(label)
+	label.set_meta("_use_default_font", true)
+	label.text = display
+	label.add_theme_font_override("font", font)
+	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_color_override("font_color", color)
+	apply_safe_outline(label, GameConstants.MENU_TEXT_OUTLINE)
 
 static func apply_tab_button(button: Button) -> void:
 	if not button:
@@ -543,10 +989,24 @@ static func apply_tab_button(button: Button) -> void:
 static func apply_popup_label(label: Label, base_size: int = GameConstants.UI_BODY_FONT_SIZE) -> void:
 	if not label:
 		return
-	label.set_meta("_use_default_font", not uses_pixel_font())
+	if needs_pixel_text_raster():
+		var key := _header_translation_key(label)
+		var display := key if not key.is_empty() else label.text
+		if _is_message_key(display):
+			label.set_meta("_tr_key", display)
+			display = String(TranslationServer.translate(display))
+		var color := Color.WHITE
+		if label.has_theme_color_override("font_color"):
+			color = label.get_theme_color("font_color")
+		apply_live_pixel_label_settings(label, display, base_size, color)
+		return
+	clear_label_settings(label)
+	var use_default := prefer_default_font()
+	label.set_meta("_use_default_font", use_default)
 	apply_locale_font_to_control(label)
-	var size := base_size if uses_pixel_font() else body_font_size(base_size)
+	var size := body_font_size(base_size) if use_default else base_size
 	label.add_theme_font_size_override("font_size", size)
+	apply_safe_outline(label, 8)
 
 static func make_dialog_panel_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -753,8 +1213,6 @@ static func _nudge_button_text_up(button: Button, pixels: int) -> void:
 static func apply_top_bar_mode_label(label: RichTextLabel) -> void:
 	if not label:
 		return
-	label.set_meta("_use_default_font", not uses_pixel_font())
-	apply_locale_font_to_control(label)
 	label.bbcode_enabled = true
 	label.fit_content = false
 	label.scroll_active = false
@@ -763,8 +1221,6 @@ static func apply_top_bar_mode_label(label: RichTextLabel) -> void:
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.add_theme_constant_override("line_separation", GameConstants.HUD_CENTER_LABEL_LINE_SEPARATION)
-	label.add_theme_constant_override("outline_size", GameConstants.HUD_LEVEL_OUTLINE_SIZE)
-	label.add_theme_color_override("font_outline_color", Color.BLACK)
 	var w := float(GameConstants.HUD_CENTER_LABEL_WIDTH)
 	var h := float(GameConstants.HUD_BUTTON_HEIGHT)
 	label.custom_minimum_size = Vector2(w, h)
@@ -784,8 +1240,21 @@ static func apply_top_bar_mode_label(label: RichTextLabel) -> void:
 			label_wrap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 			label_wrap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var plain := _plain_top_bar_label_text(label.text)
-	if not plain.is_empty():
+	_clear_pixel_raster(label)
+	if plain.is_empty():
+		label.text = ""
+		return
+	if uses_pixel_font():
+		label.set_meta("_use_default_font", false)
+		label.text = format_outlined_center_text(plain)
+		label.add_theme_font_override("normal_font", pixel_font())
 		label.add_theme_font_size_override("normal_font_size", fit_top_bar_two_line_font_size(plain))
+		_strip_live_pixel_outline(label)
+		return
+	label.set_meta("_use_default_font", true)
+	apply_locale_font_to_control(label)
+	apply_safe_outline(label, GameConstants.HUD_LEVEL_OUTLINE_SIZE)
+	label.add_theme_font_size_override("normal_font_size", fit_top_bar_two_line_font_size(plain))
 
 static func _plain_top_bar_label_text(bbcode: String) -> String:
 	var plain := bbcode
@@ -828,32 +1297,49 @@ static func align_counter_label(label: RichTextLabel, _y_nudge: float = 0.0) -> 
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
+static func prepare_timer_label(label: RichTextLabel) -> void:
+	if not label:
+		return
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.fit_content = false
+	label.scroll_active = false
+	label.clip_contents = false
+	_strip_live_pixel_outline(label)
+
+static func set_timer_raster_text(label: RichTextLabel, plain_time: String) -> void:
+	if not label:
+		return
+	prepare_timer_label(label)
+	_clear_pixel_raster(label)
+	if plain_time.is_empty():
+		label.text = ""
+		return
+	if plain_time == "∞" or not uses_pixel_font():
+		label.set_meta("_use_default_font", true)
+		apply_locale_font_to_control(label)
+		apply_safe_outline(label, 6)
+		label.text = format_time_counter(plain_time)
+		return
+	var font_size := GameConstants.HUD_COUNTER_FONT_SIZE
+	label.set_meta("_use_default_font", false)
+	label.add_theme_font_override("normal_font", pixel_font())
+	label.add_theme_font_size_override("normal_font_size", font_size)
+	label.add_theme_color_override("default_color", Color(0.96, 0.96, 0.96, 1))
+	_strip_live_pixel_outline(label)
+	label.text = format_time_counter(plain_time)
+
 static func prepare_counter_label(label: RichTextLabel) -> void:
 	if not label:
 		return
+	# Counter BBCode mixes icons + numbers; keep default font to avoid Press Start scramble.
+	label.set_meta("_use_default_font", true)
 	apply_locale_font_to_control(label)
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	label.fit_content = false
 	label.scroll_active = false
 	label.clip_contents = false
 	label.add_theme_font_size_override("normal_font_size", scaled_font_size(GameConstants.HUD_COUNTER_FONT_SIZE))
-	label.add_theme_constant_override("outline_size", 6)
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
-	label.add_theme_color_override("default_color", Color(0.96, 0.96, 0.96, 1))
-
-static func prepare_timer_label(label: RichTextLabel) -> void:
-	if not label:
-		return
-	# Timer digits always use Press Start at the English HUD size.
-	label.set_meta("_force_pixel_font", true)
-	_apply_forced_pixel_font(label)
-	label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	label.fit_content = false
-	label.scroll_active = false
-	label.clip_contents = false
-	label.add_theme_font_size_override("normal_font_size", GameConstants.HUD_COUNTER_FONT_SIZE)
-	label.add_theme_constant_override("outline_size", 6)
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
+	apply_safe_outline(label, 6)
 	label.add_theme_color_override("default_color", Color(0.96, 0.96, 0.96, 1))
 
 static func format_icon_ratio_counter(

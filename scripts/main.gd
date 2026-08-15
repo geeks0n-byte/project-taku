@@ -225,18 +225,42 @@ func _intercept_global_selection():
 		else:
 			levels.append(selected_resource)
 			current_level_index = levels.size() - 1
+		return
+
+	# Main-menu RESUME: open the level from the saved session, not highest unlocked.
+	if SaveManager and SaveManager.has_session():
+		var session_path := str(SaveManager.session_data.get("level_path", ""))
+		if not session_path.is_empty() and ResourceLoader.exists(session_path):
+			var session_level := load(session_path) as LevelData
+			if session_level:
+				levels = (
+					custom_levels.duplicate()
+					if session_path.begins_with("user://")
+					else core_levels.duplicate()
+				)
+				var session_idx := -1
+				for i in range(levels.size()):
+					if levels[i].resource_path == session_path:
+						session_idx = i
+						break
+				if session_idx != -1:
+					current_level_index = session_idx
+					return
+				levels.append(session_level)
+				current_level_index = levels.size() - 1
+				return
+
+	levels = core_levels.duplicate()
+	var target_level = SaveManager.max_unlocked_level
+	var unlocked_idx = -1
+	for i in range(levels.size()):
+		if levels[i].level_number == target_level:
+			unlocked_idx = i
+			break
+	if unlocked_idx != -1:
+		current_level_index = unlocked_idx
 	else:
-		levels = core_levels.duplicate()
-		var target_level = SaveManager.max_unlocked_level
-		var found_idx = -1
-		for i in range(levels.size()):
-			if levels[i].level_number == target_level:
-				found_idx = i
-				break
-		if found_idx != -1:
-			current_level_index = found_idx
-		else:
-			current_level_index = maxi(0, levels.size() - 1)
+		current_level_index = maxi(0, levels.size() - 1)
 
 func generate_board():
 	if current_level_index >= levels.size():
@@ -690,14 +714,10 @@ func trigger_victory():
 	var display_num = LevelUtils.get_display_level_number(levels[current_level_index])
 	var unlock_num = levels[current_level_index].level_number
 	var time_limit := 0 if _challenges_disabled else star_time_limit
-	var move_target := 0 if _challenges_disabled else required_shifter_moves
 	var star_result := LevelStars.evaluate(
 		elapsed_seconds,
 		time_limit,
-		0 if _challenges_disabled else hints_used,
-		shifter_move_count,
-		move_target,
-		_has_shifters and not _challenges_disabled
+		0 if _challenges_disabled else hints_used
 	)
 	if _challenges_disabled:
 		star_result["untimed"] = true

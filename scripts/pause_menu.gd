@@ -43,6 +43,7 @@ func _style_header() -> void:
 		return
 	title_label.set_meta("_screen_header_font_size", 72)
 	title_label.set_meta("_screen_header_outline", GameConstants.SCREEN_HEADER_OUTLINE)
+	HudLayout._bind_header_translation_key(title_label, "PAUSED")
 	HudLayout.apply_screen_header_style(title_label)
 
 func _fit_menu_buttons() -> void:
@@ -55,6 +56,7 @@ func _fit_menu_buttons() -> void:
 	if title_label:
 		title_label.set_meta("_screen_header_font_size", 72)
 		title_label.set_meta("_screen_header_outline", GameConstants.SCREEN_HEADER_OUTLINE)
+		HudLayout._bind_header_translation_key(title_label, "PAUSED")
 		HudLayout.apply_screen_header_style(title_label)
 
 func _apply_pause_button(button: Button) -> void:
@@ -65,10 +67,10 @@ func _apply_pause_button(button: Button) -> void:
 	_apply_button_tile_styles(button)
 	button.custom_minimum_size = MENU_BTN_SIZE
 	button.add_theme_color_override("font_outline_color", Color.BLACK)
-	button.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
 	button.autowrap_mode = TextServer.AUTOWRAP_OFF
 	button.clip_text = false
 	HudLayout.fit_text_button_single_line(button, MENU_BTN_FONT, 28)
+	HudLayout.apply_safe_outline(button, GameConstants.MENU_TEXT_OUTLINE)
 
 func _apply_button_tile_styles(button: Button) -> void:
 	if not button:

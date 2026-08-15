@@ -29,6 +29,7 @@ const _DEBUG_BTN_SIZE := Vector2(96, 96)
 @onready var options_menu = $UILayer/OptionsMenu
 @onready var overlay_blocker = $UILayer/OverlayBlocker
 @onready var credits_panel = $UILayer/OverlayBlocker/CreditsPanel
+@onready var credits_version_label: Label = $UILayer/OverlayBlocker/CreditsPanel/VBoxContainer/VersionLabel
 @onready var close_credits_btn = $UILayer/OverlayBlocker/CloseCreditsButton
 @onready var _htp_host: Control = $UILayer/HowToPlayHost
 @onready var _htp_panel: Control = $UILayer/HowToPlayHost/HowToPlayPanel
@@ -214,15 +215,15 @@ func _mount_credits_header() -> void:
 	if credits_title:
 		credits_title.set_meta("_screen_header_font_size", CREDITS_HEADER_SIZE)
 		credits_title.set_meta("_screen_header_outline", CREDITS_HEADER_OUTLINE)
+		HudLayout._bind_header_translation_key(credits_title, "UI_CREDITS")
 		HudLayout.apply_screen_header_style(credits_title)
 	if close_credits_btn:
 		HudLayout.style_top_bar_close_button(close_credits_btn)
 
 func _on_language_changed() -> void:
 	_refresh_start_button_label()
-	# Fonts first, then size fitting so Press Start vs default sizing is correct.
-	HudLayout.apply_locale_fonts_to_tree(self)
 	_fit_menu_buttons()
+	HudLayout.apply_locale_fonts_to_tree(self)
 	_refresh_how_to_play_text()
 
 func _refresh_start_button_label() -> void:
@@ -232,6 +233,7 @@ func _refresh_start_button_label() -> void:
 		start_btn.text = "UI_RESUME"
 	else:
 		start_btn.text = "UI_PLAY"
+	start_btn.set_meta("_tr_key", start_btn.text)
 
 func _on_save_deleted() -> void:
 	_refresh_start_button_label()
@@ -252,6 +254,7 @@ func _fit_menu_buttons() -> void:
 	if credits_title:
 		credits_title.set_meta("_screen_header_font_size", CREDITS_HEADER_SIZE)
 		credits_title.set_meta("_screen_header_outline", CREDITS_HEADER_OUTLINE)
+		HudLayout._bind_header_translation_key(credits_title, "UI_CREDITS")
 		HudLayout.apply_screen_header_style(credits_title)
 	var credits_text_node = credits_panel.get_node_or_null("VBoxContainer/CreditsText") if credits_panel else null
 	if credits_text_node:
@@ -268,15 +271,29 @@ func _apply_main_menu_button(button: Button) -> void:
 	var is_play: bool = button == start_btn
 	var row_h := 148.0 if is_play else 118.0
 	var row_w := 780.0 if is_play else 720.0
+	# Fixed sizes — PLAY/RESUME one step above the rest (64 → 72).
 	var font_size := 72 if is_play else MENU_BTN_FONT
-	var min_font := 34 if is_play else 30
 	button.custom_minimum_size = Vector2(row_w, row_h)
-	button.add_theme_constant_override("outline_size", MENU_BTN_OUTLINE + (2 if is_play else 0))
-	button.add_theme_color_override("font_outline_color", Color.BLACK)
-	if button == levels_btn:
-		HudLayout.fit_text_button_single_line(button, MENU_BTN_FONT, 32)
+	button.clip_text = false
+	button.autowrap_mode = TextServer.AUTOWRAP_OFF
+	var raw := button.text.strip_edges()
+	var key := raw if not raw.is_empty() else String(button.get_meta("_tr_key", "")).strip_edges()
+	if not key.is_empty():
+		button.set_meta("_tr_key", key)
+	var display := String(TranslationServer.translate(key)) if not key.is_empty() else ""
+	if display.is_empty():
+		display = key
+	if HudLayout.uses_pixel_font():
+		# Fixed cell grid — Press Start left bearings make P–L / A–Y look uneven.
+		HudLayout.apply_pixel_mono_button(button, display, font_size, Color.WHITE)
 	else:
-		HudLayout.fit_text_button(button, font_size, min_font)
+		HudLayout._clear_pixel_raster(button)
+		button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
+		button.text = key if not key.is_empty() else button.text
+		button.remove_meta("_safe_pixel_label")
+		HudLayout.apply_locale_font_to_control(button)
+		button.add_theme_font_size_override("font_size", HudLayout.body_font_size(font_size))
+		HudLayout.apply_safe_outline(button, MENU_BTN_OUTLINE)
 
 func _fit_debug_bar_buttons() -> void:
 	_setup_debug_fx_button(debug_star_btn, [_FX_STAR])
@@ -347,17 +364,51 @@ func _set_main_menu_chrome_visible(should_show: bool) -> void:
 
 func _apply_credits_fonts(credits_text_node: RichTextLabel) -> void:
 	if HudLayout.uses_pixel_font():
+		# English credits: Press Start without theme outlines.
 		credits_text_node.set_meta("_use_default_font", false)
-		HudLayout.apply_locale_font_to_control(credits_text_node)
-		credits_text_node.add_theme_font_size_override(
-			"normal_font_size", HudLayout.scaled_font_size(CREDITS_BODY_SIZE)
-		)
-		credits_text_node.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
+		HudLayout.apply_live_pixel_richtext(credits_text_node, CREDITS_BODY_SIZE)
 	else:
+		credits_text_node.set_meta("_use_default_font", true)
 		HudLayout.apply_body_richtext(credits_text_node, CREDITS_BODY_SIZE)
-		credits_text_node.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
+		HudLayout.apply_safe_outline(credits_text_node, GameConstants.MENU_TEXT_OUTLINE)
 	credits_text_node.scroll_active = false
 	credits_text_node.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_refresh_credits_version()
+
+func _app_version_string() -> String:
+	var version := String(ProjectSettings.get_setting("application/config/version", "1.0.0"))
+	# Guard against mangled/non-ASCII version strings from export tooling.
+	var cleaned := ""
+	for i in version.length():
+		var ch := version.substr(i, 1)
+		var code := version.unicode_at(i)
+		var ok := (
+			(code >= 48 and code <= 57) # 0-9
+			or ch == "."
+			or ch == "-"
+			or ch == "+"
+			or (code >= 65 and code <= 90) # A-Z
+			or (code >= 97 and code <= 122) # a-z
+		)
+		if ok:
+			cleaned += ch
+	if cleaned.is_empty():
+		cleaned = "1.0.0"
+	return cleaned
+
+func _refresh_credits_version() -> void:
+	if not credits_version_label:
+		return
+	credits_version_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	var version_text := "v%s" % _app_version_string()
+	credits_version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	credits_version_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	HudLayout.apply_raster_pixel_label(
+		credits_version_label,
+		version_text,
+		28,
+		Color(0.67, 0.67, 0.67, 1)
+	)
 
 func _apply_editor_button_label() -> void:
 	if not editor_btn:
@@ -416,8 +467,7 @@ func _setup_how_to_play_overlay() -> void:
 	if _htp_rules:
 		_htp_rules.set_meta("_use_default_font", true)
 		_htp_rules.add_theme_color_override("default_color", Color.WHITE)
-		_htp_rules.add_theme_color_override("font_outline_color", Color.BLACK)
-		_htp_rules.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
+		HudLayout.apply_safe_outline(_htp_rules, GameConstants.MENU_TEXT_OUTLINE)
 	for btn in [_htp_prev, _htp_next]:
 		HudLayout.apply_nav_button(btn)
 	if _htp_close:
@@ -429,7 +479,9 @@ func _refresh_how_to_play_text() -> void:
 	if _htp_header == null and _htp_host:
 		_htp_header = HudLayout.ensure_how_to_play_page_header(_htp_host)
 	if _htp_header:
-		_htp_header.text = tr(HowToPlayContent.get_page_title_key(_htp_page))
+		HudLayout._bind_header_translation_key(
+			_htp_header, HowToPlayContent.get_page_title_key(_htp_page)
+		)
 		HudLayout.apply_screen_header_style(_htp_header)
 	if _htp_rules:
 		HudLayout.apply_locale_font_to_control(_htp_rules)
@@ -470,9 +522,8 @@ func _setup_tutorial_intro_panel() -> void:
 		panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
 	if _tutorial_intro_label:
 		_tutorial_intro_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.55, 1.0))
-		_tutorial_intro_label.add_theme_color_override("font_outline_color", Color.BLACK)
-		_tutorial_intro_label.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
 		HudLayout.apply_popup_label(_tutorial_intro_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
+		HudLayout.apply_safe_outline(_tutorial_intro_label, GameConstants.MENU_TEXT_OUTLINE)
 	_copy_menu_button_styles(_tutorial_intro_yes)
 	_copy_menu_button_styles(_tutorial_intro_no)
 
@@ -485,7 +536,7 @@ func _copy_menu_button_styles(target: Button) -> void:
 		if style and not (style is StyleBoxEmpty):
 			target.add_theme_stylebox_override(style_name, style)
 	target.add_theme_color_override("font_outline_color", Color.BLACK)
-	target.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
+	HudLayout.apply_safe_outline(target, GameConstants.MENU_TEXT_OUTLINE)
 
 func _show_tutorial_intro_prompt() -> void:
 	if _tutorial_intro_label:
@@ -560,6 +611,8 @@ func _on_credits_pressed() -> void:
 	if credits_text:
 		credits_text.text = tr("CREDITS_TEXT")
 		_apply_credits_fonts(credits_text)
+	else:
+		_refresh_credits_version()
 	if close_credits_btn:
 		HudLayout.style_top_bar_close_button(close_credits_btn)
 

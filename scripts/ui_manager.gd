@@ -422,8 +422,7 @@ func set_hud_buttons_disabled(is_disabled: bool) -> void:
 func update_timer(formatted_time: String) -> void:
 	if not timer_label:
 		return
-	HudLayout.prepare_timer_label(timer_label)
-	timer_label.text = HudLayout.format_time_counter(formatted_time)
+	HudLayout.set_timer_raster_text(timer_label, formatted_time)
 
 func set_timer_visibility(visible_state: bool) -> void:
 	var slot := timer_label.get_parent() as Control if timer_label else null
@@ -451,6 +450,7 @@ func display_level(num: int, is_custom: bool = false, is_tutorial: bool = false)
 	if is_tutorial:
 		level_label.modulate.a = 0.0
 		level_label.text = ""
+		HudLayout.apply_top_bar_mode_label(level_label)
 		return
 	level_label.modulate = Color.WHITE
 	var prefix: String
@@ -458,11 +458,8 @@ func display_level(num: int, is_custom: bool = false, is_tutorial: bool = false)
 		prefix = String(tr("DEV"))
 	else:
 		prefix = String(tr("LVL"))
-	level_label.set_meta("_use_default_font", not HudLayout.uses_pixel_font())
-	HudLayout.apply_locale_font_to_control(level_label)
 	level_label.text = HudLayout.format_outlined_center_text("%s\n%d" % [prefix, num])
 	HudLayout.apply_top_bar_mode_label(level_label)
-	# Font size is fitted inside apply_top_bar_mode_label from the plain text.
 
 func show_status_valid() -> void:
 	_status_error_keys.clear()
@@ -562,21 +559,30 @@ func show_session_resume_prompt() -> void:
 		end_dimmer.color = Color(0, 0, 0, 0)
 	_set_end_dimmer_visible(true)
 	if resume_prompt_label:
-		resume_prompt_label.text = tr("SESSION_RESUME_PROMPT")
-		HudLayout.apply_popup_label(resume_prompt_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
+		resume_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		resume_prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		resume_prompt_label.clip_contents = true
+		# Panel is 820 wide with 48px side insets → ~724 usable.
+		var prompt_w := 700
+		if resume_panel:
+			prompt_w = maxi(200, int(resume_panel.custom_minimum_size.x) - 96)
+		HudLayout.apply_raster_pixel_label(
+			resume_prompt_label,
+			tr("SESSION_RESUME_PROMPT"),
+			GameConstants.UI_BODY_FONT_SIZE,
+			Color(1, 0.84, 0, 1),
+			prompt_w
+		)
 	if resume_panel:
 		var continue_btn := resume_panel.get_node_or_null("Buttons/ContinueButton") as Button
 		var restart_btn := resume_panel.get_node_or_null("Buttons/RestartButton") as Button
 		var back_btn := resume_panel.get_node_or_null("Buttons/BackButton") as Button
 		if continue_btn:
-			continue_btn.text = tr("UI_CONTINUE")
-			_style_resume_button(continue_btn)
+			_style_resume_button(continue_btn, tr("UI_CONTINUE"))
 		if restart_btn:
-			restart_btn.text = tr("UI_NEW_LAYOUT")
-			_style_resume_button(restart_btn)
+			_style_resume_button(restart_btn, tr("UI_NEW_LAYOUT"))
 		if back_btn:
-			back_btn.text = tr("UI_BACK")
-			_style_resume_button(back_btn)
+			_style_resume_button(back_btn, tr("UI_BACK"))
 	if victory_panel:
 		victory_panel.visible = false
 	if resume_panel:
@@ -605,16 +611,14 @@ func _on_session_back_pressed() -> void:
 func _make_end_screen_panel_style() -> StyleBoxFlat:
 	return HudLayout.make_dialog_panel_style()
 
-func _style_resume_button(button: Button) -> void:
+func _style_resume_button(button: Button, text: String = "") -> void:
 	if not button:
 		return
 	button.custom_minimum_size = Vector2(460, 110)
-	var outline := 8
-	if OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios"):
-		outline = 5
-	button.add_theme_color_override("font_outline_color", Color.BLACK)
-	button.add_theme_constant_override("outline_size", outline)
-	HudLayout.fit_text_button(button, 28, 18)
+	var display := text if not text.is_empty() else button.text
+	if button.auto_translate_mode != Node.AUTO_TRANSLATE_MODE_DISABLED and text.is_empty():
+		display = String(TranslationServer.translate(button.text))
+	HudLayout.apply_raster_pixel_button(button, display, 28)
 	button.autowrap_mode = TextServer.AUTOWRAP_OFF
 	button.clip_text = false
 
@@ -630,7 +634,9 @@ func _refresh_how_to_play_text() -> void:
 	if _htp_header == null and how_to_play_container:
 		_htp_header = HudLayout.ensure_how_to_play_page_header(how_to_play_container)
 	if _htp_header:
-		_htp_header.text = tr(HowToPlayContent.get_page_title_key(_htp_page))
+		HudLayout._bind_header_translation_key(
+			_htp_header, HowToPlayContent.get_page_title_key(_htp_page)
+		)
 		HudLayout.apply_screen_header_style(_htp_header)
 	if rules_label:
 		_setup_how_to_play_font()
@@ -689,7 +695,7 @@ func show_victory(
 func _refresh_victory_locale() -> void:
 	if win_label:
 		if _is_last_level_completed:
-			win_label.text = tr("ALL_COMPLETED") + "\n" + tr("YOU_WIN")
+			win_label.text = _all_levels_completed_text() + "\n" + tr("YOU_WIN")
 		elif _victory_is_custom:
 			win_label.text = (tr("CUSTOM_COMPLETED") % _victory_display_num) + "\n" + tr("COMPLETED")
 		elif _victory_is_tutorial:
@@ -701,29 +707,48 @@ func _refresh_victory_locale() -> void:
 		win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		win_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	if victory_restart_label:
-		victory_restart_label.text = tr("NEXT_LEVEL")
-		HudLayout.apply_locale_font_to_control(victory_restart_label)
+		victory_restart_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		HudLayout.apply_raster_pixel_label(
+			victory_restart_label, tr("NEXT_LEVEL"), GameConstants.UI_BTN_PANEL_FONT, Color.WHITE
+		)
 	elif restart_button:
 		restart_button.text = tr("NEXT_LEVEL")
 	if restart_button:
 		restart_button.visible = not _is_last_level_completed
-		HudLayout.apply_panel_button(restart_button)
+		if victory_restart_label == null:
+			HudLayout.apply_raster_pixel_button(
+				restart_button, tr("NEXT_LEVEL"), GameConstants.UI_BTN_PANEL_FONT
+			)
+		else:
+			HudLayout.apply_panel_button(restart_button)
 	if play_again_label:
-		play_again_label.text = tr("PLAY_AGAIN")
-		HudLayout.apply_locale_font_to_control(play_again_label)
+		play_again_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		HudLayout.apply_raster_pixel_label(
+			play_again_label, tr("PLAY_AGAIN"), GameConstants.UI_BTN_PANEL_FONT, Color.WHITE
+		)
 	if play_again_button:
 		play_again_button.visible = true
 		HudLayout.apply_panel_button(play_again_button)
 	if main_menu_button:
 		var menu_label := main_menu_button.get_node_or_null("HBoxContainer/Label") as Label
 		if menu_label:
-			menu_label.text = tr("UI_MAIN_MENU")
-			HudLayout.apply_locale_font_to_control(menu_label)
+			menu_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			HudLayout.apply_raster_pixel_label(
+				menu_label, tr("UI_MAIN_MENU"), GameConstants.UI_BTN_PANEL_FONT, Color.WHITE
+			)
 		HudLayout.apply_panel_button(main_menu_button)
 	if victory_results_host and not _victory_star_result.is_empty():
 		_populate_victory_results(_victory_star_result)
 	if victory_panel and victory_panel.visible:
 		_layout_victory_panel(_victory_star_result)
+
+func _all_levels_completed_text() -> String:
+	var text := String(tr("ALL_COMPLETED")).strip_edges()
+	while text.ends_with("!") or text.ends_with("！"):
+		text = text.substr(0, text.length() - 1).strip_edges()
+	if text.begins_with("¡"):
+		text = text.substr(1).strip_edges()
+	return text
 
 func _setup_end_layer() -> void:
 	if end_center:
@@ -763,8 +788,12 @@ func _raise_victory_buttons() -> void:
 func _set_victory_preview(texture: Texture2D) -> void:
 	if not victory_preview:
 		return
+	var frame := LevelPreview.ensure_preview_frame(victory_preview)
 	victory_preview.texture = texture
-	victory_preview.visible = texture != null
+	var should_show := texture != null
+	victory_preview.visible = should_show
+	if frame:
+		frame.visible = should_show
 
 func _populate_victory_results(star_result: Dictionary) -> void:
 	if not victory_results_host:
@@ -789,16 +818,24 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 	victory_results_host.offset_bottom = title_bottom + 8.0 + results_h
 
 	var cursor := title_bottom + 8.0 + results_h
-	var preview := victory_preview
 	var preview_h := 0.0
-	if preview.visible and preview.texture != null:
-		preview_h = 320.0
+	var frame := LevelPreview.ensure_preview_frame(victory_preview)
+	var show_preview := victory_preview.visible and victory_preview.texture != null
+	if show_preview:
+		var inner := 320.0
+		preview_h = LevelPreview.frame_outer_size(inner)
 		cursor += 24.0 if results_h > 0.0 else 16.0
-		preview.offset_left = -160.0
-		preview.offset_right = 160.0
-		preview.offset_top = cursor
-		preview.offset_bottom = cursor + preview_h
+		var half := preview_h * 0.5
+		var target: Control = frame
+		if target == null:
+			target = victory_preview
+		target.offset_left = -half
+		target.offset_right = half
+		target.offset_top = cursor
+		target.offset_bottom = cursor + preview_h
 		cursor += preview_h
+	elif frame:
+		frame.visible = false
 
 	var buttons_top := cursor + 28.0
 	var row := 0

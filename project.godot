@@ -16,6 +16,7 @@ general/ios/enabled=false
 [application]
 
 config/name="Spaceblox"
+config/version="1.0.0"
 run/main_scene="res://scenes/splash.tscn"
 config/quit_on_go_back=false
 config/features=PackedStringArray("4.7", "GL Compatibility")

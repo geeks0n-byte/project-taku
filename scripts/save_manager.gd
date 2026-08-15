@@ -166,6 +166,7 @@ func consume_interstitial_wins() -> void:
 func set_language(lang_code: String) -> void:
 	current_language = lang_code
 	TranslationServer.set_locale(lang_code)
+	HudLayout.clear_pixel_text_cache()
 	save_progress()
 	apply_locale_fonts()
 	language_changed.emit()
@@ -176,6 +177,17 @@ func apply_locale_fonts() -> void:
 		HudLayout.apply_locale_fonts_to_tree(tree.root)
 
 func _on_tree_node_added(node: Node) -> void:
+	if node == null or not is_instance_valid(node):
+		return
+	if not (
+		node is Button
+		or node is Label
+		or node is LineEdit
+		or node is OptionButton
+		or node is RichTextLabel
+	):
+		return
+	# Direct apply — call_deferred(String, Node) hits Godot's Object→Object bug.
 	HudLayout.apply_locale_font_to_control(node)
 
 func set_background_static(is_static: bool) -> void:
@@ -216,7 +228,11 @@ func is_level_unlocked(level_num: int) -> bool:
 	return level_num <= max_unlocked_level
 
 func get_level_star_bits(level_num: int) -> int:
-	return int(level_star_bits.get(str(level_num), 0))
+	var bits := int(level_star_bits.get(str(level_num), 0))
+	# Cleared levels always count the completion star (bit 4 / legacy moves bit).
+	if level_num < max_unlocked_level:
+		bits |= LevelStars.BIT_COMPLETE
+	return bits
 
 func record_level_stars(level_num: int, bits: int) -> int:
 	var key := str(level_num)

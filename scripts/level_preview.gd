@@ -16,6 +16,55 @@ static var _tile_image_cache: Dictionary = {}
 static var _preview_texture_cache: Dictionary = {}
 const _PREVIEW_CACHE_MAX := 64
 
+static func make_frame_style() -> StyleBoxFlat:
+	var frame_style := StyleBoxFlat.new()
+	frame_style.bg_color = COLOR_BG
+	frame_style.border_color = Color(0.35, 0.42, 0.55, 1.0)
+	frame_style.set_border_width_all(3)
+	frame_style.set_corner_radius_all(8)
+	frame_style.content_margin_left = 4.0
+	frame_style.content_margin_top = 4.0
+	frame_style.content_margin_right = 4.0
+	frame_style.content_margin_bottom = 4.0
+	return frame_style
+
+static func frame_outer_size(inner_size: float) -> float:
+	# border 3 + content pad 4 on each side
+	return inner_size + 14.0
+
+## Ensures `preview` sits inside a bordered PanelContainer (level-select style).
+static func ensure_preview_frame(preview: TextureRect) -> PanelContainer:
+	if preview == null:
+		return null
+	var parent := preview.get_parent()
+	if parent is PanelContainer and (parent as PanelContainer).has_meta("_level_preview_frame"):
+		var existing := parent as PanelContainer
+		existing.add_theme_stylebox_override("panel", make_frame_style())
+		return existing
+	if parent == null:
+		return null
+	var index := preview.get_index()
+	var frame := PanelContainer.new()
+	frame.name = "%sFrame" % preview.name
+	frame.set_meta("_level_preview_frame", true)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.visible = preview.visible
+	frame.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	frame.add_theme_stylebox_override("panel", make_frame_style())
+	parent.add_child(frame)
+	parent.move_child(frame, index)
+	preview.reparent(frame)
+	preview.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	preview.offset_left = 0.0
+	preview.offset_top = 0.0
+	preview.offset_right = 0.0
+	preview.offset_bottom = 0.0
+	preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	return frame
+
 static func make_texture(level: LevelData, pixel_size: int = GameConstants.LEVEL_PREVIEW_SIZE) -> ImageTexture:
 	if level == null:
 		return ImageTexture.create_from_image(Image.create(pixel_size, pixel_size, false, Image.FORMAT_RGBA8))
@@ -24,6 +73,8 @@ static func make_texture(level: LevelData, pixel_size: int = GameConstants.LEVEL
 	if layout.is_empty():
 		var dims := LevelUtils.get_dimensions_from_level(level)
 		layout = LevelUtils.make_empty_layout(maxi(1, dims.x), maxi(1, dims.y))
+	if LevelUtils.is_shape_only_layout(layout):
+		return _make_silhouette_texture(layout, pixel_size)
 	var preview_layout := layout.duplicate()
 	var active_shifters := _active_shifter_set(level)
 	var shifter_cells := _shifter_cell_set(level)
@@ -77,7 +128,11 @@ static func make_texture_from_layout(
 			if state == GameConstants.TileState.WALL:
 				continue
 			var dst := origin + Vector2i(x * cell, y * cell)
-			image.fill_rect(Rect2i(dst.x, dst.y, cell, cell), _color_for_state(state))
+			var tile_img := _resized_tile(_path_for_state(state), cell)
+			if tile_img:
+				image.blend_rect(tile_img, Rect2i(Vector2i.ZERO, tile_img.get_size()), dst)
+			else:
+				image.fill_rect(Rect2i(dst.x, dst.y, cell, cell), _color_for_state(state))
 			if state == GameConstants.TileState.SHIFTER and shifter_dirs.has(coord):
 				_blit_shifter_arrow(image, dst, cell, shifter_dirs[coord])
 
@@ -87,7 +142,7 @@ static func make_texture_from_layout(
 
 static func _layout_cache_key(layout: Dictionary, pixel_size: int, shifter_dirs: Dictionary) -> String:
 	var parts: PackedStringArray = []
-	parts.append("v4")
+	parts.append("v5tiles")
 	parts.append(str(pixel_size))
 	var coords: Array = layout.keys()
 	coords.sort_custom(func(a, b): return str(a) < str(b))
@@ -140,88 +195,42 @@ static func shifter_dirs_from_board_cells(board_cells: Dictionary) -> Dictionary
 	return dirs
 
 static func _make_silhouette_texture(layout: Dictionary, pixel_size: int) -> ImageTexture:
-	return make_texture_from_layout(layout, pixel_size)
+	if layout == null or layout.is_empty():
+		return ImageTexture.create_from_image(Image.create(pixel_size, pixel_size, false, Image.FORMAT_RGBA8))
 
-static func _draw_silhouette_grid_lines(
-	image: Image,
-	layout: Dictionary,
-	width: int,
-	height: int,
-	cell: int
-) -> void:
-	_draw_silhouette_grid_lines_at(image, layout, width, height, cell, Vector2i.ZERO)
+	var max_x := 0
+	var max_y := 0
+	for coord in layout.keys():
+		max_x = maxi(max_x, int(coord.x))
+		max_y = maxi(max_y, int(coord.y))
+	var width: int = maxi(1, max_x + 1)
+	var height: int = maxi(1, max_y + 1)
 
-static func _draw_silhouette_grid_lines_at(
-	image: Image,
-	layout: Dictionary,
-	width: int,
-	height: int,
-	cell: int,
-	origin: Vector2i
-) -> void:
-	if cell < 2:
-		return
-	var line_w := clampi(int(round(float(cell) * 0.08)), 1, maxi(1, int(cell / 4.0)))
-	var line_color := Color(0.0, 0.0, 0.0, 0.85)
+	var image := Image.create(pixel_size, pixel_size, false, Image.FORMAT_RGBA8)
+	image.fill(COLOR_BG)
+
+	var pad := maxi(4, int(round(float(pixel_size) * 0.1)))
+	var inner := maxi(8, pixel_size - pad * 2)
+	var cell := maxi(3, int(float(inner) / float(maxi(width, height))))
+	var board_w := width * cell
+	var board_h := height * cell
+	var origin := Vector2i(
+		int((pixel_size - board_w) / 2.0),
+		int((pixel_size - board_h) / 2.0)
+	)
 
 	for y in height:
 		for x in width:
 			var coord := Vector2i(x, y)
-			if not layout.has(coord):
+			var state: int = GameConstants.TileState.WALL
+			if layout.has(coord):
+				state = int(layout[coord])
+			if state == GameConstants.TileState.WALL:
 				continue
-			var is_playable := int(layout[coord]) != GameConstants.TileState.WALL
+			var dst := origin + Vector2i(x * cell, y * cell)
+			image.fill_rect(Rect2i(dst.x, dst.y, cell, cell), COLOR_EMPTY)
 
-			var right_playable := false
-			if layout.has(coord + Vector2i(1, 0)):
-				right_playable = int(layout[coord + Vector2i(1, 0)]) != GameConstants.TileState.WALL
-			var bot_playable := false
-			if layout.has(coord + Vector2i(0, 1)):
-				bot_playable = int(layout[coord + Vector2i(0, 1)]) != GameConstants.TileState.WALL
-
-			var draw_right := is_playable or right_playable
-			var draw_bottom := is_playable or bot_playable
-			var draw_top := is_playable and (
-				not layout.has(coord + Vector2i(0, -1))
-				or int(layout[coord + Vector2i(0, -1)]) == GameConstants.TileState.WALL
-			)
-			var draw_left := is_playable and (
-				not layout.has(coord + Vector2i(-1, 0))
-				or int(layout[coord + Vector2i(-1, 0)]) == GameConstants.TileState.WALL
-			)
-
-			var x0 := origin.x + x * cell
-			var y0 := origin.y + y * cell
-			var x1 := x0 + cell
-			var y1 := y0 + cell
-
-			if draw_left:
-				_fill_v_line(image, x0, y0, y1, line_w, line_color)
-			if draw_right:
-				_fill_v_line(image, x1 - line_w, y0, y1, line_w, line_color)
-			if draw_top:
-				_fill_h_line(image, y0, x0, x1, line_w, line_color)
-			if draw_bottom:
-				_fill_h_line(image, y1 - line_w, x0, x1, line_w, line_color)
-
-static func _fill_v_line(image: Image, x: int, y0: int, y1: int, thickness: int, color: Color) -> void:
-	var w := image.get_width()
-	var h := image.get_height()
-	var px := clampi(x, 0, w - 1)
-	var tw := mini(thickness, w - px)
-	var py := clampi(mini(y0, y1), 0, h)
-	var ph := clampi(absi(y1 - y0), 0, h - py)
-	if tw > 0 and ph > 0:
-		image.fill_rect(Rect2i(px, py, tw, ph), color)
-
-static func _fill_h_line(image: Image, y: int, x0: int, x1: int, thickness: int, color: Color) -> void:
-	var w := image.get_width()
-	var h := image.get_height()
-	var py := clampi(y, 0, h - 1)
-	var th := mini(thickness, h - py)
-	var px := clampi(mini(x0, x1), 0, w)
-	var pw := clampi(absi(x1 - x0), 0, w - px)
-	if th > 0 and pw > 0:
-		image.fill_rect(Rect2i(px, py, pw, th), color)
+	return ImageTexture.create_from_image(image)
 
 static func _shifter_cell_set(level: LevelData) -> Dictionary:
 	var shifter_cells := {}

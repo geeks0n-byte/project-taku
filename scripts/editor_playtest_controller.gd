@@ -382,10 +382,7 @@ func _build_end_stats() -> Dictionary:
 	var star_result := LevelStars.evaluate(
 		playtest_elapsed_seconds,
 		playtest_star_time_limit,
-		hints_used,
-		playtest_shifter_moves,
-		playtest_required_shifter_moves,
-		has_shifters
+		hints_used
 	)
 	return {
 		"star_result": star_result,

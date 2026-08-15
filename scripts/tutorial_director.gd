@@ -613,7 +613,7 @@ func _set_next_visible(show_next: bool) -> void:
 	if _next_button:
 		_next_button.visible = show_next
 		if show_next:
-			HudLayout.apply_nav_button(_next_button)
+			_style_tutorial_next_button()
 			_position_next_button()
 			var step := _current_step()
 			var free_place := (
@@ -641,6 +641,20 @@ func _set_next_visible(show_next: bool) -> void:
 			HudLayout.stop_button_attention_pulse(_next_button)
 			HudLayout.stop_toggle_mask_breathe(_next_button)
 			HudLayout.apply_toggle_active_mask(_next_button, false)
+
+func _style_tutorial_next_button() -> void:
+	if not _next_button:
+		return
+	var icon_root := _next_button.get_node_or_null("IconContainer")
+	if icon_root:
+		icon_root.queue_free()
+	_next_button.text = "UI_NEXT"
+	_next_button.flat = false
+	_next_button.clip_text = true
+	_next_button.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_next_button.custom_minimum_size = GameConstants.UI_BTN_DIALOG_SIZE
+	_next_button.set_meta("_use_default_font", HudLayout.prefer_default_font())
+	HudLayout.apply_dialog_button(_next_button)
 
 func _on_next_pressed() -> void:
 	if not _active or not _awaiting_next:
@@ -736,7 +750,10 @@ func _ensure_next_button() -> void:
 func _position_next_button() -> void:
 	if not _next_button:
 		return
-	var btn_size := GameConstants.UI_BTN_NAV_SIZE
+	_style_tutorial_next_button()
+	var btn_size := _next_button.custom_minimum_size
+	if btn_size.x <= 0.0 or btn_size.y <= 0.0:
+		btn_size = GameConstants.UI_BTN_DIALOG_SIZE
 	var half_w := btn_size.x * 0.5
 	var base_bottom := 480.0 + GameConstants.AD_BANNER_RESERVE
 	var bottom_margin := base_bottom
@@ -750,7 +767,6 @@ func _position_next_button() -> void:
 			220.0 + GameConstants.AD_BANNER_RESERVE,
 			base_bottom - overflow
 		)
-	HudLayout.apply_nav_button(_next_button)
 	_next_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_next_button.offset_left = -half_w
 	_next_button.offset_right = half_w
