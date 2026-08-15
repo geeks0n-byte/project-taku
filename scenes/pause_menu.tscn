@@ -57,7 +57,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 0
 color = Color(0, 0, 0, 0)
 
 [node name="CenterContainer" type="CenterContainer" parent="." unique_id=84648387]
@@ -65,6 +64,8 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_top = 448.0
+offset_bottom = -222.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -73,23 +74,27 @@ layout_mode = 2
 theme_override_constants/separation = 40
 alignment = 1
 
-[node name="TitleLabel" type="Label" parent="CenterContainer/VBoxContainer" unique_id=2027110153]
-layout_mode = 2
+[node name="TitleLabel" type="Label" parent="." unique_id=2027110153]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 260.0
+offset_right = -24.0
+offset_bottom = 412.0
+grow_horizontal = 2
+mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.84, 0, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 16
+theme_override_constants/outline_size = 12
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 64
+theme_override_font_sizes/font_size = 72
 text = "PAUSED"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Spacer" type="Control" parent="CenterContainer/VBoxContainer" unique_id=2110258819]
-custom_minimum_size = Vector2(0, 40)
-layout_mode = 2
-
 [node name="ResumeButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=1602945635]
-custom_minimum_size = Vector2(500, 120)
+custom_minimum_size = Vector2(720, 150)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -102,7 +107,7 @@ theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 text = "UI_RESUME"
 
 [node name="RestartButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=265163747]
-custom_minimum_size = Vector2(500, 120)
+custom_minimum_size = Vector2(720, 150)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -114,8 +119,21 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 text = "UI_NEW_LAYOUT"
 
+[node name="LevelSelectButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=832539972]
+custom_minimum_size = Vector2(720, 150)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "UI_LEVEL_SELECT"
+
 [node name="SettingsButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=265163748]
-custom_minimum_size = Vector2(500, 120)
+custom_minimum_size = Vector2(720, 150)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -127,36 +145,8 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 text = "UI_OPTIONS"
 
-[node name="AutoWinButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=510154542]
-visible = false
-custom_minimum_size = Vector2(500, 120)
-layout_mode = 2
-size_flags_horizontal = 4
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
-theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 32
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-text = "DEBUG_AUTO_WIN"
-
-[node name="AutoLoseButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=510154543]
-visible = false
-custom_minimum_size = Vector2(500, 120)
-layout_mode = 2
-size_flags_horizontal = 4
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
-theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 32
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-text = "DEBUG_AUTO_LOSE"
-
 [node name="QuitButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=389499878]
-custom_minimum_size = Vector2(500, 120)
+custom_minimum_size = Vector2(720, 150)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -167,3 +157,17 @@ theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 text = "UI_MAIN_MENU"
+
+[node name="AutoWinButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=510154542]
+visible = false
+custom_minimum_size = Vector2(720, 150)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+text = "DEBUG_AUTO_WIN"

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128" shape-rendering="crispEdges">
+  <!-- Bold AD lettermark -->
+  <g fill="#1d2b53" transform="translate(0, 1)">
+    <!-- A -->
+    <rect x="2" y="2" width="3" height="2"/>
+    <rect x="1" y="4" width="2" height="7"/>
+    <rect x="4" y="4" width="2" height="7"/>
+    <rect x="2" y="6" width="3" height="2"/>
+    <!-- D -->
+    <rect x="8" y="2" width="2" height="9"/>
+    <rect x="10" y="2" width="3" height="2"/>
+    <rect x="12" y="4" width="2" height="5"/>
+    <rect x="10" y="9" width="3" height="2"/>
+  </g>
+  <g fill="#ffeb3b">
+    <!-- A -->
+    <rect x="2" y="2" width="3" height="2"/>
+    <rect x="1" y="4" width="2" height="7"/>
+    <rect x="4" y="4" width="2" height="7"/>
+    <rect x="2" y="6" width="3" height="2"/>
+    <!-- D -->
+    <rect x="8" y="2" width="2" height="9"/>
+    <rect x="10" y="2" width="3" height="2"/>
+    <rect x="12" y="4" width="2" height="5"/>
+    <rect x="10" y="9" width="3" height="2"/>
+  </g>
+</svg>

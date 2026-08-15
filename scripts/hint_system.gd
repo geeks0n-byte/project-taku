@@ -19,9 +19,7 @@ static func count_usable_hints(
 		prefer_hidden_pool,
 		false
 	)
-	if not open.is_empty():
-		return open.size()
-	return _collect_candidates(
+	var filled := _collect_candidates(
 		board_cells,
 		active_constraints,
 		solved_reference,
@@ -29,7 +27,8 @@ static func count_usable_hints(
 		grid_size,
 		prefer_hidden_pool,
 		true
-	).size()
+	)
+	return open.size() + filled.size()
 
 static func pick_hint(
 	board_cells: Dictionary,
@@ -39,20 +38,6 @@ static func pick_hint(
 	grid_size: Vector2i = Vector2i.ZERO,
 	prefer_hidden_pool: bool = false
 ) -> Variant:
-	var open: Array = _collect_candidates(
-		board_cells,
-		active_constraints,
-		solved_reference,
-		hidden_reference_constraints,
-		grid_size,
-		prefer_hidden_pool,
-		false
-	)
-	var pick = _pick_by_priority(
-		board_cells, active_constraints, solved_reference, open, prefer_hidden_pool
-	)
-	if pick != null:
-		return pick
 	var filled: Array = _collect_candidates(
 		board_cells,
 		active_constraints,
@@ -62,7 +47,29 @@ static func pick_hint(
 		prefer_hidden_pool,
 		true
 	)
-	return _pick_both_filled(board_cells, active_constraints, solved_reference, filled, prefer_hidden_pool)
+	var wrong_filled: Variant = _pick_both_filled(
+		board_cells, active_constraints, solved_reference, filled, prefer_hidden_pool, true
+	)
+	if wrong_filled != null:
+		return wrong_filled
+
+	var open: Array = _collect_candidates(
+		board_cells,
+		active_constraints,
+		solved_reference,
+		hidden_reference_constraints,
+		grid_size,
+		prefer_hidden_pool,
+		false
+	)
+	var pick: Variant = _pick_by_priority(
+		board_cells, active_constraints, solved_reference, open, prefer_hidden_pool
+	)
+	if pick != null:
+		return pick
+	return _pick_both_filled(
+		board_cells, active_constraints, solved_reference, filled, prefer_hidden_pool, false
+	)
 
 static func attempt_dynamic_solve(
 	board_cells: Dictionary,
@@ -277,6 +284,7 @@ static func _pick_by_priority(
 	candidates: Array,
 	prefer_hidden_pool: bool = false
 ) -> Variant:
+	var priority_0: Array = []
 	var priority_1: Array = []
 	var priority_2: Array = []
 	var priority_3: Array = []
@@ -287,9 +295,11 @@ static func _pick_by_priority(
 			continue
 		_bucket_candidate(
 			board_cells, active_constraints, solved_reference, candidate,
-			priority_1, priority_2, priority_3, priority_4
+			priority_0, priority_1, priority_2, priority_3, priority_4
 		)
 
+	if priority_0.size() > 0:
+		return priority_0.pick_random()
 	if priority_1.size() > 0:
 		return priority_1.pick_random()
 	if priority_2.size() > 0:
@@ -305,7 +315,8 @@ static func _pick_both_filled(
 	_active_constraints: Array,
 	solved_reference: Dictionary,
 	candidates: Array,
-	prefer_hidden_pool: bool
+	prefer_hidden_pool: bool,
+	wrong_only: bool = false
 ) -> Variant:
 	var involving_wrong: Array = []
 	var other: Array = []
@@ -318,6 +329,8 @@ static func _pick_both_filled(
 			other.append(candidate)
 	if involving_wrong.size() > 0:
 		return involving_wrong.pick_random()
+	if wrong_only:
+		return null
 	if other.size() > 0:
 		return other.pick_random()
 	return null
@@ -344,11 +357,29 @@ static func _involves_wrong_cell(
 			return true
 	return false
 
+static func _cell_is_wrong(
+	board_cells: Dictionary,
+	solved_reference: Dictionary,
+	coord: Vector2i
+) -> bool:
+	if solved_reference.is_empty() or not board_cells.has(coord) or not solved_reference.has(coord):
+		return false
+	var cell = board_cells[coord]
+	if cell.state == GameConstants.TileState.EMPTY or cell.state == GameConstants.TileState.WALL:
+		return false
+	if cell.state == GameConstants.TileState.SHIFTER:
+		return false
+	var expected = int(solved_reference[coord])
+	if expected < 0:
+		return false
+	return int(cell.state) != expected
+
 static func _bucket_candidate(
 	board_cells: Dictionary,
 	active_constraints: Array,
 	solved_reference: Dictionary,
 	candidate: Dictionary,
+	p0: Array,
 	p1: Array,
 	p2: Array,
 	p3: Array,
@@ -372,9 +403,15 @@ static func _bucket_candidate(
 		if not b_empty and solved_reference.has(coord_b):
 			b_correct = cell_b.state == solved_reference[coord_b]
 
+	var a_wrong := _cell_is_wrong(board_cells, solved_reference, coord_a)
+	var b_wrong := _cell_is_wrong(board_cells, solved_reference, coord_b)
+
 	var a_has_hint := _cell_has_any_constraint(coord_a, active_constraints)
 	var b_has_hint := _cell_has_any_constraint(coord_b, active_constraints)
 
+	if (a_empty and b_wrong) or (b_empty and a_wrong):
+		p0.append(candidate)
+		return
 	if (a_empty and b_fixed) or (b_empty and a_fixed):
 		p1.append(candidate)
 		return

@@ -24,6 +24,11 @@ func _ready() -> void:
 	call_deferred("apply_locale_fonts")
 
 func _sync_translations_from_csv() -> void:
+	# Exported builds use imported .translation from Project Settings.
+	# Reading translations.csv only works reliably in the editor; on device the
+	# CSV is often missing/remapped, which left keys untranslated and broke % formatting.
+	if not OS.has_feature("editor"):
+		return
 	const CSV_PATH := "res://resources/localization/translations.csv"
 	if not FileAccess.file_exists(CSV_PATH):
 		return
@@ -33,23 +38,32 @@ func _sync_translations_from_csv() -> void:
 	var headers: PackedStringArray = file.get_csv_line()
 	if headers.size() < 2 or headers[0] != "keys":
 		return
+	# Rebuild plain Translation objects from CSV so editor picks up CSV edits
+	# without waiting for reimport. OptimizedTranslation ignores add_message().
 	var locale_translations: Dictionary = {}
 	for i in range(1, headers.size()):
 		var locale := String(headers[i]).strip_edges()
 		if locale.is_empty():
 			continue
-		var translation := TranslationServer.get_translation_object(locale)
-		if translation == null:
-			translation = Translation.new()
-			translation.locale = locale
-			TranslationServer.add_translation(translation)
+		while true:
+			var existing := TranslationServer.get_translation_object(locale)
+			if existing == null:
+				break
+			TranslationServer.remove_translation(existing)
+		var translation := Translation.new()
+		translation.locale = locale
+		TranslationServer.add_translation(translation)
 		locale_translations[i] = translation
+	var expected_cols := headers.size()
 	while not file.eof_reached():
 		var row: PackedStringArray = file.get_csv_line()
 		if row.is_empty():
 			continue
 		var key := String(row[0]).strip_edges()
 		if key.is_empty() or key == "keys":
+			continue
+		if row.size() != expected_cols:
+			push_warning("translations.csv: skipped %s (got %d cols, expected %d)" % [key, row.size(), expected_cols])
 			continue
 		for i in locale_translations.keys():
 			var idx := int(i)
@@ -58,7 +72,7 @@ func _sync_translations_from_csv() -> void:
 			var message := String(row[idx])
 			if message.is_empty():
 				continue
-			(locale_translations[idx] as Translation).add_message(key, message)
+			(locale_translations[idx] as Translation).add_message(key, message.c_unescape())
 	file.close()
 
 func get_campaign_start_unlock() -> int:

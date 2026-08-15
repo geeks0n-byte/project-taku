@@ -4,7 +4,10 @@ extends RefCounted
 
 const ICON_HINT_ON: Texture2D = preload("res://resources/icons/icon_hint_on.svg")
 const ICON_HINT_OFF: Texture2D = preload("res://resources/icons/icon_hint_off.svg")
+const ICON_AD: Texture2D = preload("res://resources/icons/icon_ad.svg")
 const COUNT_LABEL_NAME := "HintCountLabel"
+const COUNT_ICON_NAME := "HintCountIcon"
+const COUNT_FONT_SIZE := GameConstants.HUD_COUNTER_LABEL_FONT_SIZE
 
 static func update_button(button: Button, has_action: bool, remaining: int = -1) -> void:
 	if not button:
@@ -28,25 +31,29 @@ static func update_toggle_button(button: Button, is_on: bool) -> void:
 
 static func _update_count_badge(button: Button, remaining: int) -> void:
 	var label := _ensure_count_label(button)
-	if label == null:
+	var ad_icon := _ensure_count_icon(button)
+	if label == null or ad_icon == null:
 		return
 	if remaining < 0:
 		label.visible = false
+		ad_icon.visible = false
 		return
-	label.visible = true
 	if remaining == 0:
-		label.text = String(TranslationServer.translate("UI_AD"))
-		label.add_theme_color_override("font_color", Color.WHITE)
-	else:
-		label.text = str(remaining)
-		label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.35, 1.0))
+		label.visible = false
+		ad_icon.visible = true
+		return
+	ad_icon.visible = false
+	label.visible = true
+	label.text = str(remaining)
+	label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.35, 1.0))
+	_apply_count_label_font(label)
 
 static func _ensure_count_label(button: Button) -> Label:
 	if not button:
 		return null
 	var existing := button.get_node_or_null(COUNT_LABEL_NAME) as Label
 	if existing:
-		_apply_count_label_layout(existing)
+		_apply_count_label_font(existing)
 		return existing
 	var label := Label.new()
 	label.name = COUNT_LABEL_NAME
@@ -54,24 +61,57 @@ static func _ensure_count_label(button: Button) -> Label:
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_apply_count_label_layout(label)
+	_apply_count_label_font(label)
 	label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.35, 1.0))
 	label.add_theme_color_override("font_outline_color", Color.BLACK)
 	label.add_theme_constant_override("outline_size", 8)
-	if HudLayout.PIXEL_FONT:
-		label.add_theme_font_override("font", HudLayout.PIXEL_FONT)
-	label.add_theme_font_size_override(
-		"font_size", HudLayout.scaled_font_size(GameConstants.HUD_COUNTER_LABEL_FONT_SIZE)
-	)
 	label.visible = false
 	button.add_child(label)
 	return label
 
+static func _ensure_count_icon(button: Button) -> TextureRect:
+	if not button:
+		return null
+	var existing := button.get_node_or_null(COUNT_ICON_NAME) as TextureRect
+	if existing:
+		return existing
+	var icon := TextureRect.new()
+	icon.name = COUNT_ICON_NAME
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.texture = ICON_AD
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_apply_count_icon_layout(icon)
+	icon.visible = false
+	button.add_child(icon)
+	return icon
+
+static func _apply_count_label_font(label: Label) -> void:
+	if not label:
+		return
+	# Always Press Start 2P at English HUD size (ignore locale font scaling).
+	label.set_meta("_force_pixel_font", true)
+	if HudLayout.PIXEL_FONT:
+		label.add_theme_font_override("font", HudLayout.PIXEL_FONT)
+	label.add_theme_font_size_override("font_size", COUNT_FONT_SIZE)
+
 static func _apply_count_label_layout(label: Label) -> void:
 	label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	label.offset_left = -64.0
-	label.offset_top = 16.0
-	label.offset_right = -16.0
+	label.offset_left = -60.0
+	label.offset_top = 20.0
+	label.offset_right = -20.0
 	label.offset_bottom = 56.0
+
+static func _apply_count_icon_layout(icon: TextureRect) -> void:
+	# Same badge pocket as the hint count number, slightly inset toward button center.
+	icon.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	icon.offset_left = -60.0
+	icon.offset_top = 20.0
+	icon.offset_right = -20.0
+	icon.offset_bottom = 56.0
+	icon.custom_minimum_size = Vector2(36, 36)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 
 static func has_usable_hints(
 	board_cells: Dictionary,

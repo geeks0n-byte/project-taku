@@ -3,14 +3,16 @@ extends RefCounted
 
 
 const BIT_TIME := 1
-const BIT_GREEN := 2
+const BIT_NO_HINTS := 2
 const BIT_MOVES := 4
-const ALL_GOAL_MASKS: Array = [BIT_TIME, BIT_GREEN, BIT_MOVES]
+## Legacy alias: bit 2 used to mean the green-tile star.
+const BIT_GREEN := BIT_NO_HINTS
+const ALL_GOAL_MASKS: Array = [BIT_TIME, BIT_NO_HINTS, BIT_MOVES]
 
 const ICON_STAR_ON: Texture2D = preload("res://resources/icons/icon_star_on.svg")
 const ICON_STAR_OFF: Texture2D = preload("res://resources/icons/icon_star_off.svg")
 const STAR_ICON_SIZE := 56.0
-const SELECT_STAR_ICON_SIZE := 40.0
+const SELECT_STAR_ICON_SIZE := 34.0
 const ROW_HEIGHT := 72.0
 const RESULTS_CONTENT_WIDTH := 620.0
 const RESULTS_TITLE_FONT := 34
@@ -20,7 +22,7 @@ static func count_earned_bits(bits: int) -> int:
 	var n := 0
 	if bits & BIT_TIME:
 		n += 1
-	if bits & BIT_GREEN:
+	if bits & BIT_NO_HINTS:
 		n += 1
 	if bits & BIT_MOVES:
 		n += 1
@@ -52,8 +54,7 @@ static func format_clock(total_seconds: int) -> String:
 static func evaluate(
 	elapsed_sec: int,
 	time_limit: int,
-	greens_used: int,
-	green_target: int,
+	hints_used: int,
 	moves_used: int,
 	move_target: int,
 	has_shifters: bool
@@ -75,19 +76,15 @@ static func evaluate(
 		),
 	})
 
-	var green_earned := green_target > 0 and greens_used == green_target
-	if green_earned:
-		bits |= BIT_GREEN
+	var no_hints_earned := hints_used <= 0
+	if no_hints_earned:
+		bits |= BIT_NO_HINTS
 	goals.append({
-		"id": "green",
-		"earned": green_earned,
-		"title": TranslationServer.translate("USED"),
-		"title_icon": GameConstants.TILE_GREEN,
-		"detail": (
-			"%d / %d" % [greens_used, green_target]
-			if green_target > 0
-			else "%d / —" % greens_used
-		),
+		"id": "no_hints",
+		"earned": no_hints_earned,
+		"title": TranslationServer.translate("STAR_HINTS"),
+		"title_icon": GameConstants.ICON_HINT_ON,
+		"detail": "%d / 0" % maxi(0, hints_used),
 	})
 
 	var moves_earned := has_shifters and moves_used <= maxi(0, move_target)
@@ -128,16 +125,14 @@ static func build_requirements(level: LevelData, earned_bits: int = 0) -> Dictio
 			"elapsed_sec": 0,
 			"untimed": true,
 		}
-	var dims := LevelUtils.get_dimensions_from_level(level)
 	var time_limit := int(level.time_limit)
-	var green_target := LevelUtils.resolve_required_jokers(int(level.required_jokers), dims.x, dims.y)
 	var move_target := int(level.required_shifter_moves)
 	var has_shifters := not LevelUtils.get_shifter_pairs(level).is_empty()
 	if move_target <= 0 and has_shifters:
 		move_target = LevelUtils.compute_required_shifter_moves(LevelUtils.get_shifter_pairs(level))
 
 	var goals: Array = []
-	var bits := int(earned_bits) & (BIT_TIME | BIT_GREEN | BIT_MOVES)
+	var bits := int(earned_bits) & (BIT_TIME | BIT_NO_HINTS | BIT_MOVES)
 
 	goals.append({
 		"id": "time",
@@ -146,11 +141,11 @@ static func build_requirements(level: LevelData, earned_bits: int = 0) -> Dictio
 		"detail": format_clock(time_limit) if time_limit > 0 else "—",
 	})
 	goals.append({
-		"id": "green",
-		"earned": (bits & BIT_GREEN) != 0,
-		"title": TranslationServer.translate("USED"),
-		"title_icon": GameConstants.TILE_GREEN,
-		"detail": str(green_target) if green_target > 0 else "—",
+		"id": "no_hints",
+		"earned": (bits & BIT_NO_HINTS) != 0,
+		"title": TranslationServer.translate("STAR_HINTS"),
+		"title_icon": GameConstants.ICON_HINT_ON,
+		"detail": "0",
 	})
 	goals.append({
 		"id": "moves",

@@ -17,6 +17,7 @@ var playtest_elapsed_seconds: int = 0
 var playtest_star_time_limit: int = 0
 var playtest_shifter_moves: int = 0
 var hints_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED
+var hints_used: int = 0
 
 var _timer: Timer
 var _undo_stack := UndoStack.new()
@@ -121,6 +122,7 @@ func enter(current_level_required_jokers: int) -> void:
 
 	_undo_stack.reset(_create_snapshot())
 	hints_remaining = GameConstants.hint_limit_for_difficulty(editor_ui.editor_difficulty)
+	hints_used = 0
 	pt_ui.toggle_playtest_visibility(true)
 	_update_hud()
 	_timer.start()
@@ -170,6 +172,7 @@ func reset() -> void:
 	_update_joker_count()
 	_undo_stack.reset(_create_snapshot())
 	hints_remaining = GameConstants.hint_limit_for_difficulty(editor_ui.editor_difficulty)
+	hints_used = 0
 	_update_hud()
 	_timer.start()
 	canvas_manager.trigger_redraw()
@@ -271,6 +274,7 @@ func request_hint() -> void:
 			var pooled = playtest_hint_pool[i]
 			if (pooled["a"] == hint["a"] and pooled["b"] == hint["b"]) or (pooled["a"] == hint["b"] and pooled["b"] == hint["a"]):
 				playtest_hint_pool.remove_at(i)
+		hints_used += 1
 		if hints_remaining > 0:
 			hints_remaining -= 1
 		canvas_manager.trigger_redraw()
@@ -378,8 +382,7 @@ func _build_end_stats() -> Dictionary:
 	var star_result := LevelStars.evaluate(
 		playtest_elapsed_seconds,
 		playtest_star_time_limit,
-		LevelUtils.count_jokers_on_board(canvas_manager.board_cells),
-		playtest_required_jokers,
+		hints_used,
 		playtest_shifter_moves,
 		playtest_required_shifter_moves,
 		has_shifters

@@ -5,11 +5,11 @@ signal pause_requested
 signal reset_requested
 signal reset_confirmed
 signal reset_cancelled
-signal how_to_play_requested
-signal resume_from_tutorial_requested
-signal next_level_requested
-signal play_again_requested
-signal hint_requested
+signal how_to_play_requested 
+signal resume_from_tutorial_requested 
+signal next_level_requested  
+signal play_again_requested  
+signal hint_requested 
 signal undo_requested
 signal redo_requested
 signal session_continue_requested
@@ -39,7 +39,7 @@ signal locale_refresh_requested
 @onready var how_to_play_container: Control = $"../HowToPlayLayer/CenterContainer"
 @onready var how_to_play_panel: Control = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel"
 @onready var how_to_play_nav: HBoxContainer = $"../HowToPlayLayer/CenterContainer/NavRow"
-@onready var tutorial_back_button: Button = $"../HowToPlayLayer/CenterContainer/NavRow/BackButton"
+@onready var tutorial_back_button: Button = $"../HowToPlayLayer/CenterContainer/BackButton"
 @onready var htp_prev_button: Button = $"../HowToPlayLayer/CenterContainer/NavRow/PrevSlot/PrevButton"
 @onready var htp_next_button: Button = $"../HowToPlayLayer/CenterContainer/NavRow/NextSlot/NextButton"
 @onready var rules_label: RichTextLabel = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/RulesLabel"
@@ -95,12 +95,15 @@ func _ready() -> void:
 		SaveManager.language_changed.connect(_on_language_changed)
 
 func _layout_how_to_play() -> void:
-	HudLayout.layout_how_to_play(how_to_play_container, how_to_play_panel, how_to_play_nav)
-	HudLayout.ensure_how_to_play_nav_slots(how_to_play_nav, htp_prev_button, htp_next_button)
+	for btn in [htp_prev_button, htp_next_button]:
+		HudLayout.apply_nav_button(btn)
+	if tutorial_back_button:
+		HudLayout.style_top_bar_close_button(tutorial_back_button)
 	_htp_header = HudLayout.ensure_how_to_play_page_header(how_to_play_container)
 
 func _on_language_changed() -> void:
 	HudLayout.apply_locale_fonts_to_tree(self)
+	_apply_top_bar_buttons()
 	if _level_display_set:
 		display_level(_level_display_num, _level_display_custom, _level_display_tutorial)
 	locale_refresh_requested.emit()
@@ -129,20 +132,29 @@ func setup_ui(_show_debug_tools: bool, _cell_size: float) -> void:
 	set_joker_counter_visibility(false)
 	set_move_counter_visibility(false)
 	set_status_visible(false)
-	HudLayout.position_top_bar(top_margin)
 	if status_label:
 		HudLayout.apply_status_font(status_label, GameConstants.HUD_STATUS_FONT_SIZE)
 	call_deferred("_apply_top_bar_buttons")
 
 func _apply_top_bar_buttons() -> void:
+	HudLayout.apply_top_bar_button_cluster(top_bar_row.get_node_or_null("LeftButtons") as HBoxContainer)
+	HudLayout.apply_top_bar_button_cluster(top_bar_row.get_node_or_null("RightButtons") as HBoxContainer)
 	for button in [pause_button, reset_button, how_to_play_button, hint_button, undo_button, redo_button]:
 		HudLayout.apply_square_top_bar_button(button)
 	HudLayout.apply_top_bar_mode_label(level_label)
-	HudLayout.apply_top_bar_row(top_bar_row)
 	HudLayout.align_counter_label(timer_label, GameConstants.HUD_TIMER_Y_NUDGE)
 	HudLayout.align_counter_label(joker_counter_label)
 	HudLayout.align_counter_label(move_counter_label)
+	if timer_label:
+		HudLayout.prepare_timer_label(timer_label)
 	_refresh_counter_row_alignment()
+	if top_margin:
+		top_margin.offset_bottom = GameConstants.HUD_TOP_BAR_HEIGHT
+	if top_bar_row:
+		top_bar_row.custom_minimum_size.y = float(GameConstants.HUD_BUTTON_HEIGHT)
+	if counter_container:
+		counter_container.offset_top = GameConstants.HUD_COUNTER_ROW_TOP
+		counter_container.offset_bottom = GameConstants.HUD_COUNTER_ROW_TOP + GameConstants.HUD_COUNTER_ROW_HEIGHT
 
 func _connect_signals() -> void:
 	if pause_button and not pause_button.pressed.is_connected(_on_pause_requested):
@@ -410,7 +422,7 @@ func set_hud_buttons_disabled(is_disabled: bool) -> void:
 func update_timer(formatted_time: String) -> void:
 	if not timer_label:
 		return
-	HudLayout.prepare_counter_label(timer_label)
+	HudLayout.prepare_timer_label(timer_label)
 	timer_label.text = HudLayout.format_time_counter(formatted_time)
 
 func set_timer_visibility(visible_state: bool) -> void:
@@ -448,8 +460,9 @@ func display_level(num: int, is_custom: bool = false, is_tutorial: bool = false)
 		prefix = String(tr("LVL"))
 	level_label.set_meta("_use_default_font", not HudLayout.uses_pixel_font())
 	HudLayout.apply_locale_font_to_control(level_label)
-	level_label.add_theme_font_size_override("normal_font_size", HudLayout.scaled_font_size(GameConstants.HUD_LEVEL_FONT_SIZE))
 	level_label.text = HudLayout.format_outlined_center_text("%s\n%d" % [prefix, num])
+	HudLayout.apply_top_bar_mode_label(level_label)
+	# Font size is fitted inside apply_top_bar_mode_label from the plain text.
 
 func show_status_valid() -> void:
 	_status_error_keys.clear()
@@ -623,20 +636,23 @@ func _refresh_how_to_play_text() -> void:
 		_setup_how_to_play_font()
 		rules_label.text = HowToPlayContent.get_page_text(_htp_page)
 	if htp_prev_button:
-		htp_prev_button.text = tr("UI_PREVIOUS")
 		htp_prev_button.visible = _htp_page > 0
 		htp_prev_button.disabled = false
 		HudLayout.apply_nav_button(htp_prev_button)
 		HudLayout.refresh_button_icon_modulate(htp_prev_button)
 	if tutorial_back_button:
-		tutorial_back_button.text = tr("UI_CLOSE")
-		HudLayout.apply_secondary_button(tutorial_back_button)
+		HudLayout.style_top_bar_close_button(tutorial_back_button)
 	if htp_next_button:
-		htp_next_button.text = tr("UI_NEXT")
 		htp_next_button.visible = _htp_page < HowToPlayContent.PAGE_COUNT - 1
 		htp_next_button.disabled = false
 		HudLayout.apply_nav_button(htp_next_button)
 		HudLayout.refresh_button_icon_modulate(htp_next_button)
+	call_deferred("_layout_how_to_play_stack")
+
+func _layout_how_to_play_stack() -> void:
+	HudLayout.layout_how_to_play_stack(
+		how_to_play_container, how_to_play_panel, rules_label, how_to_play_nav
+	)
 
 func show_how_to_play() -> void:
 	_htp_page = 0

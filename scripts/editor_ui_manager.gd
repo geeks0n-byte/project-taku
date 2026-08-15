@@ -84,7 +84,6 @@ func setup_ui(grid_width: int, grid_height: int) -> void:
 	editor_height = grid_height
 	if editor_mode_label:
 		editor_mode_label.text = HudLayout.format_mode_label("EDIT_MODE", true)
-	HudLayout.position_top_bar(top_hud)
 	_apply_top_bar_buttons()
 	_ensure_hold_timer()
 	_update_number_labels()
@@ -163,10 +162,15 @@ func _bind_hold_button(button: Button, target: String, amount: int) -> void:
 	)
 
 func _apply_top_bar_buttons() -> void:
+	HudLayout.apply_top_bar_button_cluster(top_bar_row.get_node_or_null("LeftButtons") as HBoxContainer)
+	HudLayout.apply_top_bar_button_cluster(top_bar_row.get_node_or_null("RightButtons") as HBoxContainer)
 	for button in [main_menu_button, test_button, clear_button, editor_hint_button, editor_undo_button, editor_redo_button]:
 		HudLayout.apply_square_top_bar_button(button)
 	HudLayout.apply_top_bar_mode_label(editor_mode_label)
-	HudLayout.apply_top_bar_row(top_bar_row)
+	if top_hud:
+		top_hud.offset_bottom = GameConstants.HUD_TOP_BAR_HEIGHT
+	if top_bar_row:
+		top_bar_row.custom_minimum_size.y = float(GameConstants.HUD_BUTTON_HEIGHT)
 	_nudge_editor_control_icons()
 
 func _nudge_editor_control_icons() -> void:

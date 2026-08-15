@@ -15,7 +15,7 @@ static func generate_random_layout(
 	allowed_tiles: Array,
 	current_layout: Dictionary = {},
 	require_unique: bool = true,
-	lock_walls: bool = false,
+	_lock_walls: bool = false,
 	difficulty: int = Difficulty.MEDIUM
 ) -> Dictionary:
 	var attempt = 0
@@ -33,45 +33,18 @@ static func generate_random_layout(
 	
 	while attempt < 2500: 
 		attempt += 1
-		var force_no_walls = (attempt > 2000)
 		
 		var layout = {}
 		for y in range(height):
 			for x in range(width):
 				var c = Vector2i(x, y)
-				if lock_walls and current_layout.has(c) and current_layout[c] == -2:
-					layout[c] = -2 
+				if current_layout.has(c) and int(current_layout[c]) == -2:
+					layout[c] = -2
 				else:
 					layout[c] = -1
 
 		var all_cells = layout.keys()
 		all_cells.shuffle()
-
-		if not lock_walls:
-			var max_walls = 0 if force_no_walls else randi_range(0, int(all_cells.size() * 0.15))
-			var num_walls_placed = 0
-			var row_counts = {}; var col_counts = {}
-			for i in range(height): row_counts[i] = 0
-			for i in range(width): col_counts[i] = 0
-
-			for coord in all_cells:
-				if num_walls_placed >= max_walls: break
-				if row_counts[coord.y] >= width - 1 or col_counts[coord.x] >= height - 1:
-					continue
-					
-				var neighbors = [
-					coord + Vector2i(1, 0), coord + Vector2i(-1, 0),
-					coord + Vector2i(0, 1), coord + Vector2i(0, -1)
-				]
-				var playable_count = 0
-				for n in neighbors:
-					if layout.has(n) and layout[n] != -2: playable_count += 1
-				if playable_count == 4: continue 
-					
-				layout[coord] = -2
-				row_counts[coord.y] += 1
-				col_counts[coord.x] += 1
-				num_walls_placed += 1
 
 		var empty_cells = []
 		for c in layout.keys():
@@ -330,6 +303,12 @@ static func generate_random_layout(
 		if not bool(analysis.get("solvable", false)):
 			continue
 		if require_unique and not bool(analysis.get("unique", false)):
+			continue
+
+		var start_constraints: Array = final_constraints if require_unique else []
+		if not PuzzleValidator.starting_layout_is_clean(
+			layout, width, height, start_constraints, shifters
+		):
 			continue
 
 		return {

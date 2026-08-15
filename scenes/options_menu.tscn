@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://dxg5pd27av7tl" path="res://scripts/options_menu.gd" id="1_script"]
 [ext_resource type="FontFile" uid="uid://ckwxng7tlmws7" path="res://resources/fonts/PressStart2P-vaV7.ttf" id="2_font"]
 [ext_resource type="Texture2D" uid="uid://d2ql5f4tsvnk8" path="res://resources/buttons/button_tile_gray_dark.svg" id="3_tex"]
+[ext_resource type="Texture2D" uid="uid://cn061ew22eo3d" path="res://resources/icons/icon_close.svg" id="4_close"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_overlay"]
 bg_color = Color(0, 0, 0, 0)
@@ -50,6 +51,33 @@ visible = false
 layer = 20
 script = ExtResource("1_script")
 
+[node name="ScreenHeaderHost" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TitleLabel" type="Label" parent="ScreenHeaderHost"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 260.0
+offset_right = -24.0
+offset_bottom = 412.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 12
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 72
+text = "UI_OPTIONS"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="OverlayBlocker" type="Panel" parent="."]
 anchors_preset = 15
 anchor_right = 1.0
@@ -62,6 +90,8 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_overlay")
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_top = 568.0
+offset_bottom = -252.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -83,16 +113,6 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 30
 alignment = 1
-
-[node name="TitleLabel" type="Label" parent="CenterContainer/OptionsPanel/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.84, 0, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 12
-theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 48
-text = "UI_OPTIONS"
-horizontal_alignment = 1
 
 [node name="LanguageContainer" type="HBoxContainer" parent="CenterContainer/OptionsPanel/VBoxContainer"]
 custom_minimum_size = Vector2(620, 100)
@@ -261,19 +281,6 @@ auto_translate_mode = 1
 autowrap_mode = 3
 text = "UI_DELETE_CUSTOM"
 
-[node name="CloseOptionsButton" type="Button" parent="CenterContainer/OptionsPanel/VBoxContainer"]
-custom_minimum_size = Vector2(280, 90)
-layout_mode = 2
-size_flags_horizontal = 4
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
-theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 24
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-text = "UI_CLOSE"
-
 [node name="StatusLabel" type="Label" parent="CenterContainer/OptionsPanel/VBoxContainer"]
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
@@ -284,6 +291,48 @@ theme_override_font_sizes/font_size = 18
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
+
+[node name="CloseButtonHost" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="CloseOptionsButton" type="Button" parent="CloseButtonHost"]
+z_index = 20
+custom_minimum_size = Vector2(140, 140)
+layout_mode = 1
+anchors_preset = 0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 144.0
+offset_bottom = 144.0
+focus_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+
+[node name="IconContainer" type="MarginContainer" parent="CloseButtonHost/CloseOptionsButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_bottom = 4
+
+[node name="Icon" type="TextureRect" parent="CloseButtonHost/CloseOptionsButton/IconContainer"]
+custom_minimum_size = Vector2(83, 83)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("4_close")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="ConfirmBlocker" type="ColorRect" parent="."]
 visible = false

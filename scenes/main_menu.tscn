@@ -7,6 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://bnmamps4et8l4" path="res://resources/tiles/tile_green.svg" id="6_green"]
 [ext_resource type="Texture2D" uid="uid://dsu5bgexlaa44" path="res://resources/tiles/tile_yellow.svg" id="7_yellow"]
 [ext_resource type="Texture2D" uid="uid://dkilaw7wyetxk" path="res://resources/tiles/tile_blue.svg" id="8_blue"]
+[ext_resource type="Texture2D" uid="uid://cn061ew22eo3d" path="res://resources/icons/icon_close.svg" id="9_close"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_normal"]
 content_margin_left = 8.0
@@ -151,6 +152,8 @@ layer = 0
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_top = 448.0
+offset_bottom = -192.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -247,16 +250,14 @@ flat = true
 [node name="DebugBar" type="HBoxContainer" parent="UILayer" unique_id=1125842300]
 visible = false
 z_index = 8
-anchors_preset = 12
-anchor_top = 1.0
+anchors_preset = 10
 anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 12.0
-offset_top = -396.0
-offset_right = -12.0
-offset_bottom = -300.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 120.0
 grow_horizontal = 2
-grow_vertical = 0
+mouse_filter = 0
 theme_override_constants/separation = 8
 alignment = 1
 
@@ -314,21 +315,37 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_overlay")
 
+[node name="CreditsTitle" type="Label" parent="UILayer/OverlayBlocker" unique_id=1679827605]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 260.0
+offset_right = -24.0
+offset_bottom = 412.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 12
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 64
+text = "UI_CREDITS"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="CreditsPanel" type="Panel" parent="UILayer/OverlayBlocker" unique_id=2062593968]
 visible = false
-custom_minimum_size = Vector2(780, 720)
+custom_minimum_size = Vector2(860, 900)
 layout_mode = 1
-anchors_preset = 8
+anchors_preset = 5
 anchor_left = 0.5
-anchor_top = 0.5
 anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -390.0
-offset_top = -360.0
-offset_right = 390.0
-offset_bottom = 360.0
+offset_left = -430.0
+offset_top = 488.0
+offset_right = 430.0
+offset_bottom = 1388.0
 grow_horizontal = 2
-grow_vertical = 2
+grow_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="UILayer/OverlayBlocker/CreditsPanel" unique_id=1264851699]
@@ -337,23 +354,13 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 40.0
-offset_top = 40.0
+offset_top = 24.0
 offset_right = -40.0
-offset_bottom = -40.0
+offset_bottom = -24.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 30
+theme_override_constants/separation = 24
 alignment = 1
-
-[node name="CreditsTitle" type="Label" parent="UILayer/OverlayBlocker/CreditsPanel/VBoxContainer" unique_id=1679827605]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 12
-theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 80
-text = "UI_CREDITS"
-horizontal_alignment = 1
 
 [node name="CreditsText" type="RichTextLabel" parent="UILayer/OverlayBlocker/CreditsPanel/VBoxContainer" unique_id=1612252251]
 layout_mode = 2
@@ -369,19 +376,39 @@ theme_override_font_sizes/normal_font_size = 54
 theme_override_font_sizes/bold_font_size = 54
 bbcode_enabled = true
 text = "CREDITS_TEXT"
+scroll_active = false
 
-[node name="CloseCreditsButton" type="Button" parent="UILayer/OverlayBlocker/CreditsPanel/VBoxContainer" unique_id=1268894059]
-custom_minimum_size = Vector2(240, 90)
-layout_mode = 2
-size_flags_horizontal = 4
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
-theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 24
+[node name="CloseCreditsButton" type="Button" parent="UILayer/OverlayBlocker" unique_id=1268894059]
+z_index = 20
+custom_minimum_size = Vector2(140, 140)
+layout_mode = 1
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 144.0
+offset_bottom = 144.0
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-text = "UI_CLOSE"
+
+[node name="IconContainer" type="MarginContainer" parent="UILayer/OverlayBlocker/CloseCreditsButton" unique_id=1890550610]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_bottom = 4
+
+[node name="Icon" type="TextureRect" parent="UILayer/OverlayBlocker/CloseCreditsButton/IconContainer" unique_id=1536571182]
+custom_minimum_size = Vector2(83, 83)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("9_close")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="HowToPlayHost" type="Control" parent="UILayer" unique_id=949103428]
 visible = false
@@ -392,14 +419,35 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="HowToPlayPanel" type="Panel" parent="UILayer/HowToPlayHost" unique_id=940262022]
-custom_minimum_size = Vector2(950, 1040)
+[node name="HowToPlayPageHeader" type="Label" parent="UILayer/HowToPlayHost" unique_id=1893621630]
 layout_mode = 1
-anchors_preset = 15
+anchors_preset = 10
 anchor_right = 1.0
-anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 260.0
+offset_right = -24.0
+offset_bottom = 412.0
 grow_horizontal = 2
-grow_vertical = 2
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 12
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 64
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HowToPlayPanel" type="Panel" parent="UILayer/HowToPlayHost" unique_id=940262022]
+custom_minimum_size = Vector2(950, 0)
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -475.0
+offset_top = 448.0
+offset_right = 475.0
+offset_bottom = 1100.0
+grow_horizontal = 2
+grow_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_overlay")
 
 [node name="RulesLabel" type="RichTextLabel" parent="UILayer/HowToPlayHost/HowToPlayPanel" unique_id=974917922]
@@ -409,7 +457,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 40.0
 offset_right = -40.0
-offset_bottom = -28.0
+offset_bottom = -12.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_colors/default_color = Color(1, 1, 1, 1)
@@ -420,69 +468,90 @@ scroll_active = false
 
 [node name="NavRow" type="HBoxContainer" parent="UILayer/HowToPlayHost" unique_id=419191493]
 layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
+anchors_preset = 10
 anchor_right = 1.0
-anchor_bottom = 1.0
 offset_left = 40.0
-offset_top = -400.0
+offset_top = 1128.0
 offset_right = -40.0
-offset_bottom = -300.0
+offset_bottom = 1242.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_constants/separation = 20
 alignment = 1
 
 [node name="PrevSlot" type="Control" parent="UILayer/HowToPlayHost/NavRow" unique_id=1842332726]
-custom_minimum_size = Vector2(240, 100)
+custom_minimum_size = Vector2(108, 114)
 layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
 
 [node name="PrevButton" type="Button" parent="UILayer/HowToPlayHost/NavRow/PrevSlot" unique_id=2110578758]
+custom_minimum_size = Vector2(108, 114)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
-theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 24
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-text = "UI_PREVIOUS"
 
-[node name="CloseButton" type="Button" parent="UILayer/HowToPlayHost/NavRow" unique_id=2119051309]
+[node name="MidSpacer" type="Control" parent="UILayer/HowToPlayHost/NavRow" unique_id=2111668025]
+custom_minimum_size = Vector2(48, 0)
 layout_mode = 2
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
-theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 28
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-text = "UI_CLOSE"
+size_flags_horizontal = 4
+mouse_filter = 2
 
 [node name="NextSlot" type="Control" parent="UILayer/HowToPlayHost/NavRow" unique_id=2131443103]
-custom_minimum_size = Vector2(240, 100)
+custom_minimum_size = Vector2(108, 114)
 layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
 
 [node name="NextButton" type="Button" parent="UILayer/HowToPlayHost/NavRow/NextSlot" unique_id=316120215]
+custom_minimum_size = Vector2(108, 114)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
-theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 24
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-text = "UI_NEXT"
+
+[node name="CloseButton" type="Button" parent="UILayer/HowToPlayHost" unique_id=2119051309]
+z_index = 20
+custom_minimum_size = Vector2(140, 140)
+layout_mode = 1
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 144.0
+offset_bottom = 144.0
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+
+[node name="IconContainer" type="MarginContainer" parent="UILayer/HowToPlayHost/CloseButton" unique_id=965461243]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_bottom = 4
+
+[node name="Icon" type="TextureRect" parent="UILayer/HowToPlayHost/CloseButton/IconContainer" unique_id=2029522723]
+custom_minimum_size = Vector2(83, 83)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("9_close")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="TutorialIntroBlocker" type="ColorRect" parent="UILayer" unique_id=1935914228]
 visible = false

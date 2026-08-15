@@ -8,7 +8,7 @@ const LANG_NAMES = ["ENGLISH", "ESPAÑOL", "DEUTSCH", "FRANÇAIS", "POLSKI", "�
 
 enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM }
 
-@onready var title_label: Label = $CenterContainer/OptionsPanel/VBoxContainer/TitleLabel
+@onready var title_label: Label = $ScreenHeaderHost/TitleLabel
 @onready var lang_label: Label = $CenterContainer/OptionsPanel/VBoxContainer/LanguageContainer/LanguageLabel
 @onready var prev_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/LanguageContainer/PrevLangButton
 @onready var next_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/LanguageContainer/NextLangButton
@@ -21,7 +21,7 @@ enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM }
 @onready var debug_buttons: VBoxContainer = $CenterContainer/OptionsPanel/VBoxContainer/DebugButtons
 @onready var unlock_all_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DebugButtons/UnlockAllButton
 @onready var del_custom_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DebugButtons/DeleteCustomButton
-@onready var close_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/CloseOptionsButton
+@onready var close_btn: Button = $CloseButtonHost/CloseOptionsButton
 @onready var status_label: Label = $CenterContainer/OptionsPanel/VBoxContainer/StatusLabel
 @onready var _confirm_blocker: ColorRect = $ConfirmBlocker
 @onready var _confirm_label: Label = $ConfirmBlocker/CenterContainer/Panel/VBoxContainer/PromptLabel
@@ -57,31 +57,20 @@ func _ready() -> void:
 		close_btn.pressed.connect(hide_menu)
 	_setup_confirm_panel()
 	_configure_main_menu_buttons()
-	_mount_header()
+	_style_header()
 	_update_lang_label()
 	_update_background_label()
 	_update_bgm_label()
 	_update_sfx_label()
 	_fit_option_buttons()
-	_position_close_button()
+	_style_close_button()
 
-func _mount_header() -> void:
+func _style_header() -> void:
 	if not title_label:
 		return
-	var host := get_node_or_null("ScreenHeaderHost") as Control
-	if host == null:
-		host = Control.new()
-		host.name = "ScreenHeaderHost"
-		host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		host.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(host)
-		move_child(host, 0)
 	title_label.set_meta("_screen_header_font_size", 72)
 	title_label.set_meta("_screen_header_outline", GameConstants.SCREEN_HEADER_OUTLINE)
-	HudLayout.mount_screen_header(host, title_label)
-	var center := get_node_or_null("CenterContainer") as Control
-	if center:
-		HudLayout.pin_menu_body_below_header(center, 1100.0, 120.0)
+	HudLayout.apply_screen_header_style(title_label)
 
 func show_menu(from_main_menu: bool = false) -> void:
 	_from_main_menu = from_main_menu
@@ -170,8 +159,7 @@ func _fit_option_buttons() -> void:
 		privacy_options_btn.text = tr("UI_PRIVACY_OPTIONS")
 	for btn in [del_save_btn, bg_btn, bgm_btn, sfx_btn, privacy_btn, privacy_options_btn, del_custom_btn, unlock_all_btn]:
 		_apply_option_button(btn)
-	_position_close_button()
-	HudLayout.apply_secondary_button(close_btn)
+	_style_close_button()
 	if prev_btn:
 		prev_btn.custom_minimum_size = Vector2(100, 100)
 		prev_btn.flat = false
@@ -255,30 +243,10 @@ func _apply_button_tile_styles(button: Button) -> void:
 			box.modulate_color = Color(0.55, 0.55, 0.55, 1.0)
 		button.add_theme_stylebox_override(style_name, box)
 
-func _position_close_button() -> void:
+func _style_close_button() -> void:
 	if close_btn == null:
 		return
-	var host := get_node_or_null("CloseButtonHost") as Control
-	if host == null:
-		host = Control.new()
-		host.name = "CloseButtonHost"
-		host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		host.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(host)
-	if close_btn.get_parent() != host:
-		var old := close_btn.get_parent()
-		if old:
-			old.remove_child(close_btn)
-		host.add_child(close_btn)
-	close_btn.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	var half_w := GameConstants.UI_BTN_SECONDARY_SIZE.x * 0.5
-	close_btn.offset_left = -half_w
-	close_btn.offset_right = half_w
-	close_btn.offset_top = GameConstants.SCREEN_BOTTOM_NAV_TOP
-	close_btn.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_BOTTOM
-	close_btn.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	close_btn.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	close_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	HudLayout.style_top_bar_close_button(close_btn)
 
 const _TOGGLE_ACCENT := Color(1.0, 0.84, 0.0, 1.0)
 

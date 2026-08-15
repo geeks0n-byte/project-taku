@@ -156,7 +156,7 @@ func _errors_include_rule_of_two(errors: Array) -> bool:
 
 func _errors_include_balance(errors: Array) -> bool:
 	for e in errors:
-		if String(e) == "ERR_UNEQUAL_LINE":
+		if String(e).begins_with("ERR_UNEQUAL_"):
 			return true
 	return false
 
@@ -556,6 +556,7 @@ func _show_message_key(
 	_last_status_append_next_prompt = append_next_prompt
 	var text := tr(key) if not key.is_empty() else ""
 	text = _apply_icon_placeholders(text, _last_status_icons)
+	text = HudLayout.glue_tile_icon_color_labels(text)
 	text = _strip_inline_next_prompt(text)
 	if ui_manager:
 		ui_manager.show_tutorial_status(text)
@@ -612,7 +613,6 @@ func _set_next_visible(show_next: bool) -> void:
 	if _next_button:
 		_next_button.visible = show_next
 		if show_next:
-			_next_button.text = tr("UI_NEXT")
 			HudLayout.apply_nav_button(_next_button)
 			_position_next_button()
 			var step := _current_step()
@@ -736,7 +736,7 @@ func _ensure_next_button() -> void:
 func _position_next_button() -> void:
 	if not _next_button:
 		return
-	var btn_size := Vector2(420, 150)
+	var btn_size := GameConstants.UI_BTN_NAV_SIZE
 	var half_w := btn_size.x * 0.5
 	var base_bottom := 480.0 + GameConstants.AD_BANNER_RESERVE
 	var bottom_margin := base_bottom
@@ -750,12 +750,11 @@ func _position_next_button() -> void:
 			220.0 + GameConstants.AD_BANNER_RESERVE,
 			base_bottom - overflow
 		)
-	_next_button.custom_minimum_size = btn_size
+	HudLayout.apply_nav_button(_next_button)
 	_next_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_next_button.offset_left = -half_w
 	_next_button.offset_right = half_w
 	_next_button.offset_top = -(btn_size.y + bottom_margin)
 	_next_button.offset_bottom = -bottom_margin
 	_next_button.z_index = 8
-	_next_button.add_theme_font_size_override("font_size", 40)
 	_next_button.pivot_offset = btn_size * 0.5

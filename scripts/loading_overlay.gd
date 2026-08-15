@@ -1,11 +1,15 @@
 class_name LoadingOverlay
 extends CanvasLayer
 
+const DOT_INTERVAL_SEC := 0.45
 
 var _root: Control
-var _bar: ProgressBar
 var _label: Label
 var _busy: bool = false
+var _base_text: String = "LOADING"
+var _dot_count: int = 0
+var _dot_timer: Timer
+var _hidden_nodes: Array = []
 
 func _ready() -> void:
 	layer = 100
@@ -21,7 +25,7 @@ func _build() -> void:
 
 	var dim := ColorRect.new()
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.color = Color(0, 0, 0, 0.55)
+	dim.color = Color(0, 0, 0, 0.35)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	_root.add_child(dim)
 
@@ -30,42 +34,42 @@ func _build() -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(center)
 
-	var box := VBoxContainer.new()
-	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", 28)
-	center.add_child(box)
-
 	_label = Label.new()
-	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# Left-align inside a fixed-width box so growing dots don't re-center/jitter.
+	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_label.add_theme_font_override("font", HudLayout.PIXEL_FONT)
 	_label.add_theme_font_size_override("font_size", 36)
 	_label.add_theme_color_override("font_color", Color.WHITE)
 	_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	_label.add_theme_constant_override("outline_size", 8)
-	_label.text = "UI_LOADING"
-	box.add_child(_label)
+	_label.text = "LOADING"
+	center.add_child(_label)
 
-	_bar = ProgressBar.new()
-	_bar.custom_minimum_size = Vector2(520, 36)
-	_bar.show_percentage = false
-	_bar.indeterminate = true
-	_bar.max_value = 1.0
-	_bar.value = 0.0
-	box.add_child(_bar)
+	_dot_timer = Timer.new()
+	_dot_timer.wait_time = DOT_INTERVAL_SEC
+	_dot_timer.one_shot = false
+	_dot_timer.timeout.connect(_on_dot_tick)
+	add_child(_dot_timer)
 
 func show_loading(message_key: String = "UI_LOADING") -> void:
+	_hide_scene_underlay()
+	_base_text = _loading_base_text(message_key)
 	if _label:
-		_label.text = tr(message_key)
 		HudLayout.apply_locale_font_to_control(_label)
 		_label.add_theme_font_size_override("font_size", HudLayout.scaled_font_size(36))
-	if _bar:
-		_bar.indeterminate = true
+	_dot_count = 0
+	_refresh_loading_label()
+	if _dot_timer:
+		_dot_timer.start()
 	visible = true
 	_busy = true
 
 func hide_loading() -> void:
+	if _dot_timer:
+		_dot_timer.stop()
 	visible = false
 	_busy = false
+	_restore_scene_underlay()
 
 func is_busy() -> bool:
 	return _busy
@@ -95,3 +99,68 @@ func run_async(host: Node, work: Callable, message_key: String = "UI_LOADING") -
 
 	hide_loading()
 	return box.value
+
+func _loading_base_text(message_key: String) -> String:
+	var raw := String(tr(message_key)).strip_edges()
+	while raw.ends_with("."):
+		raw = raw.substr(0, raw.length() - 1).strip_edges()
+	if raw.is_empty():
+		return "LOADING"
+	return raw
+
+func _on_dot_tick() -> void:
+	_dot_count = (_dot_count % 3) + 1
+	_refresh_loading_label()
+
+func _refresh_loading_label() -> void:
+	if _label == null:
+		return
+	var dots := ""
+	for _i in range(_dot_count):
+		dots += "."
+	_label.text = _base_text + dots
+	_lock_loading_label_width()
+
+func _lock_loading_label_width() -> void:
+	if _label == null:
+		return
+	var font: Font = _label.get_theme_font("font")
+	if font == null:
+		font = HudLayout.PIXEL_FONT
+	var font_size := _label.get_theme_font_size("font_size")
+	if font_size <= 0:
+		font_size = 36
+	var full := _base_text + "..."
+	var measured := font.get_string_size(full, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+	# Outline can add a little extra visual width; pad so the box never shrinks mid-anim.
+	_label.custom_minimum_size = Vector2(ceili(measured.x) + 8, 0)
+
+func _hide_scene_underlay() -> void:
+	_restore_scene_underlay()
+	var tree := get_tree()
+	if tree == null:
+		return
+	var scene := tree.current_scene
+	if scene == null:
+		return
+	for child in scene.get_children():
+		if child == self:
+			continue
+		if child is LoadingOverlay:
+			continue
+		if not (child is CanvasItem):
+			continue
+		var item := child as CanvasItem
+		if not item.visible:
+			continue
+		_hidden_nodes.append(item)
+		item.visible = false
+
+func _restore_scene_underlay() -> void:
+	for node in _hidden_nodes:
+		if is_instance_valid(node) and node is CanvasItem:
+			(node as CanvasItem).visible = true
+	_hidden_nodes.clear()
+
+func _exit_tree() -> void:
+	_restore_scene_underlay()

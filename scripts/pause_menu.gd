@@ -3,6 +3,7 @@ extends Control
 signal resume_pressed
 signal restart_pressed
 signal settings_pressed
+signal level_select_pressed
 signal auto_win_pressed
 signal quit_pressed
 
@@ -13,11 +14,10 @@ const MENU_BTN_FONT := 64
 @onready var resume_btn: Button = $CenterContainer/VBoxContainer/ResumeButton
 @onready var restart_btn: Button = $CenterContainer/VBoxContainer/RestartButton
 @onready var settings_btn: Button = $CenterContainer/VBoxContainer/SettingsButton
+@onready var level_select_btn: Button = $CenterContainer/VBoxContainer/LevelSelectButton
 @onready var auto_win_btn: Button = $CenterContainer/VBoxContainer/AutoWinButton
-@onready var auto_lose_btn: Button = $CenterContainer/VBoxContainer/AutoLoseButton
 @onready var quit_btn: Button = $CenterContainer/VBoxContainer/QuitButton
-@onready var title_label: Label = $CenterContainer/VBoxContainer/TitleLabel
-@onready var center_container: CenterContainer = $CenterContainer
+@onready var title_label: Label = $TitleLabel
 var _restart_label_key: String = "UI_NEW_LAYOUT"
 
 func _ready() -> void:
@@ -27,36 +27,30 @@ func _ready() -> void:
 		restart_btn.pressed.connect(_on_restart)
 	if settings_btn:
 		settings_btn.pressed.connect(_on_settings)
+	if level_select_btn:
+		level_select_btn.pressed.connect(_on_level_select)
 	if auto_win_btn:
 		auto_win_btn.pressed.connect(_on_auto_win)
-	if auto_lose_btn:
-		auto_lose_btn.visible = false
 	if quit_btn:
 		quit_btn.pressed.connect(_on_quit)
-	_mount_header()
+	_style_header()
 	_fit_menu_buttons()
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
 
-func _mount_header() -> void:
+func _style_header() -> void:
 	if not title_label:
 		return
 	title_label.set_meta("_screen_header_font_size", 72)
 	title_label.set_meta("_screen_header_outline", GameConstants.SCREEN_HEADER_OUTLINE)
-	HudLayout.mount_screen_header(self, title_label)
-	if center_container:
-		HudLayout.pin_menu_body_below_header(center_container, 1100.0)
-	var spacer := get_node_or_null("CenterContainer/VBoxContainer/Spacer") as Control
-	if spacer:
-		spacer.custom_minimum_size.y = 0.0
-		spacer.visible = false
+	HudLayout.apply_screen_header_style(title_label)
 
 func _fit_menu_buttons() -> void:
 	if restart_btn:
 		restart_btn.text = _restart_label_key
 	if quit_btn:
 		quit_btn.text = "UI_MAIN_MENU"
-	for btn in [resume_btn, restart_btn, settings_btn, quit_btn, auto_win_btn]:
+	for btn in [resume_btn, restart_btn, level_select_btn, settings_btn, quit_btn, auto_win_btn]:
 		_apply_pause_button(btn)
 	if title_label:
 		title_label.set_meta("_screen_header_font_size", 72)
@@ -74,7 +68,7 @@ func _apply_pause_button(button: Button) -> void:
 	button.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
 	button.autowrap_mode = TextServer.AUTOWRAP_OFF
 	button.clip_text = false
-	HudLayout.fit_text_button(button, MENU_BTN_FONT, 32)
+	HudLayout.fit_text_button_single_line(button, MENU_BTN_FONT, 28)
 
 func _apply_button_tile_styles(button: Button) -> void:
 	if not button:
@@ -110,13 +104,12 @@ func set_restart_label_key(key: String) -> void:
 		_apply_pause_button(restart_btn)
 
 func _on_language_changed() -> void:
+	HudLayout.apply_locale_fonts_to_tree(self)
 	_fit_menu_buttons()
 
 func set_debug_tools_visible(visible_state: bool) -> void:
 	if auto_win_btn:
 		auto_win_btn.visible = visible_state
-	if auto_lose_btn:
-		auto_lose_btn.visible = false
 	_fit_menu_buttons()
 
 func _on_resume() -> void:
@@ -127,6 +120,9 @@ func _on_restart() -> void:
 
 func _on_settings() -> void:
 	settings_pressed.emit()
+
+func _on_level_select() -> void:
+	level_select_pressed.emit()
 
 func _on_auto_win() -> void:
 	auto_win_pressed.emit()

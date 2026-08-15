@@ -2,7 +2,7 @@ class_name LevelPreview
 extends RefCounted
 
 const COLOR_BG := Color(0.08, 0.1, 0.16, 1.0)
-const COLOR_EMPTY := Color(0.18, 0.22, 0.3, 1.0)
+const COLOR_EMPTY := Color(0.28, 0.34, 0.46, 1.0)
 const COLOR_WALL := Color(0.05, 0.06, 0.09, 1.0)
 const COLOR_YELLOW := Color(0.95, 0.82, 0.2, 1.0)
 const COLOR_BLUE := Color(0.25, 0.55, 0.95, 1.0)
@@ -24,8 +24,6 @@ static func make_texture(level: LevelData, pixel_size: int = GameConstants.LEVEL
 	if layout.is_empty():
 		var dims := LevelUtils.get_dimensions_from_level(level)
 		layout = LevelUtils.make_empty_layout(maxi(1, dims.x), maxi(1, dims.y))
-	if LevelUtils.is_shape_only_layout(layout):
-		return _make_silhouette_texture(layout, pixel_size)
 	var preview_layout := layout.duplicate()
 	var active_shifters := _active_shifter_set(level)
 	var shifter_cells := _shifter_cell_set(level)
@@ -56,24 +54,30 @@ static func make_texture_from_layout(
 		max_y = maxi(max_y, int(coord.y))
 	var width: int = maxi(1, max_x + 1)
 	var height: int = maxi(1, max_y + 1)
-	var cell := maxi(4, int(float(pixel_size) / float(maxi(width, height))))
-	var img_w := width * cell
-	var img_h := height * cell
-	var image := Image.create(img_w, img_h, false, Image.FORMAT_RGBA8)
-	image.fill(Color(0, 0, 0, 0))
+
+	var image := Image.create(pixel_size, pixel_size, false, Image.FORMAT_RGBA8)
+	image.fill(COLOR_BG)
+
+	var pad := maxi(4, int(round(float(pixel_size) * 0.1)))
+	var inner := maxi(8, pixel_size - pad * 2)
+	var cell := maxi(3, int(float(inner) / float(maxi(width, height))))
+	var board_w := width * cell
+	var board_h := height * cell
+	var origin := Vector2i(
+		int((pixel_size - board_w) / 2.0),
+		int((pixel_size - board_h) / 2.0)
+	)
 
 	for y in height:
 		for x in width:
 			var coord := Vector2i(x, y)
-			var state: int = GameConstants.TileState.EMPTY
+			var state: int = GameConstants.TileState.WALL
 			if layout.has(coord):
 				state = int(layout[coord])
 			if state == GameConstants.TileState.WALL:
 				continue
-			var dst := Vector2i(x * cell, y * cell)
-			var tile_img := _resized_tile(_path_for_state(state), cell)
-			if tile_img:
-				image.blend_rect(tile_img, Rect2i(Vector2i.ZERO, tile_img.get_size()), dst)
+			var dst := origin + Vector2i(x * cell, y * cell)
+			image.fill_rect(Rect2i(dst.x, dst.y, cell, cell), _color_for_state(state))
 			if state == GameConstants.TileState.SHIFTER and shifter_dirs.has(coord):
 				_blit_shifter_arrow(image, dst, cell, shifter_dirs[coord])
 
@@ -83,6 +87,7 @@ static func make_texture_from_layout(
 
 static func _layout_cache_key(layout: Dictionary, pixel_size: int, shifter_dirs: Dictionary) -> String:
 	var parts: PackedStringArray = []
+	parts.append("v4")
 	parts.append(str(pixel_size))
 	var coords: Array = layout.keys()
 	coords.sort_custom(func(a, b): return str(a) < str(b))
@@ -135,33 +140,7 @@ static func shifter_dirs_from_board_cells(board_cells: Dictionary) -> Dictionary
 	return dirs
 
 static func _make_silhouette_texture(layout: Dictionary, pixel_size: int) -> ImageTexture:
-	var max_x := 0
-	var max_y := 0
-	for coord in layout.keys():
-		max_x = maxi(max_x, int(coord.x))
-		max_y = maxi(max_y, int(coord.y))
-	var width: int = maxi(1, max_x + 1)
-	var height: int = maxi(1, max_y + 1)
-	var cell := maxi(2, int(float(pixel_size) / float(maxi(width, height))))
-	var img_w := width * cell
-	var img_h := height * cell
-	var image := Image.create(img_w, img_h, false, Image.FORMAT_RGBA8)
-	image.fill(Color(0, 0, 0, 0))
-
-	for y in height:
-		for x in width:
-			var coord := Vector2i(x, y)
-			var state: int = GameConstants.TileState.EMPTY
-			if layout.has(coord):
-				state = int(layout[coord])
-			if state == GameConstants.TileState.WALL:
-				continue
-			var color := _color_for_state(state)
-			image.fill_rect(Rect2i(x * cell, y * cell, cell, cell), color)
-
-	_draw_silhouette_grid_lines(image, layout, width, height, cell)
-
-	return ImageTexture.create_from_image(image)
+	return make_texture_from_layout(layout, pixel_size)
 
 static func _draw_silhouette_grid_lines(
 	image: Image,
@@ -170,10 +149,20 @@ static func _draw_silhouette_grid_lines(
 	height: int,
 	cell: int
 ) -> void:
+	_draw_silhouette_grid_lines_at(image, layout, width, height, cell, Vector2i.ZERO)
+
+static func _draw_silhouette_grid_lines_at(
+	image: Image,
+	layout: Dictionary,
+	width: int,
+	height: int,
+	cell: int,
+	origin: Vector2i
+) -> void:
 	if cell < 2:
 		return
-	var line_w := clampi(int(round(float(cell) * 0.04)), 1, maxi(1, int(cell / 4.0)))
-	var line_color := Color(0.0, 0.0, 0.0, 1.0)
+	var line_w := clampi(int(round(float(cell) * 0.08)), 1, maxi(1, int(cell / 4.0)))
+	var line_color := Color(0.0, 0.0, 0.0, 0.85)
 
 	for y in height:
 		for x in width:
@@ -191,11 +180,17 @@ static func _draw_silhouette_grid_lines(
 
 			var draw_right := is_playable or right_playable
 			var draw_bottom := is_playable or bot_playable
-			var draw_top := is_playable and not layout.has(coord + Vector2i(0, -1))
-			var draw_left := is_playable and not layout.has(coord + Vector2i(-1, 0))
+			var draw_top := is_playable and (
+				not layout.has(coord + Vector2i(0, -1))
+				or int(layout[coord + Vector2i(0, -1)]) == GameConstants.TileState.WALL
+			)
+			var draw_left := is_playable and (
+				not layout.has(coord + Vector2i(-1, 0))
+				or int(layout[coord + Vector2i(-1, 0)]) == GameConstants.TileState.WALL
+			)
 
-			var x0 := x * cell
-			var y0 := y * cell
+			var x0 := origin.x + x * cell
+			var y0 := origin.y + y * cell
 			var x1 := x0 + cell
 			var y1 := y0 + cell
 
@@ -315,7 +310,7 @@ static func _resized_tile(path: String, size: int) -> Image:
 		src.decompress()
 	else:
 		src = src.duplicate()
-	src.resize(size, size, Image.INTERPOLATE_BILINEAR)
+	src.resize(size, size, Image.INTERPOLATE_NEAREST)
 	_tile_image_cache[key] = src
 	return src
 

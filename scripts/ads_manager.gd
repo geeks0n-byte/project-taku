@@ -21,7 +21,6 @@ var _banner_wanted_visible: bool = false
 var _banner_loaded: bool = false
 
 var _interstitial: InterstitialAd = null
-var _interstitial_loader: InterstitialAdLoader = null
 var _loading_interstitial: bool = false
 var _pending_after_ad: Callable = Callable()
 
@@ -32,7 +31,9 @@ var _pending_reward_callback: Callable = Callable()
 var _reward_earned: bool = false
 var _queued_reward_callback: Callable = Callable()
 var _rewarded_retry_timer: Timer = null
-const REWARDED_RETRY_SEC := 15.0
+var _rewarded_load_watchdog: Timer = null
+const REWARDED_RETRY_SEC := 8.0
+const REWARDED_LOAD_TIMEOUT_SEC := 25.0
 
 func _ready() -> void:
 	_ads_supported = _detect_ads_support()
@@ -108,6 +109,12 @@ func _rewarded_unit_id() -> String:
 	return TEST_REWARDED_UNIT_ID if _use_test_units() else PROD_REWARDED_UNIT_ID
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
+		if _banner_wanted_visible:
+			_pin_banner_bottom()
+		warm_rewarded_hint()
+
 func show_menu_banner() -> void:
 	_banner_wanted_visible = true
 	if not _ads_supported:
@@ -117,7 +124,7 @@ func show_menu_banner() -> void:
 		return
 	_ensure_banner_loaded()
 	if _banner and _banner_loaded:
-		_banner.show()
+		_show_banner_pinned()
 
 func refresh_banner_anchor() -> void:
 	_banner_wanted_visible = true
@@ -134,10 +141,22 @@ func hide_menu_banner() -> void:
 	if _banner:
 		_banner.hide()
 
+func _pin_banner_bottom() -> void:
+	if _banner == null:
+		return
+	_banner.set_position(AdPosition.BOTTOM)
+
+func _show_banner_pinned() -> void:
+	if _banner == null:
+		return
+	_pin_banner_bottom()
+	_banner.show()
+	call_deferred("_pin_banner_bottom")
+
 func _ensure_banner_loaded() -> void:
 	if not _initialized or _banner != null:
 		if _banner and _banner_loaded and _banner_wanted_visible:
-			_banner.show()
+			_show_banner_pinned()
 		return
 	var ad_size := AdSize.get_current_orientation_anchored_adaptive_banner_ad_size(AdSize.FULL_WIDTH)
 	_banner = AdView.new(_banner_unit_id(), ad_size, AdPosition.BOTTOM)
@@ -145,7 +164,7 @@ func _ensure_banner_loaded() -> void:
 	listener.on_ad_loaded = func() -> void:
 		_banner_loaded = true
 		if _banner_wanted_visible and _banner:
-			_banner.show()
+			_show_banner_pinned()
 		else:
 			if _banner:
 				_banner.hide()
@@ -161,13 +180,17 @@ func _destroy_banner() -> void:
 		_banner = null
 	_banner_loaded = false
 
+func _reanchor_banner_after_fullscreen() -> void:
+	if not _banner_wanted_visible:
+		return
+	refresh_banner_anchor()
+
 
 func _load_interstitial() -> void:
 	if not _initialized or _loading_interstitial or _interstitial != null:
 		return
 	_loading_interstitial = true
-	if _interstitial_loader == null:
-		_interstitial_loader = InterstitialAdLoader.new()
+	var loader := InterstitialAdLoader.new()
 	var callback := InterstitialAdLoadCallback.new()
 	callback.on_ad_loaded = func(ad: InterstitialAd) -> void:
 		_loading_interstitial = false
@@ -176,7 +199,7 @@ func _load_interstitial() -> void:
 	callback.on_ad_failed_to_load = func(_error: LoadAdError) -> void:
 		_loading_interstitial = false
 		_interstitial = null
-	_interstitial_loader.load(_interstitial_unit_id(), AdRequest.new(), callback)
+	loader.load(_interstitial_unit_id(), AdRequest.new(), callback)
 
 func _bind_interstitial_callbacks() -> void:
 	if _interstitial == null:
@@ -200,8 +223,7 @@ func _destroy_interstitial() -> void:
 func _finish_pending_after_ad() -> void:
 	var cb := _pending_after_ad
 	_pending_after_ad = Callable()
-	if _banner_wanted_visible:
-		refresh_banner_anchor()
+	_reanchor_banner_after_fullscreen()
 	if cb.is_valid():
 		cb.call()
 
@@ -236,6 +258,8 @@ func show_interstitial_if_ready(on_done: Callable = Callable()) -> void:
 
 
 func can_offer_rewarded_hint() -> bool:
+	if not _ads_supported:
+		return OS.is_debug_build()
 	return true
 
 func is_rewarded_hint_ready() -> bool:
@@ -246,7 +270,7 @@ func is_rewarded_hint_ready() -> bool:
 func is_rewarded_hint_loading() -> bool:
 	if not _ads_supported:
 		return false
-	return _initializing or _loading_rewarded or _queued_reward_callback.is_valid()
+	return _initializing or _loading_rewarded
 
 func warm_rewarded_hint() -> void:
 	if not _ads_supported:
@@ -255,24 +279,58 @@ func warm_rewarded_hint() -> void:
 	if _initialized:
 		_load_rewarded()
 
+func _rewarded_native_available() -> bool:
+	return Engine.has_singleton("PoingGodotAdMobRewardedAd")
+
 func _load_rewarded() -> void:
 	if not _initialized or _loading_rewarded or _rewarded != null:
 		return
+	if not _rewarded_native_available():
+		push_warning("AdsManager: PoingGodotAdMobRewardedAd singleton missing")
+		_loading_rewarded = false
+		return
 	_loading_rewarded = true
-	if _rewarded_loader == null:
-		_rewarded_loader = RewardedAdLoader.new()
+	_start_rewarded_load_watchdog()
+	# New loader each request (plugin sample pattern); keep a member ref so it is not GC'd.
+	_rewarded_loader = RewardedAdLoader.new()
 	var callback := RewardedAdLoadCallback.new()
 	callback.on_ad_loaded = func(ad: RewardedAd) -> void:
 		_loading_rewarded = false
+		_stop_rewarded_load_watchdog()
 		_rewarded = ad
 		_bind_rewarded_callbacks()
 		_cancel_rewarded_retry()
-		_flush_queued_rewarded_show()
-	callback.on_ad_failed_to_load = func(_error: LoadAdError) -> void:
+		call_deferred("_flush_queued_rewarded_show")
+	callback.on_ad_failed_to_load = func(error: LoadAdError) -> void:
 		_loading_rewarded = false
+		_stop_rewarded_load_watchdog()
 		_rewarded = null
+		var msg := "unknown"
+		if error:
+			msg = str(error.message)
+		push_warning("AdsManager: rewarded load failed: %s" % msg)
 		_schedule_rewarded_retry()
 	_rewarded_loader.load(_rewarded_unit_id(), AdRequest.new(), callback)
+
+func _start_rewarded_load_watchdog() -> void:
+	if _rewarded_load_watchdog == null:
+		_rewarded_load_watchdog = Timer.new()
+		_rewarded_load_watchdog.one_shot = true
+		_rewarded_load_watchdog.timeout.connect(_on_rewarded_load_timeout)
+		add_child(_rewarded_load_watchdog)
+	_rewarded_load_watchdog.start(REWARDED_LOAD_TIMEOUT_SEC)
+
+func _stop_rewarded_load_watchdog() -> void:
+	if _rewarded_load_watchdog and not _rewarded_load_watchdog.is_stopped():
+		_rewarded_load_watchdog.stop()
+
+func _on_rewarded_load_timeout() -> void:
+	if not _loading_rewarded:
+		return
+	push_warning("AdsManager: rewarded load timed out; resetting")
+	_loading_rewarded = false
+	_rewarded_loader = null
+	_schedule_rewarded_retry()
 
 func _bind_rewarded_callbacks() -> void:
 	if _rewarded == null:
@@ -284,13 +342,19 @@ func _bind_rewarded_callbacks() -> void:
 		_pending_reward_callback = Callable()
 		_reward_earned = false
 		_destroy_rewarded()
+		_reanchor_banner_after_fullscreen()
 		_load_rewarded()
 		if earned and cb.is_valid():
 			cb.call()
-	callbacks.on_ad_failed_to_show_full_screen_content = func(_error: AdError) -> void:
+	callbacks.on_ad_failed_to_show_full_screen_content = func(error: AdError) -> void:
+		var msg := "unknown"
+		if error:
+			msg = str(error.message)
+		push_warning("AdsManager: rewarded show failed: %s" % msg)
 		_pending_reward_callback = Callable()
 		_reward_earned = false
 		_destroy_rewarded()
+		_reanchor_banner_after_fullscreen()
 		_load_rewarded()
 	_rewarded.full_screen_content_callback = callbacks
 
@@ -319,6 +383,8 @@ func _on_rewarded_retry_timeout() -> void:
 
 func _flush_queued_rewarded_show() -> void:
 	if not _queued_reward_callback.is_valid():
+		return
+	if _rewarded == null:
 		return
 	var cb := _queued_reward_callback
 	_queued_reward_callback = Callable()
@@ -374,6 +440,7 @@ func show_privacy_options_form(on_done: Callable = Callable()) -> bool:
 	if get_privacy_options_state() != PRIVACY_OPTIONS_STATE_READY:
 		return false
 	UserMessagingPlatform.show_privacy_options_form(func(form_error: FormError) -> void:
+		_reanchor_banner_after_fullscreen()
 		if on_done.is_valid():
 			on_done.call(form_error)
 	)
@@ -388,10 +455,13 @@ func prepare_for_app_exit() -> void:
 	_pending_reward_callback = Callable()
 	_queued_reward_callback = Callable()
 	_reward_earned = false
+	_loading_rewarded = false
 	_cancel_rewarded_retry()
+	_stop_rewarded_load_watchdog()
 	_destroy_banner()
 	_destroy_interstitial()
 	_destroy_rewarded()
+	_rewarded_loader = null
 
 func _exit_tree() -> void:
 	prepare_for_app_exit()

@@ -25,6 +25,7 @@ var hidden_reference_constraints: Array = []
 var prefer_hidden_hints: bool = false
 var required_jokers: int = 0
 var hints_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED
+var hints_used: int = 0
 var game_undo := UndoStack.new()
 var _is_recording_action: bool = false
 var _loading_overlay: LoadingOverlay
@@ -74,7 +75,7 @@ func _can_use_hint() -> bool:
 	return AdsManager != null and AdsManager.can_offer_rewarded_hint()
 
 func _refresh_hint_button() -> void:
-	if hints_remaining == 0 and AdsManager:
+	if AdsManager and hints_remaining <= 1:
 		AdsManager.warm_rewarded_hint()
 	if ui_manager:
 		ui_manager.set_hint_remaining(hints_remaining)
@@ -83,6 +84,7 @@ func _refresh_hint_button() -> void:
 func _ready():
 	if AdsManager:
 		AdsManager.show_menu_banner()
+		AdsManager.warm_rewarded_hint()
 	_loading_overlay = LoadingOverlay.new()
 	add_child(_loading_overlay)
 	tutorial_director = TutorialDirector.new()
@@ -162,6 +164,7 @@ func _bind_submanager_signals():
 		pause_menu.resume_pressed.connect(_on_resume)
 		pause_menu.restart_pressed.connect(_on_restart_level)
 		pause_menu.settings_pressed.connect(_on_pause_settings)
+		pause_menu.level_select_pressed.connect(_on_quit_to_level_select)
 		pause_menu.auto_win_pressed.connect(_on_auto_win)
 		pause_menu.quit_pressed.connect(_on_quit_to_menu)
 	if options_menu:
@@ -271,8 +274,11 @@ func generate_board():
 		current_level_resource.get("time_limit") if "time_limit" in current_level_resource else 0
 	)
 	_reset_hint_quota(current_level_resource)
+	if AdsManager:
+		AdsManager.warm_rewarded_hint()
 	elapsed_seconds = 0
 	shifter_move_count = 0
+	hints_used = 0
 	required_shifter_moves = 0
 	required_jokers = 0
 	_has_shifters = false
@@ -562,6 +568,8 @@ func _on_hint_requested():
 
 func _on_rewarded_hint_earned() -> void:
 	hints_remaining = GameConstants.HINTS_FROM_REWARDED_AD
+	if AdsManager:
+		AdsManager.warm_rewarded_hint()
 	_apply_hint()
 
 func _apply_hint() -> void:
@@ -603,6 +611,7 @@ func _apply_hint() -> void:
 			var pooled = hidden_reference_constraints[i]
 			if (pooled["a"] == hint["a"] and pooled["b"] == hint["b"]) or (pooled["a"] == hint["b"] and pooled["b"] == hint["a"]):
 				hidden_reference_constraints.remove_at(i)
+		hints_used += 1
 		if hints_remaining > 0:
 			hints_remaining -= 1
 		board_manager.trigger_redraw()
@@ -680,15 +689,12 @@ func trigger_victory():
 	var is_last = current_level_index >= levels.size() - 1
 	var display_num = LevelUtils.get_display_level_number(levels[current_level_index])
 	var unlock_num = levels[current_level_index].level_number
-	var greens_used := LevelUtils.count_jokers_on_board(board_manager.board_cells)
 	var time_limit := 0 if _challenges_disabled else star_time_limit
-	var green_target := 0 if _challenges_disabled else required_jokers
 	var move_target := 0 if _challenges_disabled else required_shifter_moves
 	var star_result := LevelStars.evaluate(
 		elapsed_seconds,
 		time_limit,
-		greens_used,
-		green_target,
+		0 if _challenges_disabled else hints_used,
 		shifter_move_count,
 		move_target,
 		_has_shifters and not _challenges_disabled
@@ -901,6 +907,12 @@ func _on_quit_to_menu():
 	_autosave_session()
 	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")
 
+func _on_quit_to_level_select() -> void:
+	if _is_generating_board or (_loading_overlay and _loading_overlay.is_busy()):
+		return
+	_autosave_session()
+	GlobalGameManager.go_to_scene("res://scenes/level_select.tscn")
+
 func _begin_level_entry() -> void:
 	if levels.is_empty() or current_level_index < 0 or current_level_index >= levels.size():
 		return
@@ -970,6 +982,7 @@ func _build_session_payload() -> Dictionary:
 		"level_number": level.level_number,
 		"elapsed_seconds": elapsed_seconds,
 		"shifter_move_count": shifter_move_count,
+		"hints_used": hints_used,
 		"required_jokers": required_jokers,
 		"required_shifter_moves": required_shifter_moves,
 		"has_shifters": _has_shifters,
@@ -977,6 +990,7 @@ func _build_session_payload() -> Dictionary:
 		"prefer_hidden_hints": prefer_hidden_hints,
 		"star_time_limit": star_time_limit,
 		"hints_remaining": hints_remaining,
+		"has_hints_remaining": true,
 		"available_tiles": _run_available_tiles.duplicate(),
 		"layout": _run_layout.duplicate(true),
 		"shifter_pairs": _run_shifter_pairs.duplicate(true),
@@ -1027,6 +1041,7 @@ func restore_session() -> void:
 	star_time_limit = 0 if _challenges_disabled else int(data.get("star_time_limit", 0))
 	elapsed_seconds = int(data.get("elapsed_seconds", 0))
 	shifter_move_count = int(data.get("shifter_move_count", 0))
+	hints_used = int(data.get("hints_used", 0))
 	required_jokers = 0 if _challenges_disabled else int(data.get("required_jokers", 0))
 	required_shifter_moves = 0 if _challenges_disabled else int(data.get("required_shifter_moves", 0))
 	_has_shifters = bool(data.get("has_shifters", false))

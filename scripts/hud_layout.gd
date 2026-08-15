@@ -1,6 +1,12 @@
 class_name HudLayout
 extends RefCounted
 
+const _TOP_BAR_TILE_TEX := preload("res://resources/buttons/button_tile_gray_dark.svg")
+const _CLOSE_ICON_TEX := preload("res://resources/icons/icon_close.svg")
+const _PREV_ICON_TEX := preload("res://resources/icons/icon_prev.svg")
+const _NEXT_ICON_TEX := preload("res://resources/icons/icon_next.svg")
+const _TOP_BAR_ICON_PX := 83.0
+
 static func position_top_wide(control: Control, top: float, height: float, margin: float = GameConstants.HUD_SIDE_MARGIN) -> void:
 	if not control:
 		return
@@ -26,12 +32,7 @@ static func position_editor_status_below_panel(control_panel: Control, status: C
 	control_panel.offset_bottom = 0.0
 
 static func position_counter_row(counter_row: Control) -> void:
-	position_top_wide(
-		counter_row,
-		GameConstants.HUD_COUNTER_ROW_TOP,
-		GameConstants.HUD_COUNTER_ROW_HEIGHT,
-		GameConstants.HUD_TOP_BAR_EDGE_MARGIN
-	)
+	# Geometry is owned by the HUD scene tree.
 	align_counter_row(counter_row)
 
 static func align_counter_row(counter_row: Control) -> void:
@@ -45,25 +46,11 @@ static func align_counter_row(counter_row: Control) -> void:
 			slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			slot.size_flags_stretch_ratio = 1.0
 
-static func position_top_bar(top_bar: Control) -> void:
-	position_top_wide(
-		top_bar,
-		GameConstants.HUD_TOP_BAR_EDGE_MARGIN,
-		GameConstants.HUD_BUTTON_HEIGHT,
-		GameConstants.HUD_TOP_BAR_EDGE_MARGIN
-	)
-
-static var _screen_header_font: Font
 static var _screen_header_font_default: Font
 
 static func screen_header_font(force_pixel: bool = false) -> Font:
 	if force_pixel or uses_pixel_font():
-		if _screen_header_font == null:
-			_screen_header_font = PIXEL_FONT.duplicate()
-			var fallback := ThemeDB.fallback_font
-			if fallback:
-				_screen_header_font.fallbacks = [fallback]
-		return _screen_header_font
+		return pixel_font()
 	if _screen_header_font_default == null:
 		_screen_header_font_default = ThemeDB.fallback_font
 	return _screen_header_font_default
@@ -112,147 +99,129 @@ static func apply_end_screen_header_style(label: Label, base_size: int = 48) -> 
 	label.clip_contents = false
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 
-static func mount_screen_header(host: Node, label: Label) -> void:
-	if not host or not label:
-		return
-	var parent := label.get_parent()
-	if parent != host:
-		if parent:
-			parent.remove_child(label)
-		host.add_child(label)
-	if label is Control:
-		label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-		label.offset_left = GameConstants.HUD_SIDE_MARGIN
-		label.offset_right = -GameConstants.HUD_SIDE_MARGIN
-		label.offset_top = GameConstants.SCREEN_HEADER_TOP
-		label.offset_bottom = GameConstants.SCREEN_HEADER_TOP + GameConstants.SCREEN_HEADER_HEIGHT
-		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	apply_screen_header_style(label)
-
-static func layout_how_to_play(host: Control, panel: Control, nav: Control) -> void:
-	if host == null or panel == null or nav == null:
-		return
-	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	host.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	host.grow_vertical = Control.GROW_DIRECTION_BOTH
-
-	if nav.get_parent() != host:
-		var old_parent := nav.get_parent()
-		if old_parent:
-			old_parent.remove_child(nav)
-		host.add_child(nav)
-
-	nav.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	nav.anchor_left = 0.0
-	nav.anchor_top = 1.0
-	nav.anchor_right = 1.0
-	nav.anchor_bottom = 1.0
-	nav.offset_left = 40.0
-	nav.offset_right = -40.0
-	nav.offset_top = GameConstants.SCREEN_BOTTOM_NAV_TOP
-	nav.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_BOTTOM
-	nav.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	nav.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	if nav is HBoxContainer:
-		(nav as HBoxContainer).alignment = BoxContainer.ALIGNMENT_CENTER
-
-	var panel_w := 950.0
-	if panel.custom_minimum_size.x > 0.0:
-		panel_w = panel.custom_minimum_size.x
-	panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	panel.anchor_left = 0.5
-	panel.anchor_top = 0.0
-	panel.anchor_right = 0.5
-	panel.anchor_bottom = 1.0
-	panel.offset_left = -panel_w * 0.5
-	panel.offset_right = panel_w * 0.5
-	panel.offset_top = (
-		GameConstants.SCREEN_HEADER_TOP
-		+ GameConstants.SCREEN_HEADER_HEIGHT
-		+ GameConstants.SCREEN_CONTENT_GAP
-	)
-	panel.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_TOP - 12.0
-	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-
-	var rules := panel.get_node_or_null("RulesLabel") as Control
-	if rules:
-		rules.offset_top = 0.0
-		rules.offset_bottom = -12.0
-		if rules is RichTextLabel:
-			var rtl := rules as RichTextLabel
-			rtl.fit_content = false
-			rtl.scroll_active = false
-			rtl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-
 static func ensure_how_to_play_page_header(host: Control) -> Label:
 	if host == null:
 		return null
-	var header := host.get_node_or_null("HowToPlayPageHeader") as Label
-	if header == null:
-		header = Label.new()
-		header.name = "HowToPlayPageHeader"
-		header.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		host.add_child(header)
-	mount_screen_header(host, header)
-	return header
+	return host.get_node_or_null("HowToPlayPageHeader") as Label
 
-static func ensure_how_to_play_nav_slots(nav: HBoxContainer, prev: Button, next: Button) -> void:
-	if nav == null:
-		return
-	_ensure_htp_side_slot(nav, prev, "PrevSlot", 0)
-	_ensure_htp_side_slot(nav, next, "NextSlot", -1)
-
-static func _ensure_htp_side_slot(
-	nav: HBoxContainer,
-	button: Button,
-	slot_name: String,
-	desired_index: int
+## Size the rules panel to its text and park PREV/NEXT directly under it.
+static func layout_how_to_play_stack(
+	host: Control,
+	panel: Control,
+	rules: RichTextLabel,
+	nav: Control
 ) -> void:
+	if host == null or panel == null or nav == null:
+		return
+	var host_h := host.size.y
+	if host_h <= 1.0:
+		host_h = float(
+			ProjectSettings.get_setting("display/window/size/viewport_height", 1920)
+		)
+	var nav_h := GameConstants.UI_BTN_NAV_SIZE.y
+	var bottom_limit := host_h - GameConstants.AD_BANNER_RESERVE - 16.0
+	var max_panel_h := maxf(
+		GameConstants.HTP_PANEL_MIN_HEIGHT,
+		bottom_limit - GameConstants.HTP_PANEL_TOP - nav_h - GameConstants.SCREEN_NAV_GAP
+	)
+
+	# Lock horizontal size first so RichTextLabel can measure wrap height.
+	panel.anchor_left = 0.5
+	panel.anchor_right = 0.5
+	panel.anchor_top = 0.0
+	panel.anchor_bottom = 0.0
+	panel.offset_left = -GameConstants.HTP_PANEL_HALF_WIDTH
+	panel.offset_right = GameConstants.HTP_PANEL_HALF_WIDTH
+	panel.offset_top = GameConstants.HTP_PANEL_TOP
+	panel.offset_bottom = GameConstants.HTP_PANEL_TOP + max_panel_h
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+
+	var content_h := max_panel_h
+	if rules:
+		rules.fit_content = true
+		rules.scroll_active = false
+		rules.custom_minimum_size = Vector2(0, 0)
+		content_h = maxf(rules.get_content_height() + 24.0, GameConstants.HTP_PANEL_MIN_HEIGHT)
+	var panel_h := clampf(content_h, GameConstants.HTP_PANEL_MIN_HEIGHT, max_panel_h)
+	panel.offset_bottom = GameConstants.HTP_PANEL_TOP + panel_h
+	if rules:
+		var needs_scroll := content_h > panel_h + 1.0
+		rules.scroll_active = needs_scroll
+		rules.fit_content = not needs_scroll
+
+	var nav_top := panel.offset_bottom + GameConstants.SCREEN_NAV_GAP
+	nav.anchor_left = 0.0
+	nav.anchor_right = 1.0
+	nav.anchor_top = 0.0
+	nav.anchor_bottom = 0.0
+	nav.offset_left = 40.0
+	nav.offset_right = -40.0
+	nav.offset_top = nav_top
+	nav.offset_bottom = nav_top + nav_h
+	nav.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	nav.grow_vertical = Control.GROW_DIRECTION_BEGIN
+
+static func apply_top_bar_tile_styles(button: Button) -> void:
+	if not button:
+		return
+	for style_name in ["normal", "pressed", "hover", "disabled", "focus"]:
+		var box := StyleBoxTexture.new()
+		box.texture = _TOP_BAR_TILE_TEX
+		box.texture_margin_left = 16.0
+		box.texture_margin_top = 16.0
+		box.texture_margin_right = 16.0
+		box.texture_margin_bottom = 16.0
+		box.content_margin_left = 8.0
+		box.content_margin_top = 8.0
+		box.content_margin_right = 8.0
+		box.content_margin_bottom = 8.0
+		if style_name == "hover":
+			box.modulate_color = Color(1.2, 1.2, 1.2, 1.0)
+		elif style_name == "pressed":
+			box.modulate_color = Color(0.8, 0.8, 0.8, 1.0)
+		elif style_name == "disabled":
+			box.modulate_color = Color(0.55, 0.55, 0.55, 1.0)
+		button.add_theme_stylebox_override(style_name, box)
+
+static func ensure_top_bar_icon(button: Button, texture: Texture2D) -> void:
+	if not button or texture == null:
+		return
+	button.text = ""
+	button.flat = false
+	button.clip_text = true
+	button.autowrap_mode = TextServer.AUTOWRAP_OFF
+	var icon_container := button.get_node_or_null("IconContainer") as MarginContainer
+	if icon_container == null:
+		icon_container = MarginContainer.new()
+		icon_container.name = "IconContainer"
+		icon_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		icon_container.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		icon_container.grow_vertical = Control.GROW_DIRECTION_BOTH
+		button.add_child(icon_container)
+	var icon := icon_container.get_node_or_null("Icon") as TextureRect
+	if icon == null:
+		icon = TextureRect.new()
+		icon.name = "Icon"
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		icon_container.add_child(icon)
+	icon.texture = texture
+	icon.custom_minimum_size = Vector2(_TOP_BAR_ICON_PX, _TOP_BAR_ICON_PX)
+
+static func style_top_bar_close_button(button: Button) -> void:
 	if button == null:
 		return
-	var slot := nav.get_node_or_null(slot_name) as Control
-	if slot == null:
-		slot = Control.new()
-		slot.name = slot_name
-		nav.add_child(slot)
-	slot.custom_minimum_size = GameConstants.UI_BTN_NAV_SIZE
-	slot.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	if button.get_parent() != slot:
-		var old_parent := button.get_parent()
-		if old_parent:
-			old_parent.remove_child(button)
-		slot.add_child(button)
-	button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	button.offset_left = 0.0
-	button.offset_top = 0.0
-	button.offset_right = 0.0
-	button.offset_bottom = 0.0
-	var target_index := desired_index if desired_index >= 0 else nav.get_child_count() - 1
-	target_index = clampi(target_index, 0, nav.get_child_count() - 1)
-	if slot.get_index() != target_index:
-		nav.move_child(slot, target_index)
-
-static func pin_menu_body_below_header(
-	body: Control,
-	approx_body_height: float = 980.0,
-	extra_gap: float = 0.0
-) -> void:
-	if body == null:
-		return
-	body.offset_top = (
-		GameConstants.SCREEN_HEADER_TOP
-		+ GameConstants.SCREEN_HEADER_HEIGHT
-		+ GameConstants.SCREEN_CONTENT_GAP
-		+ extra_gap
-	)
-	var vh := 1920.0
-	if body.get_viewport():
-		vh = body.get_viewport().get_visible_rect().size.y
-	var usable := maxf(240.0, vh - body.offset_top - 24.0)
-	var band := minf(approx_body_height, usable)
-	body.offset_bottom = -(vh - body.offset_top - band)
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.z_index = 20
+	button.focus_mode = Control.FOCUS_ALL
+	apply_top_bar_tile_styles(button)
+	ensure_top_bar_icon(button, _CLOSE_ICON_TEX)
+	apply_square_top_bar_button(button)
 
 static func english(key: String) -> String:
 	if key.is_empty():
@@ -273,11 +242,27 @@ static func translate_status_text(msg: String, force_english: bool = false) -> S
 		for line in msg.split("\n"):
 			if line.is_empty():
 				continue
-			translated_lines.append(_tr(line, force_english))
+			translated_lines.append(_translate_status_token(line, force_english))
 		translated = "\n".join(translated_lines)
 	else:
-		translated = _tr(msg, force_english)
+		translated = _translate_status_token(msg, force_english)
 	return break_after_sentences(translated)
+
+static func _translate_status_token(token: String, force_english: bool = false) -> String:
+	var parts := token.split("|")
+	var key := parts[0]
+	var translated := _tr(key, force_english)
+	if parts.size() <= 1 or translated == key:
+		return translated
+	var args: Array = []
+	for i in range(1, parts.size()):
+		if parts[i].is_valid_int():
+			args.append(int(parts[i]))
+		else:
+			args.append(parts[i])
+	if translated.find("%") >= 0:
+		return translated % args
+	return translated
 
 static func break_after_sentences(text: String) -> String:
 	if text.is_empty():
@@ -324,12 +309,21 @@ static func body_font_size(base: int) -> int:
 	return int(round(float(base) * scale))
 
 const PIXEL_FONT: Font = preload("res://resources/fonts/PressStart2P-vaV7.ttf")
+static var _pixel_font_with_fallback: Font
 
 static func uses_pixel_font() -> bool:
 	return TranslationServer.get_locale().substr(0, 2) == "en"
 
+static func pixel_font() -> Font:
+	if _pixel_font_with_fallback == null and PIXEL_FONT != null:
+		_pixel_font_with_fallback = PIXEL_FONT.duplicate()
+		var fallback := ThemeDB.fallback_font
+		if fallback:
+			_pixel_font_with_fallback.fallbacks = [fallback]
+	return _pixel_font_with_fallback if _pixel_font_with_fallback else PIXEL_FONT
+
 static func ui_font() -> Font:
-	return PIXEL_FONT if uses_pixel_font() else ThemeDB.fallback_font
+	return pixel_font() if uses_pixel_font() else ThemeDB.fallback_font
 
 static func is_status_label(node: Node) -> bool:
 	if node == null:
@@ -365,11 +359,17 @@ static func apply_status_font(label: RichTextLabel, base_size: int = GameConstan
 static func apply_locale_font_to_control(node: Node) -> void:
 	if node == null:
 		return
+	if node.get_meta("_force_pixel_font", false):
+		_apply_forced_pixel_font(node)
+		return
 	if node.get_meta("_screen_header", false) and node is Label:
 		apply_screen_header_style(node as Label)
 		return
 	if is_status_label(node) and node is RichTextLabel:
 		apply_status_font(node as RichTextLabel)
+		return
+	# Icon-only top-bar buttons: locale font metrics shift the TextureRect.
+	if _is_icon_only_button(node):
 		return
 	var use_default := bool(node.get_meta("_use_default_font", false))
 	if not use_default and node is Label:
@@ -378,6 +378,25 @@ static func apply_locale_font_to_control(node: Node) -> void:
 			use_default = true
 			node.set_meta("_use_default_font", true)
 	var font := ThemeDB.fallback_font if use_default else ui_font()
+	if node is Button or node is Label or node is LineEdit or node is OptionButton:
+		node.add_theme_font_override("font", font)
+	elif node is RichTextLabel:
+		node.add_theme_font_override("normal_font", font)
+		node.add_theme_font_override("bold_font", font)
+		node.add_theme_font_override("italics_font", font)
+		node.add_theme_font_override("bold_italics_font", font)
+		node.add_theme_font_override("mono_font", font)
+
+static func _is_icon_only_button(node: Node) -> bool:
+	if not node is Button:
+		return false
+	var button := node as Button
+	return button.get_node_or_null("IconContainer") != null and button.text.is_empty()
+
+static func _apply_forced_pixel_font(node: Node) -> void:
+	var font := pixel_font()
+	if font == null:
+		return
 	if node is Button or node is Label or node is LineEdit or node is OptionButton:
 		node.add_theme_font_override("font", font)
 	elif node is RichTextLabel:
@@ -418,6 +437,43 @@ static func fit_text_button(button: Button, base_font_size: int = 36, min_font_s
 			break
 		size -= 2
 	button.add_theme_font_size_override("font_size", size)
+	# Keep outline proportional so large outlines don't mush glyphs on mobile.
+	var base_outline := int(button.get_theme_constant("outline_size"))
+	if base_outline <= 0:
+		base_outline = GameConstants.MENU_TEXT_OUTLINE
+	var outline := int(round(float(base_outline) * float(size) / float(maxi(base_font_size, 1))))
+	outline = clampi(outline, 2, base_outline)
+	button.add_theme_constant_override("outline_size", outline)
+
+static func fit_text_button_single_line(button: Button, base_font_size: int = 36, min_font_size: int = 18) -> void:
+	if not button:
+		return
+	button.clip_text = false
+	button.autowrap_mode = TextServer.AUTOWRAP_OFF
+	apply_locale_font_to_control(button)
+	var font: Font = (
+		ThemeDB.fallback_font if button.get_meta("_use_default_font", false) else ui_font()
+	)
+	if font == null:
+		font = ThemeDB.fallback_font
+	var target_w := maxf(40.0, button.custom_minimum_size.x - 36.0)
+	var display := button.text
+	if button.auto_translate_mode != Node.AUTO_TRANSLATE_MODE_DISABLED:
+		display = String(TranslationServer.translate(button.text))
+	var size := scaled_font_size(base_font_size)
+	var min_size := scaled_font_size(min_font_size)
+	while size > min_size:
+		var measured := font.get_string_size(display, HORIZONTAL_ALIGNMENT_LEFT, -1, size)
+		if measured.x <= target_w + 2.0:
+			break
+		size -= 2
+	button.add_theme_font_size_override("font_size", size)
+	var base_outline := int(button.get_theme_constant("outline_size"))
+	if base_outline <= 0:
+		base_outline = GameConstants.MENU_TEXT_OUTLINE
+	var outline := int(round(float(base_outline) * float(size) / float(maxi(base_font_size, 1))))
+	outline = clampi(outline, 2, base_outline)
+	button.add_theme_constant_override("outline_size", outline)
 
 static func apply_primary_button(button: Button) -> void:
 	if not button:
@@ -446,8 +502,31 @@ static func apply_dialog_button(button: Button) -> void:
 static func apply_nav_button(button: Button) -> void:
 	if not button:
 		return
+	button.text = ""
+	button.flat = false
+	button.clip_text = true
+	button.autowrap_mode = TextServer.AUTOWRAP_OFF
 	button.custom_minimum_size = GameConstants.UI_BTN_NAV_SIZE
-	fit_text_button(button, GameConstants.UI_BTN_NAV_FONT, GameConstants.UI_BTN_NAV_FONT_MIN)
+	apply_top_bar_tile_styles(button)
+	var name_l := String(button.name).to_lower()
+	var is_next := name_l.contains("next")
+	ensure_top_bar_icon(button, _NEXT_ICON_TEX if is_next else _PREV_ICON_TEX)
+	var icon := button.get_node_or_null("IconContainer/Icon") as TextureRect
+	if icon:
+		var px := GameConstants.UI_BTN_NAV_ICON_PX
+		icon.custom_minimum_size = Vector2(px, px - 1.0)
+	nudge_button_icon_up(button, GameConstants.HUD_TOP_BAR_ICON_NUDGE)
+	# Nudge helper uses 2x margins; add exactly +1px more lift for nav icons.
+	var icon_root := button.get_node_or_null("IconContainer") as MarginContainer
+	if icon_root:
+		icon_root.add_theme_constant_override(
+			"margin_bottom",
+			GameConstants.HUD_TOP_BAR_ICON_NUDGE * 2 + 1
+		)
+	refresh_button_icon_modulate(button)
+	if not button.has_meta("_icon_disabled_hook"):
+		button.set_meta("_icon_disabled_hook", true)
+		button.draw.connect(func(): refresh_button_icon_modulate(button))
 
 static func apply_panel_button(button: Button) -> void:
 	if not button:
@@ -591,15 +670,23 @@ static func format_mode_label(translation_key: String, force_english: bool = fal
 	return format_outlined_center_text(text.replace(" ", "\n"))
 
 static func format_outlined_center_text(body: String) -> String:
-	var pad := GameConstants.HUD_LEVEL_OUTLINE_PAD
-	return "[center][font_size=%d][color=#00000000].[/color][/font_size]\n%s\n[font_size=%d][color=#00000000].[/color][/font_size][/center]" % [
-		pad, body, pad
-	]
+	return "[center]%s[/center]" % body
 
 static func _tr(key: String, force_english: bool = false) -> String:
 	if force_english:
 		return english(key)
 	return String(TranslationServer.translate(key))
+
+## Keep `[img]…[/img]` + color name on one line (no wrap between icon and label).
+static func glue_tile_icon_color_labels(bbcode: String) -> String:
+	if bbcode.is_empty():
+		return bbcode
+	var out := bbcode
+	out = out.replace("[/img] [color=", "[/img][wj][color=")
+	out = out.replace("[/img]\t[color=", "[/img][wj][color=")
+	out = out.replace("[/img][color=", "[/img][wj][color=")
+	out = out.replace("[/img][wj][wj][color=", "[/img][wj][color=")
+	return out
 
 static func apply_square_top_bar_button(button: Button) -> void:
 	if not button:
@@ -608,11 +695,26 @@ static func apply_square_top_bar_button(button: Button) -> void:
 	button.custom_minimum_size = Vector2(size, size)
 	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var icon := button.get_node_or_null("IconContainer/Icon") as TextureRect
+	if icon:
+		var px := float(GameConstants.HUD_ICON_SIZE)
+		icon.custom_minimum_size = Vector2(px, px)
 	nudge_button_icon_up(button, GameConstants.HUD_TOP_BAR_ICON_NUDGE)
 	refresh_button_icon_modulate(button)
 	if not button.has_meta("_icon_disabled_hook"):
 		button.set_meta("_icon_disabled_hook", true)
 		button.draw.connect(func(): refresh_button_icon_modulate(button))
+
+static func apply_top_bar_button_cluster(cluster: HBoxContainer) -> void:
+	if not cluster:
+		return
+	cluster.custom_minimum_size = Vector2(
+		GameConstants.HUD_BUTTON_CLUSTER_WIDTH,
+		GameConstants.HUD_BUTTON_HEIGHT
+	)
+	cluster.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	cluster.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	cluster.add_theme_constant_override("separation", GameConstants.HUD_BUTTON_SEPARATION)
 
 static func nudge_button_icon_up(button: Button, pixels: int = 1) -> void:
 	if not button:
@@ -648,110 +750,76 @@ static func _nudge_button_text_up(button: Button, pixels: int) -> void:
 			copied.content_margin_bottom = copied.content_margin_bottom + float(pixels)
 			button.add_theme_stylebox_override(style_name, copied)
 
-static func apply_top_bar_row(top_bar_row: HBoxContainer) -> void:
-	if not top_bar_row:
-		return
-
-	var left_buttons := top_bar_row.get_node_or_null("LeftButtons") as Control
-	var right_buttons := top_bar_row.get_node_or_null("RightButtons") as Control
-	var label_wrap: Control = null
-	for child in top_bar_row.get_children():
-		if child is CenterContainer:
-			label_wrap = child
-			break
-
-	if left_buttons:
-		left_buttons.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	if right_buttons:
-		right_buttons.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	if label_wrap:
-		label_wrap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-
-	var gap := GameConstants.HUD_CENTER_LABEL_GAP
-	for spacer_name in ["LeftSpacer", "RightSpacer"]:
-		var spacer := top_bar_row.get_node_or_null(spacer_name) as Control
-		if spacer:
-			spacer.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-			spacer.size_flags_stretch_ratio = 0.0
-			spacer.custom_minimum_size = Vector2(gap, 0)
-
-	var left_edge := _ensure_named_spacer(top_bar_row, "LeftEdgeSpacer")
-	var right_edge := _ensure_named_spacer(top_bar_row, "RightEdgeSpacer")
-	left_edge.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right_edge.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left_edge.size_flags_stretch_ratio = 1.0
-	right_edge.size_flags_stretch_ratio = 1.0
-
-	var ordered: Array[Node] = []
-	ordered.append(left_edge)
-	if left_buttons:
-		ordered.append(left_buttons)
-	var left_spacer := top_bar_row.get_node_or_null("LeftSpacer")
-	if left_spacer:
-		ordered.append(left_spacer)
-	if label_wrap:
-		ordered.append(label_wrap)
-	var right_spacer := top_bar_row.get_node_or_null("RightSpacer")
-	if right_spacer:
-		ordered.append(right_spacer)
-	if right_buttons:
-		ordered.append(right_buttons)
-	ordered.append(right_edge)
-
-	for i in range(ordered.size()):
-		top_bar_row.move_child(ordered[i], i)
-
-	top_bar_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	top_bar_row.add_theme_constant_override("separation", 0)
-
-static func _ensure_named_spacer(top_bar_row: HBoxContainer, spacer_name: String) -> Control:
-	var edge := top_bar_row.get_node_or_null(spacer_name) as Control
-	if edge == null:
-		edge = Control.new()
-		edge.name = spacer_name
-		edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		top_bar_row.add_child(edge)
-	return edge
-
 static func apply_top_bar_mode_label(label: RichTextLabel) -> void:
 	if not label:
 		return
 	label.set_meta("_use_default_font", not uses_pixel_font())
 	apply_locale_font_to_control(label)
-	label.custom_minimum_size = Vector2(220, 0)
-	label.fit_content = true
+	label.bbcode_enabled = true
+	label.fit_content = false
+	label.scroll_active = false
 	label.clip_contents = false
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_constant_override("line_separation", GameConstants.HUD_CENTER_LABEL_LINE_SEPARATION)
+	label.add_theme_constant_override("outline_size", GameConstants.HUD_LEVEL_OUTLINE_SIZE)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	var w := float(GameConstants.HUD_CENTER_LABEL_WIDTH)
+	var h := float(GameConstants.HUD_BUTTON_HEIGHT)
+	label.custom_minimum_size = Vector2(w, h)
 	label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	label.add_theme_constant_override("line_separation", GameConstants.HUD_CENTER_LABEL_LINE_SEPARATION)
-	var inset: Node = label.get_parent()
-	if inset is MarginContainer:
-		var nudge := int(GameConstants.HUD_LEVEL_LABEL_Y_NUDGE)
-		inset.add_theme_constant_override("margin_top", nudge)
-		inset.add_theme_constant_override("margin_bottom", nudge)
-		inset.clip_contents = false
-	var label_wrap: Node = null
+	var inset := label.get_parent() as Control
 	if inset:
-		label_wrap = inset.get_parent()
-	if label_wrap is CenterContainer:
-		label_wrap.custom_minimum_size = Vector2(220, GameConstants.HUD_BUTTON_HEIGHT)
-		label_wrap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		label_wrap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		label_wrap.clip_contents = false
-	var row := label_wrap.get_parent() if label_wrap else null
-	if row is HBoxContainer:
-		apply_top_bar_row(row)
+		inset.custom_minimum_size = Vector2(w, h)
+		inset.clip_contents = false
+		if inset is MarginContainer:
+			inset.add_theme_constant_override("margin_top", 0)
+			inset.add_theme_constant_override("margin_bottom", 0)
+		var label_wrap := inset.get_parent() as Control
+		if label_wrap:
+			label_wrap.custom_minimum_size = Vector2(w, h)
+			label_wrap.clip_contents = false
+			label_wrap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			label_wrap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var plain := _plain_top_bar_label_text(label.text)
+	if not plain.is_empty():
+		label.add_theme_font_size_override("normal_font_size", fit_top_bar_two_line_font_size(plain))
 
-static func align_counter_label(label: RichTextLabel, y_nudge: float = 0.0) -> void:
+static func _plain_top_bar_label_text(bbcode: String) -> String:
+	var plain := bbcode
+	for tag in ["[center]", "[/center]"]:
+		plain = plain.replace(tag, "")
+	return plain.strip_edges()
+
+static func fit_top_bar_level_font_size(prefix: String, num: int) -> int:
+	return fit_top_bar_two_line_font_size("%s\n%d" % [prefix, num])
+
+static func fit_top_bar_two_line_font_size(body: String) -> int:
+	var base := GameConstants.HUD_LEVEL_FONT_SIZE
+	var size := scaled_font_size(base)
+	var font: Font = ui_font()
+	if font == null:
+		font = ThemeDB.fallback_font
+	if font == null:
+		return size
+	var bar_h := float(GameConstants.HUD_BUTTON_HEIGHT)
+	var bar_w := float(GameConstants.HUD_CENTER_LABEL_WIDTH)
+	var line_sep := GameConstants.HUD_CENTER_LABEL_LINE_SEPARATION
+	while size > 16:
+		var measured := font.get_multiline_string_size(
+			body, HORIZONTAL_ALIGNMENT_CENTER, bar_w, size
+		)
+		var total_h := measured.y + float(line_sep)
+		if measured.x <= bar_w - 8.0 and total_h <= bar_h - 8.0:
+			break
+		size -= 1
+	return size
+
+static func align_counter_label(label: RichTextLabel, _y_nudge: float = 0.0) -> void:
 	if not label:
 		return
-	label.set_anchors_preset(Control.PRESET_CENTER)
-	var half_w := GameConstants.HUD_COUNTER_LABEL_HALF_W
-	var half_h := GameConstants.HUD_COUNTER_LABEL_HALF_H
-	label.offset_left = -half_w
-	label.offset_right = half_w
-	label.offset_top = -half_h + y_nudge
-	label.offset_bottom = half_h + y_nudge
 	label.bbcode_enabled = true
 	label.fit_content = false
 	label.scroll_active = false
@@ -769,6 +837,21 @@ static func prepare_counter_label(label: RichTextLabel) -> void:
 	label.scroll_active = false
 	label.clip_contents = false
 	label.add_theme_font_size_override("normal_font_size", scaled_font_size(GameConstants.HUD_COUNTER_FONT_SIZE))
+	label.add_theme_constant_override("outline_size", 6)
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
+	label.add_theme_color_override("default_color", Color(0.96, 0.96, 0.96, 1))
+
+static func prepare_timer_label(label: RichTextLabel) -> void:
+	if not label:
+		return
+	# Timer digits always use Press Start at the English HUD size.
+	label.set_meta("_force_pixel_font", true)
+	_apply_forced_pixel_font(label)
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.fit_content = false
+	label.scroll_active = false
+	label.clip_contents = false
+	label.add_theme_font_size_override("normal_font_size", GameConstants.HUD_COUNTER_FONT_SIZE)
 	label.add_theme_constant_override("outline_size", 6)
 	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
 	label.add_theme_color_override("default_color", Color(0.96, 0.96, 0.96, 1))
@@ -793,7 +876,7 @@ static func format_icon_ratio_counter(
 	]
 
 static func format_time_counter(formatted_time: String, _label_text: String = "") -> String:
-	var num_size := scaled_font_size(GameConstants.HUD_COUNTER_FONT_SIZE)
+	var num_size := GameConstants.HUD_COUNTER_FONT_SIZE
 	if formatted_time == "∞":
 		var icon_size := GameConstants.HUD_INFINITY_ICON_SIZE
 		return "[center][img=%dx%d]%s[/img][/center]" % [

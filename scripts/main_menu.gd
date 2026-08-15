@@ -29,13 +29,13 @@ const _DEBUG_BTN_SIZE := Vector2(96, 96)
 @onready var options_menu = $UILayer/OptionsMenu
 @onready var overlay_blocker = $UILayer/OverlayBlocker
 @onready var credits_panel = $UILayer/OverlayBlocker/CreditsPanel
-@onready var close_credits_btn = $UILayer/OverlayBlocker/CreditsPanel/VBoxContainer/CloseCreditsButton
+@onready var close_credits_btn = $UILayer/OverlayBlocker/CloseCreditsButton
 @onready var _htp_host: Control = $UILayer/HowToPlayHost
-@onready var _htp_panel: Panel = $UILayer/HowToPlayHost/HowToPlayPanel
-@onready var _htp_rules: RichTextLabel = $UILayer/HowToPlayHost/HowToPlayPanel/RulesLabel
+@onready var _htp_panel: Control = $UILayer/HowToPlayHost/HowToPlayPanel
 @onready var _htp_nav: HBoxContainer = $UILayer/HowToPlayHost/NavRow
+@onready var _htp_rules: RichTextLabel = $UILayer/HowToPlayHost/HowToPlayPanel/RulesLabel
 @onready var _htp_prev: Button = $UILayer/HowToPlayHost/NavRow/PrevSlot/PrevButton
-@onready var _htp_close: Button = $UILayer/HowToPlayHost/NavRow/CloseButton
+@onready var _htp_close: Button = $UILayer/HowToPlayHost/CloseButton
 @onready var _htp_next: Button = $UILayer/HowToPlayHost/NavRow/NextSlot/NextButton
 @onready var _tutorial_intro_blocker: ColorRect = $UILayer/TutorialIntroBlocker
 @onready var _tutorial_intro_label: Label = (
@@ -72,6 +72,7 @@ func _ready() -> void:
 	if AdsManager:
 		AdsManager.ensure_started()
 		AdsManager.show_menu_banner()
+		AdsManager.warm_rewarded_hint()
 	if SpaceBackground and SpaceBackground.has_method("set_foreground_events_enabled"):
 		SpaceBackground.set_foreground_events_enabled(true)
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
@@ -179,14 +180,6 @@ func _setup_title_under_fx() -> void:
 	var title := get_node_or_null("TitleLayer/TitleHost/TitleCluster/TitleLabel") as Label
 	if title:
 		_style_title_label(title)
-	var spacer := $UILayer/CenterContainer/VBoxContainer/Spacer as Control
-	if spacer:
-		spacer.custom_minimum_size.y = 20.0
-	var vbox := $UILayer/CenterContainer/VBoxContainer as VBoxContainer
-	if vbox:
-		vbox.add_theme_constant_override("separation", 22)
-	if menu_center:
-		HudLayout.pin_menu_body_below_header(menu_center, 1280.0)
 
 func _ensure_overlays_above_fx() -> void:
 	var ui_layer := $UILayer as CanvasLayer
@@ -215,66 +208,21 @@ func _style_title_label(title: Label) -> void:
 	HudLayout.apply_screen_header_style(title)
 
 func _mount_credits_header() -> void:
-	var credits_title = credits_panel.get_node_or_null("VBoxContainer/CreditsTitle") if credits_panel else null
-	if credits_title and overlay_blocker:
-		HudLayout.mount_screen_header(overlay_blocker, credits_title)
+	var credits_title = null
+	if overlay_blocker:
+		credits_title = overlay_blocker.get_node_or_null("CreditsTitle") as Label
+	if credits_title:
 		credits_title.set_meta("_screen_header_font_size", CREDITS_HEADER_SIZE)
 		credits_title.set_meta("_screen_header_outline", CREDITS_HEADER_OUTLINE)
 		HudLayout.apply_screen_header_style(credits_title)
-	_configure_credits_layout()
-
-func _configure_credits_layout() -> void:
-	if not credits_panel:
-		return
-	var top := (
-		GameConstants.SCREEN_HEADER_TOP
-		+ GameConstants.SCREEN_HEADER_HEIGHT
-		+ GameConstants.SCREEN_CONTENT_GAP
-		+ 40.0
-	)
-	credits_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	credits_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	credits_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	credits_panel.custom_minimum_size = Vector2(860, 900)
-	credits_panel.offset_left = -430.0
-	credits_panel.offset_right = 430.0
-	credits_panel.offset_top = top
-	credits_panel.offset_bottom = top + 900.0
-	var vbox := credits_panel.get_node_or_null("VBoxContainer") as VBoxContainer
-	if vbox:
-		vbox.add_theme_constant_override("separation", 24)
-		vbox.offset_top = 24.0
-		vbox.offset_bottom = -24.0
-	var credits_text = credits_panel.get_node_or_null("VBoxContainer/CreditsText") as RichTextLabel
-	if credits_text:
-		credits_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		credits_text.scroll_active = false
-		credits_text.fit_content = false
-		credits_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_position_credits_close()
-
-func _position_credits_close() -> void:
-	if close_credits_btn == null or overlay_blocker == null:
-		return
-	if close_credits_btn.get_parent() != overlay_blocker:
-		var old := close_credits_btn.get_parent()
-		if old:
-			old.remove_child(close_credits_btn)
-		overlay_blocker.add_child(close_credits_btn)
-	close_credits_btn.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	var half_w := GameConstants.UI_BTN_SECONDARY_SIZE.x * 0.5
-	close_credits_btn.offset_left = -half_w
-	close_credits_btn.offset_right = half_w
-	close_credits_btn.offset_top = GameConstants.SCREEN_BOTTOM_NAV_TOP
-	close_credits_btn.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_BOTTOM
-	close_credits_btn.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	close_credits_btn.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	HudLayout.apply_secondary_button(close_credits_btn)
+	if close_credits_btn:
+		HudLayout.style_top_bar_close_button(close_credits_btn)
 
 func _on_language_changed() -> void:
 	_refresh_start_button_label()
-	_fit_menu_buttons()
+	# Fonts first, then size fitting so Press Start vs default sizing is correct.
 	HudLayout.apply_locale_fonts_to_tree(self)
+	_fit_menu_buttons()
 	_refresh_how_to_play_text()
 
 func _refresh_start_button_label() -> void:
@@ -293,14 +241,13 @@ func _fit_menu_buttons() -> void:
 	for btn in [start_btn, tutorial_btn, levels_btn, how_to_play_btn, options_btn, credits_btn, editor_btn]:
 		_apply_main_menu_button(btn)
 	_fit_debug_bar_buttons()
-	HudLayout.apply_secondary_button(close_credits_btn)
+	if close_credits_btn:
+		HudLayout.style_top_bar_close_button(close_credits_btn)
 	var title = get_node_or_null("TitleLayer/TitleHost/TitleCluster/TitleLabel") as Label
 	if title:
 		_style_title_label(title)
 	var credits_title = null
-	if credits_panel:
-		credits_title = credits_panel.get_node_or_null("VBoxContainer/CreditsTitle") as Label
-	if credits_title == null and overlay_blocker:
+	if overlay_blocker:
 		credits_title = overlay_blocker.get_node_or_null("CreditsTitle") as Label
 	if credits_title:
 		credits_title.set_meta("_screen_header_font_size", CREDITS_HEADER_SIZE)
@@ -327,47 +274,16 @@ func _apply_main_menu_button(button: Button) -> void:
 	button.add_theme_constant_override("outline_size", MENU_BTN_OUTLINE + (2 if is_play else 0))
 	button.add_theme_color_override("font_outline_color", Color.BLACK)
 	if button == levels_btn:
-		button.autowrap_mode = TextServer.AUTOWRAP_OFF
-		button.clip_text = false
-		HudLayout.apply_locale_font_to_control(button)
-		var font: Font = (
-			ThemeDB.fallback_font if button.get_meta("_use_default_font", false) else HudLayout.ui_font()
-		)
-		var display := String(TranslationServer.translate(button.text))
-		var fitted := HudLayout.scaled_font_size(MENU_BTN_FONT)
-		var min_font_size := HudLayout.scaled_font_size(32)
-		var target_w := maxf(40.0, button.custom_minimum_size.x - 28.0)
-		while fitted > min_font_size:
-			var measured := font.get_string_size(display, HORIZONTAL_ALIGNMENT_CENTER, -1, fitted)
-			if measured.x <= target_w + 2.0:
-				break
-			fitted -= 2
-		button.add_theme_font_size_override("font_size", fitted)
+		HudLayout.fit_text_button_single_line(button, MENU_BTN_FONT, 32)
 	else:
 		HudLayout.fit_text_button(button, font_size, min_font)
 
 func _fit_debug_bar_buttons() -> void:
-	_position_debug_bar()
 	_setup_debug_fx_button(debug_star_btn, [_FX_STAR])
 	_setup_debug_fx_button(debug_asteroid_btn, [_FX_AST_1])
 	_setup_debug_fx_button(debug_asteroid_cloud_btn, [_FX_AST_1, _FX_AST_2, _FX_AST_3])
 	_setup_debug_fx_button(debug_comet_btn, [_FX_COMET_1])
 	_setup_debug_fx_button(debug_comet_shower_btn, [_FX_COMET_1, _FX_COMET_2, _FX_COMET_3])
-
-func _position_debug_bar() -> void:
-	if debug_bar == null:
-		return
-	var bar := debug_bar as Control
-	var btn_h := _DEBUG_BTN_SIZE.y
-	bar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	bar.offset_left = 12.0
-	bar.offset_right = -12.0
-	bar.offset_bottom = GameConstants.SCREEN_BOTTOM_NAV_BOTTOM
-	bar.offset_top = bar.offset_bottom - btn_h
-	bar.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	bar.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	bar.z_index = 8
-	bar.mouse_filter = Control.MOUSE_FILTER_STOP
 
 func _setup_debug_fx_button(button: Button, textures: Array) -> void:
 	if button == null:
@@ -502,10 +418,10 @@ func _setup_how_to_play_overlay() -> void:
 		_htp_rules.add_theme_color_override("default_color", Color.WHITE)
 		_htp_rules.add_theme_color_override("font_outline_color", Color.BLACK)
 		_htp_rules.add_theme_constant_override("outline_size", GameConstants.MENU_TEXT_OUTLINE)
-	for btn in [_htp_prev, _htp_close, _htp_next]:
-		_copy_menu_button_styles(btn)
-	HudLayout.layout_how_to_play(_htp_host, _htp_panel, _htp_nav)
-	HudLayout.ensure_how_to_play_nav_slots(_htp_nav, _htp_prev, _htp_next)
+	for btn in [_htp_prev, _htp_next]:
+		HudLayout.apply_nav_button(btn)
+	if _htp_close:
+		HudLayout.style_top_bar_close_button(_htp_close)
 	_htp_header = HudLayout.ensure_how_to_play_page_header(_htp_host)
 	_refresh_how_to_play_text()
 
@@ -519,16 +435,17 @@ func _refresh_how_to_play_text() -> void:
 		HudLayout.apply_locale_font_to_control(_htp_rules)
 		_htp_rules.text = HowToPlayContent.get_page_text(_htp_page)
 	if _htp_prev:
-		_htp_prev.text = tr("UI_PREVIOUS")
 		_htp_prev.visible = _htp_page > 0
 		HudLayout.apply_nav_button(_htp_prev)
 	if _htp_next:
-		_htp_next.text = tr("UI_NEXT")
 		_htp_next.visible = _htp_page < HowToPlayContent.PAGE_COUNT - 1
 		HudLayout.apply_nav_button(_htp_next)
 	if _htp_close:
-		_htp_close.text = tr("UI_CLOSE")
-		HudLayout.apply_secondary_button(_htp_close)
+		HudLayout.style_top_bar_close_button(_htp_close)
+	call_deferred("_layout_how_to_play_stack")
+
+func _layout_how_to_play_stack() -> void:
+	HudLayout.layout_how_to_play_stack(_htp_host, _htp_panel, _htp_rules, _htp_nav)
 
 func _on_htp_prev() -> void:
 	_htp_page = maxi(_htp_page - 1, 0)
@@ -563,9 +480,8 @@ func _copy_menu_button_styles(target: Button) -> void:
 	var source: Button = start_btn if start_btn else options_btn
 	if not source or not target:
 		return
-	var style_source: Button = close_credits_btn if close_credits_btn else source
 	for style_name in ["normal", "pressed", "hover", "disabled"]:
-		var style := style_source.get_theme_stylebox(style_name)
+		var style := source.get_theme_stylebox(style_name)
 		if style and not (style is StyleBoxEmpty):
 			target.add_theme_stylebox_override(style_name, style)
 	target.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -644,7 +560,8 @@ func _on_credits_pressed() -> void:
 	if credits_text:
 		credits_text.text = tr("CREDITS_TEXT")
 		_apply_credits_fonts(credits_text)
-	_position_credits_close()
+	if close_credits_btn:
+		HudLayout.style_top_bar_close_button(close_credits_btn)
 
 func _on_close_credits() -> void:
 	if overlay_blocker: overlay_blocker.visible = false
