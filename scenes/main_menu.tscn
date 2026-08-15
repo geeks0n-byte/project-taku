@@ -58,6 +58,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
+show_debug_tools = true
 
 [node name="TitleLayer" type="CanvasLayer" parent="." unique_id=731966347]
 layer = 0
@@ -149,6 +150,7 @@ vertical_alignment = 1
 layer = 0
 
 [node name="CenterContainer" type="Control" parent="UILayer" unique_id=669949293]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -166,7 +168,6 @@ offset_left = -390.0
 offset_right = 390.0
 grow_horizontal = 2
 theme_override_constants/separation = 22
-alignment = 0
 
 [node name="Spacer" type="Control" parent="UILayer/CenterContainer/VBoxContainer" unique_id=340732676]
 custom_minimum_size = Vector2(0, 20)
@@ -384,7 +385,7 @@ bbcode_enabled = true
 text = "CREDITS_TEXT"
 scroll_active = false
 
-[node name="VersionLabel" type="Label" parent="UILayer/OverlayBlocker/CreditsPanel/VBoxContainer"]
+[node name="VersionLabel" type="Label" parent="UILayer/OverlayBlocker/CreditsPanel/VBoxContainer" unique_id=1799760303]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.67, 0.67, 0.67, 1)
