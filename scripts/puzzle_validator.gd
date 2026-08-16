@@ -297,7 +297,11 @@ static func _validate_state_map(states: Dictionary, cached_lines: Array, constra
 static func _unequal_status_key(is_row: bool, yellow_count: int, blue_count: int) -> String:
 	var axis := "ROW" if is_row else "COLUMN"
 	if yellow_count > blue_count:
+		if blue_count == 0:
+			return "ERR_UNEQUAL_MORE_YELLOW_%s_NO_BLUE|%d" % [axis, yellow_count]
 		return "ERR_UNEQUAL_MORE_YELLOW_%s|%d|%d" % [axis, yellow_count, blue_count]
+	if yellow_count == 0:
+		return "ERR_UNEQUAL_MORE_BLUE_%s_NO_YELLOW|%d" % [axis, blue_count]
 	return "ERR_UNEQUAL_MORE_BLUE_%s|%d|%d" % [axis, blue_count, yellow_count]
 
 static func _has_unequal_for(errors: Array, is_row: bool) -> bool:

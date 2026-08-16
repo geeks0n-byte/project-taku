@@ -558,11 +558,14 @@ static func apply_raster_pixel_label(
 	font_size: int,
 	color: Color = Color.WHITE,
 	_max_width: int = 0,
-	_force_raster: bool = false
+	force_pixel: bool = false
 ) -> void:
 	if not label:
 		return
-	if uses_pixel_font():
+	# Digits / forced badges stay Press Start in every language.
+	if force_pixel or uses_pixel_font():
+		if force_pixel:
+			label.set_meta("_force_pixel_font", true)
 		apply_live_pixel_label_settings(label, text, font_size, color)
 		return
 	clear_label_settings(label)
@@ -728,6 +731,10 @@ static func _apply_forced_pixel_font(node: Node) -> void:
 		node.add_theme_font_override("italics_font", font)
 		node.add_theme_font_override("bold_italics_font", font)
 		node.add_theme_font_override("mono_font", font)
+		if bool(node.get_meta("_fixed_counter_font_size", false)):
+			node.add_theme_font_size_override(
+				"normal_font_size", GameConstants.HUD_COUNTER_FONT_SIZE
+			)
 
 static func apply_locale_fonts_to_tree(root: Node) -> void:
 	if root == null:
@@ -1213,6 +1220,54 @@ static func _nudge_button_text_up(button: Button, pixels: int) -> void:
 static func apply_top_bar_mode_label(label: RichTextLabel) -> void:
 	if not label:
 		return
+	_layout_top_bar_center_label(label)
+	var plain := _plain_top_bar_label_text(label.text)
+	_clear_pixel_raster(label)
+	if plain.is_empty():
+		label.text = ""
+		return
+	if uses_pixel_font():
+		label.set_meta("_use_default_font", false)
+		label.set_meta("_force_pixel_font", true)
+		label.text = format_outlined_center_text(plain)
+		label.add_theme_font_override("normal_font", pixel_font())
+		label.add_theme_font_size_override("normal_font_size", fit_top_bar_two_line_font_size(plain))
+		_strip_live_pixel_outline(label)
+		return
+	label.set_meta("_force_pixel_font", false)
+	label.set_meta("_use_default_font", true)
+	apply_locale_font_to_control(label)
+	apply_safe_outline(label, GameConstants.HUD_LEVEL_OUTLINE_SIZE)
+	label.add_theme_font_size_override("normal_font_size", fit_top_bar_two_line_font_size(plain))
+
+## Level word uses locale font; digits always use Press Start (like the timer).
+static func apply_level_label(label: RichTextLabel, prefix: String, num: int) -> void:
+	if not label:
+		return
+	_layout_top_bar_center_label(label)
+	_clear_pixel_raster(label)
+	var num_str := str(num)
+	var plain := "%s\n%s" % [prefix, num_str]
+	var font_size := fit_top_bar_two_line_font_size(plain)
+	if uses_pixel_font():
+		label.set_meta("_use_default_font", false)
+		label.set_meta("_force_pixel_font", true)
+		label.set_meta("_fixed_counter_font_size", false)
+		label.text = format_outlined_center_text(plain)
+		label.add_theme_font_override("normal_font", pixel_font())
+		label.add_theme_font_size_override("normal_font_size", font_size)
+		_strip_live_pixel_outline(label)
+		return
+	label.set_meta("_force_pixel_font", false)
+	label.set_meta("_use_default_font", true)
+	apply_locale_font_to_control(label)
+	apply_safe_outline(label, GameConstants.HUD_LEVEL_OUTLINE_SIZE)
+	label.add_theme_font_size_override("normal_font_size", font_size)
+	label.text = "[center]%s\n[font=%s][font_size=%d]%s[/font_size][/font][/center]" % [
+		prefix, PIXEL_FONT_PATH, font_size, num_str
+	]
+
+static func _layout_top_bar_center_label(label: RichTextLabel) -> void:
 	label.bbcode_enabled = true
 	label.fit_content = false
 	label.scroll_active = false
@@ -1239,27 +1294,32 @@ static func apply_top_bar_mode_label(label: RichTextLabel) -> void:
 			label_wrap.clip_contents = false
 			label_wrap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 			label_wrap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var plain := _plain_top_bar_label_text(label.text)
-	_clear_pixel_raster(label)
-	if plain.is_empty():
-		label.text = ""
-		return
-	if uses_pixel_font():
-		label.set_meta("_use_default_font", false)
-		label.text = format_outlined_center_text(plain)
-		label.add_theme_font_override("normal_font", pixel_font())
-		label.add_theme_font_size_override("normal_font_size", fit_top_bar_two_line_font_size(plain))
-		_strip_live_pixel_outline(label)
-		return
-	label.set_meta("_use_default_font", true)
-	apply_locale_font_to_control(label)
-	apply_safe_outline(label, GameConstants.HUD_LEVEL_OUTLINE_SIZE)
-	label.add_theme_font_size_override("normal_font_size", fit_top_bar_two_line_font_size(plain))
 
 static func _plain_top_bar_label_text(bbcode: String) -> String:
 	var plain := bbcode
 	for tag in ["[center]", "[/center]"]:
 		plain = plain.replace(tag, "")
+	# Strip optional [font=...] wrappers used for digit Press Start.
+	while true:
+		var start := plain.find("[font=")
+		if start < 0:
+			break
+		var end := plain.find("]", start)
+		if end < 0:
+			break
+		plain = plain.substr(0, start) + plain.substr(end + 1)
+	for tag in ["[/font]", "[font_size=", "[/font_size]"]:
+		if tag == "[font_size=":
+			while true:
+				var s := plain.find(tag)
+				if s < 0:
+					break
+				var e := plain.find("]", s)
+				if e < 0:
+					break
+				plain = plain.substr(0, s) + plain.substr(e + 1)
+		else:
+			plain = plain.replace(tag, "")
 	return plain.strip_edges()
 
 static func fit_top_bar_level_font_size(prefix: String, num: int) -> int:
@@ -1267,8 +1327,8 @@ static func fit_top_bar_level_font_size(prefix: String, num: int) -> int:
 
 static func fit_top_bar_two_line_font_size(body: String) -> int:
 	var base := GameConstants.HUD_LEVEL_FONT_SIZE
-	var size := scaled_font_size(base)
-	var font: Font = ui_font()
+	var size := scaled_font_size(base) if not uses_pixel_font() else base
+	var font: Font = pixel_font() if uses_pixel_font() else ui_font()
 	if font == null:
 		font = ThemeDB.fallback_font
 	if font == null:
@@ -1311,17 +1371,17 @@ static func set_timer_raster_text(label: RichTextLabel, plain_time: String) -> v
 		return
 	prepare_timer_label(label)
 	_clear_pixel_raster(label)
+	# Timer stays Press Start + fixed size in every language (digits only).
+	label.set_meta("_force_pixel_font", true)
+	label.set_meta("_fixed_counter_font_size", true)
+	label.set_meta("_use_default_font", false)
 	if plain_time.is_empty():
 		label.text = ""
 		return
-	if plain_time == "∞" or not uses_pixel_font():
-		label.set_meta("_use_default_font", true)
-		apply_locale_font_to_control(label)
-		apply_safe_outline(label, 6)
+	if plain_time == "∞":
 		label.text = format_time_counter(plain_time)
 		return
 	var font_size := GameConstants.HUD_COUNTER_FONT_SIZE
-	label.set_meta("_use_default_font", false)
 	label.add_theme_font_override("normal_font", pixel_font())
 	label.add_theme_font_size_override("normal_font_size", font_size)
 	label.add_theme_color_override("default_color", Color(0.96, 0.96, 0.96, 1))

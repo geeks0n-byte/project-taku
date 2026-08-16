@@ -5,6 +5,7 @@ extends RefCounted
 const ICON_HINT_ON: Texture2D = preload("res://resources/icons/icon_hint_on.svg")
 const ICON_HINT_OFF: Texture2D = preload("res://resources/icons/icon_hint_off.svg")
 const ICON_AD: Texture2D = preload("res://resources/icons/icon_ad.svg")
+const ICON_INFINITY: Texture2D = preload("res://resources/icons/icon_infinity.svg")
 const COUNT_LABEL_NAME := "HintCountLabel"
 const COUNT_ICON_NAME := "HintCountIcon"
 const COUNT_FONT_SIZE := GameConstants.HUD_COUNTER_LABEL_FONT_SIZE
@@ -27,22 +28,31 @@ static func update_toggle_button(button: Button, is_on: bool) -> void:
 	var icon := button.get_node_or_null("IconContainer/Icon") as TextureRect
 	if icon:
 		icon.texture = ICON_HINT_ON if is_on else ICON_HINT_OFF
-	_update_count_badge(button, -1)
+	# Toggle buttons don't show a remaining-count badge.
+	var label := button.get_node_or_null(COUNT_LABEL_NAME) as Label
+	var badge := button.get_node_or_null(COUNT_ICON_NAME) as TextureRect
+	if label:
+		label.visible = false
+	if badge:
+		badge.visible = false
 
 static func _update_count_badge(button: Button, remaining: int) -> void:
 	var label := _ensure_count_label(button)
-	var ad_icon := _ensure_count_icon(button)
-	if label == null or ad_icon == null:
+	var badge_icon := _ensure_count_icon(button)
+	if label == null or badge_icon == null:
 		return
 	if remaining < 0:
+		# Unlimited (tutorial / remove-ads): show infinity badge.
 		label.visible = false
-		ad_icon.visible = false
+		badge_icon.texture = ICON_INFINITY
+		badge_icon.visible = true
 		return
 	if remaining == 0:
 		label.visible = false
-		ad_icon.visible = true
+		badge_icon.texture = ICON_AD
+		badge_icon.visible = true
 		return
-	ad_icon.visible = false
+	badge_icon.visible = false
 	label.visible = true
 	# Always bake Press Start + thin outline (never live theme outline).
 	HudLayout.apply_raster_pixel_label(

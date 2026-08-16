@@ -13,9 +13,13 @@ const PROD_REWARDED_UNIT_ID := "ca-app-pub-1624206851803206/1850531037"
 
 const PRIVACY_POLICY_URL := "https://geeks0n-byte.github.io/project-taku/privacy-policy.html"
 
+signal fullscreen_ad_started
+signal fullscreen_ad_finished
+
 var _initialized: bool = false
 var _initializing: bool = false
 var _ads_supported: bool = false
+var _fullscreen_ad_open: bool = false
 
 var _banner: AdView = null
 var _banner_wanted_visible: bool = false
@@ -42,6 +46,18 @@ const REWARDED_LOAD_TIMEOUT_SEC := 25.0
 func _ready() -> void:
 	_ads_supported = _detect_ads_support()
 	call_deferred("ensure_started")
+
+func _notify_fullscreen_started() -> void:
+	if _fullscreen_ad_open:
+		return
+	_fullscreen_ad_open = true
+	fullscreen_ad_started.emit()
+
+func _notify_fullscreen_finished() -> void:
+	if not _fullscreen_ad_open:
+		return
+	_fullscreen_ad_open = false
+	fullscreen_ad_finished.emit()
 
 func _detect_ads_support() -> bool:
 	if not (OS.has_feature("android") or OS.get_name() == "Android"):
@@ -209,12 +225,16 @@ func _bind_interstitial_callbacks() -> void:
 	if _interstitial == null:
 		return
 	var callbacks := FullScreenContentCallback.new()
+	callbacks.on_ad_showed_full_screen_content = func() -> void:
+		_notify_fullscreen_started()
 	callbacks.on_ad_dismissed_full_screen_content = func() -> void:
 		_destroy_interstitial()
+		_notify_fullscreen_finished()
 		_finish_pending_after_ad()
 		_load_interstitial()
 	callbacks.on_ad_failed_to_show_full_screen_content = func(_error: AdError) -> void:
 		_destroy_interstitial()
+		_notify_fullscreen_finished()
 		_finish_pending_after_ad()
 		_load_interstitial()
 	_interstitial.full_screen_content_callback = callbacks
@@ -257,6 +277,7 @@ func show_interstitial_if_ready(on_done: Callable = Callable()) -> void:
 	_pending_after_ad = on_done
 	_interstitial_progress = 0
 	_interstitial_every_n += 1
+	_notify_fullscreen_started()
 	_interstitial.show()
 
 
@@ -339,12 +360,15 @@ func _bind_rewarded_callbacks() -> void:
 	if _rewarded == null:
 		return
 	var callbacks := FullScreenContentCallback.new()
+	callbacks.on_ad_showed_full_screen_content = func() -> void:
+		_notify_fullscreen_started()
 	callbacks.on_ad_dismissed_full_screen_content = func() -> void:
 		var earned := _reward_earned
 		var cb := _pending_reward_callback
 		_pending_reward_callback = Callable()
 		_reward_earned = false
 		_destroy_rewarded()
+		_notify_fullscreen_finished()
 		_reanchor_banner_after_fullscreen()
 		_load_rewarded()
 		if earned and cb.is_valid():
@@ -357,6 +381,7 @@ func _bind_rewarded_callbacks() -> void:
 		_pending_reward_callback = Callable()
 		_reward_earned = false
 		_destroy_rewarded()
+		_notify_fullscreen_finished()
 		_reanchor_banner_after_fullscreen()
 		_load_rewarded()
 	_rewarded.full_screen_content_callback = callbacks
@@ -413,12 +438,16 @@ func show_rewarded_for_hint(on_rewarded: Callable = Callable()) -> bool:
 	var reward_listener := OnUserEarnedRewardListener.new()
 	reward_listener.on_user_earned_reward = func(_item: RewardedItem) -> void:
 		_reward_earned = true
+	_notify_fullscreen_started()
 	_rewarded.show(reward_listener)
 	return true
 
 func _invoke_rewarded_mock(on_rewarded: Callable) -> void:
+	# Debug mock is instant — still bracket so timer pause logic stays consistent.
+	_notify_fullscreen_started()
 	if on_rewarded.is_valid():
 		on_rewarded.call()
+	_notify_fullscreen_finished()
 
 
 const PRIVACY_OPTIONS_STATE_UNAVAILABLE := 0
@@ -465,6 +494,7 @@ func prepare_for_app_exit() -> void:
 	_destroy_interstitial()
 	_destroy_rewarded()
 	_rewarded_loader = null
+	_notify_fullscreen_finished()
 
 func _exit_tree() -> void:
 	prepare_for_app_exit()

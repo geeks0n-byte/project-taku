@@ -83,6 +83,7 @@ var _joker_current: int = 0
 var _joker_required: int = 0
 var _move_count: int = 0
 var _move_required: int = -1
+var _last_timer_text: String = ""
 
 func _ready() -> void:
 	_layout_how_to_play()
@@ -109,6 +110,9 @@ func _on_language_changed() -> void:
 	locale_refresh_requested.emit()
 	_refresh_status_label()
 	_refresh_how_to_play_text()
+	# Re-assert Press Start + fixed size after locale font walk (digits only).
+	if timer_label and not _last_timer_text.is_empty():
+		update_timer(_last_timer_text)
 	if joker_counter_label and joker_counter_label.visible:
 		update_joker_counter(_joker_current, _joker_required)
 	if move_counter_label and move_counter_label.visible:
@@ -422,6 +426,7 @@ func set_hud_buttons_disabled(is_disabled: bool) -> void:
 func update_timer(formatted_time: String) -> void:
 	if not timer_label:
 		return
+	_last_timer_text = formatted_time
 	HudLayout.set_timer_raster_text(timer_label, formatted_time)
 
 func set_timer_visibility(visible_state: bool) -> void:
@@ -458,8 +463,7 @@ func display_level(num: int, is_custom: bool = false, is_tutorial: bool = false)
 		prefix = String(tr("DEV"))
 	else:
 		prefix = String(tr("LVL"))
-	level_label.text = HudLayout.format_outlined_center_text("%s\n%d" % [prefix, num])
-	HudLayout.apply_top_bar_mode_label(level_label)
+	HudLayout.apply_level_label(level_label, prefix, num)
 
 func show_status_valid() -> void:
 	_status_error_keys.clear()

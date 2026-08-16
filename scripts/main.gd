@@ -28,6 +28,7 @@ var hints_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED
 var hints_used: int = 0
 var game_undo := UndoStack.new()
 var _is_recording_action: bool = false
+var _timer_paused_for_ad: bool = false
 var _loading_overlay: LoadingOverlay
 var _is_generating_board: bool = false
 var tutorial_director: TutorialDirector
@@ -85,6 +86,10 @@ func _ready():
 	if AdsManager:
 		AdsManager.show_menu_banner()
 		AdsManager.warm_rewarded_hint()
+		if not AdsManager.fullscreen_ad_started.is_connected(_on_fullscreen_ad_started):
+			AdsManager.fullscreen_ad_started.connect(_on_fullscreen_ad_started)
+		if not AdsManager.fullscreen_ad_finished.is_connected(_on_fullscreen_ad_finished):
+			AdsManager.fullscreen_ad_finished.connect(_on_fullscreen_ad_finished)
 	_loading_overlay = LoadingOverlay.new()
 	add_child(_loading_overlay)
 	tutorial_director = TutorialDirector.new()
@@ -102,6 +107,23 @@ func _ready():
 	if timer_node:
 		timer_node.timeout.connect(_on_timer_timeout)
 	_begin_level_entry()
+
+func _on_fullscreen_ad_started() -> void:
+	if timer_node == null or _challenges_disabled:
+		return
+	if not is_game_active or is_paused:
+		return
+	if timer_node.is_stopped():
+		return
+	_timer_paused_for_ad = true
+	timer_node.stop()
+
+func _on_fullscreen_ad_finished() -> void:
+	if not _timer_paused_for_ad:
+		return
+	_timer_paused_for_ad = false
+	if timer_node and is_game_active and not is_paused and not _challenges_disabled:
+		timer_node.start()
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
@@ -284,6 +306,7 @@ func generate_board():
 		hud_layer.visible = true
 	is_game_active = true
 	is_paused = false
+	_timer_paused_for_ad = false
 
 	var current_level_resource = levels[current_level_index]
 	var is_custom = current_level_resource.resource_path.begins_with("user://")
@@ -705,6 +728,7 @@ func trigger_victory():
 	if tutorial_director:
 		tutorial_director.stop()
 	is_game_active = false
+	_timer_paused_for_ad = false
 	if timer_node:
 		timer_node.stop()
 	board_manager.process_mode = Node.PROCESS_MODE_DISABLED
@@ -757,6 +781,7 @@ func _on_pause():
 	if not is_game_active or is_paused:
 		return
 	is_paused = true
+	_timer_paused_for_ad = false
 	if timer_node:
 		timer_node.stop()
 	_autosave_session()
@@ -774,6 +799,7 @@ func _on_how_to_play():
 	if not is_game_active or is_paused:
 		return
 	is_paused = true
+	_timer_paused_for_ad = false
 	if timer_node:
 		timer_node.stop()
 	board_manager.process_mode = Node.PROCESS_MODE_DISABLED
@@ -981,6 +1007,7 @@ func _on_session_back() -> void:
 	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")
 
 func _on_locale_refresh() -> void:
+	_update_timer_display()
 	if tutorial_director and tutorial_director.is_active():
 		tutorial_director.refresh_for_locale()
 
@@ -1018,6 +1045,7 @@ func _build_session_payload() -> Dictionary:
 		"hidden_reference_constraints": hidden_reference_constraints.duplicate(true),
 		"solved_solution_reference": solved_solution_reference.duplicate(true),
 		"cells": cells,
+		"undo_history": game_undo.export_history(),
 	}
 
 func _autosave_session() -> void:
@@ -1109,10 +1137,16 @@ func restore_session() -> void:
 	board_manager.process_mode = Node.PROCESS_MODE_INHERIT
 	_set_board_and_hud_visible(true)
 	ui_manager.set_hud_buttons_disabled(false)
-	game_undo.reset(_create_game_snapshot())
+	var history: Dictionary = data.get("undo_history", {})
+	if history is Dictionary and not history.is_empty() and history.has("current"):
+		game_undo.import_history(history)
+	else:
+		game_undo.reset(_create_game_snapshot())
+	ui_manager.update_undo_redo_buttons(game_undo.can_undo(), game_undo.can_redo())
 	_run_validation_pass()
 	if timer_node and not _challenges_disabled:
 		timer_node.start()
+	_refresh_hint_button()
 
 func _on_timer_timeout():
 	if _challenges_disabled:
