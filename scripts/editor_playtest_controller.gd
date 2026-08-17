@@ -194,6 +194,7 @@ func handle_cell_click(coord: Vector2i) -> void:
 			var partner = canvas_manager.board_cells[partner_coord]
 			if partner.state == GameConstants.TileState.SHIFTER:
 				partner.set_error_highlight()
+				cell.play_blocked_shake()
 				pt_ui.update_playtest_status("ERR_SHIFTER_BLOCKED", Color.WHITE)
 				return
 			cell.state = GameConstants.TileState.EMPTY

@@ -227,6 +227,7 @@ func set_error_highlight():
 		error_highlight.queue_redraw()
 
 func play_blocked_shake() -> void:
+	Input.vibrate_handheld(40)
 	if _shake_tween and _shake_tween.is_valid():
 		_shake_tween.kill()
 		position = _shake_rest_position
