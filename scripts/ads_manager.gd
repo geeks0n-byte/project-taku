@@ -40,8 +40,12 @@ var _reward_earned: bool = false
 var _queued_reward_callback: Callable = Callable()
 var _rewarded_retry_timer: Timer = null
 var _rewarded_load_watchdog: Timer = null
+var _focus_banner_settle_timer: Timer = null
+var _focus_banner_settle_ticks: int = 0
 const REWARDED_RETRY_SEC := 8.0
 const REWARDED_LOAD_TIMEOUT_SEC := 25.0
+const FOCUS_BANNER_SETTLE_TRIES := 5
+const FOCUS_BANNER_SETTLE_SEC := 0.2
 
 func _ready() -> void:
 	_ads_supported = _detect_ads_support()
@@ -131,9 +135,47 @@ func _rewarded_unit_id() -> String:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
-		if _banner_wanted_visible:
-			_pin_banner_bottom()
-		warm_rewarded_hint()
+		_on_app_focus_in()
+
+func _on_app_focus_in() -> void:
+	_dismiss_soft_keyboard()
+	if _banner_wanted_visible:
+		_pin_banner_bottom()
+		call_deferred("_pin_banner_bottom")
+		_schedule_banner_focus_settle()
+	warm_rewarded_hint()
+
+func _dismiss_soft_keyboard() -> void:
+	var tree := get_tree()
+	if tree and tree.root:
+		var vp := tree.root.get_viewport()
+		if vp:
+			vp.gui_release_focus()
+	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
+		DisplayServer.virtual_keyboard_hide()
+
+func _schedule_banner_focus_settle() -> void:
+	_focus_banner_settle_ticks = 0
+	if _focus_banner_settle_timer == null:
+		_focus_banner_settle_timer = Timer.new()
+		_focus_banner_settle_timer.one_shot = true
+		_focus_banner_settle_timer.timeout.connect(_on_banner_focus_settle)
+		add_child(_focus_banner_settle_timer)
+	_focus_banner_settle_timer.start(FOCUS_BANNER_SETTLE_SEC)
+
+func _on_banner_focus_settle() -> void:
+	_dismiss_soft_keyboard()
+	if _banner_wanted_visible:
+		_pin_banner_bottom()
+	_focus_banner_settle_ticks += 1
+	if _focus_banner_settle_ticks >= FOCUS_BANNER_SETTLE_TRIES:
+		return
+	var kb_h := 0
+	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
+		kb_h = DisplayServer.virtual_keyboard_get_height()
+	# Keep settling while IME is closing, or for a couple frames after resume.
+	if kb_h > 0 or _focus_banner_settle_ticks < 3:
+		_focus_banner_settle_timer.start(FOCUS_BANNER_SETTLE_SEC)
 
 func show_menu_banner() -> void:
 	_banner_wanted_visible = true

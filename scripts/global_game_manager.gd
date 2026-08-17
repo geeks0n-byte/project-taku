@@ -13,6 +13,20 @@ func _ready() -> void:
 	if OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios"):
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
+		# Android can restore GUI focus on resume and pop the soft keyboard,
+		# which resizes the window and lifts AdMob banners off the true bottom.
+		_dismiss_soft_keyboard()
+		call_deferred("_dismiss_soft_keyboard")
+
+func _dismiss_soft_keyboard() -> void:
+	var vp := get_viewport()
+	if vp:
+		vp.gui_release_focus()
+	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
+		DisplayServer.virtual_keyboard_hide()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if (event as InputEventKey).keycode == KEY_F12:

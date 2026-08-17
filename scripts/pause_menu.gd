@@ -63,6 +63,7 @@ func _apply_pause_button(button: Button) -> void:
 	if not button or not button.visible:
 		return
 	_clear_pause_icon(button)
+	button.focus_mode = Control.FOCUS_NONE
 	button.flat = false
 	_apply_button_tile_styles(button)
 	button.custom_minimum_size = MENU_BTN_SIZE

@@ -208,6 +208,7 @@ func _fit_option_buttons() -> void:
 func _apply_option_button(button: Button) -> void:
 	if not button or not button.visible:
 		return
+	button.focus_mode = Control.FOCUS_NONE
 	button.flat = false
 	_apply_button_tile_styles(button)
 	button.autowrap_mode = TextServer.AUTOWRAP_OFF

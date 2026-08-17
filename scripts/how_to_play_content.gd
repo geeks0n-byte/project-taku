@@ -98,8 +98,13 @@ static func _page_examples(force_english: bool) -> String:
 	]
 	return "\n".join(lines)
 
-## VALID / INVALID: bold default font (Press Start + live outline scrambles glyphs).
-static func _example_column_label(text: String, _force_english: bool) -> String:
+## VALID / INVALID: Press Start on English. Outline is forced off — theme outline
+## on Press Start scrambles glyphs under GL Compatibility.
+static func _example_column_label(text: String, force_english: bool) -> String:
+	if force_english or HudLayout.uses_pixel_font():
+		return "[outline_size=0][font=%s]%s[/font][/outline_size]" % [
+			HudLayout.PIXEL_FONT_PATH, text
+		]
 	return "[b]%s[/b]" % text
 
 static func _page_purple(force_english: bool) -> String:

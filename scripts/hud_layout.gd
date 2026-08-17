@@ -304,7 +304,7 @@ static func style_top_bar_close_button(button: Button) -> void:
 		return
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	button.z_index = 20
-	button.focus_mode = Control.FOCUS_ALL
+	button.focus_mode = Control.FOCUS_NONE
 	apply_top_bar_tile_styles(button)
 	ensure_top_bar_icon(button, _CLOSE_ICON_TEX)
 	apply_square_top_bar_button(button)
@@ -853,6 +853,7 @@ static func apply_safe_outline(control: Control, base_outline: int = GameConstan
 static func apply_primary_button(button: Button) -> void:
 	if not button:
 		return
+	button.focus_mode = Control.FOCUS_NONE
 	button.custom_minimum_size = GameConstants.UI_BTN_PRIMARY_SIZE
 	fit_text_button(
 		button, GameConstants.UI_BTN_PRIMARY_FONT, GameConstants.UI_BTN_PRIMARY_FONT_MIN
@@ -861,6 +862,7 @@ static func apply_primary_button(button: Button) -> void:
 static func apply_secondary_button(button: Button) -> void:
 	if not button:
 		return
+	button.focus_mode = Control.FOCUS_NONE
 	button.custom_minimum_size = GameConstants.UI_BTN_SECONDARY_SIZE
 	fit_text_button(
 		button, GameConstants.UI_BTN_SECONDARY_FONT, GameConstants.UI_BTN_SECONDARY_FONT_MIN
@@ -869,6 +871,7 @@ static func apply_secondary_button(button: Button) -> void:
 static func apply_dialog_button(button: Button) -> void:
 	if not button:
 		return
+	button.focus_mode = Control.FOCUS_NONE
 	button.custom_minimum_size = GameConstants.UI_BTN_DIALOG_SIZE
 	var display := button.text
 	if not display.is_empty() and _is_message_key(display):
@@ -883,6 +886,7 @@ static func apply_dialog_button(button: Button) -> void:
 static func apply_nav_button(button: Button) -> void:
 	if not button:
 		return
+	button.focus_mode = Control.FOCUS_NONE
 	button.text = ""
 	button.flat = false
 	button.clip_text = true
@@ -912,6 +916,7 @@ static func apply_nav_button(button: Button) -> void:
 static func apply_panel_button(button: Button) -> void:
 	if not button:
 		return
+	button.focus_mode = Control.FOCUS_NONE
 	button.custom_minimum_size = GameConstants.UI_BTN_PANEL_SIZE
 	button.set_meta("_use_default_font", not uses_pixel_font())
 	if uses_pixel_font():
@@ -1158,6 +1163,7 @@ static func glue_tile_icon_color_labels(bbcode: String) -> String:
 static func apply_square_top_bar_button(button: Button) -> void:
 	if not button:
 		return
+	button.focus_mode = Control.FOCUS_NONE
 	var size := float(GameConstants.HUD_BUTTON_WIDTH)
 	button.custom_minimum_size = Vector2(size, size)
 	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
