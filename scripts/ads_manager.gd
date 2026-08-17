@@ -49,7 +49,17 @@ const FOCUS_BANNER_SETTLE_SEC := 0.2
 
 func _ready() -> void:
 	_ads_supported = _detect_ads_support()
+	_focus_banner_settle_timer = _make_timer(_on_banner_focus_settle)
+	_rewarded_retry_timer = _make_timer(_on_rewarded_retry_timeout)
+	_rewarded_load_watchdog = _make_timer(_on_rewarded_load_timeout)
 	call_deferred("ensure_started")
+
+func _make_timer(on_timeout: Callable) -> Timer:
+	var t := Timer.new()
+	t.one_shot = true
+	t.timeout.connect(on_timeout)
+	add_child(t)
+	return t
 
 func _notify_fullscreen_started() -> void:
 	if _fullscreen_ad_open:
@@ -135,9 +145,15 @@ func _rewarded_unit_id() -> String:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
-		_on_app_focus_in()
+		# Focus can arrive while this autoload is still entering the tree.
+		if is_node_ready() and is_inside_tree():
+			_on_app_focus_in()
+		else:
+			call_deferred("_on_app_focus_in")
 
 func _on_app_focus_in() -> void:
+	if not is_inside_tree():
+		return
 	_dismiss_soft_keyboard()
 	if _banner_wanted_visible:
 		_pin_banner_bottom()
@@ -156,11 +172,14 @@ func _dismiss_soft_keyboard() -> void:
 
 func _schedule_banner_focus_settle() -> void:
 	_focus_banner_settle_ticks = 0
-	if _focus_banner_settle_timer == null:
-		_focus_banner_settle_timer = Timer.new()
-		_focus_banner_settle_timer.one_shot = true
-		_focus_banner_settle_timer.timeout.connect(_on_banner_focus_settle)
-		add_child(_focus_banner_settle_timer)
+	_start_banner_focus_settle_timer()
+
+func _start_banner_focus_settle_timer() -> void:
+	if not is_inside_tree():
+		return
+	if _focus_banner_settle_timer == null or not _focus_banner_settle_timer.is_inside_tree():
+		call_deferred("_start_banner_focus_settle_timer")
+		return
 	_focus_banner_settle_timer.start(FOCUS_BANNER_SETTLE_SEC)
 
 func _on_banner_focus_settle() -> void:
@@ -175,7 +194,7 @@ func _on_banner_focus_settle() -> void:
 		kb_h = DisplayServer.virtual_keyboard_get_height()
 	# Keep settling while IME is closing, or for a couple frames after resume.
 	if kb_h > 0 or _focus_banner_settle_ticks < 3:
-		_focus_banner_settle_timer.start(FOCUS_BANNER_SETTLE_SEC)
+		_start_banner_focus_settle_timer()
 
 func show_menu_banner() -> void:
 	_banner_wanted_visible = true
@@ -379,11 +398,8 @@ func _load_rewarded() -> void:
 	_rewarded_loader.load(_rewarded_unit_id(), AdRequest.new(), callback)
 
 func _start_rewarded_load_watchdog() -> void:
-	if _rewarded_load_watchdog == null:
-		_rewarded_load_watchdog = Timer.new()
-		_rewarded_load_watchdog.one_shot = true
-		_rewarded_load_watchdog.timeout.connect(_on_rewarded_load_timeout)
-		add_child(_rewarded_load_watchdog)
+	if _rewarded_load_watchdog == null or not _rewarded_load_watchdog.is_inside_tree():
+		return
 	_rewarded_load_watchdog.start(REWARDED_LOAD_TIMEOUT_SEC)
 
 func _stop_rewarded_load_watchdog() -> void:
@@ -436,11 +452,8 @@ func _destroy_rewarded() -> void:
 func _schedule_rewarded_retry() -> void:
 	if not _ads_supported or not _initialized:
 		return
-	if _rewarded_retry_timer == null:
-		_rewarded_retry_timer = Timer.new()
-		_rewarded_retry_timer.one_shot = true
-		_rewarded_retry_timer.timeout.connect(_on_rewarded_retry_timeout)
-		add_child(_rewarded_retry_timer)
+	if _rewarded_retry_timer == null or not _rewarded_retry_timer.is_inside_tree():
+		return
 	if _rewarded_retry_timer.is_stopped():
 		_rewarded_retry_timer.start(REWARDED_RETRY_SEC)
 
