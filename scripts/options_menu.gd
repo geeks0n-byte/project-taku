@@ -340,17 +340,17 @@ func _set_toggle_button_caption(button: Button, full_text: String) -> void:
 		HudLayout.apply_safe_outline(caption, GameConstants.MENU_TEXT_OUTLINE)
 		caption.add_theme_font_size_override("normal_font_size", font_size)
 	var accent := _TOGGLE_ACCENT.to_html(false)
-	var tokens: Array[String] = [
-		"DYNAMICZNE", "STATYCZNE", "DYNAMISCH", "STATISCH", "DYNAMIQUE", "STATIQUE",
-		"DINÁMICO", "ESTÁTICO", "დინამიკური", "სტატიკური", "ДИНАМІЧНИЙ", "СТАТИЧНИЙ",
-		"DYNAMIC", "STATIC", "УВІМК.", "ВИМК.", "ჩართ.", "გამორთ.", "WŁ.", "WYŁ.",
-		"OUI", "NON", "SÍ", "ON", "OFF", "AN", "AUS", "NO",
-	]
+	# Color only the value after the last colon (ON/OFF, AN/AUS, DYNAMIC…).
+	# Substring replace of "ON" would paint the "ON" inside "VIBRATION".
 	var colored := full_text
-	for token in tokens:
-		if colored.contains(token):
-			colored = colored.replace(token, "[color=#%s]%s[/color]" % [accent, token])
-			break
+	var colon := full_text.rfind(":")
+	if colon >= 0 and colon < full_text.length() - 1:
+		var left := full_text.substr(0, colon + 1)
+		var right := full_text.substr(colon + 1)
+		var space_end := 0
+		while space_end < right.length() and right[space_end] == " ":
+			space_end += 1
+		colored = "%s%s[color=#%s]%s[/color]" % [left, right.substr(0, space_end), accent, right.substr(space_end)]
 	caption.text = "[center]%s[/center]" % colored
 	_apply_option_button(button)
 
