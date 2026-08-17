@@ -34,6 +34,10 @@ func play_click() -> void:
 	_player.stream = _click_stream
 	_player.play()
 
+## Short bump for a blocked purple move. Android only; needs VIBRATE in the export.
+func play_blocked_haptic() -> void:
+	Input.vibrate_handheld(80, 0.8)
+
 func _on_node_added(node: Node) -> void:
 	if node is BaseButton:
 		_hook_button(node as BaseButton)
