@@ -10,6 +10,7 @@ var current_language: String = "en"
 var background_static: bool = false
 var bgm_enabled: bool = true
 var sfx_enabled: bool = true
+var haptic_enabled: bool = true
 var tutorial_intro_answered: bool = false
 var level_star_bits: Dictionary = {}
 var session_data: Dictionary = {}
@@ -100,6 +101,7 @@ func load_progress() -> void:
 		background_static = bool(config.get_value("Progression", "background_static", false))
 		bgm_enabled = bool(config.get_value("Progression", "bgm_enabled", true))
 		sfx_enabled = bool(config.get_value("Progression", "sfx_enabled", true))
+		haptic_enabled = bool(config.get_value("Progression", "haptic_enabled", true))
 		if config.has_section_key("Progression", "tutorial_intro_answered"):
 			tutorial_intro_answered = bool(config.get_value("Progression", "tutorial_intro_answered", false))
 		else:
@@ -142,6 +144,7 @@ func save_progress() -> void:
 	config.set_value("Progression", "background_static", background_static)
 	config.set_value("Progression", "bgm_enabled", bgm_enabled)
 	config.set_value("Progression", "sfx_enabled", sfx_enabled)
+	config.set_value("Progression", "haptic_enabled", haptic_enabled)
 	config.set_value("Progression", "tutorial_intro_answered", tutorial_intro_answered)
 	config.set_value("Progression", "level_star_bits", level_star_bits)
 	config.set_value("Ads", "wins_since_interstitial", ads_wins_since_interstitial)
@@ -203,6 +206,10 @@ func set_bgm_enabled(enabled: bool) -> void:
 
 func set_sfx_enabled(enabled: bool) -> void:
 	sfx_enabled = enabled
+	save_progress()
+
+func set_haptic_enabled(enabled: bool) -> void:
+	haptic_enabled = enabled
 	save_progress()
 
 func _apply_background_mode() -> void:

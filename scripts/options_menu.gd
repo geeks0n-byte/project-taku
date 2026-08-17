@@ -15,6 +15,7 @@ enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM }
 @onready var bg_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/BackgroundButton
 @onready var bgm_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/BgmButton
 @onready var sfx_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/SfxButton
+@onready var haptic_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/HapticButton
 @onready var privacy_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/PrivacyPolicyButton
 @onready var privacy_options_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/PrivacyOptionsButton
 @onready var del_save_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DeleteSaveButton
@@ -43,6 +44,8 @@ func _ready() -> void:
 		bgm_btn.pressed.connect(_on_toggle_bgm)
 	if sfx_btn:
 		sfx_btn.pressed.connect(_on_toggle_sfx)
+	if haptic_btn:
+		haptic_btn.pressed.connect(_on_toggle_haptic)
 	if privacy_btn:
 		privacy_btn.pressed.connect(_on_privacy_policy_pressed)
 	if privacy_options_btn:
@@ -62,6 +65,7 @@ func _ready() -> void:
 	_update_background_label()
 	_update_bgm_label()
 	_update_sfx_label()
+	_update_haptic_label()
 	_fit_option_buttons()
 	_style_close_button()
 
@@ -82,6 +86,7 @@ func show_menu(from_main_menu: bool = false) -> void:
 	_update_background_label()
 	_update_bgm_label()
 	_update_sfx_label()
+	_update_haptic_label()
 	_fit_option_buttons()
 	if status_label:
 		status_label.text = ""
@@ -175,7 +180,7 @@ func _fit_option_buttons() -> void:
 	if privacy_options_btn:
 		privacy_options_btn.text = "UI_PRIVACY_OPTIONS"
 		privacy_options_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
-	for btn in [del_save_btn, bg_btn, bgm_btn, sfx_btn, privacy_btn, privacy_options_btn, del_custom_btn, unlock_all_btn]:
+	for btn in [del_save_btn, bg_btn, bgm_btn, sfx_btn, haptic_btn, privacy_btn, privacy_options_btn, del_custom_btn, unlock_all_btn]:
 		_apply_option_button(btn)
 	_style_close_button()
 	if prev_btn:
@@ -365,6 +370,13 @@ func _update_sfx_label() -> void:
 		return
 	_set_toggle_button_caption(sfx_btn, tr("UI_SFX_ON" if SaveManager.sfx_enabled else "UI_SFX_OFF"))
 
+func _update_haptic_label() -> void:
+	if not haptic_btn:
+		return
+	_set_toggle_button_caption(
+		haptic_btn, tr("UI_HAPTIC_ON" if SaveManager.haptic_enabled else "UI_HAPTIC_OFF")
+	)
+
 func _on_prev_lang() -> void:
 	var current_locale = TranslationServer.get_locale().substr(0, 2)
 	var idx = LANGUAGES.find(current_locale)
@@ -376,6 +388,7 @@ func _on_prev_lang() -> void:
 	_update_background_label()
 	_update_bgm_label()
 	_update_sfx_label()
+	_update_haptic_label()
 	_fit_option_buttons()
 
 func _on_next_lang() -> void:
@@ -389,6 +402,7 @@ func _on_next_lang() -> void:
 	_update_background_label()
 	_update_bgm_label()
 	_update_sfx_label()
+	_update_haptic_label()
 	_fit_option_buttons()
 
 func _on_toggle_background() -> void:
@@ -402,6 +416,10 @@ func _on_toggle_bgm() -> void:
 func _on_toggle_sfx() -> void:
 	SaveManager.set_sfx_enabled(not SaveManager.sfx_enabled)
 	_update_sfx_label()
+
+func _on_toggle_haptic() -> void:
+	SaveManager.set_haptic_enabled(not SaveManager.haptic_enabled)
+	_update_haptic_label()
 
 func _on_privacy_policy_pressed() -> void:
 	if AdsManager:

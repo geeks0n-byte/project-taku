@@ -27,6 +27,7 @@ func _ready() -> void:
 	call_deferred("_hook_existing", get_tree().root)
 
 func play_click() -> void:
+	play_click_haptic()
 	if SaveManager and not SaveManager.sfx_enabled:
 		return
 	if _player == null or _click_stream == null:
@@ -34,9 +35,17 @@ func play_click() -> void:
 	_player.stream = _click_stream
 	_player.play()
 
+func play_click_haptic() -> void:
+	_vibrate(25, 0.4)
+
 ## Short bump for a blocked purple move. Android only; needs VIBRATE in the export.
 func play_blocked_haptic() -> void:
-	Input.vibrate_handheld(80, 0.8)
+	_vibrate(80, 0.8)
+
+func _vibrate(duration_ms: int, amplitude: float) -> void:
+	if SaveManager and not SaveManager.haptic_enabled:
+		return
+	Input.vibrate_handheld(duration_ms, amplitude)
 
 func _on_node_added(node: Node) -> void:
 	if node is BaseButton:

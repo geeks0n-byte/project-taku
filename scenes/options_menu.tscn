@@ -90,20 +90,20 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_overlay")
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = 568.0
-offset_bottom = -252.0
+offset_top = 500.0
+offset_bottom = -180.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="OptionsPanel" type="Panel" parent="CenterContainer"]
-custom_minimum_size = Vector2(700, 980)
+custom_minimum_size = Vector2(700, 1110)
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
 offset_left = -350.0
 offset_right = 350.0
-offset_bottom = 980.0
+offset_bottom = 1110.0
 grow_horizontal = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
 
@@ -203,6 +203,20 @@ theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 autowrap_mode = 3
 text = "UI_SFX_ON"
+
+[node name="HapticButton" type="Button" parent="CenterContainer/OptionsPanel/VBoxContainer"]
+custom_minimum_size = Vector2(560, 100)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+autowrap_mode = 3
+text = "UI_HAPTIC_ON"
 
 [node name="PrivacyPolicyButton" type="Button" parent="CenterContainer/OptionsPanel/VBoxContainer"]
 custom_minimum_size = Vector2(560, 100)

@@ -39,6 +39,8 @@ UI_BGM_ON,MUSIC: ON,MÚSICA: SÍ,MUSIK: AN,MUSIQUE : OUI,MUZYKA: WŁ.,მუს�
 UI_BGM_OFF,MUSIC: OFF,MÚSICA: NO,MUSIK: AUS,MUSIQUE : NON,MUZYKA: WYŁ.,მუსიკა: გამორთ.,МУЗИКА: ВИМК.
 UI_SFX_ON,SFX: ON,SFX: SÍ,SFX: AN,SFX : OUI,SFX: WŁ.,SFX: ჩართ.,SFX: УВІМК.
 UI_SFX_OFF,SFX: OFF,SFX: NO,SFX: AUS,SFX : NON,SFX: WYŁ.,SFX: გამორთ.,SFX: ВИМК.
+UI_HAPTIC_ON,VIBRATION: ON,VIBRACIÓN: SÍ,VIBRATION: AN,VIBRATION : OUI,WIBRACJE: WŁ.,ვიბრაცია: ჩართ.,ВІБРАЦІЯ: УВІМК.
+UI_HAPTIC_OFF,VIBRATION: OFF,VIBRACIÓN: NO,VIBRATION: AUS,VIBRATION : NON,WIBRACJE: WYŁ.,ვიბრაცია: გამორთ.,ВІБРАЦІЯ: ВИМК.
 UI_PRIVACY_POLICY,PRIVACY POLICY,POLÍTICA DE PRIVACIDAD,DATENSCHUTZ,POLITIQUE DE CONFIDENTIALITÉ,POLITYKA PRYWATNOŚCI,კონფიდენციალურობის პოლიტიკა,ПОЛІТИКА КОНФІДЕНЦІЙНОСТІ
 UI_PRIVACY_OPTIONS,PRIVACY OPTIONS,OPCIONES DE PRIVACIDAD,DATENSCHUTZ-OPTIONEN,OPTIONS DE CONFIDENTIALITÉ,OPCJE PRYWATNOŚCI,კონფიდენციალურობის პარამეტრები,ПАРАМЕТРИ КОНФІДЕНЦІЙНОСТІ
 UI_PRIVACY_OPTIONS_OPENING,Opening privacy options...,Abriendo opciones de privacidad...,Datenschutz-Optionen werden geöffnet...,Ouverture des options de confidentialité...,Otwieranie opcji prywatności...,კონფიდენციალურობის პარამეტრები იხსნება...,Відкриття параметрів конфіденційності...
