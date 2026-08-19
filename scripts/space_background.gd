@@ -347,7 +347,7 @@ func _show_static_composite() -> void:
 		_static_rect = TextureRect.new()
 		_static_rect.name = "StaticComposite"
 		_static_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		_static_rect.stretch_mode = TextureRect.STRETCH_TILE
+		_static_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		_static_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(_static_rect)
 		move_child(_static_rect, 0)
@@ -491,7 +491,7 @@ func _load_fx_assets() -> void:
 
 # Returns the size each background layer should be so it covers the viewport even during
 # parallax scrolling. The 1.35× factor prevents edge gaps when the scroll offset shifts layers.
-# Falls back to a 1080×1920 reference if the viewport has not been sized yet.
+# Layers scale a single texture copy to this size (no in-rect tiling).
 func _cover_size() -> Vector2:
 	var view := get_viewport().get_visible_rect().size
 	if view.x <= 1.0 or view.y <= 1.0:
@@ -549,9 +549,9 @@ func _release_offscreen_asteroids() -> void:
 			if seen and _asteroid_is_fully_offscreen(rb, view):
 				_release_asteroid(rb)
 
-# Creates a tiled parallax layer for a given texture.
+# Creates a parallax layer for a given texture.
 # motion_offset is randomised so layers don't all start aligned, adding visual variety on first load.
-# motion_mirroring equals the cover size so Godot seamlessly wraps the tile as the scroll offset changes.
+# motion_mirroring wraps the scaled layer during scroll; the TextureRect itself is not tiled.
 func _build_parallax_layer(tex: Texture2D, speed_scale: Vector2, view_size: Vector2 = Vector2.ZERO) -> ParallaxLayer:
 	if view_size == Vector2.ZERO:
 		view_size = _cover_size()
@@ -569,7 +569,7 @@ func _create_pixel_rect(tex: Texture2D, view_size: Vector2 = Vector2.ZERO) -> Te
 	var rect = TextureRect.new()
 	rect.texture = tex
 	rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	rect.stretch_mode = TextureRect.STRETCH_TILE
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	_apply_cover_rect(rect, view_size)
 	return rect
 
