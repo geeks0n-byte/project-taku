@@ -1,7 +1,22 @@
 class_name HintSystem
 extends RefCounted
 
+# Stateless utility class for selecting and counting constraint hints.
+# A "hint" is a pair of adjacent cells with a known relationship (equals or
+# not_equals) derived from the solved reference board. Hints are surfaced to
+# the player as visual link overlays on the active board.
+#
+# Two candidate pools exist:
+#   open pool   – at least one cell in the pair is still EMPTY
+#   filled pool – both cells are already filled (used to correct mistakes)
+#
+# "hidden_reference_constraints" are extra constraints that were stripped from
+# the published level to reduce information; they still come from a valid
+# solution and can be offered as bonus hints.
 
+
+# Returns the total number of hints that could currently be shown: the sum of
+# open-pair candidates and filled-pair candidates.
 static func count_usable_hints(
 	board_cells: Dictionary,
 	active_constraints: Array,
@@ -30,6 +45,11 @@ static func count_usable_hints(
 	)
 	return open.size() + filled.size()
 
+# Selects the single best hint to show. Priority order:
+#   1. A filled pair where at least one cell is wrong (corrective hint)
+#   2. The highest-priority open pair (see _pick_by_priority)
+#   3. Any filled pair that satisfies the reference (informational hint)
+# Returns null when no suitable hint exists.
 static func pick_hint(
 	board_cells: Dictionary,
 	active_constraints: Array,
@@ -71,6 +91,9 @@ static func pick_hint(
 		board_cells, active_constraints, solved_reference, filled, prefer_hidden_pool, false
 	)
 
+# Runs a quick solve on the board in its current state (respecting existing
+# locked tiles) to produce a reference solution on demand, e.g. when the level
+# has no pre-computed reference. Returns an empty dict if unsolvable.
 static func attempt_dynamic_solve(
 	board_cells: Dictionary,
 	active_constraints: Array,
@@ -87,6 +110,9 @@ static func attempt_dynamic_solve(
 		active_constraints
 	)
 
+# Solves the board from scratch and rebuilds the hidden-hint pool from the
+# resulting solution. Useful after the board state changes significantly (e.g.
+# after a shifter move). Returns an empty array if no solution is found.
 static func rebuild_hidden_hints(
 	board_cells: Dictionary,
 	active_constraints: Array,
@@ -107,6 +133,9 @@ static func rebuild_hidden_hints(
 		return []
 	return hidden_hints_from_solved(solved, active_constraints, width, height)
 
+# Enumerates all adjacent cell pairs in the solved grid and records each
+# relationship as a hidden hint, provided the pair is not already an active
+# (visible) constraint and both cells hold hintable tile states.
 static func hidden_hints_from_solved(
 	solved: Dictionary,
 	active_constraints: Array,
@@ -130,6 +159,12 @@ static func hidden_hints_from_solved(
 					hidden.append({"a": coord, "b": neighbor, "type": hint_type})
 	return hidden
 
+# Builds the list of hint candidates for the given pool type.
+# When prefer_hidden_pool is true the hidden constraints are used exclusively.
+# When solved_reference is empty we also fall back to the hidden pool.
+# Otherwise, candidates are derived from every adjacent pair in the grid,
+# followed by any hidden constraints not already covered.
+# both_filled_only controls whether to collect open pairs or filled pairs.
 static func _collect_candidates(
 	board_cells: Dictionary,
 	active_constraints: Array,
@@ -202,6 +237,9 @@ static func _collect_candidates(
 
 	return candidates
 
+# Tries to construct a hint candidate for two adjacent cells.
+# Returns null if either cell is a wall, outside the solved reference, already
+# linked by an active constraint, or doesn't match the both_filled_only filter.
 static func _make_candidate(
 	board_cells: Dictionary,
 	active_constraints: Array,
@@ -239,6 +277,9 @@ static func _make_candidate(
 	var hint_type := "equals" if sol_a == sol_b else "not_equals"
 	return {"a": coord_a, "b": coord_b, "type": hint_type}
 
+# Validates a hidden-pool hint: checks that both cells exist, neither is a
+# wall, the pair isn't already constrained, and the fill-state matches the
+# requested pool (open or filled).
 static func _is_pool_hint_usable(
 	board_cells: Dictionary,
 	active_constraints: Array,
@@ -266,6 +307,8 @@ static func _is_pool_hint_usable(
 		return false
 	return true
 
+# Returns true when the solved reference agrees with the hint's relationship:
+# "equals" requires both cells to share the same tile state, "not_equals" requires them to differ.
 static func _reference_satisfies(solved_reference: Dictionary, hint: Dictionary) -> bool:
 	if not solved_reference.has(hint["a"]) or not solved_reference.has(hint["b"]):
 		return false
@@ -277,6 +320,15 @@ static func _reference_satisfies(solved_reference: Dictionary, hint: Dictionary)
 		return sol_a == sol_b
 	return sol_a != sol_b
 
+# Selects the best open-pair hint from the candidate list using a five-bucket
+# priority system. Picks randomly within the highest-occupied bucket so the
+# player doesn't always see the same hint on repeated presses.
+# Priority buckets (highest to lowest):
+#   p0 – one empty, the other is wrong
+#   p1 – one empty, the other is locked/fixed
+#   p2 – one empty, the other is correctly placed
+#   p3 – one or both empty, and either cell already has a visible constraint
+#   p4 – both empty, no other context
 static func _pick_by_priority(
 	board_cells: Dictionary,
 	active_constraints: Array,
@@ -310,6 +362,9 @@ static func _pick_by_priority(
 		return priority_4.pick_random()
 	return null
 
+# Selects a hint from the filled-pair pool. Prefers pairs that involve at
+# least one incorrectly-placed cell (corrective), then falls back to any other
+# filled pair unless wrong_only is set (in which case null is returned).
 static func _pick_both_filled(
 	board_cells: Dictionary,
 	_active_constraints: Array,
@@ -335,6 +390,8 @@ static func _pick_both_filled(
 		return other.pick_random()
 	return null
 
+# Returns true if either cell in the candidate pair is currently filled with a
+# tile that contradicts the solved reference (i.e. the player has a mistake there).
 static func _involves_wrong_cell(
 	board_cells: Dictionary,
 	solved_reference: Dictionary,
@@ -357,6 +414,8 @@ static func _involves_wrong_cell(
 			return true
 	return false
 
+# Checks whether a single filled (non-empty, non-wall, non-shifter) cell
+# disagrees with the solved reference. Returns false when no reference exists.
 static func _cell_is_wrong(
 	board_cells: Dictionary,
 	solved_reference: Dictionary,
@@ -374,6 +433,9 @@ static func _cell_is_wrong(
 		return false
 	return int(cell.state) != expected
 
+# Classifies a single open-pair candidate into one of five priority buckets
+# (p0–p4) based on the fill/correctness/lock state of its two cells.
+# See _pick_by_priority for the full bucket semantics.
 static func _bucket_candidate(
 	board_cells: Dictionary,
 	active_constraints: Array,
@@ -424,12 +486,15 @@ static func _bucket_candidate(
 	if a_empty and b_empty:
 		p4.append(candidate)
 
+# Returns true if the given cell is part of at least one active visible constraint.
 static func _cell_has_any_constraint(coord: Vector2i, constraints: Array) -> bool:
 	for constraint in constraints:
 		if constraint["a"] == coord or constraint["b"] == coord:
 			return true
 	return false
 
+# Produces a canonical string key for an unordered cell pair so that (a, b)
+# and (b, a) map to the same key, preventing duplicate candidates.
 static func _pair_key(a: Vector2i, b: Vector2i) -> String:
 	if a.x < b.x or (a.x == b.x and a.y <= b.y):
 		return "%d,%d|%d,%d" % [a.x, a.y, b.x, b.y]

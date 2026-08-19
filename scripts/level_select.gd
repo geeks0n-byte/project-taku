@@ -27,15 +27,20 @@ const TAB_LOCK_ALPHA := 0.9
 @onready var tab_list_gap: Control = $"UILayer/CenterContainer/VBoxContainer/TabListGap"
 @onready var _title_label: Label = $"UILayer/ScreenHeaderHost/TitleLabel"
 
+## Corresponds to the four difficulty tabs; CUSTOM is only visible in debug builds.
 enum ViewMode { EASY, MEDIUM, HARD, CUSTOM }
 var current_view: ViewMode = ViewMode.EASY
+# Flat list of {resource, title, locked} dicts for the active tab, rebuilt on tab switch.
 var _level_entries: Array = []
+# Zero-based page currently displayed; clamped to valid range before each refresh.
 var _page_index: int = 0
 
 func _ready() -> void:
 	if AdsManager:
 		AdsManager.show_menu_banner()
+		# Pre-load the rewarded-ad unit so there's no latency when the player first asks for a hint.
 		AdsManager.warm_rewarded_hint()
+	# Template buttons live in the scene tree as design references; remove them before populating.
 	for template in [button_template, locked_button_template, custom_button_template]:
 		if template and template.get_parent() == level_grid:
 			level_grid.remove_child(template)
@@ -55,6 +60,7 @@ func _ready() -> void:
 		custom_tab_button.pressed.connect(func(): _switch_view(ViewMode.CUSTOM))
 	_configure_custom_tab()
 	_layout_level_select()
+	# If the default tab is locked (e.g. only Easy is unlocked initially), fall back gracefully.
 	if not _is_category_unlocked(current_view):
 		current_view = _first_unlocked_view()
 	_fit_chrome_buttons()
@@ -64,10 +70,13 @@ func _ready() -> void:
 		SaveManager.language_changed.connect(_on_language_changed)
 
 func _notification(what: int) -> void:
+	# Handle the Android/iOS hardware back button — treat it the same as the UI back button.
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		if GlobalGameManager and GlobalGameManager.consume_system_back():
 			_on_back_pressed()
 
+## Applies consistent styling to all chrome buttons (tabs, page nav, close).
+## Called on ready and again whenever the language changes to handle font switches.
 func _fit_chrome_buttons() -> void:
 	_apply_close_button()
 	_configure_custom_tab()
@@ -101,6 +110,7 @@ func _apply_close_button() -> void:
 	if back_button:
 		HudLayout.style_top_bar_close_button(back_button)
 
+## Re-applies fonts and rebuilds the menu when the player changes language at runtime.
 func _on_language_changed() -> void:
 	HudLayout.apply_locale_fonts_to_tree(self)
 	_fit_chrome_buttons()
@@ -117,6 +127,8 @@ func _layout_level_select() -> void:
 	_connect_level_list_host()
 	_pin_level_list_to_top()
 
+## Wires the LevelListHost resize signal to keep layout pinned to the top, and
+## sets the grid to 3 columns with consistent spacing.
 func _connect_level_list_host() -> void:
 	var host := content_vbox.get_node_or_null("LevelListHost") as Control if content_vbox else null
 	if host == null:
@@ -128,6 +140,8 @@ func _connect_level_list_host() -> void:
 		level_grid.add_theme_constant_override("h_separation", 30)
 		level_grid.add_theme_constant_override("v_separation", 30)
 
+## Pins the level grid to the top-left of its host and reserves exactly one full page
+## of height so the layout doesn't jump when navigating between pages with fewer items.
 func _pin_level_list_to_top() -> void:
 	var host := content_vbox.get_node_or_null("LevelListHost") as Control if content_vbox else null
 	if host == null:
@@ -171,6 +185,8 @@ func _pin_level_list_to_top() -> void:
 		host.custom_minimum_size = Vector2(0, maxf(label_h, 1.0))
 		host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
+## Shows or hides the Custom tab depending on whether dev/debug tools are enabled.
+## If the tab is hidden while it's the active view, resets to Easy.
 func _configure_custom_tab() -> void:
 	var show_custom := GlobalGameManager.debug_tools_enabled
 	if custom_tab_button:
@@ -180,6 +196,8 @@ func _configure_custom_tab() -> void:
 	if not show_custom and current_view == ViewMode.CUSTOM:
 		current_view = ViewMode.EASY
 
+## Switches the active difficulty tab, resets to page 0, and repopulates the grid.
+## Guards against switching to locked or unavailable categories.
 func _switch_view(new_mode: ViewMode) -> void:
 	if new_mode == ViewMode.CUSTOM and not GlobalGameManager.debug_tools_enabled:
 		return
@@ -192,17 +210,22 @@ func _switch_view(new_mode: ViewMode) -> void:
 	_update_tab_button_visuals()
 	populate_level_menu()
 
+## Finds the first playable non-Custom view in Easy→Medium→Hard order.
+## Falls back to Easy if nothing is explicitly unlocked (should not happen in normal play).
 func _first_unlocked_view() -> ViewMode:
 	for view in [ViewMode.EASY, ViewMode.MEDIUM, ViewMode.HARD]:
 		if _is_category_unlocked(view):
 			return view
 	return ViewMode.EASY
 
+## All non-Custom categories are always accessible; Custom requires debug tools enabled.
 func _is_category_unlocked(view: ViewMode) -> bool:
 	if view == ViewMode.CUSTOM:
 		return GlobalGameManager.debug_tools_enabled
 	return true
 
+## Refreshes tab button modulate and disabled state to reflect the active view.
+## Active tab uses its accent color; inactive tabs are grey; locked tabs are dark with a lock icon.
 func _update_tab_button_visuals() -> void:
 	var tabs := [
 		[easy_tab_button, ViewMode.EASY, Color(0.45, 1.0, 0.45)],
@@ -225,6 +248,8 @@ func _update_tab_button_visuals() -> void:
 			btn.modulate = Color(0.35, 0.35, 0.35, 1.0)
 		_set_tab_lock_icon(btn, not unlocked)
 
+## Lazily adds or removes a centered lock-icon overlay on a tab button.
+## The icon is created on first use and reused on subsequent calls.
 func _set_tab_lock_icon(button: Button, show_lock: bool) -> void:
 	if not button:
 		return
@@ -260,6 +285,8 @@ func _set_tab_lock_icon(button: Button, show_lock: bool) -> void:
 		existing.modulate = Color(1, 1, 1, TAB_LOCK_ALPHA)
 	existing.visible = true
 
+## Scans the correct directory for the active tab, loads all valid LevelData resources,
+## builds the _level_entries list, then renders the current page.
 func populate_level_menu() -> void:
 	if not level_grid or not button_template:
 		return
@@ -293,6 +320,7 @@ func populate_level_menu() -> void:
 	_page_index = clampi(_page_index, 0, _max_page_index())
 	_refresh_page()
 
+## Returns the index of the last valid page (0-based). Returns 0 when the list is empty.
 func _max_page_index() -> int:
 	if _level_entries.is_empty():
 		return 0
@@ -306,6 +334,8 @@ func _on_page_next() -> void:
 	_page_index = mini(_page_index + 1, _max_page_index())
 	_refresh_page()
 
+## Clears all dynamically-added buttons from the grid and re-populates the current page.
+## Template nodes are retained so they can be duplicated again on the next refresh.
 func _refresh_page() -> void:
 	for child in level_grid.get_children():
 		if child not in [button_template, locked_button_template, custom_button_template]:
@@ -350,6 +380,8 @@ func _refresh_page() -> void:
 	_pin_level_list_to_top()
 	call_deferred("_pin_level_list_to_top")
 
+## Shows prev/next arrows only when there is more than one page of levels, and only
+## for the direction the player can actually navigate to from the current page.
 func _update_page_nav_visibility() -> void:
 	var multi_page := _level_entries.size() > LEVELS_PER_PAGE
 	if _page_nav:
@@ -366,6 +398,7 @@ func _update_page_nav_visibility() -> void:
 		HudLayout.refresh_button_icon_modulate(_page_next_button)
 	_apply_close_button()
 
+## Maps a ViewMode to the resource directory where its LevelData files are stored.
 func _folder_for_view(view: ViewMode) -> String:
 	match view:
 		ViewMode.MEDIUM:
@@ -375,6 +408,8 @@ func _folder_for_view(view: ViewMode) -> String:
 		_:
 			return GameConstants.CAMPAIGN_EASY_DIR
 
+## Populates a level button with a preview thumbnail, title label, and star row.
+## Locked levels get a greyed-out preview and a centered lock icon overlay instead of stars.
 func _apply_level_button_content(btn: Button, level: LevelData, title: String, locked: bool) -> void:
 	btn.text = ""
 	btn.custom_minimum_size = Vector2(260, 240)
@@ -412,6 +447,7 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	preview.texture = LevelPreview.make_texture(level, GameConstants.LEVEL_PREVIEW_SIZE)
+	# Desaturate the preview and frame slightly so locked levels look unavailable.
 	if locked:
 		preview.modulate = Color(0.45, 0.45, 0.45, 1.0)
 		preview_frame.modulate = Color(0.7, 0.7, 0.7, 1.0)
@@ -469,6 +505,7 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 
 	btn.add_child(content)
 
+## Stores the chosen level on GlobalGameManager and loads the gameplay scene.
 func _on_level_selected(resource: LevelData) -> void:
 	GlobalGameManager.selected_level_resource = resource
 	GlobalGameManager.go_to_scene("res://scenes/main.tscn")

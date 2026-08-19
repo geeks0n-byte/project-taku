@@ -2,6 +2,8 @@ class_name BoardManager
 extends Node2D
 
 signal cell_changed(coord: Vector2i)
+# Emitted when a tile is removed via the hold-to-clear gesture. 
+# main.gd connects this to the same handler as cell_changed.
 signal cell_hold_cleared(coord: Vector2i)
 signal shifter_move_made
 signal invalid_move_attempted(message: String)

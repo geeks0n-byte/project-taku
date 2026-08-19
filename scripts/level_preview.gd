@@ -1,6 +1,10 @@
 class_name LevelPreview
 extends RefCounted
+## Stateless utility for generating puzzle preview thumbnails (ImageTexture).
+## SVG tile images are cached by "path@size" and composed layouts are cached by fingerprint.
+## All methods are static; no instance is needed.
 
+# Fallback solid colors used when a tile SVG cannot be loaded or resized.
 const COLOR_BG := Color(0.08, 0.1, 0.16, 1.0)
 const COLOR_EMPTY := Color(0.28, 0.34, 0.46, 1.0)
 const COLOR_WALL := Color(0.05, 0.06, 0.09, 1.0)
@@ -12,10 +16,14 @@ const COLOR_SHIFTER := Color(0.7, 0.35, 0.9, 1.0)
 const PATH_EMPTY := "res://resources/tiles/tile_empty.svg"
 const PATH_WALL := "res://resources/tiles/tile_wall.svg"
 
+# Per-size tile image cache: key = "path@size". Avoids re-rasterizing SVGs each frame.
 static var _tile_image_cache: Dictionary = {}
+# Fully-composed preview textures keyed by layout fingerprint + pixel_size.
+# Bounded to _PREVIEW_CACHE_MAX entries; oldest entry is evicted when full.
 static var _preview_texture_cache: Dictionary = {}
 const _PREVIEW_CACHE_MAX := 64
 
+## Creates the dark bordered StyleBoxFlat used to frame preview thumbnails.
 static func make_frame_style() -> StyleBoxFlat:
 	var frame_style := StyleBoxFlat.new()
 	frame_style.bg_color = COLOR_BG
@@ -28,11 +36,14 @@ static func make_frame_style() -> StyleBoxFlat:
 	frame_style.content_margin_bottom = 4.0
 	return frame_style
 
+## Returns the outer pixel size for a frame with a given inner content area.
+## Accounts for border (3 px) + content margin (4 px) on each side = +14 total.
 static func frame_outer_size(inner_size: float) -> float:
-	# border 3 + content pad 4 on each side
 	return inner_size + 14.0
 
 ## Ensures `preview` sits inside a bordered PanelContainer (level-select style).
+## Idempotent: if the frame already exists it just refreshes the style; otherwise it
+## inserts a new PanelContainer at the same scene-tree index as `preview` was.
 static func ensure_preview_frame(preview: TextureRect) -> PanelContainer:
 	if preview == null:
 		return null
@@ -65,6 +76,10 @@ static func ensure_preview_frame(preview: TextureRect) -> PanelContainer:
 	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	return frame
 
+## Generates a preview thumbnail for a LevelData resource.
+## Handles the shifter display correctly: the active shifter position shows the
+## SHIFTER tile, while the inactive home/alt position is rendered as EMPTY so
+## only the current state of each pair is visible in the preview.
 static func make_texture(level: LevelData, pixel_size: int = GameConstants.LEVEL_PREVIEW_SIZE) -> ImageTexture:
 	if level == null:
 		return ImageTexture.create_from_image(Image.create(pixel_size, pixel_size, false, Image.FORMAT_RGBA8))
@@ -86,6 +101,9 @@ static func make_texture(level: LevelData, pixel_size: int = GameConstants.LEVEL
 			preview_layout[coord] = GameConstants.TileState.EMPTY
 	return make_texture_from_layout(preview_layout, pixel_size)
 
+## Rasterizes a coord→TileState layout dict into a square preview image.
+## Tiles are rendered using SVG assets when available, falling back to solid colors.
+## `shifter_dirs` maps shifter coords to their direction vector so an arrow overlay is drawn.
 static func make_texture_from_layout(
 	layout: Dictionary,
 	pixel_size: int = GameConstants.LEVEL_PREVIEW_SIZE,
@@ -109,6 +127,9 @@ static func make_texture_from_layout(
 	var image := Image.create(pixel_size, pixel_size, false, Image.FORMAT_RGBA8)
 	image.fill(COLOR_BG)
 
+	# Pad = 10 % of pixel_size, floored at 4. inner is the drawable square after padding.
+	# cell is the pixel size of one grid tile, determined by the larger board dimension
+	# so both axes always fit; minimum 3 px so very large boards still render something.
 	var pad := maxi(4, int(round(float(pixel_size) * 0.1)))
 	var inner := maxi(8, pixel_size - pad * 2)
 	var cell := maxi(3, int(float(inner) / float(maxi(width, height))))
@@ -140,6 +161,8 @@ static func make_texture_from_layout(
 	_store_preview_texture(cache_key, tex)
 	return tex
 
+## Produces a stable string fingerprint for a layout + pixel_size combination.
+## The "v5tiles" prefix allows cache invalidation if the tile rendering logic changes.
 static func _layout_cache_key(layout: Dictionary, pixel_size: int, shifter_dirs: Dictionary) -> String:
 	var parts: PackedStringArray = []
 	parts.append("v5tiles")
@@ -156,12 +179,15 @@ static func _layout_cache_key(layout: Dictionary, pixel_size: int, shifter_dirs:
 			parts.append("d%s:%d,%d" % [str(coord), d.x, d.y])
 	return "|".join(parts)
 
+## Inserts a generated texture into the preview cache, evicting the oldest entry
+## (insertion order) when the cache has reached its capacity.
 static func _store_preview_texture(key: String, tex: ImageTexture) -> void:
 	if _preview_texture_cache.size() >= _PREVIEW_CACHE_MAX:
 		var first_key = _preview_texture_cache.keys()[0]
 		_preview_texture_cache.erase(first_key)
 	_preview_texture_cache[key] = tex
 
+## Convenience wrapper that converts live board_cells (Cell node dict) into a preview texture.
 static func make_texture_from_board_cells(
 	board_cells: Dictionary,
 	pixel_size: int = GameConstants.LEVEL_PREVIEW_SIZE
@@ -172,6 +198,7 @@ static func make_texture_from_board_cells(
 		shifter_dirs_from_board_cells(board_cells)
 	)
 
+## Extracts a plain coord→int state map from live Cell nodes for use with make_texture_from_layout.
 static func layout_from_board_cells(board_cells: Dictionary) -> Dictionary:
 	var layout := {}
 	for coord in board_cells:
@@ -181,6 +208,8 @@ static func layout_from_board_cells(board_cells: Dictionary) -> Dictionary:
 		layout[coord] = int(cell.state)
 	return layout
 
+## Extracts a coord→Vector2i direction map for all SHIFTER cells in the live board.
+## Only cells with a non-zero shifter_direction are included.
 static func shifter_dirs_from_board_cells(board_cells: Dictionary) -> Dictionary:
 	var dirs := {}
 	for coord in board_cells:
@@ -194,6 +223,8 @@ static func shifter_dirs_from_board_cells(board_cells: Dictionary) -> Dictionary
 			dirs[coord] = dir
 	return dirs
 
+## Renders a shape-only layout (no color data) as a flat silhouette: all non-wall
+## cells are filled with COLOR_EMPTY. Used for levels whose layout has no tile states yet.
 static func _make_silhouette_texture(layout: Dictionary, pixel_size: int) -> ImageTexture:
 	if layout == null or layout.is_empty():
 		return ImageTexture.create_from_image(Image.create(pixel_size, pixel_size, false, Image.FORMAT_RGBA8))
@@ -232,6 +263,8 @@ static func _make_silhouette_texture(layout: Dictionary, pixel_size: int) -> Ima
 
 	return ImageTexture.create_from_image(image)
 
+## Returns a set (coord → true) of every coord that belongs to any shifter pair,
+## including both the home and active positions. Used to identify shifter-occupied cells.
 static func _shifter_cell_set(level: LevelData) -> Dictionary:
 	var shifter_cells := {}
 	for pair in LevelUtils.get_shifter_pairs(level):
@@ -247,6 +280,8 @@ static func _shifter_cell_set(level: LevelData) -> Dictionary:
 			shifter_cells[pair["home"]] = true
 	return shifter_cells
 
+## Returns a set of only the currently-active shifter coord for each pair.
+## Prefers "active" over "home" — whichever key the pair dict provides.
 static func _active_shifter_set(level: LevelData) -> Dictionary:
 	var active := {}
 	for pair in LevelUtils.get_shifter_pairs(level):
@@ -258,6 +293,7 @@ static func _active_shifter_set(level: LevelData) -> Dictionary:
 			active[pair["home"]] = true
 	return active
 
+## Maps a TileState int to the SVG resource path for that tile type.
 static func _path_for_state(state: int) -> String:
 	match state:
 		GameConstants.TileState.WALL:
@@ -273,6 +309,8 @@ static func _path_for_state(state: int) -> String:
 		_:
 			return PATH_EMPTY
 
+## Maps a unit direction vector to the corresponding directional arrow SVG path.
+## Returns an empty string for zero or diagonal directions (no arrow to draw).
 static func _path_for_shifter_dir(dir: Vector2i) -> String:
 	if dir == Vector2i(0, -1):
 		return GameConstants.TILE_SHIFTER_UP
@@ -284,6 +322,8 @@ static func _path_for_shifter_dir(dir: Vector2i) -> String:
 		return GameConstants.TILE_SHIFTER_RIGHT
 	return ""
 
+## Blends a directional arrow sprite centered within a shifter cell.
+## The arrow is sized to 72 % of the cell and inset equally on all sides.
 static func _blit_shifter_arrow(image: Image, cell_pos: Vector2i, cell: int, dir: Variant) -> void:
 	var path := _path_for_shifter_dir(dir as Vector2i)
 	if path.is_empty():
@@ -299,6 +339,9 @@ static func _blit_shifter_arrow(image: Image, cell_pos: Vector2i, cell: int, dir
 		cell_pos + Vector2i(inset, inset)
 	)
 
+## Loads and nearest-neighbor-resizes a tile SVG to `size` × `size` pixels.
+## Results are cached by "path@size" key to avoid redundant disk reads and resizes.
+## Returns null if the resource cannot be loaded or has no pixel data.
 static func _resized_tile(path: String, size: int) -> Image:
 	var key := "%s@%d" % [path, size]
 	if _tile_image_cache.has(key):
@@ -314,6 +357,7 @@ static func _resized_tile(path: String, size: int) -> Image:
 			src = img_tex.get_image()
 	if src == null:
 		return null
+	# Image must be decompressed before resize; always duplicate to avoid mutating the cached source.
 	if src.is_compressed():
 		src = src.duplicate()
 		src.decompress()
@@ -323,6 +367,7 @@ static func _resized_tile(path: String, size: int) -> Image:
 	_tile_image_cache[key] = src
 	return src
 
+## Returns the solid fallback color for a tile state, used when the SVG tile cannot be loaded.
 static func _color_for_state(state: int) -> Color:
 	match state:
 		GameConstants.TileState.WALL:

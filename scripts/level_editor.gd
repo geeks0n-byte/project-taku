@@ -1,19 +1,32 @@
 extends Node2D
 
+# Root controller for the level editor scene.
+# Coordinates the EditorUIManager, PlaytestUIManager, EditorCanvasManager, and
+# EditorPlaytestController — acting as the bridge between all editor subsystems.
+
 @onready var editor_ui: EditorUIManager = $EditorUIManager
 @onready var pt_ui: PlaytestUIManager = $PlaytestUIManager
 @onready var canvas_manager: EditorCanvasManager = $EditorUI/EditorCanvasManager
 
 var playtest_controller: EditorPlaytestController
 
+# Currently selected tile type/brush tool. Determines what is painted on cell click/drag.
 var current_brush_state: int = GameConstants.TileState.EMPTY
+# Holds the first coordinate selected when using a two-click link brush (shifter or constraint).
+# null means no selection is in progress.
 var link_first_selection = null
+# Stores the required-joker count for the currently edited level.
+# -1 means "auto" (derive from grid dimensions); positive values are explicit.
 var current_level_required_jokers: int = -1
 var editor_undo := UndoStack.new()
+# True while the primary mouse/touch button is held down during a paint drag.
 var _is_painting: bool = false
+# True if at least one cell was modified during the current paint stroke, so undo is recorded on release.
 var _paint_dirty: bool = false
+# Tracks the last cell painted during a drag to avoid repainting the same cell each motion event.
 var _last_painted_coord: Vector2i = Vector2i(-9999, -9999)
 var _loading_overlay: LoadingOverlay
+# Prevents stacking multiple async generation requests if the user clicks rapidly.
 var _is_generating: bool = false
 
 func _ready():
@@ -31,10 +44,13 @@ func _ready():
 	canvas_manager.generate_blank_canvas(canvas_manager.grid_width, canvas_manager.grid_height)
 	_recenter_editor_layout(canvas_manager.grid_width, canvas_manager.grid_height)
 	_update_editor_joker_counter_display()
-	editor_undo.max_size = 0 # Unlimited undo/redo while editing.
+	editor_undo.max_size = 0  # Unlimited undo/redo while editing.
+	# Seed the undo stack with the initial blank state so Ctrl+Z can return to it.
 	editor_undo.reset(_create_editor_snapshot())
 	editor_ui.update_editor_undo_redo_buttons(false, false)
 
+# Handles raw mouse/touch input for painting tiles via drag. Link brushes use a
+# two-click flow routed through canvas_cell_clicked instead, so they are excluded here.
 func _input(event: InputEvent) -> void:
 	if playtest_controller and playtest_controller.is_active:
 		return
@@ -61,12 +77,16 @@ func _input(event: InputEvent) -> void:
 	elif event is InputEventScreenDrag and event.index == 0 and _is_painting:
 		_try_paint_at_mouse(false)
 
+# Called when the paint button is released. Records a single undo entry for the whole stroke
+# rather than one per cell, keeping the undo history manageable.
 func _finish_paint_stroke() -> void:
 	if _paint_dirty:
 		_record_editor_change()
 		_paint_dirty = false
 	_last_painted_coord = Vector2i(-9999, -9999)
 
+# Link brushes (shifter, equals, not-equals) require selecting two cells rather than painting,
+# so they are handled separately via canvas_cell_clicked rather than the drag input path.
 func _is_link_brush() -> bool:
 	return (
 		current_brush_state == GameConstants.TileState.SHIFTER
@@ -74,6 +94,7 @@ func _is_link_brush() -> bool:
 		or current_brush_state == GameConstants.BrushTool.NOT_EQUALS
 	)
 
+# Converts a global screen position to integer grid coordinates using the canvas_manager's transform.
 func _coord_from_global(global_pos: Vector2) -> Vector2i:
 	var local := canvas_manager.to_local(global_pos)
 	return Vector2i(floori(local.x / float(GameConstants.CELL_SIZE)), floori(local.y / float(GameConstants.CELL_SIZE)))
@@ -89,6 +110,8 @@ func _try_paint_at_mouse(record_undo: bool) -> void:
 		_paint_dirty = true
 		_update_editor_joker_counter_display()
 
+# Repositions the canvas_manager so the grid is visually centered, then tells the UI
+# panels to reflow any elements that depend on where the board sits on screen.
 func _recenter_editor_layout(width: int, height: int) -> void:
 	var screen_size := get_viewport_rect().size
 	var centered_board_x := LevelUtils.center_board_x(width, GameConstants.CELL_SIZE, screen_size.x)
@@ -127,6 +150,8 @@ func _on_editor_hint_toggled(_is_on: bool):
 	canvas_manager.show_editor_hints = false
 	canvas_manager.trigger_redraw()
 
+# Captures the complete mutable editor state — cell data, shifter/constraint pairs,
+# and the joker count — into a deep-copied dictionary suitable for undo/redo storage.
 func _create_editor_snapshot() -> Dictionary:
 	var snap := {}
 	for coord in canvas_manager.board_cells:
@@ -146,6 +171,8 @@ func _create_editor_snapshot() -> Dictionary:
 		"jokers": current_level_required_jokers
 	}
 
+# Restores the editor state from a snapshot produced by _create_editor_snapshot.
+# Called by undo and redo; pairs are deep-copied so subsequent edits don't corrupt history.
 func _apply_editor_snapshot(snap: Dictionary):
 	for coord in snap["cells"]:
 		var cell = canvas_manager.board_cells[coord]
@@ -163,6 +190,8 @@ func _apply_editor_snapshot(snap: Dictionary):
 	canvas_manager.trigger_redraw()
 	_update_editor_joker_counter_display()
 
+# Saves the current editor state to the undo stack and refreshes the undo/redo buttons.
+# Also regenerates hidden hint constraints when the hint overlay is active so they stay in sync.
 func _record_editor_change():
 	if canvas_manager.show_editor_hints:
 		_rebuild_editor_hidden_hints()
@@ -341,6 +370,10 @@ func _apply_paint_brush(coord: Vector2i, record_undo: bool) -> bool:
 		_record_editor_change()
 	return changed
 
+# Refreshes the joker counter shown in the playtest panel.
+# The counter is hidden entirely when the board is empty or no jokers are required,
+# so it only appears when it carries meaningful information.
+# If current_level_required_jokers is -1 (auto), derive the target from the shorter grid dimension.
 func _update_editor_joker_counter_display():
 	if playtest_controller.is_active:
 		return
@@ -358,6 +391,10 @@ func _update_editor_joker_counter_display():
 	pt_ui.set_playtest_joker_counter_visibility(has_jokers)
 	pt_ui.update_playtest_joker_counter(placed_jokers, total_required)
 
+# Creates a shifter pair between coord_a (active/home) and coord_b (inactive partner).
+# First removes any existing pair that shares coord_a as its active cell, or that already
+# links the same two coords, to enforce a one-pair-per-cell invariant.
+# All affected cell visuals are recalculated after the array is mutated.
 func _execute_pair_link_creation(coord_a: Vector2i, coord_b: Vector2i):
 	var pairs_to_remove: Array = []
 	for i in range(canvas_manager.loaded_shifter_pairs.size() - 1, -1, -1):
@@ -402,6 +439,10 @@ func _remove_pair_by_coord(coord: Vector2i):
 		_recalculate_cell_pair_state(c)
 	canvas_manager.trigger_redraw()
 
+# Re-derives a cell's state from the current loaded_shifter_pairs list.
+# A cell is "active" (shows the SHIFTER tile with direction arrow) if it is the "active" key
+# of any pair; "target" (appears empty but flagged linked) if it appears as "a" or "b";
+# otherwise it is a plain empty cell with no link flags.
 func _recalculate_cell_pair_state(c: Vector2i):
 	if not canvas_manager.board_cells.has(c):
 		return
@@ -433,6 +474,8 @@ func _recalculate_cell_pair_state(c: Vector2i):
 		cell.is_locked = false
 	cell.update_visuals()
 
+# Adds or replaces a constraint between two adjacent cells.
+# Any existing constraint between the same pair is removed first so re-clicking toggles type cleanly.
 func _execute_constraint_creation(coord_a: Vector2i, coord_b: Vector2i, type: String):
 	canvas_manager.board_cells[coord_a].update_visuals()
 	for i in range(canvas_manager.loaded_constraint_pairs.size() - 1, -1, -1):
@@ -442,6 +485,8 @@ func _execute_constraint_creation(coord_a: Vector2i, coord_b: Vector2i, type: St
 	canvas_manager.loaded_constraint_pairs.append({"a": coord_a, "b": coord_b, "type": type})
 	canvas_manager.trigger_redraw()
 
+# Removes every constraint that involves `coord`, used when the EMPTY brush is applied
+# to a cell that participates in one or more constraint pairs.
 func _remove_constraint_by_coord(coord: Vector2i):
 	for i in range(canvas_manager.loaded_constraint_pairs.size() - 1, -1, -1):
 		var p = canvas_manager.loaded_constraint_pairs[i]
@@ -475,6 +520,8 @@ func _on_clear_board():
 	_update_editor_joker_counter_display()
 	_record_editor_change()
 
+# Swaps between the opaque editor background and the animated SpaceBackground.
+# The editor uses its own solid background so the parallax doesn't distract during design work.
 func _apply_background_for_mode(is_playtest: bool) -> void:
 	var editor_bg = get_node_or_null("EditorUI/EditorBackground")
 	if editor_bg:
@@ -489,6 +536,8 @@ func _on_test_mode_entered():
 	playtest_controller.enter(current_level_required_jokers)
 	_recenter_editor_layout(canvas_manager.grid_width, canvas_manager.grid_height)
 
+# Opens the how-to-play overlay while playtesting: hides the board and pauses the timer
+# so the player can read the rules without time pressure.
 func _on_playtest_rules_requested():
 	if not playtest_controller.is_active:
 		return
@@ -498,6 +547,7 @@ func _on_playtest_rules_requested():
 	pt_ui.set_playtest_chrome_visible(false)
 	pt_ui.show_how_to_play()
 
+# Resumes playtesting after the rules overlay is dismissed.
 func _on_resume_from_playtest_tutorial():
 	if canvas_manager:
 		canvas_manager.visible = true
@@ -521,6 +571,10 @@ func _on_save_level():
 		return
 	_execute_save()
 
+# Runs the solver analysis, constructs a LevelData resource from current editor state,
+# and writes it to disk. Shifter cells are stored as EMPTY in the layout because the
+# active/inactive state is fully described by shifter_pairs; saving SHIFTER in the layout
+# would double-encode the information and confuse the loader.
 func _execute_save():
 	var level_num = editor_ui.get_level_number()
 	var tiles: Array = editor_ui.get_allowed_tiles()
@@ -567,6 +621,9 @@ func _execute_save():
 	else:
 		editor_ui.update_status(HudLayout.english("ED_MSG_LEVEL_SAVE_FAILED") % [level_num, error_string(save_result).to_upper()], Color(1.0, 0.4, 0.4), false)
 
+# Validates a solver analysis result before allowing a save.
+# Blocks saving if the solver timed out (result is ambiguous), the puzzle is unsolvable,
+# or a unique-solution requirement is active but multiple solutions were found.
 func _accept_save_analysis(analysis: Dictionary) -> bool:
 	if bool(analysis.get("timed_out", false)) or int(analysis.get("solution_count", 0)) == PuzzleSolver.SOLUTIONS_UNKNOWN:
 		editor_ui.update_status(HudLayout.english("ED_MSG_SOLVE_TIMEOUT"), Color(1.0, 0.4, 0.4), false)
@@ -625,6 +682,9 @@ func _notification(what: int) -> void:
 		if GlobalGameManager and GlobalGameManager.consume_system_back():
 			_on_main_menu()
 
+# Recomputes the auto-derived hint constraints that are hidden from the player but
+# visible to the designer when the editor hint overlay is toggled on.
+# Must be called whenever the board or allowed-tiles list changes.
 func _rebuild_editor_hidden_hints():
 	canvas_manager.hidden_constraint_pairs = HintSystem.rebuild_hidden_hints(
 		canvas_manager.board_cells,

@@ -1,12 +1,19 @@
+# Static utility library — no scene node needed. All layout and font helpers
+# live here so every HUD scene can share the same logic without duplicating code.
 class_name HudLayout
 extends RefCounted
 
+# Shared tile texture for all top-bar buttons (close, nav, square action buttons).
 const _TOP_BAR_TILE_TEX := preload("res://resources/buttons/button_tile_gray_dark.svg")
+# Icon textures used by the close button and the HTP prev/next nav buttons.
 const _CLOSE_ICON_TEX := preload("res://resources/icons/icon_close.svg")
 const _PREV_ICON_TEX := preload("res://resources/icons/icon_prev.svg")
 const _NEXT_ICON_TEX := preload("res://resources/icons/icon_next.svg")
+# Default icon render size in pixels for square top-bar buttons.
 const _TOP_BAR_ICON_PX := 83.0
 
+# Stretches a control to the full horizontal width with symmetric side margins,
+# anchored to the top of its parent at the given pixel offset.
 static func position_top_wide(control: Control, top: float, height: float, margin: float = GameConstants.HUD_SIDE_MARGIN) -> void:
 	if not control:
 		return
@@ -16,9 +23,13 @@ static func position_top_wide(control: Control, top: float, height: float, margi
 	control.offset_top = top
 	control.offset_bottom = top + height
 
+# Places the in-game status label (error / success messages) directly below the board
+# with the standard gap defined in GameConstants.
 static func position_status_below_board(status: Control, board_y: float, board_height: float) -> void:
 	position_top_wide(status, board_y + board_height + GameConstants.HUD_STATUS_GAP, GameConstants.HUD_STATUS_MIN_HEIGHT)
 
+# Pins the editor's status bar at the bottom of its parent and shrinks the control
+# panel's bottom edge flush so there's no gap between them.
 static func position_editor_status_below_panel(control_panel: Control, status: Control) -> void:
 	if not control_panel or not status:
 		return
@@ -31,10 +42,14 @@ static func position_editor_status_below_panel(control_panel: Control, status: C
 	status.offset_top = status_top
 	control_panel.offset_bottom = 0.0
 
+# Public entry point for counter row layout. Actual position offsets are
+# managed by the HUD scene tree; this call handles only the internal alignment.
 static func position_counter_row(counter_row: Control) -> void:
 	# Geometry is owned by the HUD scene tree.
 	align_counter_row(counter_row)
 
+# Centres the HBoxContainer and makes all visible child slots share equal width,
+# so the counter row re-balances when slots are hidden/shown.
 static func align_counter_row(counter_row: Control) -> void:
 	if counter_row == null:
 		return
@@ -46,8 +61,11 @@ static func align_counter_row(counter_row: Control) -> void:
 			slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			slot.size_flags_stretch_ratio = 1.0
 
+# Cached fallback font reference so we don't call ThemeDB.fallback_font on every frame.
 static var _screen_header_font_default: Font
 
+# Returns the font to use for screen headers. Press Start is used in English;
+# all other locales fall back to the theme's default scalable font.
 static func screen_header_font(force_pixel: bool = false) -> Font:
 	if force_pixel or uses_pixel_font():
 		return pixel_font()
@@ -55,6 +73,8 @@ static func screen_header_font(force_pixel: bool = false) -> Font:
 		_screen_header_font_default = ThemeDB.fallback_font
 	return _screen_header_font_default
 
+# Returns true when text looks like a raw i18n key (all-caps ASCII + digits + underscores).
+# Used to distinguish un-translated keys from already-translated display strings.
 static func _is_message_key(text: String) -> bool:
 	if text.is_empty():
 		return false
@@ -70,6 +90,9 @@ static func _is_message_key(text: String) -> bool:
 			return false
 	return true
 
+# Reverse-looks up the original i18n key from an already-translated string.
+# Necessary when a scene was saved with tr() output baked into .text,
+# making it impossible to retranslate on locale change without this recovery.
 static func _recover_header_key_from_translated(text: String) -> String:
 	if text.is_empty() or _is_message_key(text):
 		return text
@@ -89,6 +112,9 @@ static func _recover_header_key_from_translated(text: String) -> String:
 				return key
 	return ""
 
+# Determines the stable i18n key for a header label, checking the stored meta
+# first, then the raw .text, then attempting recovery from a translated string.
+# Result is cached in the "_tr_key" meta so the next call is cheap.
 static func _header_translation_key(label: Label) -> String:
 	if label == null:
 		return ""
@@ -107,6 +133,8 @@ static func _header_translation_key(label: Label) -> String:
 		return stored
 	return raw
 
+# Resets a label's translation binding to a known key, clearing any previously
+# baked translated text so auto-translate can re-evaluate it from scratch.
 static func _bind_header_translation_key(label: Label, key: String) -> void:
 	if label == null or key.is_empty():
 		return
@@ -118,6 +146,9 @@ static func _bind_header_translation_key(label: Label, key: String) -> void:
 	label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
 	label.notification(Node.NOTIFICATION_TRANSLATION_CHANGED)
 
+# Applies the canonical screen-header look: centred, correct font, outline, colour.
+# Handles both the pixel-font (English) and scalable-font (other locales) paths,
+# and ensures the translation key stays in .text rather than a baked string.
 static func apply_screen_header_style(label: Label) -> void:
 	if not label:
 		return
@@ -156,6 +187,8 @@ static func apply_screen_header_style(label: Label) -> void:
 	label.add_theme_font_size_override("font_size", body_font_size(header_size))
 	apply_safe_outline(label, outline_size)
 
+# Styles the victory/completion header label. Reduces font size on mobile to prevent
+# overflow, and uses the pixel font path when the locale is English.
 static func apply_end_screen_header_style(label: Label, base_size: int = 48) -> void:
 	if not label:
 		return
@@ -185,6 +218,8 @@ static func apply_end_screen_header_style(label: Label, base_size: int = 48) -> 
 	label.add_theme_color_override("font_color", GameConstants.SCREEN_HEADER_COLOR)
 	apply_safe_outline(label, 8)
 
+# Finds the named header label inside a how-to-play host container without crashing
+# if the node doesn't exist (returns null instead).
 static func ensure_how_to_play_page_header(host: Control) -> Label:
 	if host == null:
 		return null
@@ -248,6 +283,8 @@ static func layout_how_to_play_stack(
 	nav.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	nav.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
+# Applies the 9-slice gray-dark tile texture to all visual states of a button,
+# with brightness modulation for hover, pressed, and disabled states.
 static func apply_top_bar_tile_styles(button: Button) -> void:
 	if not button:
 		return
@@ -270,6 +307,9 @@ static func apply_top_bar_tile_styles(button: Button) -> void:
 			box.modulate_color = Color(0.55, 0.55, 0.55, 1.0)
 		button.add_theme_stylebox_override(style_name, box)
 
+# Creates or reuses an IconContainer/Icon child hierarchy inside a button so
+# the texture is rendered at a fixed pixel size independent of the button's font metrics.
+# Using a child node instead of button.icon avoids theme-driven scaling surprises.
 static func ensure_top_bar_icon(button: Button, texture: Texture2D) -> void:
 	if not button or texture == null:
 		return
@@ -299,6 +339,8 @@ static func ensure_top_bar_icon(button: Button, texture: Texture2D) -> void:
 	icon.texture = texture
 	icon.custom_minimum_size = Vector2(_TOP_BAR_ICON_PX, _TOP_BAR_ICON_PX)
 
+# Full setup for a close/back button in the top bar: stops mouse events, puts it
+# on top of other controls (z_index 20), and gives it tile style + close icon.
 static func style_top_bar_close_button(button: Button) -> void:
 	if button == null:
 		return
@@ -309,6 +351,8 @@ static func style_top_bar_close_button(button: Button) -> void:
 	ensure_top_bar_icon(button, _CLOSE_ICON_TEX)
 	apply_square_top_bar_button(button)
 
+# Returns the English translation of an i18n key regardless of the active locale.
+# Used by the editor preview and forced-English paths to get consistent layout metrics.
 static func english(key: String) -> String:
 	if key.is_empty():
 		return ""
@@ -319,6 +363,8 @@ static func english(key: String) -> String:
 			return msg
 	return key
 
+# Translates a status message string, supporting multi-line input and pipe-delimited
+# format strings (e.g. "KEY|arg1|arg2"). Applies sentence-break formatting after translation.
 static func translate_status_text(msg: String, force_english: bool = false) -> String:
 	if msg.is_empty():
 		return ""
@@ -334,6 +380,8 @@ static func translate_status_text(msg: String, force_english: bool = false) -> S
 		translated = _translate_status_token(msg, force_english)
 	return break_after_sentences(translated)
 
+# Handles a single pipe-delimited token: splits off the key, translates it,
+# then substitutes any typed arguments (int or string) into %d/%s placeholders.
 static func _translate_status_token(token: String, force_english: bool = false) -> String:
 	var parts := token.split("|")
 	var key := parts[0]
@@ -350,6 +398,9 @@ static func _translate_status_token(token: String, force_english: bool = false) 
 		return translated % args
 	return translated
 
+# Inserts a newline after sentence-ending punctuation followed by a space and a
+# non-numeric character. Prevents two-sentence status messages from running together
+# on a single line without breaking mid-number (e.g. "1.5 seconds").
 static func break_after_sentences(text: String) -> String:
 	if text.is_empty():
 		return text
@@ -372,9 +423,13 @@ static func break_after_sentences(text: String) -> String:
 		i += 1
 	return out
 
+# Wraps a status message in BBCode center tags after translation.
 static func format_centered_status(msg: String, force_english: bool = false) -> String:
 	return "[center]" + translate_status_text(msg, force_english) + "[/center]"
 
+# Returns the composite font scale for the current locale and font type.
+# Georgian (ka) gets an extra 15% because the script has naturally larger glyphs.
+# Press Start (pixel font) is not scaled — it's designed on an 8px grid.
 static func font_scale() -> float:
 	var scale := 1.0
 	if not uses_pixel_font():
@@ -384,9 +439,11 @@ static func font_scale() -> float:
 		scale *= 1.15
 	return scale
 
+# Scales a font size by font_scale() and snaps to the nearest valid Press Start grid size.
 static func scaled_font_size(base: int) -> int:
 	return snap_pixel_font_size(int(round(float(base) * font_scale())))
 
+# Scales a font size for the non-pixel (scalable) font path. Georgian gets an extra bump.
 static func body_font_size(base: int) -> int:
 	var scale := GameConstants.DEFAULT_FONT_SCALE
 	var locale := TranslationServer.get_locale().substr(0, 2)
@@ -408,9 +465,11 @@ const PIXEL_FONT: Font = preload("res://resources/fonts/PressStart2P-vaV7.ttf")
 const _PIXEL_MONO_TEXT_SCRIPT: Script = preload("res://scripts/pixel_mono_text.gd")
 static var _pixel_font_with_fallback: Font
 
+# Press Start 2P is only used in English; all other locales use the fallback font.
 static func uses_pixel_font() -> bool:
 	return TranslationServer.get_locale().substr(0, 2) == "en"
 
+# Loads the Press Start font, preferring the preloaded constant to avoid disk reads.
 static func _load_press_start_font() -> Font:
 	if PIXEL_FONT != null:
 		return PIXEL_FONT
@@ -420,6 +479,8 @@ static func _load_press_start_font() -> Font:
 			return loaded
 	return ThemeDB.fallback_font
 
+# Returns the Press Start font, falling back to the theme font if somehow missing.
+# Result is cached after first call to avoid repeated ResourceLoader hits.
 static func pixel_font() -> Font:
 	if _pixel_font_with_fallback == null:
 		_pixel_font_with_fallback = _load_press_start_font()
@@ -430,13 +491,20 @@ static func pixel_font_clean() -> Font:
 	# runtime FontFile copies and the extra safe.ttf import produced fd-null crashes.
 	return pixel_font()
 
+# True when the current locale uses Press Start; callers use this to decide
+# whether to create a pixel caption overlay instead of using the theme font.
 static func needs_pixel_text_raster() -> bool:
 	return uses_pixel_font()
 
+# No-op kept for call-site compatibility. The imported FontFile must remain alive
+# in memory; clearing the cached reference caused fd-null crashes in older builds.
 static func clear_pixel_text_cache() -> void:
 	# Keep the imported FontFile reference alive; clearing it caused fd-null.
 	pass
 
+# Applies Press Start directly to a Label via theme overrides (not LabelSettings).
+# LabelSettings advances glyphs differently from the menu theme path and produces
+# inconsistent spacing, so it is intentionally avoided here.
 static func apply_live_pixel_label_settings(
 	label: Label,
 	text: String,
@@ -461,10 +529,13 @@ static func apply_live_pixel_label_settings(
 	label.add_theme_constant_override("letter_spacing", 0)
 	_strip_live_pixel_outline(label)
 
+# Detaches LabelSettings from a label so theme overrides take effect cleanly.
 static func clear_label_settings(label: Label) -> void:
 	if label:
 		label.label_settings = null
 
+# Sets Press Start on all font slots of a RichTextLabel so bold/italic/mono
+# variants also render as pixel text instead of the theme fallback.
 static func apply_live_pixel_richtext(label: RichTextLabel, font_size: int) -> void:
 	if label == null:
 		return
@@ -496,6 +567,8 @@ static func _strip_live_pixel_outline(control: Control) -> void:
 	if control is Label or control is Button or control is RichTextLabel:
 		control.add_theme_constant_override("letter_spacing", 0)
 
+# Returns true when a control should currently render with Press Start.
+# Forced/brand controls stay pixel in every locale; _use_default_font opts out.
 static func _is_live_pixel_control(control: Control) -> bool:
 	if control == null:
 		return false
@@ -506,6 +579,8 @@ static func _is_live_pixel_control(control: Control) -> bool:
 		return false
 	return uses_pixel_font()
 
+# Returns true if a control already has a pixel-text overlay child node.
+# Used to skip re-styling controls that were already processed this frame.
 static func has_pixel_text_overlay(host: Control) -> bool:
 	if host == null:
 		return false
@@ -516,6 +591,8 @@ static func has_pixel_text_overlay(host: Control) -> bool:
 		or host.get_node_or_null("PixelMonoCaption") != null
 	)
 
+# Removes all pixel-text overlay children from a control so they can be rebuilt
+# fresh (e.g. after a locale change or font-size recalculation).
 static func _clear_pixel_raster(host: Control) -> void:
 	if host == null:
 		return
@@ -552,6 +629,9 @@ static func apply_pixel_mono_button(
 		host.call("set_mono_text", text, pixel_font_clean(), font_size, color)
 	host.queue_redraw()
 
+# Styles a Label for pixel or scalable display.
+# force_pixel keeps Press Start regardless of locale (used for digit-only badges).
+# For other locales, falls back to the theme font with safe outline and body scaling.
 static func apply_raster_pixel_label(
 	label: Label,
 	text: String,
@@ -580,6 +660,9 @@ static func apply_raster_pixel_label(
 	label.add_theme_color_override("font_color", color)
 	apply_safe_outline(label, 8)
 
+# Styles a Button for pixel or scalable text rendering.
+# In English, creates a PixelSafeCaption child Label with Press Start so the
+# button's own font/outline path (which scrambles under GL Compatibility) is bypassed.
 static func apply_raster_pixel_button(
 	button: Button, text: String, font_size: int, _max_width: int = 0
 ) -> void:
@@ -622,15 +705,20 @@ static func apply_raster_pixel_button(
 	button.add_theme_font_size_override("font_size", body_font_size(font_size))
 	apply_safe_outline(button, 8)
 
+# Returns the appropriate UI font for the active locale.
 static func ui_font() -> Font:
 	return pixel_font() if uses_pixel_font() else ThemeDB.fallback_font
 
+# Returns true for any node whose name marks it as a status/feedback label.
+# Used by apply_locale_font_to_control to route these to apply_status_font instead.
 static func is_status_label(node: Node) -> bool:
 	if node == null:
 		return false
 	var n := String(node.name)
 	return n == "StatusLabel" or n == "PlaytestStatusLabel" or n.ends_with("StatusLabel")
 
+# Sets up a RichTextLabel to render status/feedback text at a slightly enlarged size
+# (×1.2 of base) with word-wrap and auto-height. Georgian gets a further 15% boost.
 static func apply_status_font(label: RichTextLabel, base_size: int = GameConstants.HUD_STATUS_FONT_SIZE) -> void:
 	if not label:
 		return
@@ -656,6 +744,9 @@ static func apply_status_font(label: RichTextLabel, base_size: int = GameConstan
 	label.fit_content = true
 	label.scroll_active = false
 
+# Applies the correct locale font to a single UI control, respecting all the
+# special-case guards: pixel outline parts, pre-styled pixel labels, icon-only buttons,
+# LabelSettings, screen headers, and the "=" / "×" math symbols that must stay default.
 static func apply_locale_font_to_control(node: Node) -> void:
 	if node == null or not is_instance_valid(node):
 		return
@@ -713,12 +804,17 @@ static func apply_locale_font_to_control(node: Node) -> void:
 		if node is Control and _is_live_pixel_control(node as Control):
 			_strip_live_pixel_outline(node as Control)
 
+# True for top-bar buttons that render only an icon (no text label).
+# These must be skipped during locale font walks because applying a font shifts the
+# IconContainer's layout and misaligns the texture.
 static func _is_icon_only_button(node: Node) -> bool:
 	if not node is Button:
 		return false
 	var button := node as Button
 	return button.get_node_or_null("IconContainer") != null and button.text.is_empty()
 
+# Applies Press Start to a node that has _force_pixel_font=true, regardless of locale.
+# Also sets a fixed counter font size when the node is marked as a HUD counter.
 static func _apply_forced_pixel_font(node: Node) -> void:
 	var font := pixel_font()
 	if font == null:
@@ -736,6 +832,8 @@ static func _apply_forced_pixel_font(node: Node) -> void:
 				"normal_font_size", GameConstants.HUD_COUNTER_FONT_SIZE
 			)
 
+# Recursively walks a subtree and applies the correct locale font to every
+# eligible control. Skips pixel-outline overlay parts to avoid infinite recursion.
 static func apply_locale_fonts_to_tree(root: Node) -> void:
 	if root == null:
 		return
@@ -755,6 +853,8 @@ static func apply_locale_fonts_to_tree(root: Node) -> void:
 	for child in root.get_children():
 		apply_locale_fonts_to_tree(child)
 
+# Shrinks a button's font until the wrapped text fits within the button's minimum
+# size minus padding. Useful for long translated strings that otherwise overflow.
 static func fit_text_button(button: Button, base_font_size: int = 36, min_font_size: int = 18) -> void:
 	if not button:
 		return
@@ -791,6 +891,8 @@ static func fit_text_button(button: Button, base_font_size: int = 36, min_font_s
 		base_outline = GameConstants.MENU_TEXT_OUTLINE
 	apply_safe_outline(button, base_outline)
 
+# Same as fit_text_button but for single-line buttons only (AUTOWRAP_OFF).
+# Shrinks font until the text width fits, ignoring height.
 static func fit_text_button_single_line(button: Button, base_font_size: int = 36, min_font_size: int = 18) -> void:
 	if not button:
 		return
@@ -826,15 +928,20 @@ static func fit_text_button_single_line(button: Button, base_font_size: int = 36
 		base_outline = GameConstants.MENU_TEXT_OUTLINE
 	apply_safe_outline(button, base_outline)
 
+# Returns true when running on a physical mobile device or the Android/iOS simulator.
+# Used to select a slightly smaller default font size on small screens.
 static func _is_mobile_ui() -> bool:
 	if OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios"):
 		return true
 	var os_name := OS.get_name()
 	return os_name == "Android" or os_name == "iOS"
 
+# Returns true when the current locale should use the scalable theme font instead of Press Start.
 static func prefer_default_font() -> bool:
 	return not uses_pixel_font()
 
+# Applies a text outline safely: strips it for Press Start controls (outline_size
+# scrambles glyphs under GL Compatibility), applies a black outline for all others.
 static func apply_safe_outline(control: Control, base_outline: int = GameConstants.MENU_TEXT_OUTLINE) -> void:
 	if not control:
 		return
@@ -850,6 +957,7 @@ static func apply_safe_outline(control: Control, base_outline: int = GameConstan
 	control.add_theme_color_override("font_outline_color", Color.BLACK)
 	control.add_theme_constant_override("outline_size", outline)
 
+# Sets the standard primary-button minimum size and fits its text font.
 static func apply_primary_button(button: Button) -> void:
 	if not button:
 		return
@@ -859,6 +967,7 @@ static func apply_primary_button(button: Button) -> void:
 		button, GameConstants.UI_BTN_PRIMARY_FONT, GameConstants.UI_BTN_PRIMARY_FONT_MIN
 	)
 
+# Sets the standard secondary-button minimum size and fits its text font.
 static func apply_secondary_button(button: Button) -> void:
 	if not button:
 		return
@@ -868,6 +977,8 @@ static func apply_secondary_button(button: Button) -> void:
 		button, GameConstants.UI_BTN_SECONDARY_FONT, GameConstants.UI_BTN_SECONDARY_FONT_MIN
 	)
 
+# Sizes and styles a dialog confirm/cancel button (Yes/No), translating its text
+# and routing through apply_raster_pixel_button for font consistency.
 static func apply_dialog_button(button: Button) -> void:
 	if not button:
 		return
@@ -883,6 +994,8 @@ static func apply_dialog_button(button: Button) -> void:
 		display = String(TranslationServer.translate(display))
 	apply_raster_pixel_button(button, display, GameConstants.UI_BTN_DIALOG_FONT)
 
+# Styles a PREV/NEXT navigation button: tile background, directional icon chosen
+# by whether the button name contains "next", and an extra +1 px icon lift.
 static func apply_nav_button(button: Button) -> void:
 	if not button:
 		return
@@ -913,6 +1026,8 @@ static func apply_nav_button(button: Button) -> void:
 		button.set_meta("_icon_disabled_hook", true)
 		button.draw.connect(func(): refresh_button_icon_modulate(button))
 
+# Styles a "panel" button (victory screen: Next Level, Play Again, Main Menu).
+# Sizes to UI_BTN_PANEL_SIZE and fits any caption Labels inside the button.
 static func apply_panel_button(button: Button) -> void:
 	if not button:
 		return
@@ -964,6 +1079,9 @@ static func apply_tile_button(
 	button.add_theme_font_size_override("font_size", scaled_font_size(font_size))
 	apply_safe_outline(button, GameConstants.MENU_TEXT_OUTLINE)
 
+# Iterates all Label descendants of a panel button and shrinks each one's font
+# until the text fits within the button's minimum width. Skips caption overlays
+# and labels that already have their own LabelSettings or pixel styling.
 static func _fit_panel_button_captions(button: Button) -> void:
 	if not button:
 		return
@@ -986,6 +1104,8 @@ static func _fit_panel_button_captions(button: Button) -> void:
 			GameConstants.UI_BTN_PANEL_FONT_MIN
 		)
 
+# Shrinks a single caption Label's font until its single-line width fits inside
+# the button's minimum width minus padding, using the correct font for the locale.
 static func _fit_caption_label(
 	label: Label,
 	button_size: Vector2,
@@ -1030,12 +1150,15 @@ static func _fit_caption_label(
 	label.add_theme_color_override("font_color", color)
 	apply_safe_outline(label, GameConstants.MENU_TEXT_OUTLINE)
 
+# Sizes and fits text for a tab-style button (e.g. editor mode tabs).
 static func apply_tab_button(button: Button) -> void:
 	if not button:
 		return
 	button.custom_minimum_size = GameConstants.UI_BTN_TAB_SIZE
 	fit_text_button(button, GameConstants.UI_BTN_TAB_FONT, GameConstants.UI_BTN_TAB_FONT_MIN)
 
+# Styles a popup/dialog body label. In English uses the pixel label path;
+# in other locales applies body font scaling and a safe outline.
 static func apply_popup_label(label: Label, base_size: int = GameConstants.UI_BODY_FONT_SIZE) -> void:
 	if not label:
 		return
@@ -1058,6 +1181,8 @@ static func apply_popup_label(label: Label, base_size: int = GameConstants.UI_BO
 	label.add_theme_font_size_override("font_size", size)
 	apply_safe_outline(label, 8)
 
+# Creates the near-opaque dark panel StyleBox used by all confirmation dialogs
+# (reset progress, session resume, etc.). Gold border gives it a premium feel.
 static func make_dialog_panel_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.08, 0.08, 0.1, 0.98)
@@ -1067,6 +1192,8 @@ static func make_dialog_panel_style() -> StyleBoxFlat:
 	style.set_border_width_all(3)
 	return style
 
+# Applies the locale-correct body font to a plain Label. Always uses the scalable
+# font (not Press Start), suitable for longer readable text blocks.
 static func apply_body_label(label: Label, base_size: int = GameConstants.UI_BODY_FONT_SIZE) -> void:
 	if not label:
 		return
@@ -1074,6 +1201,7 @@ static func apply_body_label(label: Label, base_size: int = GameConstants.UI_BOD
 	apply_locale_font_to_control(label)
 	label.add_theme_font_size_override("font_size", body_font_size(base_size))
 
+# Same as apply_body_label but for RichTextLabel, setting the normal_font_size slot.
 static func apply_body_richtext(
 	label: RichTextLabel, base_size: int = GameConstants.UI_BODY_FONT_SIZE
 ) -> void:
@@ -1083,6 +1211,8 @@ static func apply_body_richtext(
 	apply_locale_font_to_control(label)
 	label.add_theme_font_size_override("normal_font_size", body_font_size(base_size))
 
+# Adds or updates the amber/white rounded overlay that indicates a toggled-on
+# or tutorial-highlighted button. Hides and cleans up any legacy ColorRect version.
 static func apply_toggle_active_mask(button: Button, is_on: bool, tint: Color = GameConstants.TOGGLE_MASK_AMBER) -> void:
 	if not button:
 		return
@@ -1112,6 +1242,8 @@ static func apply_toggle_active_mask(button: Button, is_on: bool, tint: Color = 
 	if not is_on:
 		stop_toggle_mask_breathe(button)
 
+# Starts a looping tween that fades the ActiveMask alpha between 1.0 and 0.35,
+# drawing the player's attention to the highlighted tutorial button.
 static func start_toggle_mask_breathe(button: Button) -> void:
 	if not button:
 		return
@@ -1125,6 +1257,7 @@ static func start_toggle_mask_breathe(button: Button) -> void:
 	tween.tween_property(mask, "modulate:a", 1.0, 1.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	button.set_meta("_toggle_mask_breathe", tween)
 
+# Kills the breathe tween and resets the ActiveMask to fully opaque white.
 static func stop_toggle_mask_breathe(button: Button) -> void:
 	if not button:
 		return
@@ -1137,6 +1270,8 @@ static func stop_toggle_mask_breathe(button: Button) -> void:
 	if mask:
 		mask.modulate = Color.WHITE
 
+# Starts a looping scale+brightness pulse to attract attention to a button
+# (e.g. the hint button when hints are available). Pivot is centred first.
 static func start_button_attention_pulse(button: Button) -> void:
 	if not button:
 		return
@@ -1153,6 +1288,7 @@ static func start_button_attention_pulse(button: Button) -> void:
 	tween.parallel().tween_property(button, "modulate", Color.WHITE, 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	button.set_meta("_attention_pulse", tween)
 
+# Stops the attention pulse tween and restores scale and modulate to neutral.
 static func stop_button_attention_pulse(button: Button) -> void:
 	if not button:
 		return
@@ -1164,10 +1300,13 @@ static func stop_button_attention_pulse(button: Button) -> void:
 	button.scale = Vector2.ONE
 	button.modulate = Color.WHITE
 
+# Sets the pivot to the button centre so scale animations expand symmetrically.
 static func _sync_button_attention_pivot(button: Button) -> void:
 	if button:
 		button.pivot_offset = button.size * 0.5
 
+# Dims the IconContainer when the button is disabled so the icon looks greyed out.
+# Connected to button.draw so it re-evaluates whenever the disabled state changes.
 static func refresh_button_icon_modulate(button: Button) -> void:
 	if not button:
 		return
@@ -1175,13 +1314,17 @@ static func refresh_button_icon_modulate(button: Button) -> void:
 	if icon_root:
 		icon_root.modulate = GameConstants.DISABLED_ICON_MODULATE if button.disabled else Color.WHITE
 
+# Translates a mode name (e.g. "EASY MODE") and replaces spaces with newlines
+# so it fits on two lines in the top-bar centre label.
 static func format_mode_label(translation_key: String, force_english: bool = false) -> String:
 	var text := _tr(translation_key, force_english)
 	return format_outlined_center_text(text.replace(" ", "\n"))
 
+# Wraps text in BBCode [center] tags for use in a RichTextLabel.
 static func format_outlined_center_text(body: String) -> String:
 	return "[center]%s[/center]" % body
 
+# Internal translation helper that supports forced-English mode for the editor preview.
 static func _tr(key: String, force_english: bool = false) -> String:
 	if force_english:
 		return english(key)
@@ -1198,6 +1341,9 @@ static func glue_tile_icon_color_labels(bbcode: String) -> String:
 	out = out.replace("[/img][wj][wj][color=", "[/img][wj][color=")
 	return out
 
+# Sizes a top-bar button to a square (HUD_BUTTON_WIDTH × HUD_BUTTON_WIDTH),
+# nudges its icon upward, and connects a draw callback to keep the icon modulation
+# in sync with the button's disabled state.
 static func apply_square_top_bar_button(button: Button) -> void:
 	if not button:
 		return
@@ -1216,6 +1362,8 @@ static func apply_square_top_bar_button(button: Button) -> void:
 		button.set_meta("_icon_disabled_hook", true)
 		button.draw.connect(func(): refresh_button_icon_modulate(button))
 
+# Sets the overall size and spacing for a left-buttons or right-buttons cluster
+# so all buttons sit at a consistent height in the top bar.
 static func apply_top_bar_button_cluster(cluster: HBoxContainer) -> void:
 	if not cluster:
 		return
@@ -1227,6 +1375,9 @@ static func apply_top_bar_button_cluster(cluster: HBoxContainer) -> void:
 	cluster.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	cluster.add_theme_constant_override("separation", GameConstants.HUD_BUTTON_SEPARATION)
 
+# Shifts the icon upward by pixels by adjusting the IconContainer's bottom margin.
+# This compensates for the visual weight of the tile background pushing icons down.
+# Handles both MarginContainer and CenterContainer icon layouts.
 static func nudge_button_icon_up(button: Button, pixels: int = 1) -> void:
 	if not button:
 		return
@@ -1252,6 +1403,8 @@ static func nudge_button_icon_up(button: Button, pixels: int = 1) -> void:
 	if button.text != "" and icon_container == null:
 		_nudge_button_text_up(button, pixels)
 
+# Fallback nudge for text-only buttons (no IconContainer): shifts content upward
+# by reducing top content margin and increasing bottom margin in each StyleBox.
 static func _nudge_button_text_up(button: Button, pixels: int) -> void:
 	for style_name in ["normal", "pressed", "hover", "disabled"]:
 		var style: StyleBox = button.get_theme_stylebox(style_name)
@@ -1261,6 +1414,9 @@ static func _nudge_button_text_up(button: Button, pixels: int) -> void:
 			copied.content_margin_bottom = copied.content_margin_bottom + float(pixels)
 			button.add_theme_stylebox_override(style_name, copied)
 
+# Applies layout and font to the top-bar centre RichTextLabel that shows the
+# current mode name. Strips BBCode centre/font tags to get the plain text for
+# font-size fitting, then re-applies pixel or scalable styling.
 static func apply_top_bar_mode_label(label: RichTextLabel) -> void:
 	if not label:
 		return
@@ -1311,6 +1467,9 @@ static func apply_level_label(label: RichTextLabel, prefix: String, num: int) ->
 		prefix, PIXEL_FONT_PATH, font_size, num_str
 	]
 
+# Configures the RichTextLabel geometry for the top-bar centre slot:
+# fixed size, no scroll, centred alignment, and propagates the size up to the
+# wrapping ancestors so the HBoxContainer knows the reserved width.
 static func _layout_top_bar_center_label(label: RichTextLabel) -> void:
 	label.bbcode_enabled = true
 	label.fit_content = false
@@ -1339,6 +1498,8 @@ static func _layout_top_bar_center_label(label: RichTextLabel) -> void:
 			label_wrap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 			label_wrap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 
+# Strips all BBCode formatting from the top-bar label text so the raw string
+# can be measured for font-size fitting without tags inflating its width.
 static func _plain_top_bar_label_text(bbcode: String) -> String:
 	var plain := bbcode
 	for tag in ["[center]", "[/center]"]:
@@ -1366,9 +1527,12 @@ static func _plain_top_bar_label_text(bbcode: String) -> String:
 			plain = plain.replace(tag, "")
 	return plain.strip_edges()
 
+# Convenience wrapper that builds the "LVL\n5" two-line string before fitting.
 static func fit_top_bar_level_font_size(prefix: String, num: int) -> int:
 	return fit_top_bar_two_line_font_size("%s\n%d" % [prefix, num])
 
+# Finds the largest font size at which a two-line body string fits inside the
+# top-bar centre area (HUD_BUTTON_HEIGHT × HUD_CENTER_LABEL_WIDTH), stepping by 1px.
 static func fit_top_bar_two_line_font_size(body: String) -> int:
 	var base := GameConstants.HUD_LEVEL_FONT_SIZE
 	var size := scaled_font_size(base) if not uses_pixel_font() else base
@@ -1390,6 +1554,8 @@ static func fit_top_bar_two_line_font_size(body: String) -> int:
 		size -= 1
 	return size
 
+# Configures a HUD counter RichTextLabel to be centred and non-scrolling.
+# _y_nudge is reserved for future vertical fine-tuning and currently unused.
 static func align_counter_label(label: RichTextLabel, _y_nudge: float = 0.0) -> void:
 	if not label:
 		return
@@ -1401,6 +1567,8 @@ static func align_counter_label(label: RichTextLabel, _y_nudge: float = 0.0) -> 
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
+# Prepares a timer RichTextLabel for Press Start rendering by disabling scroll,
+# fit-content, and any live outline (which scrambles under GL Compatibility).
 static func prepare_timer_label(label: RichTextLabel) -> void:
 	if not label:
 		return
@@ -1410,6 +1578,8 @@ static func prepare_timer_label(label: RichTextLabel) -> void:
 	label.clip_contents = false
 	_strip_live_pixel_outline(label)
 
+# Sets the timer label to display a formatted time string using Press Start
+# at the fixed counter font size. The ∞ symbol shows a special icon instead.
 static func set_timer_raster_text(label: RichTextLabel, plain_time: String) -> void:
 	if not label:
 		return
@@ -1432,6 +1602,9 @@ static func set_timer_raster_text(label: RichTextLabel, plain_time: String) -> v
 	_strip_live_pixel_outline(label)
 	label.text = format_time_counter(plain_time)
 
+# Prepares a joker/move counter label for BBCode icon+number rendering.
+# Uses the default (scalable) font because Press Start and inline icon images
+# don't mix well under GL Compatibility.
 static func prepare_counter_label(label: RichTextLabel) -> void:
 	if not label:
 		return
@@ -1446,6 +1619,8 @@ static func prepare_counter_label(label: RichTextLabel) -> void:
 	apply_safe_outline(label, 6)
 	label.add_theme_color_override("default_color", Color(0.96, 0.96, 0.96, 1))
 
+# Builds a BBCode string that shows [icon] current/required with an optional
+# caption label before the numbers. Used for joker and move-count HUD slots.
 static func format_icon_ratio_counter(
 	icon_path: String,
 	current: int,
@@ -1465,6 +1640,8 @@ static func format_icon_ratio_counter(
 		icon_size, icon_size, icon_path, label_size, hex, caption, num_size, hex, current, required
 	]
 
+# Builds the BBCode string for the timer slot. Shows an infinity icon for ∞
+# and wraps the time digits in a fixed Press Start font-size tag otherwise.
 static func format_time_counter(formatted_time: String, _label_text: String = "") -> String:
 	var num_size := GameConstants.HUD_COUNTER_FONT_SIZE
 	if formatted_time == "∞":

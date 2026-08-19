@@ -1,6 +1,7 @@
 class_name LevelStars
 extends RefCounted
-
+## Stateless utility that scores completed puzzles, builds star-goal data, and
+## renders star rows into result/requirements panels. All methods are static.
 
 ## Bit layout (stable for saves):
 ## 1 = time, 2 = no hints, 4 = level clear (replaces legacy moves bit).
@@ -22,6 +23,7 @@ const RESULTS_CONTENT_WIDTH := 620.0
 const RESULTS_TITLE_FONT := 34
 const RESULTS_ROW_FONT := 28
 
+## Counts how many of the three star goals are set in `bits`.
 static func count_earned_bits(bits: int) -> int:
 	var n := 0
 	for mask in ALL_GOAL_MASKS:
@@ -29,6 +31,8 @@ static func count_earned_bits(bits: int) -> int:
 			n += 1
 	return n
 
+## Builds the compact 3-star icon row shown on each level-select card.
+## Earned stars are fully opaque; unearned stars are dimmed.
 static func make_select_star_row(_level: LevelData, earned_bits: int) -> Control:
 	var row := HBoxContainer.new()
 	row.name = "StarRow"
@@ -48,10 +52,14 @@ static func make_select_star_row(_level: LevelData, earned_bits: int) -> Control
 		row.add_child(icon)
 	return row
 
+## Formats a second count as MM:SS, clamped to zero so negative values don't display.
 static func format_clock(total_seconds: int) -> String:
 	var secs := maxi(0, total_seconds)
 	return "%02d:%02d" % [int(secs / 60.0), secs % 60]
 
+## Scores a completed puzzle session and returns the full star result dict.
+## `_moves_used`, `_move_target`, `_has_shifters` are reserved for future goal types
+## and currently have no effect on the returned bits.
 static func evaluate(
 	elapsed_sec: int,
 	time_limit: int,
@@ -111,6 +119,9 @@ static func evaluate(
 		"elapsed_sec": elapsed_sec,
 	}
 
+## Builds a star result dict representing the goals for a level without running it.
+## Used to preview requirements on the level-select info panel, with previously-earned
+## bits optionally pre-filled so the UI can show which goals are already complete.
 static func build_requirements(level: LevelData, earned_bits: int = 0) -> Dictionary:
 	if level == null:
 		return {
@@ -154,6 +165,8 @@ static func build_requirements(level: LevelData, earned_bits: int = 0) -> Dictio
 		"untimed": false,
 	}
 
+## Clears `host` and fills it with the post-game star rows from a completed star_result dict.
+## If the result is marked untimed (no goal rows), the host is left empty after clearing.
 static func populate_results(host: Control, star_result: Dictionary) -> void:
 	if host == null:
 		return
@@ -180,6 +193,8 @@ static func populate_results(host: Control, star_result: Dictionary) -> void:
 	for g in goals:
 		stars_box.add_child(_make_star_row(g))
 
+## Clears `host` and fills it with star-goal rows built from the level's requirements.
+## Used on the pre-play info panel rather than the post-game results screen.
 static func populate_requirements(host: Control, level: LevelData, earned_bits: int = 0) -> void:
 	if host == null:
 		return
@@ -199,6 +214,7 @@ static func populate_requirements(host: Control, level: LevelData, earned_bits: 
 	for g in preview.get("goals", []):
 		stars_box.add_child(_make_star_row(g))
 
+## Helper to create a centered pixel-font label used for section headings in result rows.
 static func _make_text_row(text: String, color: Color, font_size: int) -> Label:
 	var label := Label.new()
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -206,6 +222,8 @@ static func _make_text_row(text: String, color: Color, font_size: int) -> Label:
 	HudLayout.apply_raster_pixel_label(label, text, font_size, color)
 	return label
 
+## Builds one full-width HBox row for a single star goal: star icon | title | optional detail.
+## Earned goals use a bright color; unearned goals are dimmed to indicate they weren't met.
 static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 	var earned := bool(goal.get("earned", false))
 	var row := HBoxContainer.new()
@@ -218,6 +236,7 @@ static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 	icon_slot.custom_minimum_size = Vector2(STAR_ICON_SIZE + 8.0, STAR_ICON_SIZE + 8.0)
 	row.add_child(icon_slot)
 
+	# Slight vertical lift so the star icon reads as top-aligned with the text lines beside it.
 	var icon_lift := MarginContainer.new()
 	icon_lift.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	icon_lift.add_theme_constant_override("margin_bottom", 10)
@@ -239,6 +258,7 @@ static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 	title_slot.alignment = BoxContainer.ALIGNMENT_BEGIN
 	row.add_child(title_slot)
 
+	# Optional small tile icon placed before the goal title (e.g. a tile sprite for visual context).
 	var icon_path := str(goal.get("title_icon", ""))
 	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
 		var tile_icon := TextureRect.new()

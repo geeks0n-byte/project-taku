@@ -1,14 +1,34 @@
 class_name PuzzleGenerator
 extends RefCounted
 
+# Sentinel returned by _count_solutions when the iteration budget is exhausted
+# before the solver could determine the true count.
 const SOLUTIONS_UNKNOWN := -1
+# Maximum recursive iterations allowed when finding a single solution.
 const SOLVE_ITER_BUDGET := 60000
+# Higher budget for the solution-count pass (needs to find at least two solutions
+# to determine non-uniqueness, so it explores more of the tree).
 const COUNT_ITER_BUDGET := 80000
 
 enum Difficulty { EASY, MEDIUM, HARD }
 
+# Fraction of accepted clue-punches that are allowed to leave no obvious move,
+# used by the MEDIUM difficulty gate in _punch_keeps_obvious_move.
 const MEDIUM_SKIP_OBVIOUS_FRACTION := 0.30
 
+# Attempts up to 2500 times to generate a valid, playable puzzle layout.
+# Each attempt:
+#   1. Builds a blank grid (preserving any pre-existing walls).
+#   2. Randomly places shifter pairs (only when jokers are allowed).
+#   3. Checks parity: every row and column must have the same (playable+shifter) parity
+#      so that a balanced solution is mathematically possible.
+#   4. Solves the grid to prove at least one solution exists.
+#   5. "Punches" clues (removes pre-filled tiles) while maintaining uniqueness and
+#      difficulty-appropriate solvability.
+#   6. Minimises visible constraints while keeping the solution unique (hidden hints).
+#   7. Randomises final shifter positions.
+#   8. Validates the result with PuzzleSolver and PuzzleValidator before returning.
+# Returns an empty dict on failure (rare with 2500 attempts).
 static func generate_random_layout(
 	width: int,
 	height: int,
@@ -54,12 +74,16 @@ static func generate_random_layout(
 		var shifters = []
 		var total_playable = empty_cells.size()
 
+		# Target ~20 % of playable cells as shifter pairs (each pair uses 2 cells).
+		# As attempt count grows we allow more pairs to escape local stuck states.
 		var base_shifter_pairs = 0 if not allow_jokers else int(round((total_playable * 0.20) / 2.0))
 		var target_shifter_pairs = base_shifter_pairs
 
 		if allow_jokers:
 			target_shifter_pairs += int(attempt / 75.0)
 
+			# Always guarantee at least one shifter pair on large enough grids so
+			# the mechanic is actually present in joker-enabled puzzles.
 			if target_shifter_pairs <= 1 and total_playable >= 4:
 				target_shifter_pairs = randi_range(1, 2)
 			elif target_shifter_pairs < 1 and total_playable >= 2:
@@ -101,6 +125,10 @@ static func generate_random_layout(
 		if pairs_placed < target_shifter_pairs:
 			continue
 
+		# Parity check: for a balanced solution to exist, every row and every column
+		# must have an even number of playable + shifter cells (each line needs equal
+		# yellow and blue counts). We accumulate the odd-parity line count for rows
+		# (r_sum) and columns (c_sum); they must match for the layout to be viable.
 		var r_sum = 0
 		var c_sum = 0
 		for yy in range(height):
@@ -167,7 +195,9 @@ static func generate_random_layout(
 					color_cells.append(c)
 					
 		var clearable_cells = all_filled_cells.duplicate()
-		
+
+		# Always keep at least one joker and one colour tile as visible clues so
+		# the player has anchors for both tile types from the start.
 		if green_cells.size() > 0:
 			green_cells.shuffle()
 			clearable_cells.erase(green_cells[0])
@@ -179,6 +209,7 @@ static func generate_random_layout(
 		clearable_cells.shuffle()
 		
 		var total_filled_count = all_filled_cells.size()
+		# Target clearing 67–85 % of the pre-filled cells to leave a partial puzzle.
 		var min_clear_count = int(ceil(total_filled_count * 0.67))
 		var max_clear_count = int(total_filled_count * 0.85)
 		
@@ -256,6 +287,9 @@ static func generate_random_layout(
 		var final_constraints = []
 		var hidden_hints = []
 		
+		# Constraint minimisation: iteratively try removing each constraint.
+		# If the solution remains unique without it, the constraint becomes a hidden
+		# hint (available to the hint system but not shown on the board by default).
 		if require_unique:
 			var current_constraints = all_possible_constraints.duplicate()
 			current_constraints.shuffle()
@@ -272,8 +306,13 @@ static func generate_random_layout(
 					
 			final_constraints = current_constraints
 		else:
+			# Non-unique mode: all constraints become hidden hints since we don't
+			# need any to guarantee a unique solution.
 			hidden_hints = all_possible_constraints.duplicate()
 
+		# Randomly flip some shifter pairs so the active node is on the "wrong" side.
+		# This forces the player to move shifters before placing tiles there.
+		# required_shifter_moves tracks how many shifts are needed for metadata.
 		var required_shifter_moves := 0
 		for pair in shifters:
 			pair["home"] = pair.active
@@ -323,6 +362,9 @@ static func generate_random_layout(
 	push_error("Generator failed: Generated walls may be mathematically impossible with the strict parity rules.")
 	return {} 
 
+# Returns true if at least one empty cell in the layout has exactly one valid
+# tile value, i.e. can be filled by pure logical deduction without guessing.
+# Used to gate difficulty: EASY requires an obvious move after every punch.
 static func _has_obvious_move(
 	layout: Dictionary,
 	empty_cells: Array,
@@ -346,6 +388,10 @@ static func _has_obvious_move(
 			return true
 	return false
 
+# Decides whether a candidate clue-removal (punch) is acceptable for the given
+# difficulty. HARD always accepts; EASY rejects any punch that leaves no
+# obvious move; MEDIUM allows up to MEDIUM_SKIP_OBVIOUS_FRACTION of punches to
+# land without an obvious move, giving a moderate challenge without pure guessing.
 static func _punch_keeps_obvious_move(
 	difficulty: int,
 	layout: Dictionary,
@@ -370,6 +416,10 @@ static func _punch_keeps_obvious_move(
 	var next_without := punches_without_obvious + 1
 	return float(next_without) / float(maxi(1, next_accepted)) <= MEDIUM_SKIP_OBVIOUS_FRACTION
 
+# Recursive backtracking counter. Returns the number of distinct solutions up
+# to max_needed (default 2), so callers only need to know "exactly 1" or ">1".
+# Returns SOLUTIONS_UNKNOWN if the iteration budget is exhausted.
+# Stores the first found solution in iter["solution"] for later use.
 static func _count_solutions(
 	layout: Dictionary,
 	empty_cells: Array,
@@ -412,6 +462,10 @@ static func _count_solutions(
 	empty_cells.insert(best_idx, best_coord)
 	return total_sols
 
+# Recursive backtracking solver. Modifies layout in place and returns true
+# when a complete valid assignment is found. Uses MRV (Minimum Remaining Values)
+# to pick the most constrained empty cell first, reducing the search tree.
+# Shuffles value order for randomised generation output.
 static func _solve(
 	layout: Dictionary,
 	empty_cells: Array,
@@ -446,6 +500,10 @@ static func _solve(
 	empty_cells.insert(best_idx, best_coord)
 	return false
 
+# Minimum Remaining Values heuristic: finds the empty cell with the fewest
+# valid placements. Choosing the most constrained cell first prunes the search
+# tree aggressively. Returns an empty dict when any cell has zero options
+# (dead end) or when the empty list is exhausted.
 static func _pick_mrv_cell(
 	layout: Dictionary,
 	empty_cells: Array,
@@ -476,9 +534,16 @@ static func _pick_mrv_cell(
 		return {}
 	return {"idx": best_idx, "vals": best_valid_vals}
 
+# Tests whether placing val at coord would violate any game rule.
+# Temporarily writes val into the layout so neighbour scans see the full picture,
+# then restores the cell to -1 (empty) before returning.
+# Checks in order: three-in-a-row horizontally, three-in-a-row vertically,
+# row balance (joker quota + equal colour split), column balance, constraints.
+# Joker (2) is treated as satisfying either colour for the run check.
 static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w: int, h: int, constraints: Array) -> bool:
 	layout[coord] = val 
 	
+	# Horizontal three-in-a-row check: examine every window of 3 that includes coord.
 	for x in range(max(0, coord.x - 2), min(w - 2, coord.x + 1)):
 		var v1 = layout.get(Vector2i(x, coord.y), -1)
 		var v2 = layout.get(Vector2i(x+1, coord.y), -1)
@@ -490,6 +555,7 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 				layout[coord] = -1
 				return false
 				
+	# Vertical three-in-a-row check.
 	for y in range(max(0, coord.y - 2), min(h - 2, coord.y + 1)):
 		var v1 = layout.get(Vector2i(coord.x, y), -1)
 		var v2 = layout.get(Vector2i(coord.x, y+1), -1)
@@ -501,6 +567,9 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 				layout[coord] = -1
 				return false
 
+	# Row balance check: count playable, shifter, joker, and colour tiles in this row.
+	# req_j_row is 1 when the row has an odd number of playable+shifter cells, meaning
+	# exactly one joker is required to maintain balance; otherwise 0.
 	var p_row = 0; var s_row = 0; var j_row = 0; var empty_row = 0; var b0_row = 0; var b1_row = 0
 	for x in range(w):
 		var st = layout.get(Vector2i(x, coord.y), -1)
@@ -520,6 +589,7 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 	var target_0_row = int((p_row - req_j_row - s_row) / 2.0)
 	if b0_row > target_0_row or b1_row > target_0_row: layout[coord] = -1; return false
 		
+	# Column balance check — same logic as the row check above.
 	var p_col = 0; var s_col = 0; var j_col = 0; var empty_col = 0; var b0_col = 0; var b1_col = 0
 	for y in range(h):
 		var st = layout.get(Vector2i(coord.x, y), -1)

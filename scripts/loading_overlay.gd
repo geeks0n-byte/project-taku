@@ -1,17 +1,22 @@
 class_name LoadingOverlay
 extends CanvasLayer
+## Full-screen dimmer + animated "LOADING..." label used during async work (e.g. level generation).
+## Runs at process mode ALWAYS so it ticks even when the tree is paused.
+## Hides visible scene children while active to reduce GPU overdraw and visual confusion.
 
+# How long each dot-animation step lasts (cycles through 1, 2, 3 dots).
 const DOT_INTERVAL_SEC := 0.45
 
-var _root: Control
-var _label: Label
-var _busy: bool = false
-var _base_text: String = "LOADING"
-var _dot_count: int = 0
-var _dot_timer: Timer
-var _hidden_nodes: Array = []
+var _root: Control          # Full-rect control that blocks all pointer events while loading.
+var _label: Label           # The "LOADING..." text label, rebuilt each tick.
+var _busy: bool = false     # True while a loading operation is in progress.
+var _base_text: String = "LOADING"  # Translated message with trailing dots stripped.
+var _dot_count: int = 0    # Current dot count (1–3), advanced by _dot_timer.
+var _dot_timer: Timer      # Drives the animated dots; restarted on each show_loading call.
+var _hidden_nodes: Array = []  # Scene children hidden during loading; restored on hide_loading.
 
 func _ready() -> void:
+	# Layer 100 puts this above all regular UI CanvasLayers.
 	layer = 100
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build()
@@ -48,6 +53,8 @@ func _build() -> void:
 	_dot_timer.timeout.connect(_on_dot_tick)
 	add_child(_dot_timer)
 
+## Shows the overlay with an animated loading message.
+## Hides scene content beneath to reduce visual noise while work is in progress.
 func show_loading(message_key: String = "UI_LOADING") -> void:
 	_hide_scene_underlay()
 	_base_text = _loading_base_text(message_key)
@@ -58,6 +65,7 @@ func show_loading(message_key: String = "UI_LOADING") -> void:
 	visible = true
 	_busy = true
 
+## Hides the overlay and restores scene children that were hidden by show_loading.
 func hide_loading() -> void:
 	if _dot_timer:
 		_dot_timer.stop()
@@ -68,6 +76,10 @@ func hide_loading() -> void:
 func is_busy() -> bool:
 	return _busy
 
+## Shows the loading overlay, runs `work` on a worker thread, awaits completion, then hides.
+## Two process_frame awaits before spawning the task give the main thread time to render
+## the overlay before the heavy work starts, preventing a single-frame freeze.
+## Returns the Callable's return value, or null if `host` was freed mid-task.
 func run_async(host: Node, work: Callable, message_key: String = "UI_LOADING") -> Variant:
 	show_loading(message_key)
 	if not is_instance_valid(host) or host.get_tree() == null:
@@ -79,6 +91,8 @@ func run_async(host: Node, work: Callable, message_key: String = "UI_LOADING") -
 		return null
 	await host.get_tree().process_frame
 
+	# Dictionary acts as a by-reference box so the thread lambda can write its result
+	# back and the main thread can read it after wait_for_task_completion.
 	var box := {"value": null}
 	var task_id := WorkerThreadPool.add_task(func():
 		box.value = work.call()
@@ -94,6 +108,7 @@ func run_async(host: Node, work: Callable, message_key: String = "UI_LOADING") -
 	hide_loading()
 	return box.value
 
+## Translates the key and strips any trailing dots so the animated dots animate cleanly.
 func _loading_base_text(message_key: String) -> String:
 	var raw := String(tr(message_key)).strip_edges()
 	while raw.ends_with("."):
@@ -125,6 +140,8 @@ func _refresh_loading_label() -> void:
 		_label.text = display
 		_lock_loading_label_width()
 
+## Pins the label's minimum width to the widest possible state ("LOADING...") so the
+## label never changes width as dots are added, preventing the centering from jittering.
 func _lock_loading_label_width() -> void:
 	if _label == null:
 		return
@@ -143,6 +160,8 @@ func _lock_loading_label_width() -> void:
 	var measured := font.get_string_size(full, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 	_label.custom_minimum_size = Vector2(ceili(measured.x) + pad, 0)
 
+## Hides all visible CanvasItem children of the current scene (except this overlay)
+## to reduce overdraw while the loading screen is active.
 func _hide_scene_underlay() -> void:
 	_restore_scene_underlay()
 	var tree := get_tree()
@@ -164,11 +183,14 @@ func _hide_scene_underlay() -> void:
 		_hidden_nodes.append(item)
 		item.visible = false
 
+## Restores visibility for every node that was hidden by _hide_scene_underlay.
+## Safe to call even if nodes were freed during loading (validity check guards each one).
 func _restore_scene_underlay() -> void:
 	for node in _hidden_nodes:
 		if is_instance_valid(node) and node is CanvasItem:
 			(node as CanvasItem).visible = true
 	_hidden_nodes.clear()
 
+## Ensure scene nodes are always restored even if the overlay is removed mid-operation.
 func _exit_tree() -> void:
 	_restore_scene_underlay()

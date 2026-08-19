@@ -1,11 +1,19 @@
 class_name PuzzleSolver
 extends RefCounted
 
+# High-level façade that answers "is this puzzle solvable / unique?" while
+# accounting for shifter mobility: each shifter pair can be in one of two
+# positions, so the solver must test all 2^N configurations.
 
 const SOLUTIONS_UNKNOWN := PuzzleGenerator.SOLUTIONS_UNKNOWN
+# Shared iteration budget across all shifter configurations in one analysis call.
 const MOBILITY_ITER_BUDGET := 120000
+# Cap on the number of shifter pairs enumerated for mobility; beyond this the
+# combinatorial explosion makes analysis impractical.
 const MAX_SHIFTER_PAIRS_FOR_MOBILITY := 8
 
+# Primary entry point: analyses a raw layout dict. Delegates to the mobility-aware
+# variant which iterates over all shifter configurations.
 static func analyze(
 	layout: Dictionary,
 	width: int,
@@ -19,6 +27,8 @@ static func analyze(
 		layout, width, height, available_tiles, constraints, shifter_pairs, require_unique
 	)
 
+# Convenience overload that accepts the live board_cells dict (as used by
+# BoardManager) and converts it to a layout before calling the main analyser.
 static func analyze_board_cells(
 	board_cells: Dictionary,
 	width: int,
@@ -39,6 +49,8 @@ static func analyze_board_cells(
 		require_unique
 	)
 
+# Convenience overload that unpacks a LevelData resource and calls analyze().
+# Defaults to all three tile types when the level has no tile list set.
 static func analyze_level(level: LevelData, require_unique: bool = true) -> Dictionary:
 	if level == null:
 		return _result(0, {}, true)
@@ -57,6 +69,11 @@ static func analyze_level(level: LevelData, require_unique: bool = true) -> Dict
 		require_unique
 	)
 
+# Core analysis loop. Iterates over every combination of shifter positions
+# (2^N configs via bitmask), runs the solution counter for each, and
+# accumulates the total. A shared iteration budget prevents runaway search.
+# Uniqueness is determined across all configurations combined: if any two
+# configs together yield more than one solution the puzzle is not unique.
 static func _analyze_with_shifter_mobility(
 	layout: Dictionary,
 	width: int,
@@ -91,6 +108,7 @@ static func _analyze_with_shifter_mobility(
 	var total := 0
 	var timed_out := false
 	var first_solution: Dictionary = {}
+	# Each bit in mask represents one shifter pair's position (0 = A side, 1 = B side).
 	var config_count := 1 << pairs.size()
 	for mask in range(config_count):
 		if int(shared_iter["count"]) > MOBILITY_ITER_BUDGET:
@@ -131,6 +149,9 @@ static func _analyze_with_shifter_mobility(
 		return _result(SOLUTIONS_UNKNOWN, first_solution, true)
 	return _result(total, first_solution, false)
 
+# Runs the solution count on a layout that has already been prepared (empty cells
+# extracted). If the count phase doesn't produce a solution dict, falls back to
+# a dedicated solve call to populate the reference solution.
 static func _analyze_prepared(
 	layout: Dictionary,
 	empty_cells: Array,
@@ -154,6 +175,8 @@ static func _analyze_prepared(
 		)
 	return _result(count, solution, false)
 
+# Returns a copy of the layout with both cells of every shifter pair set to
+# EMPTY, so the mobility loop can place the shifter on whichever side it needs.
 static func _layout_with_pair_cells_cleared(layout: Dictionary, pairs: Array) -> Dictionary:
 	var out: Dictionary = layout.duplicate()
 	for pair in pairs:
@@ -167,6 +190,8 @@ static func _layout_with_pair_cells_cleared(layout: Dictionary, pairs: Array) ->
 				out[cell] = GameConstants.TileState.EMPTY
 	return out
 
+# Strips invalid entries from the raw shifter_pairs list: keeps only dicts with
+# "a" and "b" keys pointing to distinct coordinates.
 static func _normalized_shifter_pairs(shifter_pairs: Array) -> Array:
 	var pairs: Array = []
 	for raw in shifter_pairs:
@@ -181,6 +206,8 @@ static func _normalized_shifter_pairs(shifter_pairs: Array) -> Array:
 		pairs.append({"a": cell_a, "b": cell_b})
 	return pairs
 
+# Deduplicates the tile list and falls back to all three types when empty,
+# preventing a degenerate solver state.
 static func _normalize_tiles(available_tiles: Array) -> Array:
 	var tiles: Array = []
 	for tile in available_tiles:
@@ -195,6 +222,7 @@ static func _normalize_tiles(available_tiles: Array) -> Array:
 		]
 	return tiles
 
+# Builds the standardised result dict returned by all public analyse methods.
 static func _result(solution_count: int, solution: Dictionary, timed_out: bool) -> Dictionary:
 	var solvable := solution_count >= 1
 	return {

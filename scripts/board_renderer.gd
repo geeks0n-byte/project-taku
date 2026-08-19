@@ -1,6 +1,11 @@
 class_name BoardRenderer
 extends RefCounted
 
+# Pure-static rendering utilities. All drawing is done onto an external CanvasItem
+# so these functions can be called from any draw callback without owning a scene node.
+
+# Pre-sorts all cells into row and column groups for efficient row/column-aware operations.
+# The returned array is cached and reused to avoid re-sorting every frame.
 static func cache_board_lines(board_cells: Dictionary) -> Array:
 	var cached_lines: Array = []
 	var rows := {}
@@ -22,10 +27,13 @@ static func cache_board_lines(board_cells: Dictionary) -> Array:
 		cached_lines.append({"coords": col, "is_horizontal": false, "index": c})
 	return cached_lines
 
+# Clears any visual highlight overlays on all cells (e.g. after a hint or error flash).
 static func clear_highlights(board_cells: Dictionary) -> void:
 	for coord in board_cells:
 		board_cells[coord].clear_highlight()
 
+# A board is "full" only when every playable (non-wall) cell has been assigned a tile.
+# Walls and non-playable cells are excluded from the check.
 static func is_board_full(board_cells: Dictionary) -> bool:
 	for coord in board_cells:
 		var cell = board_cells[coord]
@@ -33,6 +41,9 @@ static func is_board_full(board_cells: Dictionary) -> bool:
 			return false
 	return true
 
+# Draws the grid border lines for all cells.
+# full_grid=true (editor mode) always draws all interior lines.
+# full_grid=false (play mode) omits borders between two wall cells to keep walls visually solid.
 static func draw_grid(
 	canvas: CanvasItem,
 	board_cells: Dictionary,
@@ -57,11 +68,15 @@ static func draw_grid(
 		var draw_left: bool
 
 		if full_grid:
+			# In editor mode show all lines; only skip top/left when a neighbour exists
+			# (avoids double-drawing shared edges).
 			draw_right = true
 			draw_bottom = true
 			draw_top = not board_cells.has(coord + Vector2i(0, -1))
 			draw_left = not board_cells.has(coord + Vector2i(-1, 0))
 		else:
+			# In play mode draw a border whenever at least one side of the edge is playable,
+			# so wall-wall borders are suppressed but wall-playable borders remain visible.
 			var right_playable := false
 			if board_cells.has(coord + Vector2i(1, 0)):
 				right_playable = board_cells[coord + Vector2i(1, 0)].state != GameConstants.TileState.WALL
@@ -84,6 +99,8 @@ static func draw_grid(
 		if draw_left:
 			canvas.draw_line(pos_tl, pos_bl, line_color, line_width)
 
+# Draws "=" (equals) or "X" (not-equals) constraint symbols between adjacent cell pairs.
+# Symbols are drawn at the midpoint of the shared edge with a black outline for readability.
 static func draw_constraints(
 	canvas: CanvasItem,
 	board_cells: Dictionary,
@@ -100,6 +117,7 @@ static func draw_constraints(
 		if not (board_cells.has(coord_a) and board_cells.has(coord_b)):
 			continue
 
+		# Compute cell-center positions in canvas-local space.
 		var pos_a := Vector2(
 			coord_a.x * cell_size + cell_size / 2.0,
 			coord_a.y * cell_size + cell_size / 2.0
@@ -110,10 +128,12 @@ static func draw_constraints(
 		)
 
 		var midpoint := (pos_a + pos_b) / 2.0
+		# dir points from a to b; perp is the axis orthogonal to the shared edge.
 		var dir := (pos_b - pos_a).normalized()
 		var perp := dir.orthogonal()
 
 		if pair["type"] == "equals":
+			# Two parallel bars rendered as thick outline + thinner white fill.
 			var l1_s := midpoint + perp * 8.0 - dir * 16.0
 			var l1_e := midpoint + perp * 8.0 + dir * 16.0
 			var l2_s := midpoint - perp * 8.0 - dir * 16.0
@@ -122,11 +142,13 @@ static func draw_constraints(
 			canvas.draw_line(l1_s, l1_e, outline_color, 8.0, true)
 			canvas.draw_line(l2_s, l2_e, outline_color, 8.0, true)
 
+			# Shrink the white fill slightly so the outline is visible at both ends.
 			var shrink := dir * 2.0
 			canvas.draw_line(l1_s + shrink, l1_e - shrink, equals_color, 4.0, true)
 			canvas.draw_line(l2_s + shrink, l2_e - shrink, equals_color, 4.0, true)
 
 		elif pair["type"] == "not_equals":
+			# Two diagonal lines forming an X, drawn the same outline+fill way.
 			var l1_s := midpoint - dir * 12.0 - perp * 12.0
 			var l1_e := midpoint + dir * 12.0 + perp * 12.0
 			var l2_s := midpoint - dir * 12.0 + perp * 12.0
@@ -141,6 +163,10 @@ static func draw_constraints(
 			canvas.draw_line(l1_s + shrink1, l1_e - shrink1, diff_color, 4.0, true)
 			canvas.draw_line(l2_s + shrink2, l2_e - shrink2, diff_color, 4.0, true)
 
+# Draws horizontal and vertical "bridge" lines connecting highlighted cells that are
+# separated by a run of wall cells. Used to visually link related cells during hints.
+# Only draws a bridge when both endpoints are highlighted, non-wall, and separated
+# exclusively by wall cells (no gaps or other playable cells in between).
 static func draw_highlight_bridges(
 	canvas: CanvasItem,
 	board_cells: Dictionary,
@@ -154,6 +180,8 @@ static func draw_highlight_bridges(
 		highlighted[raw as Vector2i] = true
 	var color := Color.RED
 	var width := 10.0
+
+	# Horizontal bridges: scan rightward from each highlighted cell.
 	for raw in highlight_coords:
 		var c: Vector2i = raw as Vector2i
 		if not board_cells.has(c):
@@ -161,11 +189,14 @@ static func draw_highlight_bridges(
 		if board_cells[c].state == GameConstants.TileState.WALL:
 			continue
 		var right: Vector2i = c + Vector2i(1, 0)
+		# Bridge only starts when the immediate right neighbour is a wall.
 		if not board_cells.has(right) or board_cells[right].state != GameConstants.TileState.WALL:
 			continue
+		# Walk the wall run until we exit it.
 		var cursor: Vector2i = right
 		while board_cells.has(cursor) and board_cells[cursor].state == GameConstants.TileState.WALL:
 			cursor += Vector2i(1, 0)
+		# Only draw if the landing cell is also highlighted.
 		if not highlighted.has(cursor) or not board_cells.has(cursor):
 			continue
 		if board_cells[cursor].state == GameConstants.TileState.WALL:
@@ -174,6 +205,8 @@ static func draw_highlight_bridges(
 		var x0: float = float(c.x + 1) * cell_size
 		var x1: float = float(cursor.x) * cell_size
 		canvas.draw_line(Vector2(x0, y_mid), Vector2(x1, y_mid), color, width, true)
+
+	# Vertical bridges: same logic as horizontal but scanning downward.
 	for raw in highlight_coords:
 		var c: Vector2i = raw as Vector2i
 		if not board_cells.has(c):
@@ -195,6 +228,8 @@ static func draw_highlight_bridges(
 		var y1: float = float(cursor.y) * cell_size
 		canvas.draw_line(Vector2(x_mid, y0), Vector2(x_mid, y1), color, width, true)
 
+# Alias for draw_highlight_bridges used when the caller wants to emphasize
+# that the bridges represent a focused/selected group rather than a hint highlight.
 static func draw_focus_bridges(
 	canvas: CanvasItem,
 	board_cells: Dictionary,

@@ -1,10 +1,17 @@
 class_name TutorialScripts
 extends RefCounted
 
+# Static data store for all tutorial step sequences.
+# Each tutorial is identified by a script_id (derived from the level file name)
+# and returns an ordered Array of step Dictionaries consumed by TutorialDirector.
 
+# Default pixel size for tile icons embedded in BBCode status messages.
 const ICON_SIZE := 44
+# Lock icons are taller, so they use a larger size and a crop region.
 const LOCK_ICON_SIZE := 56
 
+# Converts a level file path (e.g. "res://levels/level_1.tres") to the
+# corresponding tutorial script ID ("level_1") by stripping directory and extension.
 static func script_id_from_path(path: String) -> String:
 	var p := path.strip_edges()
 	if p.is_empty():
@@ -14,9 +21,12 @@ static func script_id_from_path(path: String) -> String:
 		return ""
 	return base.get_basename()
 
+# Returns true when a tutorial sequence exists for the given script_id.
 static func has_script(script_id: String) -> bool:
 	return not steps_for(script_id).is_empty()
 
+# Returns the step array for the given script_id, or an empty array if unknown.
+# Add new tutorial scripts here as additional match arms.
 static func steps_for(script_id: String) -> Array:
 	match script_id:
 		"level_1":
@@ -24,6 +34,9 @@ static func steps_for(script_id: String) -> Array:
 		_:
 			return []
 
+# Produces the BBCode [img] tag for a named icon token.
+# The lock icon uses a crop region to trim its transparent padding.
+# size defaults to LOCK_ICON_SIZE for "lock" and ICON_SIZE for everything else.
 static func icon_bbcode(token: String, size: int = -1) -> String:
 	var path := _icon_path(token)
 	if path.is_empty():
@@ -35,6 +48,8 @@ static func icon_bbcode(token: String, size: int = -1) -> String:
 		return "[img height=%d region=36,36,56,64]%s[/img]" % [icon_size, path]
 	return "[img=%dx%d]%s[/img]" % [icon_size, icon_size, path]
 
+# Maps a short token name to its resource path. Returns "" for unknown tokens
+# so callers can safely skip icon substitution when the token is unrecognised.
 static func _icon_path(token: String) -> String:
 	match token:
 		"lock":  return GameConstants.TILE_LOCK
@@ -49,6 +64,11 @@ static func _icon_path(token: String) -> String:
 		"redo":   return "res://resources/icons/icon_redo.svg"
 		_:        return ""
 
+# Defines the full step sequence for the Level 1 tutorial.
+# Steps teach: locked tiles, the three-in-a-row rule, the balance rule,
+# joker tiles and their odd-row behaviour, shifter mechanics (blocked/unblocked),
+# equals/not-equals constraint links, and the HUD tool buttons.
+# Short aliases avoid repetition in the layout tables below.
 static func _level_1() -> Array:
 	var y := GameConstants.TileState.YELLOW
 	var b := GameConstants.TileState.BLUE
@@ -82,6 +102,9 @@ static func _level_1() -> Array:
 		Vector2i(0, 3): y, Vector2i(1, 3): e, Vector2i(2, 3): e, Vector2i(3, 3): e, Vector2i(4, 3): e,
 		Vector2i(0, 4): e, Vector2i(1, 4): e, Vector2i(2, 4): b, Vector2i(3, 4): e, Vector2i(4, 4): y,
 	}
+	# Each shifter pair: "a"/"b" are the two cells it occupies, "active" is where
+	# the shifter token currently sits, "home" is where it needs to end up for
+	# the player to be able to place a tile on the inactive cell.
 	var shifter_pairs := [
 		{"a": Vector2i(0, 0), "b": Vector2i(1, 0), "active": Vector2i(1, 0), "home": Vector2i(0, 0)},
 		{"a": Vector2i(1, 2), "b": Vector2i(2, 2), "active": Vector2i(2, 2), "home": Vector2i(1, 2)},

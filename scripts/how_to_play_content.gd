@@ -1,15 +1,19 @@
 class_name HowToPlayContent
 extends RefCounted
 
+# Total number of how-to-play pages shown in the in-game HTP overlay.
 const PAGE_COUNT := 5
+# Tile icon sizes used in BBCode [img] tags for different contexts.
 const BODY_TILE_SIZE := 40
 const EXAMPLE_TILE_SIZE := 72
 const ARROW_TILE_SIZE := 64
 const LOCK_ICON_SIZE := 96
 
+# Convenience alias for the first page (the core rules) used by other systems.
 static func get_rules_text(force_english: bool = false) -> String:
 	return get_page_text(0, force_english)
 
+# Returns the i18n key for the page's header label, clamped to valid range.
 static func get_page_title_key(page_index: int) -> String:
 	var page := clampi(page_index, 0, PAGE_COUNT - 1)
 	match page:
@@ -24,6 +28,8 @@ static func get_page_title_key(page_index: int) -> String:
 		_:
 			return "HTP_STARS_TITLE"
 
+# Builds the full BBCode string for a given page, then post-processes it with
+# glue_tile_icon_color_labels to prevent word-wrap between icons and their color labels.
 static func get_page_text(page_index: int, force_english: bool = false) -> String:
 	var page := clampi(page_index, 0, PAGE_COUNT - 1)
 	var raw := ""
@@ -40,9 +46,12 @@ static func get_page_text(page_index: int, force_english: bool = false) -> Strin
 			raw = _page_stars(force_english)
 	return HudLayout.glue_tile_icon_color_labels(raw)
 
+# Body text font size, scaled for locale (Georgian needs ~15% larger).
 static func _body_size() -> int:
 	return HudLayout.body_font_size(GameConstants.UI_BODY_FONT_SIZE_LARGE)
 
+# Builds the core rules page: five bullet points with inline tile icons
+# inserted into translated strings via _fill().
 static func _page_how_to_play(force_english: bool) -> String:
 	var img_e := _tile_img(GameConstants.TILE_EMPTY, BODY_TILE_SIZE)
 	var img_y := _tile_img(GameConstants.TILE_YELLOW, BODY_TILE_SIZE)
@@ -71,6 +80,7 @@ static func _page_how_to_play(force_english: bool) -> String:
 	]
 	return "\n".join(lines)
 
+# Builds a two-column table showing valid vs invalid tile arrangements.
 static func _page_examples(force_english: bool) -> String:
 	var img_y := _tile_img(GameConstants.TILE_YELLOW, EXAMPLE_TILE_SIZE)
 	var img_b := _tile_img(GameConstants.TILE_BLUE, EXAMPLE_TILE_SIZE)
@@ -107,6 +117,7 @@ static func _example_column_label(text: String, force_english: bool) -> String:
 		]
 	return "[b]%s[/b]" % text
 
+# Builds the shifter (purple) tile page: explains how shifters move and interact.
 static func _page_purple(force_english: bool) -> String:
 	var img_s := _tile_img(GameConstants.TILE_SHIFTER, BODY_TILE_SIZE)
 	var img_g := _tile_img(GameConstants.TILE_GREEN, BODY_TILE_SIZE)
@@ -131,6 +142,7 @@ static func _page_purple(force_english: bool) -> String:
 	]
 	return "\n".join(lines)
 
+# Builds the constraint/links page: lock icon usage, equals and not-equals rules.
 static func _page_links(force_english: bool) -> String:
 	# Region is 96x128 — scale by height only so it stays unstretched.
 	var img_lock := (
@@ -153,6 +165,7 @@ static func _page_links(force_english: bool) -> String:
 	]
 	return "\n".join(lines)
 
+# Builds the star-scoring page: explains the three star criteria (completion, hints, time).
 static func _page_stars(force_english: bool) -> String:
 	var body_sz := _body_size()
 	var lines: PackedStringArray = [
@@ -177,6 +190,7 @@ static func _page_stars(force_english: bool) -> String:
 	]
 	return "\n".join(lines)
 
+# Wraps a tile texture path in a BBCode [img] tag sized for inline body text.
 static func _tile_img(path: String, size: int = BODY_TILE_SIZE) -> String:
 	return "[img width=%d height=%d center,baseline]%s[/img]" % [size, size, path]
 
@@ -185,6 +199,8 @@ static func _tile_img_text_aligned(path: String, size: int = ARROW_TILE_SIZE) ->
 	return "[img width=%d height=%d center,baseline]%s[/img]" % [size, size, path]
 
 
+# Translates a key, bypassing the current locale when force_english is true
+# (used by the editor's preview which always needs English for layout measurements).
 static func _t(key: String, force_english: bool) -> String:
 	return HudLayout.english(key) if force_english else String(TranslationServer.translate(key))
 

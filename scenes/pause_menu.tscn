@@ -27,8 +27,8 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = 448.0
-offset_bottom = -222.0
+offset_top = 480.0
+offset_bottom = -48.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -37,11 +37,11 @@ layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -320.0
-offset_right = 320.0
+offset_left = -390.0
+offset_right = 390.0
 grow_horizontal = 2
-theme_override_constants/separation = 20
-alignment = 0
+theme_override_constants/separation = 14
+alignment = 1
 
 [node name="TitleLabel" type="Label" parent="." unique_id=2027110153]
 layout_mode = 1
@@ -59,25 +59,31 @@ vertical_alignment = 1
 
 [node name="ResumeButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=1602945635]
 layout_mode = 2
+size_flags_horizontal = 4
 text = "UI_RESUME"
 
 [node name="RestartButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=265163747]
 layout_mode = 2
+size_flags_horizontal = 4
 text = "UI_NEW_LAYOUT"
 
 [node name="LevelSelectButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=832539972]
 layout_mode = 2
+size_flags_horizontal = 4
 text = "UI_LEVEL_SELECT"
 
 [node name="SettingsButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=265163748]
 layout_mode = 2
+size_flags_horizontal = 4
 text = "UI_OPTIONS"
 
 [node name="QuitButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=389499878]
 layout_mode = 2
+size_flags_horizontal = 4
 text = "UI_MAIN_MENU"
 
 [node name="AutoWinButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=510154542]
 visible = false
 layout_mode = 2
+size_flags_horizontal = 4
 text = "DEBUG_AUTO_WIN"

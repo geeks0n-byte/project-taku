@@ -8,9 +8,13 @@ var font_color: Color = Color.WHITE
 var font: Font
 
 func _ready() -> void:
+	# This node is purely decorative; it should never block pointer events.
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Needed so _notification fires on parent transforms, keeping layout responsive.
 	set_notify_transform(true)
 
+## Sets all text properties at once and triggers a redraw.
+## Call this instead of setting individual vars to avoid partial-state redraws.
 func set_mono_text(p_text: String, p_font: Font, p_size: int, p_color: Color = Color.WHITE) -> void:
 	text = p_text
 	font = p_font
@@ -19,27 +23,35 @@ func set_mono_text(p_text: String, p_font: Font, p_size: int, p_color: Color = C
 	queue_redraw()
 
 func _notification(what: int) -> void:
+	# Also fires for NOTIFICATION_TRANSFORM_CHANGED (enabled via set_notify_transform)
+	# so the label redraws when an ancestor moves or scales it.
 	if what == NOTIFICATION_RESIZED:
 		queue_redraw()
 
 func _draw() -> void:
 	if font == null or text.is_empty() or font_size <= 0:
 		return
+	# Treat font_size as the per-character cell width so all glyphs advance equally.
 	var cell := float(font_size)
 	var total_w := cell * float(text.length())
+	# Center the full string block horizontally within the control's bounds.
 	var x := (size.x - total_w) * 0.5
 	var ascent := font.get_ascent(font_size)
 	var descent := font.get_descent(font_size)
+	# Vertically center using the font metrics so the visual midpoint aligns with the control center.
 	var baseline := (size.y + ascent - descent) * 0.5
 	var ci := get_canvas_item()
 	for i in text.length():
 		var code: int = text.unicode_at(i)
+		# Space has no glyph to draw; advance the cursor by one cell width.
 		if code == 32:
 			x += cell
 			continue
 		var glyph: int = font.get_glyph_index(font_size, code, 0)
 		var offset: Vector2 = Vector2.ZERO
 		if font is FontFile:
+			# get_glyph_offset returns the glyph's left bearing; subtracting it
+			# pins every glyph's ink origin to the same pixel-grid column.
 			offset = (font as FontFile).get_glyph_offset(0, Vector2i(font_size, 0), glyph)
 		# Cancel left bearing so every glyph sits on the same pixel grid.
 		font.draw_char(ci, Vector2(x - offset.x, baseline), code, font_size, font_color)

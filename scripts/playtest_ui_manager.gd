@@ -1,13 +1,13 @@
 class_name PlaytestUIManager
 extends Node2D
 
-signal test_mode_exited
-signal playtest_reset_requested
-signal playtest_rules_requested
-signal playtest_hint_requested
-signal playtest_undo_requested
-signal playtest_redo_requested
-signal resume_from_tutorial_requested
+signal test_mode_exited            ## Player pressed Exit; editor should end playtest mode.
+signal playtest_reset_requested    ## Player pressed Reset; board should be restored to start.
+signal playtest_rules_requested    ## Player pressed Rules; How-To-Play overlay should open.
+signal playtest_hint_requested     ## Player pressed Hint; hint logic should run.
+signal playtest_undo_requested     ## Player pressed Undo.
+signal playtest_redo_requested     ## Player pressed Redo.
+signal resume_from_tutorial_requested  ## Player closed the How-To-Play overlay; gameplay resumes.
 
 @onready var playtest_hud_container: MarginContainer = $"../EditorUI/PlaytestHUD"
 @onready var top_bar_row: HBoxContainer = $"../EditorUI/PlaytestHUD/TopBarRow"
@@ -42,12 +42,12 @@ signal resume_from_tutorial_requested
 @onready var _try_again_button: Button = $"../PlaytestEndLayer/CenterContainer/VictoryPanel/VictoryButtons/TryAgainButton"
 @onready var _return_button: Button = $"../PlaytestEndLayer/CenterContainer/VictoryPanel/VictoryButtons/ReturnButton"
 
-var _test_label_breathe_tween: Tween
-var _htp_page: int = 0
-var _htp_header: Label
-var _hint_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED
-var _hint_forced_disabled: bool = false
-var _button_style_source: Button
+var _test_label_breathe_tween: Tween       # Looping alpha tween on the "TEST MODE" label.
+var _htp_page: int = 0                     # Current zero-based How-To-Play page index.
+var _htp_header: Label                     # Page header label injected by HudLayout.
+var _hint_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED  # -1 = unlimited; 0 = ad required.
+var _hint_forced_disabled: bool = false    # True while the board is solved or overlay is open.
+var _button_style_source: Button           # Reference button whose StyleBoxes are copied to end-screen buttons.
 
 func _ready() -> void:
 	_button_style_source = exit_button if exit_button else reset_button
@@ -105,6 +105,9 @@ func _apply_top_bar_buttons() -> void:
 		counter_container.offset_bottom = GameConstants.HUD_COUNTER_ROW_TOP + GameConstants.HUD_COUNTER_ROW_HEIGHT
 	_start_test_mode_label_breathe()
 
+## Starts an infinite alpha pulse on the "TEST MODE" label to remind developers
+## they are in playtest mode. Kills any existing tween before starting a new one
+## so calling this multiple times is safe.
 func _start_test_mode_label_breathe() -> void:
 	if not test_mode_label:
 		return
@@ -171,6 +174,9 @@ func _style_end_buttons() -> void:
 		HudLayout.apply_safe_outline(btn, 8)
 		HudLayout.apply_panel_button(btn)
 
+## Calculates and applies offsets for all children of the victory panel based on how
+## many star-goal rows the result contains and whether a board preview is shown.
+## Heights are computed manually because the panel uses absolute anchoring, not a VBox.
 func _layout_victory_panel(star_result: Dictionary) -> void:
 	if not _victory_panel or not _victory_results_host:
 		return
@@ -211,6 +217,9 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 	var min_h := 980.0 if preview_h > 0.0 else 900.0
 	_victory_panel.custom_minimum_size = Vector2(840, maxf(min_h, buttons_top + 300.0))
 
+## Disables (or re-enables) all playtest action buttons.
+## Reset is always kept disabled regardless of `disabled` — it is only enabled by
+## external code once the board has been interacted with.
 func _set_playtest_buttons_disabled(disabled: bool) -> void:
 	if reset_button:
 		reset_button.disabled = true
@@ -231,6 +240,7 @@ func _set_playtest_buttons_disabled(disabled: bool) -> void:
 		exit_button.disabled = disabled
 		HudLayout.refresh_button_icon_modulate(exit_button)
 
+## Updates the in-playtest status message (e.g. "Board solved!" or validation errors).
 func update_playtest_status(msg: String, text_color: Color) -> void:
 	if not status_label:
 		return
@@ -238,6 +248,8 @@ func update_playtest_status(msg: String, text_color: Color) -> void:
 	HudLayout.apply_status_font(status_label, GameConstants.HUD_STATUS_FONT_SIZE)
 	status_label.text = HudLayout.format_centered_status(msg, false)
 
+## Shows or hides the entire playtest chrome (HUD, counters, status label).
+## Also manages the breathe tween so it only runs while playtesting is active.
 func toggle_playtest_visibility(is_playtesting: bool) -> void:
 	if playtest_hud_container:
 		playtest_hud_container.visible = is_playtesting
@@ -258,6 +270,8 @@ func toggle_playtest_visibility(is_playtesting: bool) -> void:
 		if test_mode_label:
 			test_mode_label.modulate = Color(1, 1, 1, 1)
 
+## Re-positions the counter row and status label to account for the current board position.
+## Called whenever the board is rebuilt or repositioned in the editor viewport.
 func update_dynamic_playtest_layout(board_y: float, board_height: float) -> void:
 	HudLayout.position_counter_row(counter_container)
 	if status_label:
@@ -381,6 +395,8 @@ func set_playtest_chrome_visible(should_show: bool) -> void:
 	else:
 		_set_playtest_buttons_disabled(false)
 
+## Updates the timer and move-counter labels each game tick.
+## `required_moves` overrides the displayed target; pass -1 to show the actual move count as target.
 func update_playtest_hud(elapsed_seconds: int, moves: int, _editor_time_limit: int, required_moves: int = -1) -> void:
 	if timer_label:
 		HudLayout.set_timer_raster_text(timer_label, LevelStars.format_clock(elapsed_seconds))
@@ -399,6 +415,7 @@ func update_playtest_joker_counter(current: int, required: int) -> void:
 		GameConstants.TILE_GREEN, current, required, GameConstants.HUD_COUNTER_GREEN, tr("COUNTER_GREEN")
 	)
 
+## Shows/hides the joker counter slot (parent preferred so spacing collapses cleanly).
 func set_playtest_joker_counter_visibility(visible_state: bool) -> void:
 	var slot := jokers_label.get_parent() as Control if jokers_label else null
 	if slot:
@@ -407,6 +424,7 @@ func set_playtest_joker_counter_visibility(visible_state: bool) -> void:
 		jokers_label.visible = visible_state
 	HudLayout.align_counter_row(counter_container)
 
+## Shows/hides the move counter slot (parent preferred so spacing collapses cleanly).
 func set_playtest_move_counter_visibility(visible_state: bool) -> void:
 	var slot := moves_label.get_parent() as Control if moves_label else null
 	if slot:
@@ -415,13 +433,16 @@ func set_playtest_move_counter_visibility(visible_state: bool) -> void:
 		moves_label.visible = visible_state
 	HudLayout.align_counter_row(counter_container)
 
+## Updates the cached hint count and refreshes the button badge.
 func set_playtest_hint_remaining(remaining: int) -> void:
 	_hint_remaining = remaining
 	_refresh_playtest_hint_visual()
 
+## Forces the hint button disabled regardless of remaining count (e.g. during victory overlay).
 func set_playtest_hint_button_disabled(is_disabled: bool) -> void:
 	_hint_forced_disabled = is_disabled
 	_refresh_playtest_hint_visual()
 
+## Applies the current enabled/remaining state to the hint button via HintController.
 func _refresh_playtest_hint_visual() -> void:
 	HintController.update_button(hint_button, not _hint_forced_disabled, _hint_remaining)

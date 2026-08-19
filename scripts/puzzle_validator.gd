@@ -1,10 +1,16 @@
 class_name PuzzleValidator
 extends RefCounted
+## Validates a puzzle board against all game rules: constraints (equals/not_equals),
+## max-joker-per-line, no-three-in-a-row, and balanced color counts per line.
+## Returns {"valid": bool, "errors": Array[String]} and highlights offending cells.
 
+## Validates the live board (with cell objects) — called during gameplay.
+## `cached_lines`: pre-built row/column coord arrays. `constraint_pairs`: equals/not_equals pairs.
 static func validate_board(board_cells: Dictionary, cached_lines: Array, constraint_pairs: Array, _max_jokers: int = -1) -> Dictionary:
 	var errors = []
 	var is_valid = true
 
+	# --- Pass 1: Check pairwise constraints (equals / not_equals) ---
 	for pair in constraint_pairs:
 		if board_cells.has(pair["a"]) and board_cells.has(pair["b"]):
 			var cell_a = board_cells[pair["a"]]
@@ -13,12 +19,14 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 			var state_a = cell_a.state
 			var state_b = cell_b.state
 
+			# Skip unfilled cells (negative state means empty/wall).
 			if state_a < 0 or state_b < 0:
 				continue
 
 			var can_be_equal = false
 			var can_be_not_equal = false
 
+			# Shifters are wildcards that match only themselves; jokers (state 2) match anything.
 			if state_a == GameConstants.TileState.SHIFTER or state_b == GameConstants.TileState.SHIFTER:
 				if state_a == state_b:
 					can_be_equal = true
@@ -52,6 +60,7 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 				if cell_a.has_method("set_error_highlight"): cell_a.set_error_highlight()
 				if cell_b.has_method("set_error_highlight"): cell_b.set_error_highlight()
 
+	# --- Pass 2: Per-line rules (max jokers, no three-in-a-row, balanced counts) ---
 	for line_data in cached_lines:
 		var coords = line_data["coords"]
 		var is_row: bool = bool(line_data.get("is_horizontal", true))
@@ -80,6 +89,8 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 				if cell.state == 2 and cell.has_method("set_error_highlight"):
 					cell.set_error_highlight()
 
+		# Sliding window of 3: no three consecutive cells may all be the same color
+		# (jokers count as either color for violation purposes).
 		for i in range(line_vals.size() - 2):
 			var v1 = line_vals[i]
 			var v2 = line_vals[i+1]
@@ -120,6 +131,8 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 						if cell.has_method("set_error_highlight"):
 							cell.set_error_highlight()
 
+		# Count only non-wall cells (v == -2 is WALL); filled means state >= 0 (a placed tile).
+		# The balance rule only fires once the line is fully filled — partial lines are fine.
 		var playable_count = 0
 		var filled_count = 0
 		
@@ -128,7 +141,7 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 				playable_count += 1
 				if v >= 0: 
 					filled_count += 1
-					
+				
 		if playable_count > 0 and filled_count == playable_count:
 			if count_0 != count_1:
 				is_valid = false
@@ -143,6 +156,7 @@ static func validate_board(board_cells: Dictionary, cached_lines: Array, constra
 	return {"valid": is_valid, "errors": errors}
 
 ## Validates a raw layout dict (coord -> TileState int), including active shifters.
+## Used by the editor/generator to verify a layout before play — no cell objects involved.
 static func validate_layout_states(
 	layout: Dictionary,
 	width: int,
@@ -151,6 +165,7 @@ static func validate_layout_states(
 	shifter_pairs: Array = []
 ) -> Dictionary:
 	var states := layout.duplicate()
+	# Stamp the currently-active shifter position so the validator treats it as SHIFTER state.
 	for pair in shifter_pairs:
 		if typeof(pair) != TYPE_DICTIONARY:
 			continue
@@ -160,6 +175,8 @@ static func validate_layout_states(
 	var lines := _build_lines_from_layout(states, width, height)
 	return _validate_state_map(states, lines, constraint_pairs)
 
+## Convenience wrapper that returns a single bool: true only if the starting layout
+## has zero violations. Used to gate puzzle publishing in the editor.
 static func starting_layout_is_clean(
 	layout: Dictionary,
 	width: int,
@@ -170,6 +187,8 @@ static func starting_layout_is_clean(
 	var result := validate_layout_states(layout, width, height, constraint_pairs, shifter_pairs)
 	return bool(result.get("valid", false))
 
+## Builds the same cached_lines format used by validate_board, but from a raw state dict.
+## Rows are added first (is_horizontal: true), then columns (is_horizontal: false).
 static func _build_lines_from_layout(states: Dictionary, width: int, height: int) -> Array:
 	var lines: Array = []
 	for y in height:
@@ -190,6 +209,8 @@ static func _build_lines_from_layout(states: Dictionary, width: int, height: int
 			lines.append({"coords": col, "is_horizontal": false})
 	return lines
 
+## Core validation logic shared by both validate_board (cell objects) and validate_layout_states
+## (raw int maps). Works identically to validate_board's per-line passes but on plain ints.
 static func _validate_state_map(states: Dictionary, cached_lines: Array, constraint_pairs: Array) -> Dictionary:
 	var errors = []
 	var is_valid = true
@@ -279,6 +300,7 @@ static func _validate_state_map(states: Dictionary, cached_lines: Array, constra
 				if not errors.has(msg2):
 					errors.append(msg2)
 
+		# Mirror of the validate_board balance check: only flag unequal counts on a complete line.
 		var playable_count := 0
 		var filled_count := 0
 		for v in line_vals:
@@ -294,6 +316,8 @@ static func _validate_state_map(states: Dictionary, cached_lines: Array, constra
 
 	return {"valid": is_valid, "errors": errors}
 
+## Builds a descriptive error key encoding which color has more tiles and by how much.
+## The pipe-delimited suffix carries counts so callers can format human-readable messages.
 static func _unequal_status_key(is_row: bool, yellow_count: int, blue_count: int) -> String:
 	var axis := "ROW" if is_row else "COLUMN"
 	if yellow_count > blue_count:
@@ -304,6 +328,7 @@ static func _unequal_status_key(is_row: bool, yellow_count: int, blue_count: int
 		return "ERR_UNEQUAL_MORE_BLUE_%s_NO_YELLOW|%d" % [axis, blue_count]
 	return "ERR_UNEQUAL_MORE_BLUE_%s|%d|%d" % [axis, blue_count, yellow_count]
 
+## Prevents duplicate unequal-count errors: only one ERR_UNEQUAL_* per axis is appended.
 static func _has_unequal_for(errors: Array, is_row: bool) -> bool:
 	var needle := "_ROW" if is_row else "_COLUMN"
 	for e in errors:

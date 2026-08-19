@@ -15,6 +15,8 @@ enum BrushTool {
 	NOT_EQUALS = 5,
 }
 
+# Public URL for the privacy policy page. Opened in the device browser from the consent popup.
+# Update this if the URL ever changes — it's referenced in consent_popup.gd.
 const PRIVACY_POLICY_URL := "https://geeks0n-byte.github.io/project-taku/privacy-policy.html"
 
 const CELL_SIZE := 120
@@ -63,6 +65,8 @@ const HUD_SIDE_MARGIN := 24.0
 const HUD_TOP_BAR_ICON_NUDGE := 2
 const LEVEL_PREVIEW_SIZE := 112
 
+# Shared font size for all screen titles (options, pause, level select, HTP).
+# Main menu title uses its own larger size (96) defined in main_menu.gd.
 const SCREEN_HEADER_FONT_SIZE := 72
 const SCREEN_HEADER_OUTLINE := 12
 const SCREEN_HEADER_TOP := 260.0

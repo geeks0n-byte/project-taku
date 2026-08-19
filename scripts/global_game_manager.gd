@@ -1,14 +1,21 @@
 extends Node
 
+# Set by the level-select screen so main.gd knows which level to load directly,
+# bypassing the normal "highest unlocked" logic.
 var selected_level_resource: LevelData = null
+# Toggled from a debug menu; enables extra tools (auto-win, unlock-all, etc.).
 var debug_tools_enabled: bool = false
+# Tells the main menu to play its fade-in animation on first load.
 var main_menu_should_fade_in: bool = false
 
+# Prevents rapid repeated system-back presses from navigating multiple screens at once.
 var _back_guard_until_msec: int = 0
+# Prevents change_scene_to_file being called twice in quick succession (e.g. double-tap).
 var _scene_guard_until_msec: int = 0
 var _screenshot_busy: bool = false
 
 func _ready() -> void:
+	# Always process so back-button and focus events work even when the tree is paused.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	if OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios"):
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
@@ -20,6 +27,7 @@ func _notification(what: int) -> void:
 		_dismiss_soft_keyboard()
 		call_deferred("_dismiss_soft_keyboard")
 
+# Releases GUI focus and hides the virtual keyboard to avoid banner/layout drift on Android.
 func _dismiss_soft_keyboard() -> void:
 	var vp := get_viewport()
 	if vp:
@@ -27,12 +35,15 @@ func _dismiss_soft_keyboard() -> void:
 	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
 		DisplayServer.virtual_keyboard_hide()
 
+# F12 shortcut for capturing store/QA screenshots without external tools.
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if (event as InputEventKey).keycode == KEY_F12:
 			capture_store_screenshot()
 			get_viewport().set_input_as_handled()
 
+# Captures the current viewport after the frame is fully rendered and saves it as PNG.
+# The guard prevents overlapping async captures.
 func capture_store_screenshot() -> void:
 	if _screenshot_busy:
 		return
@@ -43,6 +54,7 @@ func capture_store_screenshot() -> void:
 		push_error("Screenshot failed: no viewport image")
 		_screenshot_busy = false
 		return
+	# Ensure RGB8 format for PNG compatibility (viewport may return RGBA).
 	if img.get_format() != Image.FORMAT_RGB8:
 		img.convert(Image.FORMAT_RGB8)
 	var dir_path := _screenshot_dir()
@@ -56,6 +68,8 @@ func capture_store_screenshot() -> void:
 		return
 	print("Screenshot saved: ", file_path)
 
+# In editor/desktop builds, saves to the tracked docs folder for store asset management.
+# On device, falls back to the app's user:// directory.
 func _screenshot_dir() -> String:
 	if OS.has_feature("editor") or OS.get_name() in ["Windows", "Linux", "macOS"]:
 		var project_dir := ProjectSettings.globalize_path("res://docs/store-assets/screenshots")
@@ -63,6 +77,8 @@ func _screenshot_dir() -> String:
 			return project_dir
 	return ProjectSettings.globalize_path("user://screenshots")
 
+# Rate-limits system back events to prevent accidental double-navigation.
+# Returns false if the guard is still active; true if the back press should be handled.
 func consume_system_back() -> bool:
 	var now := Time.get_ticks_msec()
 	if now < _back_guard_until_msec:
@@ -70,6 +86,7 @@ func consume_system_back() -> bool:
 	_back_guard_until_msec = now + 450
 	return true
 
+# Shuts down ads cleanly before exiting so pending callbacks don't fire on dead nodes.
 func quit_app() -> void:
 	if AdsManager and AdsManager.has_method("prepare_for_app_exit"):
 		AdsManager.prepare_for_app_exit()
@@ -77,6 +94,8 @@ func quit_app() -> void:
 	if tree:
 		tree.call_deferred("quit")
 
+# Switches scenes with a debounce guard to prevent rapid double-transitions.
+# Unpauses the tree first so the incoming scene starts in a clean state.
 func go_to_scene(path: String) -> void:
 	if path.is_empty():
 		return

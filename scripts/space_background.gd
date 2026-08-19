@@ -1,14 +1,25 @@
 extends ParallaxBackground
 
+# Autoload-style global that renders the animated space backdrop.
+# Manages a multi-layer parallax background, a foreground FX CanvasLayer for
+# shooting stars / comets / asteroids, and a static composite mode for performance.
+
+# Pixels per second the entire scroll offset moves when not in static mode.
 @export var base_scroll_speed: Vector2 = Vector2(-15, -5)
+# Min/max seconds between random FX event triggers (shooting star, comet, asteroid).
 @export var event_spawn_interval: Vector2 = Vector2(0.2, 12.0)
+# Probability (0–1) that a triggered FX event spawns on the foreground CanvasLayer
+# instead of the mid-layer, making it appear in front of game UI.
 @export var foreground_event_chance: float = 0.38
+# Hard cap on simultaneously active asteroid RigidBody2D instances across both layers.
 @export var max_active_asteroids: int = 16
 
 const ASSET_DIR = "res://resources/background/"
+# Extra pixels beyond the asteroid's visual radius before it is considered fully offscreen.
 const ASTEROID_POOL_SIZE := 16
 const ASTEROID_OFFSCREEN_MARGIN := 64.0
 
+# Maps logical layer names to their SVG asset filenames, keeping paths in one place.
 const ASSET_FILES = {
 	"void": "bg_0_void.svg",
 	"dust": "bg_1_far_dust.svg",
@@ -21,31 +32,45 @@ const ASSET_FILES = {
 	"fx_comet_3": "fx_comet_3.svg"
 }
 
+# Runtime textures/frames loaded once and reused by every spawn call.
 var tex_shooting_star: Texture2D
 var sf_comet_anim: SpriteFrames
 var tex_asteroids: Array[Texture2D] = []
 
+# Mid-layer Node2D containers that sit inside the parallax stack.
 var dyn_layer_stars: Node2D
 var dyn_layer_comets: Node2D
 var dyn_layer_asteroids: Node2D
 
+# Foreground CanvasLayer (layer=1) whose children render on top of the game UI.
 var _fx_foreground: CanvasLayer
 var _fg_stars: Node2D
 var _fg_comets: Node2D
 var _fg_asteroids: Node2D
+# Set to false during scenes where foreground FX would be distracting (e.g. splash screen).
 var _foreground_events_enabled: bool = false
 
+# Keyed by timer name ("event"); each entry holds {"timer": Timer, "interval": Vector2}.
 var event_timers: Dictionary = {}
+# When true, scroll and FX are frozen and the background is replaced with a baked texture.
 var _static_mode: bool = false
+# Lazily created TextureRect that shows the baked composite in static mode.
 var _static_rect: TextureRect
+# Looping tween that alternates alpha on the stars_mid and accents layers to simulate twinkling.
 var _twinkle_tween: Tween
+# Ordered list of all ParallaxLayer nodes added by _build_background_layers.
 var _parallax_layer_nodes: Array[ParallaxLayer] = []
+# Free pool of pre-built RigidBody2D asteroid nodes waiting to be activated.
 var _asteroid_pool: Array[RigidBody2D] = []
+# Invisible root that holds inactive pooled asteroids to keep the scene tree tidy.
 var _asteroid_pool_root: Node2D
+# Tracked separately from pool size to avoid iterating children on every frame.
 var _active_asteroid_count: int = 0
+# Shared physics material instance reused by all pooled asteroids (bouncy, no friction-damp).
 var _asteroid_phys_mat: PhysicsMaterial
 
 func _ready() -> void:
+	# layer = -2 so the entire parallax background renders behind all game UI layers.
 	layer = -2
 	get_viewport().size_changed.connect(_on_viewport_size_changed)
 	_build_background_layers()
@@ -53,15 +78,21 @@ func _ready() -> void:
 	_load_fx_assets()
 	_init_asteroid_pool()
 	_setup_timer("event", event_spawn_interval, _on_event_timeout)
+	# Deferred so the viewport size is valid when the first layout pass runs.
 	call_deferred("_on_viewport_size_changed")
 	if SaveManager:
+		# Apply the saved preference after SaveManager is fully initialized.
 		call_deferred("set_static_mode", SaveManager.background_static)
 
+# Controls whether FX events can spawn on the foreground CanvasLayer.
+# Disabling also immediately removes any foreground FX that is already visible.
 func set_foreground_events_enabled(enabled: bool) -> void:
 	_foreground_events_enabled = enabled
 	if not enabled:
 		_clear_foreground_fx()
 
+# Creates the CanvasLayer that renders FX in front of game UI.
+# follow_viewport_enabled=false keeps the layer anchored to screen space, not world space.
 func _build_foreground_fx_layer() -> void:
 	_fx_foreground = CanvasLayer.new()
 	_fx_foreground.name = "FxForeground"
@@ -75,6 +106,8 @@ func _build_foreground_fx_layer() -> void:
 	_fx_foreground.add_child(_fg_comets)
 	_fx_foreground.add_child(_fg_asteroids)
 
+# Removes all active foreground FX children.
+# Asteroids are returned to the pool rather than freed so they can be reused.
 func _clear_foreground_fx() -> void:
 	for layer_node in [_fg_stars, _fg_comets, _fg_asteroids]:
 		if layer_node:
@@ -84,6 +117,7 @@ func _clear_foreground_fx() -> void:
 				else:
 					child.queue_free()
 
+# Pre-builds ASTEROID_POOL_SIZE inactive asteroids so spawning has no instantiation cost at runtime.
 func _init_asteroid_pool() -> void:
 	_asteroid_pool_root = Node2D.new()
 	_asteroid_pool_root.name = "AsteroidPool"
@@ -95,6 +129,12 @@ func _init_asteroid_pool() -> void:
 	for _i in ASTEROID_POOL_SIZE:
 		_asteroid_pool.append(_make_pooled_asteroid())
 
+# Builds a single inactive asteroid RigidBody2D with:
+# - No gravity and zero damping (moves at constant velocity set on spawn).
+# - Collision on layer/mask 2 so asteroids only collide with each other, not game objects.
+# - A main Sprite2D for the rock texture and an Overlay Sprite2D for optional direction icons
+#   (e.g. shifter arrows rendered on top of game-tile asteroids).
+# - process_mode=DISABLED while pooled to avoid physics overhead when inactive.
 func _make_pooled_asteroid() -> RigidBody2D:
 	var rb := RigidBody2D.new()
 	rb.set_meta("pooled_asteroid", true)
@@ -128,6 +168,9 @@ func _make_pooled_asteroid() -> RigidBody2D:
 	_asteroid_pool_root.add_child(rb)
 	return rb
 
+# Checks out an asteroid from the pool, enforcing the active-count cap with two fallback
+# eviction passes: first try to reclaim offscreen asteroids, then the oldest active one.
+# Returns null only if the cap still cannot be met after both eviction attempts.
 func _acquire_asteroid() -> RigidBody2D:
 	_sync_active_asteroid_count()
 	if _active_asteroid_count >= max_active_asteroids:
@@ -146,6 +189,8 @@ func _acquire_asteroid() -> RigidBody2D:
 	_active_asteroid_count += 1
 	return rb
 
+# Releases the first asteroid found to be fully outside the viewport,
+# freeing a pool slot without discarding a visible one.
 func _release_oldest_offscreen_asteroid() -> void:
 	var view := get_viewport().get_visible_rect()
 	for layer_node in [dyn_layer_asteroids, _fg_asteroids]:
@@ -158,6 +203,8 @@ func _release_oldest_offscreen_asteroid() -> void:
 					_release_asteroid(rb)
 					return
 
+# Last-resort eviction: releases the asteroid that has been alive the longest,
+# identified by the "spawn_msec" meta tag written at spawn time.
 func _release_oldest_active_asteroid() -> void:
 	var oldest: RigidBody2D = null
 	var oldest_stamp: int = Time.get_ticks_msec()
@@ -175,6 +222,7 @@ func _release_oldest_active_asteroid() -> void:
 	if oldest:
 		_release_asteroid(oldest)
 
+# Recounts live asteroids across both layers to keep _active_asteroid_count accurate.
 func _sync_active_asteroid_count() -> void:
 	var live_count := 0
 	for layer_node in [dyn_layer_asteroids, _fg_asteroids]:
@@ -185,12 +233,16 @@ func _sync_active_asteroid_count() -> void:
 				live_count += 1
 	_active_asteroid_count = live_count
 
+# Returns the effective screen-space radius of an asteroid, accounting for its node scale.
+# Falls back to 48px when the collision shape is missing (e.g. before full initialization).
 func _asteroid_visual_radius(rb: RigidBody2D) -> float:
 	var col := rb.get_node_or_null("Collision") as CollisionShape2D
 	if col and col.shape is CircleShape2D:
 		return (col.shape as CircleShape2D).radius * maxf(absf(rb.scale.x), absf(rb.scale.y))
 	return 48.0
 
+# True when the asteroid's bounding circle (plus the offscreen margin) is entirely outside
+# the viewport — used to decide when a moving asteroid can safely be recycled.
 func _asteroid_is_fully_offscreen(rb: RigidBody2D, view: Rect2) -> bool:
 	var radius := _asteroid_visual_radius(rb) + ASTEROID_OFFSCREEN_MARGIN
 	var pos := rb.global_position
@@ -201,6 +253,9 @@ func _asteroid_is_fully_offscreen(rb: RigidBody2D, view: Rect2) -> bool:
 		or pos.y - radius > view.position.y + view.size.y
 	)
 
+# True when any part of the asteroid's bounding circle overlaps the viewport.
+# Used to track when a freshly-spawned asteroid first becomes visible so we know
+# it has "entered view" and can be released once it exits again.
 func _asteroid_intersects_view(rb: RigidBody2D, view: Rect2) -> bool:
 	var radius := _asteroid_visual_radius(rb)
 	var pos := rb.global_position
@@ -211,9 +266,13 @@ func _asteroid_intersects_view(rb: RigidBody2D, view: Rect2) -> bool:
 		or pos.y - radius > view.position.y + view.size.y
 	)
 
+# Returns an asteroid to the pool: disconnects collision signals, freezes physics,
+# hides it, and re-parents it under _asteroid_pool_root.
+# If the pool is already at capacity the node is freed instead of retained.
 func _release_asteroid(rb: RigidBody2D) -> void:
 	if not is_instance_valid(rb):
 		return
+	# Guard against double-release (already pooled or already in the pool root).
 	if rb.get_parent() == _asteroid_pool_root or _asteroid_pool.has(rb):
 		return
 	for conn in rb.body_entered.get_connections():
@@ -237,9 +296,14 @@ func _release_asteroid(rb: RigidBody2D) -> void:
 	else:
 		rb.queue_free()
 
+# Returns true when the next FX event should use the foreground CanvasLayer.
+# Requires foreground events to be enabled and passes a random chance roll.
 func _use_foreground_layer() -> bool:
 	return _foreground_events_enabled and not _static_mode and randf() < foreground_event_chance
 
+# Switches between animated and static background modes.
+# In static mode: FX timers and scroll stop, and all parallax layers are replaced by
+# a single baked texture for better performance on low-end devices.
 func set_static_mode(is_static: bool) -> void:
 	_static_mode = is_static
 	set_process(not is_static)
@@ -264,6 +328,9 @@ func _stop_events_and_fx() -> void:
 					child.queue_free()
 	_clear_foreground_fx()
 
+# Hides all animated layers and replaces them with a single baked composite TextureRect.
+# The twinkle tween is killed to stop alpha animation while static.
+# _static_rect is created lazily and reused on subsequent calls.
 func _show_static_composite() -> void:
 	for p_layer in _parallax_layer_nodes:
 		if is_instance_valid(p_layer):
@@ -302,6 +369,9 @@ func _hide_static_composite() -> void:
 	if _twinkle_tween == null and _parallax_layer_nodes.size() >= 2:
 		_start_twinkle_on_mid_layers()
 
+# CPU-composites all background SVG layers onto a fixed 1080x1920 image.
+# Using a fixed resolution keeps the baked texture small while still covering
+# portrait phone screens at maximum quality.
 func _bake_static_texture() -> Texture2D:
 	var size := Vector2i(1080, 1920)
 	var img := Image.create(size.x, size.y, false, Image.FORMAT_RGBA8)
@@ -322,6 +392,8 @@ func _bake_static_texture() -> Texture2D:
 		_blit_tiled(img, src)
 	return ImageTexture.create_from_image(img)
 
+# Tiles src over dest using alpha-blending so each layer composites on top of the previous.
+# Handles SVGs whose native size is smaller than the target canvas.
 func _blit_tiled(dest: Image, src: Image) -> void:
 	var sw := src.get_width()
 	var sh := src.get_height()
@@ -335,6 +407,8 @@ func _blit_tiled(dest: Image, src: Image) -> void:
 			x += sw
 		y += sh
 
+# Starts the looping alpha tween that makes the star and accent layers appear to twinkle.
+# The two layers fade together but not identically (0.5 vs 0.6 target alpha) for a natural look.
 func _start_twinkle_on_mid_layers() -> void:
 	if _parallax_layer_nodes.size() < 2:
 		return
@@ -391,6 +465,9 @@ func _build_background_layers() -> void:
 		_twinkle_tween.tween_property(layer_stars_mid, "modulate:a", 1.0, 3.0)
 		_twinkle_tween.parallel().tween_property(layer_accents, "modulate:a", 1.0, 3.0)
 
+# Loads all FX textures/frames at startup (or lazily when first needed for asteroids).
+# Comet frames are packed into a SpriteFrames so AnimatedSprite2D can play them at 12 fps.
+# Asteroid textures are loaded into a pool so spawning can pick_random() for variety.
 func _load_fx_assets() -> void:
 	if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["fx_star"]):
 		tex_shooting_star = load(ASSET_DIR + ASSET_FILES["fx_star"])
@@ -412,12 +489,18 @@ func _load_fx_assets() -> void:
 	if ResourceLoader.exists(ASSET_DIR + "fx_asteroid_3.svg"):
 		tex_asteroids.append(load(ASSET_DIR + "fx_asteroid_3.svg"))
 
+# Returns the size each background layer should be so it covers the viewport even during
+# parallax scrolling. The 1.35× factor prevents edge gaps when the scroll offset shifts layers.
+# Falls back to a 1080×1920 reference if the viewport has not been sized yet.
 func _cover_size() -> Vector2:
 	var view := get_viewport().get_visible_rect().size
 	if view.x <= 1.0 or view.y <= 1.0:
 		view = Vector2(1080.0, 1920.0)
 	return view * 1.35
 
+# Sizes and centers a Control rect so it covers the viewport symmetrically.
+# Since the layer is oversized (1.35×), centering keeps the overflow equally distributed
+# on all sides regardless of which way the scroll offset drifts.
 func _apply_cover_rect(rect: Control, view_size: Vector2) -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
 	if viewport_size.x <= 1.0 or viewport_size.y <= 1.0:
@@ -438,12 +521,16 @@ func _on_viewport_size_changed() -> void:
 	if _static_mode and _static_rect and _static_rect.visible:
 		_apply_cover_rect(_static_rect, view_size)
 
+# Advances the parallax scroll and checks for asteroids that have left the screen.
 func _process(delta: float) -> void:
 	if _static_mode:
 		return
 	scroll_offset += base_scroll_speed * delta
 	_release_offscreen_asteroids()
 
+# Per-frame cleanup: recycles any asteroid that has entered the viewport and then
+# fully exited it. The "entered_view" meta flag prevents releasing an asteroid that
+# was spawned offscreen but has not yet crossed into view.
 func _release_offscreen_asteroids() -> void:
 	if _active_asteroid_count <= 0:
 		return
@@ -462,6 +549,9 @@ func _release_offscreen_asteroids() -> void:
 			if seen and _asteroid_is_fully_offscreen(rb, view):
 				_release_asteroid(rb)
 
+# Creates a tiled parallax layer for a given texture.
+# motion_offset is randomised so layers don't all start aligned, adding visual variety on first load.
+# motion_mirroring equals the cover size so Godot seamlessly wraps the tile as the scroll offset changes.
 func _build_parallax_layer(tex: Texture2D, speed_scale: Vector2, view_size: Vector2 = Vector2.ZERO) -> ParallaxLayer:
 	if view_size == Vector2.ZERO:
 		view_size = _cover_size()
@@ -483,6 +573,9 @@ func _create_pixel_rect(tex: Texture2D, view_size: Vector2 = Vector2.ZERO) -> Te
 	_apply_cover_rect(rect, view_size)
 	return rect
 
+# Creates a one-shot Timer registered under `key` and immediately starts it with a random
+# wait drawn from the [interval.x, interval.y] range. One-shot timers are manually restarted
+# by _restart_timer after each callback so the interval randomises each time.
 func _setup_timer(key: String, interval: Vector2, callback: Callable) -> void:
 	var t = Timer.new()
 	t.one_shot = true
@@ -491,6 +584,8 @@ func _setup_timer(key: String, interval: Vector2, callback: Callable) -> void:
 	event_timers[key] = {"timer": t, "interval": interval}
 	_restart_timer(key)
 
+# Re-arms the timer with a new random wait from its stored interval.
+# In static mode the timer is stopped instead of restarted.
 func _restart_timer(key: String) -> void:
 	if not event_timers.has(key):
 		return
@@ -500,11 +595,16 @@ func _restart_timer(key: String) -> void:
 		return
 	t_data["timer"].start(randf_range(t_data["interval"].x, t_data["interval"].y))
 
+# Randomly selects and triggers one background FX event, then re-arms the timer.
+# Roll thresholds (out of 1000) determine rarity:
+#   1/1000  → meteor shower (mass comet burst)
+#   10/1000 → single comet
+#   340/1000 → asteroid(s), with a 30% chance of spawning a cluster of 3–5
+#   648/1000 → shooting star (most common)
 func _on_event_timeout() -> void:
 	if _static_mode:
 		return
-	var roll = randi() % 1000 + 1 
-	
+	var roll = randi() % 1000 + 1
 	if roll <= 1:
 		_trigger_meteor_shower()
 	elif roll <= 11:
@@ -517,9 +617,9 @@ func _on_event_timeout() -> void:
 			debug_spawn_asteroid()
 	else:
 		debug_spawn_shooting_star()
-		
 	_restart_timer("event")
 
+# Public spawn helpers — named "debug_" historically; they are the main runtime spawn paths.
 func debug_spawn_shooting_star() -> void:
 	var target := _fg_stars if _use_foreground_layer() else dyn_layer_stars
 	_spawn_entity(tex_shooting_star, target, Vector2(64, 64), 0.8, 1.5, "star")
@@ -528,6 +628,8 @@ func debug_spawn_comet() -> void:
 	var target := _fg_comets if _use_foreground_layer() else dyn_layer_comets
 	_spawn_entity(sf_comet_anim, target, Vector2(128, 64), 10.0, 20.0, "comet")
 
+# Spawns a regular rock asteroid with a 2% chance of using a game-tile texture instead,
+# giving the background an occasional Easter-egg feel.
 func debug_spawn_asteroid() -> void:
 	if tex_asteroids.is_empty():
 		_load_fx_assets()
@@ -544,6 +646,8 @@ func debug_spawn_asteroid() -> void:
 		return
 	_spawn_debug_asteroid_standard_motion(target, tex, Vector2(64, 64))
 
+# Spawns an asteroid textured as an in-game tile (yellow/blue/green or a shifter tile).
+# Shifter asteroids (roll==3) get a randomly-directed arrow overlay to mimic the in-game look.
 func _spawn_tile_asteroid(target: Node2D) -> void:
 	var size := Vector2(36, 36)
 	var roll := randi() % 4
@@ -569,6 +673,8 @@ func _spawn_tile_asteroid(target: Node2D) -> void:
 	if tex:
 		_spawn_entity(tex, target, size, 15.0, 25.0, "asteroid")
 
+# Variant of _spawn_tile_asteroid that uses _spawn_debug_asteroid_standard_motion
+# (physics-driven velocity) instead of a tween, for consistent motion across all asteroid types.
 func _spawn_debug_tile_asteroid_standard_motion(target: Node2D) -> void:
 	var size := Vector2(36, 36)
 	var roll := randi() % 4
@@ -594,6 +700,11 @@ func _spawn_debug_tile_asteroid_standard_motion(target: Node2D) -> void:
 	if tex:
 		_spawn_debug_asteroid_standard_motion(target, tex, size)
 
+# Acquires a pooled asteroid, configures its texture/scale/collision, then launches it
+# with physics-based linear and angular velocity so it drifts across the screen.
+# Larger asteroids (higher random_scale) move slower, preserving a sense of mass.
+# The "entered_view" meta starts false and flips on when the node crosses into the viewport,
+# allowing _release_offscreen_asteroids to skip premature recycling.
 func _spawn_debug_asteroid_standard_motion(
 	target_layer: Node2D,
 	tex: Texture2D,
@@ -624,6 +735,7 @@ func _spawn_debug_asteroid_standard_motion(
 		overlay.texture = overlay_tex
 		overlay.visible = true
 		var overlay_w := maxf(1.0, float(overlay_tex.get_width()))
+		# Scale the overlay to 72% of the tile size so the arrow fits inside the rock.
 		overlay.scale = Vector2.ONE * (size.x * 0.72 / overlay_w)
 	else:
 		overlay.visible = false
@@ -636,10 +748,12 @@ func _spawn_debug_asteroid_standard_motion(
 	rb.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	var viewport_size := get_viewport().get_visible_rect().size
 	var max_dim: float = maxf(size.x, size.y)
+	# All asteroids enter from the right edge and exit off the left edge.
 	var start_x: float = viewport_size.x + max_dim + 50.0
 	var end_x: float = -max_dim - 100.0
 	var travel_x: float = start_x - end_x
 	var start_y: float = randf_range(-100.0, viewport_size.y * 0.8)
+	# Add a vertical drift proportional to the horizontal travel so paths vary in angle.
 	var end_y: float = start_y + (travel_x * randf_range(0.1, 1.2))
 
 	rb.position = Vector2(start_x, start_y)
@@ -652,6 +766,7 @@ func _spawn_debug_asteroid_standard_motion(
 		(col.shape as CircleShape2D).radius = size.x * 0.4 * random_scale
 	rb.mass = random_scale * 1.5
 
+	# Bigger asteroids move slower (remapped inverse relationship).
 	var base_duration := remap(random_scale, 0.8, 1.2, 25.0, 15.0)
 	var final_duration := base_duration * randf_range(0.85, 1.15)
 	var travel_vector := Vector2(end_x - start_x, end_y - start_y)
@@ -673,6 +788,8 @@ func debug_spawn_asteroid_cloud() -> void:
 func debug_spawn_meteor_shower() -> void:
 	_trigger_meteor_shower()
 
+# Spawns 20–40 comets staggered over 2.5 seconds to simulate a meteor shower.
+# The foreground/background decision is made once so the whole shower appears on the same layer.
 func _trigger_meteor_shower() -> void:
 	var count = randi_range(20, 40)
 	var use_fg := _use_foreground_layer()
@@ -685,11 +802,12 @@ func _trigger_meteor_shower() -> void:
 			_spawn_entity(sf_comet_anim, target, Vector2(128, 64), 3.0, 6.0, "comet")
 		)
 
+# Plays a small particle burst at the midpoint between two colliding asteroids.
+# The instance ID guard ensures only the lower-ID body handles the event,
+# preventing the callback from firing twice for a single collision pair.
 func _on_asteroid_collided(body: Node, self_entity: RigidBody2D) -> void:
 	if not body is RigidBody2D: return
-	
 	if self_entity.get_instance_id() > body.get_instance_id(): return
-	
 	var vfx = CPUParticles2D.new()
 	vfx.emitting = true
 	vfx.one_shot = true
@@ -702,13 +820,17 @@ func _on_asteroid_collided(body: Node, self_entity: RigidBody2D) -> void:
 	vfx.initial_velocity_max = 80.0
 	vfx.scale_amount_min = 2.0
 	vfx.scale_amount_max = 6.0
-	vfx.color = Color(0.6, 0.6, 0.65) 
-	
+	# Grey-blue tint matches the overall cool colour palette of the background.
+	vfx.color = Color(0.6, 0.6, 0.65)
 	vfx.global_position = (self_entity.global_position + body.global_position) / 2.0
-	
 	dyn_layer_asteroids.add_child(vfx)
 	get_tree().create_timer(1.0).timeout.connect(vfx.queue_free)
 
+# General-purpose entity spawner used by shooting stars, comets, and the tween-based
+# asteroid path (the physics path uses _spawn_debug_asteroid_standard_motion instead).
+# tex is a Texture2D for stars/asteroids or a SpriteFrames for animated comets.
+# min_time/max_time bound the random travel duration.
+# overlay_tex is an optional second sprite rendered on top (used for shifter arrow icons).
 func _spawn_entity(
 	tex: Variant,
 	target_layer: Node2D,
@@ -719,17 +841,14 @@ func _spawn_entity(
 	overlay_tex: Texture2D = null
 ) -> void:
 	if not tex or not target_layer: return
-	
 	var entity
 	var final_duration: float
-	
 	if type == "comet":
 		var anim_sprite = AnimatedSprite2D.new()
 		anim_sprite.sprite_frames = tex
 		anim_sprite.play("default")
 		anim_sprite.centered = true
 		entity = anim_sprite
-		
 	elif type == "asteroid":
 		var rb := _acquire_asteroid()
 		if rb == null:

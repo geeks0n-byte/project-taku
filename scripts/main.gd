@@ -1,7 +1,12 @@
+# Root game scene script. Owns board, HUD, and level progression logic.
+# Delegates UI to UIManager and board logic to BoardManager; wires them together.
 extends Node2D
 
+# Levels loaded from the campaign directory.
 var core_levels: Array[LevelData] = []
+# Levels from user:// (editor-created / imported).
 var custom_levels: Array[LevelData] = []
+# The active level list (either core_levels or custom_levels depending on context).
 var levels: Array[LevelData] = []
 
 @onready var ui_manager: UIManager = $UIManager
@@ -11,37 +16,51 @@ var levels: Array[LevelData] = []
 @onready var options_menu = $OptionsMenu
 @onready var hud_layer = $HUDLayer
 
+# Time limit in seconds for 3-star completion; 0 means untimed (tutorial levels).
 var star_time_limit: int = 0
 var elapsed_seconds: int = 0
 var shifter_move_count: int = 0
 var required_shifter_moves: int = 0
 var _has_shifters: bool = false
+# True for campaign tutorial levels — disables timer, move counter, and hint quota.
 var _challenges_disabled: bool = false
 var is_game_active: bool = true
 var is_paused: bool = false
 var current_level_index: int = 0
+# A fully solved copy of the board layout, used as reference for hint generation.
 var solved_solution_reference: Dictionary = {}
+# Constraint pairs not shown to the player that can be revealed as hints.
 var hidden_reference_constraints: Array = []
+# When true, hints are drawn from hidden_reference_constraints instead of explicit ones.
 var prefer_hidden_hints: bool = false
 var required_jokers: int = 0
 var hints_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED
 var hints_used: int = 0
 var game_undo := UndoStack.new()
+# Guards against recording multiple snapshots for a single cell interaction.
 var _is_recording_action: bool = false
+# True while a fullscreen ad is visible so the timer stays paused.
 var _timer_paused_for_ad: bool = false
 var _loading_overlay: LoadingOverlay
+# Prevents input and state changes while async board generation is in progress.
 var _is_generating_board: bool = false
 var tutorial_director: TutorialDirector
+# The layout and tile data used for the current run (saved for session autosave).
 var _run_layout: Dictionary = {}
 var _run_shifter_pairs: Array = []
 var _run_available_tiles: Array = []
+# When true, cancelling a reset from inside the pause menu returns to the pause menu.
 var _reset_confirm_return_to_pause: bool = false
 
+# Returns true when a level lives in the campaign tutorials directory.
+# Tutorial levels disable the timer, move counter, and hint quota.
 func _is_campaign_tutorial(level: LevelData) -> bool:
 	if level == null:
 		return false
 	return String(level.resource_path).begins_with(GameConstants.CAMPAIGN_TUTORIALS_DIR)
 
+# Maps a level's resource path to one of the PuzzleGenerator.Difficulty values
+# based on which subdirectory it lives in (easy/medium/hard).
 func _difficulty_for_level(level: LevelData) -> int:
 	if level == null:
 		return PuzzleGenerator.Difficulty.MEDIUM
@@ -54,12 +73,17 @@ func _difficulty_for_level(level: LevelData) -> int:
 		return PuzzleGenerator.Difficulty.MEDIUM
 	return PuzzleGenerator.Difficulty.MEDIUM
 
+# Sets hints_remaining based on level type. Tutorials get unlimited hints;
+# campaign levels get a difficulty-based quota.
 func _reset_hint_quota(level: LevelData) -> void:
 	if _is_campaign_tutorial(level):
 		hints_remaining = GameConstants.HINT_LIMIT_UNLIMITED
 	else:
 		hints_remaining = GameConstants.hint_limit_for_difficulty(_difficulty_for_level(level))
 
+# Returns true when the player is allowed to use a hint right now:
+# the board has a cell that can actually be hinted, the quota isn't zero,
+# OR an ad-rewarded hint could be offered.
 func _can_use_hint() -> bool:
 	var board_ok := HintController.has_usable_hints(
 		board_manager.board_cells if board_manager else {},
@@ -75,6 +99,8 @@ func _can_use_hint() -> bool:
 		return true
 	return AdsManager != null and AdsManager.can_offer_rewarded_hint()
 
+# Pre-warms the rewarded ad when hints are almost exhausted, then updates the
+# hint button's icon and enabled state through UIManager.
 func _refresh_hint_button() -> void:
 	if AdsManager and hints_remaining <= 1:
 		AdsManager.warm_rewarded_hint()
@@ -82,6 +108,7 @@ func _refresh_hint_button() -> void:
 		ui_manager.set_hint_remaining(hints_remaining)
 		ui_manager.set_hint_button_disabled(not _can_use_hint())
 
+# Bootstraps ads, tutorial director, level lists, and first level/session entry.
 func _ready():
 	if AdsManager:
 		AdsManager.show_menu_banner()
@@ -108,6 +135,8 @@ func _ready():
 		timer_node.timeout.connect(_on_timer_timeout)
 	_begin_level_entry()
 
+# Pauses the game timer while a fullscreen ad is displayed.
+# The timer only stops if the game is actually running and not already paused.
 func _on_fullscreen_ad_started() -> void:
 	if timer_node == null or _challenges_disabled:
 		return
@@ -118,6 +147,7 @@ func _on_fullscreen_ad_started() -> void:
 	_timer_paused_for_ad = true
 	timer_node.stop()
 
+# Resumes the timer after an ad if it was paused by _on_fullscreen_ad_started.
 func _on_fullscreen_ad_finished() -> void:
 	if not _timer_paused_for_ad:
 		return
@@ -125,10 +155,13 @@ func _on_fullscreen_ad_finished() -> void:
 	if timer_node and is_game_active and not is_paused and not _challenges_disabled:
 		timer_node.start()
 
+# Routes OS back-button notifications into our stack-aware back handler.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		_on_system_back()
 
+# Handles the Android back button with a priority stack: options menu → HTP →
+# reset confirm → resume prompt → victory → pause → in-game pause → main menu.
 func _on_system_back() -> void:
 	if GlobalGameManager == null or not GlobalGameManager.consume_system_back():
 		return
@@ -161,6 +194,8 @@ func _on_system_back() -> void:
 		return
 	_on_quit_to_menu()
 
+# Wires UIManager and BoardManager signals to main.gd handlers.
+# Called once after both managers are confirmed non-null.
 func _bind_submanager_signals():
 	if not ui_manager or not board_manager:
 		return
@@ -199,6 +234,8 @@ func _bind_submanager_signals():
 	ui_manager.session_back_requested.connect(_on_session_back)
 	ui_manager.locale_refresh_requested.connect(_on_locale_refresh)
 
+# Shows error feedback when the player attempts an illegal move.
+# Gives the tutorial director first refusal so it can override the message.
 func _on_invalid_move_attempted(msg: String):
 	if not is_game_active or is_paused:
 		return
@@ -217,6 +254,8 @@ func _on_invalid_move_attempted(msg: String):
 	ui_manager.show_status_errors(combined_errors)
 	board_manager.refresh_error_bridges()
 
+# Scans the campaign and user:// directories and populates core_levels/custom_levels.
+# Called once in _ready before level selection logic runs.
 func _load_all_levels_from_storage() -> void:
 	core_levels.clear()
 	custom_levels.clear()
@@ -233,6 +272,9 @@ func _load_all_levels_from_storage() -> void:
 		if res and res is LevelData:
 			custom_levels.append(res)
 
+# Checks GlobalGameManager for a level picked from the level-select screen,
+# a saved session to resume, or falls back to the highest unlocked level.
+# Sets current_level_index and populates the levels array accordingly.
 func _intercept_global_selection():
 	if GlobalGameManager.selected_level_resource != null:
 		var selected_resource = GlobalGameManager.selected_level_resource
@@ -285,6 +327,9 @@ func _intercept_global_selection():
 	else:
 		current_level_index = maxi(0, levels.size() - 1)
 
+# Main board setup function. For tutorial levels uses the stored layout directly;
+# for generated levels runs PuzzleGenerator asynchronously on the loading overlay.
+# Solves a reference solution, positions the board, then starts the timer.
 func generate_board():
 	if current_level_index >= levels.size():
 		return
@@ -487,6 +532,8 @@ func generate_board():
 	if timer_node and is_game_active and not _challenges_disabled:
 		timer_node.start()
 
+# Looks up a tutorial script for the current level and starts TutorialDirector
+# if one exists. No-ops silently when the level has no associated script.
 func _start_tutorial_if_needed(tiles_list: Array) -> void:
 	if not tutorial_director:
 		return
@@ -513,6 +560,8 @@ func _on_tutorial_tools_unlocked() -> void:
 	ui_manager.update_undo_redo_buttons(game_undo.can_undo(), game_undo.can_redo())
 	_refresh_hint_button()
 
+# Fired when TutorialDirector changes the board layout (e.g. reveals locked cells).
+# Resets the undo stack so the player can't undo past the tutorial modification.
 func _on_tutorial_board_layout_changed() -> void:
 	game_undo.reset(_create_game_snapshot())
 	var dims := LevelUtils.get_dimensions_from_cells(board_manager.board_cells)
@@ -525,6 +574,8 @@ func _on_tutorial_board_layout_changed() -> void:
 	if ui_manager:
 		ui_manager.update_undo_redo_buttons(game_undo.can_undo(), game_undo.can_redo())
 
+# Builds a flattened layout with shifters merged in and runs the backtracking solver.
+# Returns the solved cell-state dictionary used as the hint reference.
 func _solve_layout(
 	layout: Dictionary,
 	tiles_list: Array,
@@ -536,6 +587,8 @@ func _solve_layout(
 	var empty_cells: Array = LevelUtils.empty_cells_from_layout(solve_layout)
 	return LevelUtils.solve_reference(solve_layout, empty_cells, dims.x, dims.y, tiles_list, constraints)
 
+# Captures the current cell states and shifter-move count into a snapshot
+# dictionary suitable for UndoStack and session serialisation.
 func _create_game_snapshot() -> Dictionary:
 	var snap := {}
 	for coord in board_manager.board_cells:
@@ -546,6 +599,8 @@ func _create_game_snapshot() -> Dictionary:
 		"moves": shifter_move_count
 	}
 
+# Restores cell states and move count from a snapshot, updates visuals, and
+# re-runs validation so the status label reflects the restored state.
 func _apply_game_snapshot(snap: Dictionary):
 	shifter_move_count = snap["moves"]
 	ui_manager.update_move_counter(shifter_move_count, required_shifter_moves)
@@ -558,12 +613,16 @@ func _apply_game_snapshot(snap: Dictionary):
 	board_manager.trigger_redraw()
 	_run_validation_pass()
 
+# Records the current state to the undo stack after the frame settles (deferred call).
+# Clears the recording guard so the next interaction can schedule another record.
 func _record_game_action():
 	_is_recording_action = false
 	game_undo.record(_create_game_snapshot())
 	ui_manager.update_undo_redo_buttons(game_undo.can_undo(), game_undo.can_redo())
 	_autosave_session()
 
+# Gives the tutorial director first refusal on the undo action (it may intercept
+# to show guidance), then pops the undo stack and autosaves.
 func _on_undo_requested():
 	if tutorial_director and tutorial_director.consume_hud_action("undo"):
 		return
@@ -592,6 +651,7 @@ func _update_joker_count():
 		required_jokers
 	)
 
+# Hint button flow: consume tutorial action, spend quota, or attempt rewarded ad.
 func _on_hint_requested():
 	if tutorial_director and tutorial_director.consume_hud_action("hint"):
 		return
@@ -614,12 +674,14 @@ func _on_hint_requested():
 		return
 	_apply_hint()
 
+# Reward callback grants a small hint bundle, then immediately applies one hint.
 func _on_rewarded_hint_earned() -> void:
 	hints_remaining = GameConstants.HINTS_FROM_REWARDED_AD
 	if AdsManager:
 		AdsManager.warm_rewarded_hint()
 	_apply_hint()
 
+# Reveals one constraint hint, updates pools/counters, redraws, validates, autosaves.
 func _apply_hint() -> void:
 	if not is_game_active or is_paused:
 		return
@@ -670,6 +732,7 @@ func _apply_hint() -> void:
 		ui_manager.show_status_errors(["ERROR_NO_HINTS"])
 		_refresh_hint_button()
 
+# Responds to any cell change: updates counters, tutorial hooks, validation, undo record.
 func _on_cell_changed(_coord: Vector2i):
 	if not is_game_active or is_paused:
 		return
@@ -681,6 +744,7 @@ func _on_cell_changed(_coord: Vector2i):
 		_is_recording_action = true
 		call_deferred("_record_game_action")
 
+# Special handler for shifter swaps so move-goal counters stay accurate.
 func _on_shifter_move_made():
 	if not is_game_active or is_paused:
 		return
@@ -692,6 +756,8 @@ func _on_shifter_move_made():
 		_is_recording_action = true
 		call_deferred("_record_game_action")
 
+# Central validation pass: recompute errors, update tutorial gates/hint state,
+# and trigger victory once board is valid and full.
 func _run_validation_pass():
 	board_manager.clear_highlights()
 	var results = PuzzleValidator.validate_board(
@@ -725,6 +791,7 @@ func _run_validation_pass():
 		else:
 			trigger_victory()
 
+# Ends the run, computes stars/unlocks, records ad cadence, and opens victory UI.
 func trigger_victory():
 	if tutorial_director:
 		tutorial_director.stop()
@@ -770,12 +837,14 @@ func trigger_victory():
 		solved_preview
 	)
 
+# Toggles gameplay visuals (board + HUD layer) together.
 func _set_board_and_hud_visible(should_show: bool) -> void:
 	if board_manager:
 		board_manager.visible = should_show
 	if hud_layer:
 		hud_layer.visible = should_show
 
+# Pauses gameplay and opens pause menu.
 func _on_pause():
 	if _is_generating_board or (_loading_overlay and _loading_overlay.is_busy()):
 		return
@@ -794,6 +863,7 @@ func _on_pause():
 			pause_menu.set_restart_label_key("UI_RESTART" if _challenges_disabled else "UI_NEW_LAYOUT")
 		pause_menu.show()
 
+# Opens in-game how-to-play overlay from active run.
 func _on_how_to_play():
 	if tutorial_director and tutorial_director.consume_hud_action("how_to_play"):
 		return
@@ -808,6 +878,7 @@ func _on_how_to_play():
 	if ui_manager.has_method("show_how_to_play"):
 		ui_manager.show_how_to_play()
 
+# Resumes gameplay from pause/tutorial overlays and restores button states.
 func _on_resume():
 	if not is_paused:
 		return
@@ -831,6 +902,7 @@ func _on_resume():
 	if tutorial_director and tutorial_director.is_active():
 		tutorial_director.refresh_tool_gates()
 
+# Opens reset/new-layout confirm overlay.
 func _on_reset():
 	if tutorial_director and tutorial_director.consume_hud_action("reset"):
 		return
@@ -845,6 +917,7 @@ func _on_reset():
 	ui_manager.set_hud_buttons_disabled(true)
 	ui_manager.show_reset_confirm()
 
+# Handles confirmed reset, optionally showing an interstitial before regen.
 func _on_reset_confirmed() -> void:
 	_reset_confirm_return_to_pause = false
 	is_paused = false
@@ -866,10 +939,12 @@ func _on_reset_confirmed() -> void:
 			return
 	_finish_reset_confirmed()
 
+# Shared continuation after ad flow completes.
 func _finish_reset_confirmed() -> void:
 	_set_board_and_hud_visible(true)
 	generate_board()
 
+# Cancel from reset confirm returns either to pause menu or resumed gameplay.
 func _on_reset_cancelled() -> void:
 	if _reset_confirm_return_to_pause:
 		_reset_confirm_return_to_pause = false
@@ -880,6 +955,7 @@ func _on_reset_cancelled() -> void:
 		return
 	_on_resume()
 
+# Pause-menu restart goes through the same reset confirm flow.
 func _on_restart_level():
 	if pause_menu:
 		pause_menu.hide()
@@ -888,6 +964,7 @@ func _on_restart_level():
 	ui_manager.set_hud_buttons_disabled(true)
 	ui_manager.show_reset_confirm()
 
+# Opens options from pause while keeping gameplay hidden.
 func _on_pause_settings() -> void:
 	if pause_menu:
 		pause_menu.hide()
@@ -895,6 +972,7 @@ func _on_pause_settings() -> void:
 	if options_menu:
 		options_menu.show_menu()
 
+# Restores pause menu when backing out of options.
 func _on_options_back_from_pause() -> void:
 	if not is_paused:
 		return
@@ -902,6 +980,7 @@ func _on_options_back_from_pause() -> void:
 	if pause_menu:
 		pause_menu.show()
 
+# Victory CTA: clear session and optionally show interstitial before advancing.
 func _on_next_level():
 	SaveManager.clear_session()
 	var skip_ad := (
@@ -915,11 +994,13 @@ func _on_next_level():
 	else:
 		_do_next_level()
 
+# Advances level index and starts entry flow.
 func _do_next_level() -> void:
 	if current_level_index < levels.size() - 1:
 		current_level_index += 1
 	_begin_level_entry()
 
+# Victory CTA: replay current level (possibly after interstitial).
 func _on_play_again():
 	SaveManager.clear_session()
 	var skip_ad := (
@@ -933,13 +1014,16 @@ func _on_play_again():
 	else:
 		_do_play_again()
 
+# Restarts current level entry flow.
 func _do_play_again() -> void:
 	_begin_level_entry()
 
+# Pushes global debug-tools toggle into pause menu UI.
 func _apply_debug_tools_visibility() -> void:
 	if pause_menu and pause_menu.has_method("set_debug_tools_visible"):
 		pause_menu.set_debug_tools_visible(GlobalGameManager.debug_tools_enabled)
 
+# Debug shortcut from pause menu to instantly complete current level.
 func _on_auto_win() -> void:
 	if not is_game_active:
 		return
@@ -948,18 +1032,22 @@ func _on_auto_win() -> void:
 		pause_menu.hide()
 	trigger_victory()
 
+# Leaves gameplay to main menu, persisting session first.
 func _on_quit_to_menu():
 	if _is_generating_board or (_loading_overlay and _loading_overlay.is_busy()):
 		return
 	_autosave_session()
 	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")
 
+# Leaves gameplay to level-select, persisting session first.
 func _on_quit_to_level_select() -> void:
 	if _is_generating_board or (_loading_overlay and _loading_overlay.is_busy()):
 		return
 	_autosave_session()
 	GlobalGameManager.go_to_scene("res://scenes/level_select.tscn")
 
+# Entry point for opening a level: either show resume prompt for an existing
+# autosave, or clear stale session data and generate a fresh board.
 func _begin_level_entry() -> void:
 	if levels.is_empty() or current_level_index < 0 or current_level_index >= levels.size():
 		return
@@ -982,6 +1070,7 @@ func _begin_level_entry() -> void:
 		SaveManager.clear_session()
 	generate_board()
 
+# Session prompt actions.
 func _on_session_continue() -> void:
 	restore_session()
 
@@ -1007,11 +1096,13 @@ func _finish_session_restart() -> void:
 func _on_session_back() -> void:
 	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")
 
+# Rebuilds timer and tutorial strings after UI locale/font refresh.
 func _on_locale_refresh() -> void:
 	_update_timer_display()
 	if tutorial_director and tutorial_director.is_active():
 		tutorial_director.refresh_for_locale()
 
+# Serialises all runtime state needed to resume the exact in-progress puzzle.
 func _build_session_payload() -> Dictionary:
 	if levels.is_empty() or current_level_index < 0 or current_level_index >= levels.size():
 		return {}
@@ -1049,6 +1140,8 @@ func _build_session_payload() -> Dictionary:
 		"undo_history": game_undo.export_history(),
 	}
 
+# Writes a resumable snapshot when the run is in a stable state.
+# Skips during generation and active tutorials to avoid partial/bad saves.
 func _autosave_session() -> void:
 	if not is_game_active and not is_paused:
 		return
@@ -1061,6 +1154,8 @@ func _autosave_session() -> void:
 		return
 	SaveManager.save_session(payload)
 
+# Restores a previously autosaved run, including board cells, constraints,
+# timer/move counters, hint state, and undo history.
 func restore_session() -> void:
 	var data := SaveManager.load_session()
 	if data.is_empty():
@@ -1149,6 +1244,7 @@ func restore_session() -> void:
 		timer_node.start()
 	_refresh_hint_button()
 
+# Per-second timer tick for timed levels.
 func _on_timer_timeout():
 	if _challenges_disabled:
 		return
@@ -1156,6 +1252,7 @@ func _on_timer_timeout():
 		elapsed_seconds += 1
 		_update_timer_display()
 
+# Shows or hides the timer based on level rules and formats elapsed seconds.
 func _update_timer_display():
 	if _challenges_disabled:
 		ui_manager.set_timer_visibility(false)

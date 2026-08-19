@@ -1,6 +1,10 @@
+# Owns all HUD controls, overlay panels, and the how-to-play pages.
+# Emits signals so main.gd can respond to player actions without UIManager
+# knowing about game logic.
 class_name UIManager
 extends Control
 
+# Fired by top-bar button presses — main.gd connects and responds to each.
 signal pause_requested
 signal reset_requested
 signal reset_confirmed
@@ -12,9 +16,11 @@ signal play_again_requested
 signal hint_requested 
 signal undo_requested
 signal redo_requested
+# Session-resume panel actions.
 signal session_continue_requested
 signal session_restart_requested
 signal session_back_requested
+# Emitted after a locale change so main.gd can re-format time and tutorial text.
 signal locale_refresh_requested
 
 @onready var top_margin: MarginContainer = $"../HUDLayer/HUDControl/TopMargin"
@@ -58,34 +64,44 @@ signal locale_refresh_requested
 @onready var reset_confirm_yes: Button = $"../EndLayer/CenterContainer/ResetConfirmPanel/VBoxContainer/HBoxContainer/YesButton"
 @onready var reset_confirm_no: Button = $"../EndLayer/CenterContainer/ResetConfirmPanel/VBoxContainer/HBoxContainer/NoButton"
 
+# State cached so the victory panel and status label can be rebuilt on locale change.
 var _is_last_level_completed: bool = false
 var _victory_display_num: int = 0
 var _victory_is_custom: bool = false
 var _victory_is_tutorial: bool = false
 var _victory_star_result: Dictionary = {}
+# Current how-to-play page index (0-based, clamped to HowToPlayContent.PAGE_COUNT-1).
 var _htp_page: int = 0
 var _htp_header: Label
+# When true, all HUD buttons except the highlighted one are disabled (tutorial mode).
 var _tutorial_tools_locked: bool = false
+# Name of the single HUD button that remains active during a tutorial step.
 var _highlighted_hud_button: String = ""
 var _tutorial_status_body: String = ""
 var _tutorial_mode: bool = false
+# When true the reset button shows the restart icon; false shows the random icon.
 var _reset_is_restart: bool = false
 const _ICON_RESET: Texture2D = preload("res://resources/icons/icon_reset.svg")
 const _ICON_RANDOM: Texture2D = preload("res://resources/icons/icon_random.svg")
+# Error keys to display in the status label; empty means "board is valid".
 var _status_error_keys: Array = []
 var _hint_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED
+# Set by an external caller (e.g. when ads are loading) to disable the hint button.
 var _hint_forced_disabled: bool = false
+# Cached for locale-rebuild: last values passed to display_level().
 var _level_display_num: int = 0
 var _level_display_custom: bool = false
 var _level_display_tutorial: bool = false
 var _level_display_set: bool = false
+# Cached counter values so they can be re-rendered on locale change.
 var _joker_current: int = 0
 var _joker_required: int = 0
 var _move_count: int = 0
 var _move_required: int = -1
 var _last_timer_text: String = ""
 
-# Hold-to-repeat undo/redo
+# Hold-to-repeat undo/redo: starts after _HOLD_INITIAL_DELAY then accelerates
+# each repeat until it reaches _HOLD_REPEAT_MIN interval.
 var _hold_undo_active: bool = false
 var _hold_redo_active: bool = false
 var _hold_repeat_elapsed: float = 0.0
@@ -93,6 +109,7 @@ var _hold_repeat_interval: float = 0.0
 const _HOLD_INITIAL_DELAY := 0.4
 const _HOLD_REPEAT_START := 0.3
 const _HOLD_REPEAT_MIN := 0.05
+# Multiplied to _hold_repeat_interval each repeat so actions speed up when held.
 const _HOLD_REPEAT_ACCEL := 0.82
 
 func _ready() -> void:
@@ -106,6 +123,7 @@ func _ready() -> void:
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
 
+# Styles the how-to-play nav buttons and locates the page header label in the container.
 func _layout_how_to_play() -> void:
 	for btn in [htp_prev_button, htp_next_button]:
 		HudLayout.apply_nav_button(btn)
@@ -113,6 +131,8 @@ func _layout_how_to_play() -> void:
 		HudLayout.style_top_bar_close_button(tutorial_back_button)
 	_htp_header = HudLayout.ensure_how_to_play_page_header(how_to_play_container)
 
+# Rebuilds all locale-sensitive UI after SaveManager.language_changed fires.
+# Re-asserts Press Start on digit-only widgets because the font walk resets them.
 func _on_language_changed() -> void:
 	HudLayout.apply_locale_fonts_to_tree(self)
 	_apply_top_bar_buttons()
@@ -141,6 +161,8 @@ func _setup_how_to_play_font() -> void:
 	rules_label.set_meta("_use_default_font", true)
 	HudLayout.apply_locale_font_to_control(rules_label)
 
+# Called once by main.gd after the scene is ready. Hides all overlays, sets up
+# fonts, and defers top-bar button layout to the next frame so sizes are stable.
 func setup_ui(_show_debug_tools: bool, _cell_size: float) -> void:
 	_connect_signals()
 	set_overlays_hidden()
@@ -151,6 +173,8 @@ func setup_ui(_show_debug_tools: bool, _cell_size: float) -> void:
 		HudLayout.apply_status_font(status_label, GameConstants.HUD_STATUS_FONT_SIZE)
 	call_deferred("_apply_top_bar_buttons")
 
+# Applies sizing and icon styles to all top-bar button clusters and counter labels.
+# Deferred on setup so the scene tree has computed its initial sizes.
 func _apply_top_bar_buttons() -> void:
 	HudLayout.apply_top_bar_button_cluster(top_bar_row.get_node_or_null("LeftButtons") as HBoxContainer)
 	HudLayout.apply_top_bar_button_cluster(top_bar_row.get_node_or_null("RightButtons") as HBoxContainer)
@@ -171,6 +195,7 @@ func _apply_top_bar_buttons() -> void:
 		counter_container.offset_top = GameConstants.HUD_COUNTER_ROW_TOP
 		counter_container.offset_bottom = GameConstants.HUD_COUNTER_ROW_TOP + GameConstants.HUD_COUNTER_ROW_HEIGHT
 
+# Connects all button pressed/down/up signals once, guarded against double-connection.
 func _connect_signals() -> void:
 	if pause_button and not pause_button.pressed.is_connected(_on_pause_requested):
 		pause_button.pressed.connect(_on_pause_requested)
@@ -216,6 +241,7 @@ func _connect_signals() -> void:
 	if resume_back_btn and not resume_back_btn.pressed.is_connected(_on_session_back_pressed):
 		resume_back_btn.pressed.connect(_on_session_back_pressed)
 
+# Simple signal forwarders from button callbacks to main.gd.
 func _on_pause_requested() -> void:
 	pause_requested.emit()
 
@@ -234,6 +260,7 @@ func _on_undo_requested() -> void:
 func _on_redo_requested() -> void:
 	redo_requested.emit()
 
+# Starts the hold-to-repeat timer when the undo button is pressed and held.
 func _on_undo_button_down() -> void:
 	_hold_undo_active = true
 	_hold_redo_active = false
@@ -241,11 +268,13 @@ func _on_undo_button_down() -> void:
 	_hold_repeat_interval = _HOLD_REPEAT_START
 	set_process(true)
 
+# Stops hold-to-repeat for undo when the user releases the button.
 func _on_undo_button_up() -> void:
 	_hold_undo_active = false
 	if not _hold_redo_active:
 		set_process(false)
 
+# Starts the hold-to-repeat timer when the redo button is pressed and held.
 func _on_redo_button_down() -> void:
 	_hold_redo_active = true
 	_hold_undo_active = false
@@ -253,11 +282,14 @@ func _on_redo_button_down() -> void:
 	_hold_repeat_interval = _HOLD_REPEAT_START
 	set_process(true)
 
+# Stops hold-to-repeat for redo when the user releases the button.
 func _on_redo_button_up() -> void:
 	_hold_redo_active = false
 	if not _hold_undo_active:
 		set_process(false)
 
+# Drives hold-to-repeat undo/redo. Waits for the initial delay, then emits
+# the action each time the accelerating interval elapses.
 func _process(delta: float) -> void:
 	if not _hold_undo_active and not _hold_redo_active:
 		set_process(false)
@@ -276,11 +308,13 @@ func _process(delta: float) -> void:
 	elif _hold_redo_active:
 		redo_requested.emit()
 
+# Closes the HTP overlay and tells main.gd to return to paused gameplay.
 func _on_tutorial_back_pressed() -> void:
 	if how_to_play_container:
 		how_to_play_container.visible = false
 	resume_from_tutorial_requested.emit()
 
+# Victory panel button handlers.
 func _on_victory_next_pressed() -> void:
 	next_level_requested.emit()
 
@@ -290,6 +324,8 @@ func _on_play_again_pressed() -> void:
 func _on_main_menu_pressed() -> void:
 	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")
 
+# Updates the enabled/disabled state of undo and redo buttons.
+# In tutorial mode, both are forced disabled unless one of them is the highlighted button.
 func update_undo_redo_buttons(can_undo: bool, can_redo: bool) -> void:
 	if _tutorial_tools_locked and _highlighted_hud_button != "undo" and _highlighted_hud_button != "redo":
 		if undo_button:
@@ -312,6 +348,7 @@ func update_undo_redo_buttons(can_undo: bool, can_redo: bool) -> void:
 		redo_button.disabled = not redo_on
 		HudLayout.refresh_button_icon_modulate(redo_button)
 
+# Updates the joker (green tile) counter label with the current/required ratio.
 func update_joker_counter(current: int, required: int) -> void:
 	if not joker_counter_label:
 		return
@@ -322,6 +359,7 @@ func update_joker_counter(current: int, required: int) -> void:
 		GameConstants.TILE_GREEN, current, required, GameConstants.HUD_COUNTER_GREEN, tr("COUNTER_GREEN")
 	)
 
+# Shows or hides the joker counter slot (parent node) and re-aligns the counter row.
 func set_joker_counter_visibility(visible_state: bool) -> void:
 	var slot := joker_counter_label.get_parent() as Control if joker_counter_label else null
 	if slot:
@@ -330,6 +368,8 @@ func set_joker_counter_visibility(visible_state: bool) -> void:
 		joker_counter_label.visible = visible_state
 	_refresh_counter_row_alignment()
 
+# Updates the shifter-move counter. When required < 0, both numerator and denominator
+# show the current count (used to display moves without a fixed goal).
 func update_move_counter(moves: int, required: int = -1) -> void:
 	if not move_counter_label:
 		return
@@ -349,17 +389,22 @@ func set_move_counter_visibility(visible_state: bool) -> void:
 		move_counter_label.visible = visible_state
 	_refresh_counter_row_alignment()
 
+# Re-centres visible counter slots after any visibility change.
 func _refresh_counter_row_alignment() -> void:
 	HudLayout.align_counter_row(counter_container)
 
+# Stores the remaining hint count and updates the hint button visual state.
 func set_hint_remaining(remaining: int) -> void:
 	_hint_remaining = remaining
 	_refresh_hint_button_visual()
 
+# Externally disables the hint button (e.g. while an ad is loading) without
+# affecting the hint count itself.
 func set_hint_button_disabled(is_disabled: bool) -> void:
 	_hint_forced_disabled = is_disabled
 	_refresh_hint_button_visual()
 
+# Applies the current hint availability to the hint button, respecting tutorial lock.
 func _refresh_hint_button_visual() -> void:
 	if _tutorial_tools_locked and _highlighted_hud_button != "hint":
 		HintController.update_button(hint_button, false, _hint_remaining)
@@ -369,20 +414,26 @@ func _refresh_hint_button_visual() -> void:
 		return
 	HintController.update_button(hint_button, not _hint_forced_disabled, _hint_remaining)
 
+# Shows a tutorial instruction in the status label (BBCode supported).
 func show_tutorial_status(bbcode_body: String) -> void:
 	_tutorial_status_body = bbcode_body
 	_refresh_status_label()
 
+# Clears the tutorial instruction and reverts the status label to normal mode.
 func clear_tutorial_status() -> void:
 	_tutorial_status_body = ""
 	_refresh_status_label()
 
+# Locks/unlocks the HUD toolbar for tutorial steps. When locked, only the
+# highlighted button is interactive.
 func set_tutorial_tools_locked(locked: bool) -> void:
 	_tutorial_tools_locked = locked
 	if not locked:
 		_highlighted_hud_button = ""
 	_apply_tutorial_tool_state()
 
+# Highlights a single HUD button (by id string) with the breathing mask animation.
+# When the "reset" button is highlighted, swaps to the random icon to match the tutorial step.
 func highlight_hud_button(button_id: String) -> void:
 	_highlighted_hud_button = button_id
 	if button_id == "reset":
@@ -391,11 +442,14 @@ func highlight_hud_button(button_id: String) -> void:
 		_apply_reset_button_icon()
 	_apply_tutorial_tool_state()
 
+# Removes the highlight from all HUD buttons and restores normal tool state.
 func clear_hud_button_highlight() -> void:
 	_highlighted_hud_button = ""
 	_apply_reset_button_icon()
 	_apply_tutorial_tool_state()
 
+# Controls which icon the reset button shows: restart icon for tutorial levels
+# (where the board layout is fixed), random icon for generated puzzles.
 func set_reset_mode_restart(is_restart: bool) -> void:
 	_reset_is_restart = is_restart
 	_apply_reset_button_icon()
@@ -403,6 +457,7 @@ func set_reset_mode_restart(is_restart: bool) -> void:
 func _apply_reset_button_icon() -> void:
 	_set_reset_button_texture(_ICON_RESET if _reset_is_restart else _ICON_RANDOM)
 
+# Swaps the IconContainer/Icon texture on the reset button without rebuilding the node.
 func _set_reset_button_texture(tex: Texture2D) -> void:
 	if not reset_button:
 		return
@@ -410,6 +465,8 @@ func _set_reset_button_texture(tex: Texture2D) -> void:
 	if icon:
 		icon.texture = tex
 
+# Returns the Button node for a given id string ("reset", "hint", "undo", etc.).
+# Used by tutorial director to position tooltip arrows or pulse specific buttons.
 func get_hud_button(button_id: String) -> Button:
 	match button_id:
 		"reset":
@@ -427,6 +484,8 @@ func get_hud_button(button_id: String) -> Button:
 		_:
 			return null
 
+# Re-applies the active mask and enabled state to all toolbar buttons based on
+# the current tutorial lock and highlighted button. Reset/HTP are never disabled.
 func _apply_tutorial_tool_state() -> void:
 	var ids := ["reset", "how_to_play", "hint", "undo", "redo"]
 	for id in ids:
@@ -458,11 +517,15 @@ func _apply_tutorial_tool_state() -> void:
 			button.disabled = not is_focus
 			HudLayout.refresh_button_icon_modulate(button)
 
+# Called after the board is positioned to place the counter row and status label
+# relative to the board's actual screen position (board_y, board_height).
 func update_dynamic_layout(board_y: float, board_height: float) -> void:
 	HudLayout.position_counter_row(counter_container)
 	if status_label:
 		HudLayout.position_status_below_board(status_label, board_y, board_height)
 
+# Enables or disables all top-bar action buttons. When disabling, hint/undo/redo
+# are also forced off; on re-enable, tutorial tool state is restored if active.
 func set_hud_buttons_disabled(is_disabled: bool) -> void:
 	for button in [pause_button, reset_button, how_to_play_button]:
 		if button:
@@ -498,6 +561,8 @@ func set_timer_visibility(visible_state: bool) -> void:
 		timer_label.text = ""
 	_refresh_counter_row_alignment()
 
+# Updates the top-bar level label. Tutorial levels hide the label (alpha=0) since
+# they don't have a meaningful level number to show.
 func display_level(num: int, is_custom: bool = false, is_tutorial: bool = false) -> void:
 	if not level_label:
 		return
@@ -524,10 +589,12 @@ func display_level(num: int, is_custom: bool = false, is_tutorial: bool = false)
 		prefix = String(tr("LVL"))
 	HudLayout.apply_level_label(level_label, prefix, num)
 
+# Clears any error state and shows the default "fill empty cells" prompt.
 func show_status_valid() -> void:
 	_status_error_keys.clear()
 	_refresh_status_label()
 
+# Stores an array of error key strings and refreshes the status label to show them.
 func show_status_errors(errors: Array) -> void:
 	_status_error_keys = errors.duplicate()
 	_refresh_status_label()
@@ -542,12 +609,15 @@ func set_top_bar_visible(should_show: bool) -> void:
 	if counter_container:
 		counter_container.visible = should_show
 
+# Switches the status label between tutorial-instruction mode and normal error/valid mode.
 func set_tutorial_mode(active: bool) -> void:
 	_tutorial_mode = active
 	if not active:
 		_tutorial_status_body = ""
 	_refresh_status_label()
 
+# Rebuilds the status label text from the current state:
+# tutorial body if in tutorial mode, error keys if any, or the default hint message.
 func _refresh_status_label() -> void:
 	if not status_label:
 		return
@@ -567,6 +637,8 @@ func _refresh_status_label() -> void:
 	status_label.text = "[center]" + "\n".join(lines) + "[/center]"
 	status_label.visible = true
 
+# Hides all overlays (victory, HTP, resume prompt, reset confirm) and re-enables
+# the HUD buttons. Called at the start of every new level.
 func set_overlays_hidden() -> void:
 	if victory_panel:
 		victory_panel.visible = false
@@ -577,6 +649,8 @@ func set_overlays_hidden() -> void:
 	_set_end_dimmer_visible(false)
 	set_hud_buttons_disabled(false)
 
+# Shows the reset/restart confirmation panel over a transparent dimmer.
+# The prompt text varies based on whether reset restarts a fixed layout or generates a new one.
 func show_reset_confirm() -> void:
 	if end_dimmer:
 		end_dimmer.color = Color(0, 0, 0, 0)
@@ -600,6 +674,7 @@ func show_reset_confirm() -> void:
 		reset_confirm_panel.move_to_front()
 	set_hud_buttons_disabled(true)
 
+# Hides the reset confirm panel and removes the dimmer only if no other overlay is visible.
 func hide_reset_confirm() -> void:
 	if reset_confirm_panel:
 		reset_confirm_panel.visible = false
@@ -609,6 +684,7 @@ func hide_reset_confirm() -> void:
 	):
 		_set_end_dimmer_visible(false)
 
+# Reset confirm panel button handlers.
 func _on_reset_confirm_yes() -> void:
 	hide_reset_confirm()
 	reset_confirmed.emit()
@@ -617,6 +693,8 @@ func _on_reset_confirm_no() -> void:
 	hide_reset_confirm()
 	reset_cancelled.emit()
 
+# Shows the "Resume or New Layout?" panel when the player returns to a level
+# that has an autosaved session. Styles and sizes all three action buttons.
 func show_session_resume_prompt() -> void:
 	if end_dimmer:
 		end_dimmer.color = Color(0, 0, 0, 0)
@@ -659,6 +737,7 @@ func hide_session_resume_prompt() -> void:
 	if victory_panel == null or not victory_panel.visible:
 		_set_end_dimmer_visible(false)
 
+# Session resume panel button handlers.
 func _on_session_continue_pressed() -> void:
 	hide_session_resume_prompt()
 	session_continue_requested.emit()
@@ -674,6 +753,8 @@ func _on_session_back_pressed() -> void:
 func _make_end_screen_panel_style() -> StyleBoxFlat:
 	return HudLayout.make_dialog_panel_style()
 
+# Applies pixel/scalable text and sizes a session-resume panel button.
+# text overrides button.text when provided (used for translated strings).
 func _style_resume_button(button: Button, text: String = "") -> void:
 	if not button:
 		return
@@ -685,6 +766,7 @@ func _style_resume_button(button: Button, text: String = "") -> void:
 	button.autowrap_mode = TextServer.AUTOWRAP_OFF
 	button.clip_text = false
 
+# HTP page navigation handlers (bounded to valid page range).
 func _on_htp_prev_pressed() -> void:
 	_htp_page = maxi(_htp_page - 1, 0)
 	_refresh_how_to_play_text()
@@ -693,6 +775,9 @@ func _on_htp_next_pressed() -> void:
 	_htp_page = mini(_htp_page + 1, HowToPlayContent.PAGE_COUNT - 1)
 	_refresh_how_to_play_text()
 
+# Refreshes all how-to-play content for the current page: header title, body text,
+# and prev/next button visibility. Defers layout to the next frame so the
+# RichTextLabel has a chance to measure its content height.
 func _refresh_how_to_play_text() -> void:
 	if _htp_header == null and how_to_play_container:
 		_htp_header = HudLayout.ensure_how_to_play_page_header(how_to_play_container)
@@ -718,11 +803,13 @@ func _refresh_how_to_play_text() -> void:
 		HudLayout.refresh_button_icon_modulate(htp_next_button)
 	call_deferred("_layout_how_to_play_stack")
 
+# Applies final panel/nav placement after rules_label measured its content height.
 func _layout_how_to_play_stack() -> void:
 	HudLayout.layout_how_to_play_stack(
 		how_to_play_container, how_to_play_panel, rules_label, how_to_play_nav
 	)
 
+# Opens the HTP overlay from page 0 and disables in-game HUD controls.
 func show_how_to_play() -> void:
 	_htp_page = 0
 	_refresh_how_to_play_text()
@@ -730,6 +817,8 @@ func show_how_to_play() -> void:
 		how_to_play_container.visible = true
 	set_hud_buttons_disabled(true)
 
+# Shows the victory panel with level number, star results, optional board preview,
+# and appropriate "Next Level" / "Play Again" / "Main Menu" buttons.
 func show_victory(
 	display_num: int,
 	is_last_level: bool,
@@ -755,6 +844,8 @@ func show_victory(
 	if victory_panel:
 		victory_panel.visible = true
 
+# Re-translates and re-styles all text in the victory panel.
+# Called on initial show and after a locale change while the panel is visible.
 func _refresh_victory_locale() -> void:
 	if win_label:
 		if _is_last_level_completed:
@@ -805,6 +896,9 @@ func _refresh_victory_locale() -> void:
 	if victory_panel and victory_panel.visible:
 		_layout_victory_panel(_victory_star_result)
 
+# Returns the "All levels completed" string with exclamation marks and the
+# Spanish inverted exclamation mark stripped, so it can be combined with YOU_WIN
+# without double punctuation in any locale.
 func _all_levels_completed_text() -> String:
 	var text := String(tr("ALL_COMPLETED")).strip_edges()
 	while text.ends_with("!") or text.ends_with("！"):
@@ -813,10 +907,13 @@ func _all_levels_completed_text() -> String:
 		text = text.substr(1).strip_edges()
 	return text
 
+# Keeps overlay centre container transparent to input; dimmer panels handle blocking.
 func _setup_end_layer() -> void:
 	if end_center:
 		end_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
+# Shows or hides the full-screen dimmer behind overlay panels.
+# Blocks mouse input when visible so clicks don't pass through to the board.
 func _set_end_dimmer_visible(should_show: bool) -> void:
 	if end_dimmer:
 		end_dimmer.visible = should_show
@@ -824,6 +921,7 @@ func _set_end_dimmer_visible(should_show: bool) -> void:
 			Control.MOUSE_FILTER_STOP if should_show else Control.MOUSE_FILTER_IGNORE
 		)
 
+# Applies panel frame and title geometry for the victory overlay.
 func _style_victory_chrome() -> void:
 	if victory_panel and victory_panel is Panel:
 		(victory_panel as Panel).add_theme_stylebox_override("panel", _make_end_screen_panel_style())
@@ -838,6 +936,8 @@ func _style_victory_chrome() -> void:
 		win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		win_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
+# Moves victory-screen action buttons to the top of the panel's draw order so they
+# render above the results host and preview frame.
 func _raise_victory_buttons() -> void:
 	if victory_panel == null:
 		return
@@ -848,6 +948,7 @@ func _raise_victory_buttons() -> void:
 	if main_menu_button:
 		victory_panel.move_child(main_menu_button, -1)
 
+# Shows/hides the solved-board preview texture and its decorative frame together.
 func _set_victory_preview(texture: Texture2D) -> void:
 	if not victory_preview:
 		return
@@ -858,6 +959,7 @@ func _set_victory_preview(texture: Texture2D) -> void:
 	if frame:
 		frame.visible = should_show
 
+# Delegates star goal row rendering to LevelStars.
 func _populate_victory_results(star_result: Dictionary) -> void:
 	if not victory_results_host:
 		return
@@ -865,6 +967,9 @@ func _populate_victory_results(star_result: Dictionary) -> void:
 		time_result_label.visible = false
 	LevelStars.populate_results(victory_results_host, star_result)
 
+# Computes and applies absolute pixel positions for all victory panel elements:
+# results host, optional board preview, and the action buttons stacked below.
+# Panel minimum height adapts to whether a preview is shown and the goal count.
 func _layout_victory_panel(star_result: Dictionary) -> void:
 	if not victory_panel:
 		return
@@ -916,6 +1021,7 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 	var min_h := 980.0 if preview_h > 0.0 else (620.0 if untimed else 900.0)
 	victory_panel.custom_minimum_size = Vector2(840, maxf(min_h, buttons_bottom + 40.0))
 
+# Positions a victory button at the given row below buttons_top, centred horizontally.
 func _place_victory_button(button: Button, buttons_top: float, row: int) -> void:
 	if not button:
 		return

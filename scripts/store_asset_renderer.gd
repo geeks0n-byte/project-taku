@@ -1,16 +1,24 @@
 extends RefCounted
 class_name StoreAssetRenderer
 
+# Offline tool for generating Play Store listing assets programmatically.
+# Call render_all() from an editor script or autoload; it is not used at runtime.
 
 const OUTPUT_DIR := "res://docs/store-assets/"
 const MAIN_MENU_SCENE := preload("res://scenes/main_menu.tscn")
 const ICON_TEXTURE: Texture2D = preload("res://resources/icons/app_icon_cosmos.svg")
 
+# Dark space-blue background colour matching the game's main menu backdrop.
 const SPACE_BG := Color(0.0, 0.0705882, 0.227451, 1.0) # #00123a
+# Natural pixel size of the TitleCluster node as authored in the main menu scene.
 const CLUSTER_SIZE := Vector2(1080.0, 420.0)
+# The crop region within CLUSTER_SIZE that contains just the title text (strips
+# excess vertical whitespace above and below the visible title area).
 const TITLE_CROP := Rect2(0.0, 220.0, 1080.0, 180.0)
 
 
+# Entry point: renders all three store assets and returns true when all succeed.
+# Waits a few frames first so the scene tree is fully settled before capturing.
 static func render_all(tree: SceneTree) -> bool:
 	print("StoreAssetRenderer: starting")
 	var host := Node.new()
@@ -29,6 +37,8 @@ static func render_all(tree: SceneTree) -> bool:
 	return ok
 
 
+# Captures content into a SubViewport at the given size, then writes the result
+# to a deterministic filename under OUTPUT_DIR based on the pixel dimensions.
 static func _save_png(host: Node, tree: SceneTree, size: Vector2i, content: Control) -> bool:
 	var image := await _capture(host, tree, size, content)
 	if image == null:
@@ -53,6 +63,9 @@ static func _save_png(host: Node, tree: SceneTree, size: Vector2i, content: Cont
 	return true
 
 
+# Creates a temporary SubViewport, adds a background and the content Control,
+# then waits 8 frames for Godot to fully render the scene before extracting the
+# image. The viewport is freed after capture to avoid memory leaks.
 static func _capture(host: Node, tree: SceneTree, size: Vector2i, content: Control) -> Image:
 	var vp := SubViewport.new()
 	vp.name = "CaptureViewport"
@@ -82,6 +95,8 @@ static func _capture(host: Node, tree: SceneTree, size: Vector2i, content: Contr
 	return tex.get_image()
 
 
+# Builds the 512×512 app icon asset: space background + the SVG app icon
+# stretched to fill the full square.
 static func _build_app_icon() -> Control:
 	var root := Control.new()
 	var bg := ColorRect.new()
@@ -100,6 +115,8 @@ static func _build_app_icon() -> Control:
 	return root
 
 
+# Builds the 1024×500 feature graphic (landscape). Scales the TITLE_CROP
+# region of the TitleCluster to fit within a 960×360 safe area and centres it.
 static func _build_feature_landscape() -> Control:
 	var root := Control.new()
 	_add_star_field(root, Vector2(1024, 500))
@@ -115,6 +132,8 @@ static func _build_feature_landscape() -> Control:
 	return root
 
 
+# Builds the 500×1024 feature graphic (portrait). Pins the title to the upper
+# third of the canvas so there is space below for promotional text overlays.
 static func _build_feature_portrait() -> Control:
 	var root := Control.new()
 	_add_star_field(root, Vector2(500, 1024))
@@ -130,6 +149,11 @@ static func _build_feature_portrait() -> Control:
 	return root
 
 
+# Extracts the TitleCluster node from the main menu scene without running the
+# full menu. The cluster is reparented to avoid it being freed with the menu,
+# and its anchors are reset to top-left so scale/position work predictably.
+# Font overrides are applied here to ensure consistent rendering outside the
+# game's normal theme context.
 static func _instantiate_title_cluster() -> Control:
 	var menu: Node = MAIN_MENU_SCENE.instantiate()
 	var cluster: Control = menu.get_node("TitleLayer/TitleHost/TitleCluster")
@@ -168,6 +192,9 @@ static func _instantiate_title_cluster() -> Control:
 	return cluster
 
 
+# Adds a space background and a fixed set of 3×3 pixel "stars" at hand-placed
+# fractional positions. Stars alternate between dim and bright to give depth.
+# Using fixed positions (rather than random) guarantees reproducible renders.
 static func _add_star_field(parent: Control, size: Vector2) -> void:
 	var bg := ColorRect.new()
 	bg.color = SPACE_BG

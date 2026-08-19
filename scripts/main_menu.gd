@@ -61,9 +61,13 @@ const MENU_FADE_IN := 0.65
 var _htp_header: Label
 var _htp_page: int = 0
 
-var _consent_blocker: ColorRect  # Instance of consent_popup.tscn
+# Instance of consent_popup.tscn. Kept as a reference so we can check
+# its visibility for the back-button handler.
+var _consent_blocker: ColorRect
 
-# Dev mode long-press on version label
+# Dev mode is unlocked by holding the version label in credits for _VERSION_HOLD_SEC seconds.
+# This gives the developer access to debug tools in production builds without exposing them
+# to players, and without storing the flag in the save file.
 var _version_hold_active: bool = false
 var _version_hold_elapsed: float = 0.0
 const _VERSION_HOLD_SEC := 3.0
@@ -425,6 +429,7 @@ func _refresh_credits_version() -> void:
 	if not credits_version_label.gui_input.is_connected(_on_version_label_input):
 		credits_version_label.gui_input.connect(_on_version_label_input)
 
+# Detects press/release on the version label to start/stop the hold timer.
 func _on_version_label_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
@@ -434,6 +439,7 @@ func _on_version_label_input(event: InputEvent) -> void:
 		else:
 			_version_hold_active = false
 
+# Counts hold time; fires _toggle_dev_mode once the threshold is reached.
 func _process(delta: float) -> void:
 	if not _version_hold_active:
 		set_process(false)
@@ -444,15 +450,15 @@ func _process(delta: float) -> void:
 		set_process(false)
 		_toggle_dev_mode()
 
+# Toggles dev mode via SaveManager and flashes the version label green (on) or red (off).
+# Does NOT change debug_bar visibility here — the bar must only appear in the main menu,
+# not inside the credits overlay where this label lives.
 func _toggle_dev_mode() -> void:
 	if SaveManager == null:
 		return
 	var now_on := SaveManager.toggle_dev_mode()
-	# Only update the global flag; don't touch debug_bar visibility here because
-	# we may be inside the credits overlay where the bar must stay hidden.
 	GlobalGameManager.debug_tools_enabled = _is_debug_enabled()
 	_refresh_credits_version()
-	# Brief flash on the version label as confirmation.
 	if credits_version_label:
 		var tw := create_tween()
 		var target_color := Color(0.2, 1.0, 0.4, 1.0) if now_on else Color(1.0, 0.3, 0.3, 1.0)
@@ -465,6 +471,8 @@ func _apply_editor_button_label() -> void:
 	editor_btn.text = "EDITOR"
 	editor_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 
+# Debug tools are enabled either via the export flag (editor/testing builds)
+# or via the in-game dev mode unlock (runtime, session-only).
 func _is_debug_enabled() -> bool:
 	return show_debug_tools or (SaveManager != null and SaveManager.dev_mode_enabled)
 
@@ -568,6 +576,9 @@ func _on_htp_close() -> void:
 
 const _CONSENT_POPUP_SCENE := preload("res://scenes/consent_popup.tscn")
 
+# Instantiates the consent popup scene and shows it on first launch.
+# The popup blocks interaction with the main menu until the player accepts.
+# On subsequent launches, privacy_accepted is true so the popup stays hidden.
 func _build_consent_popup() -> void:
 	var ui_layer := get_node_or_null("UILayer") as CanvasLayer
 	if ui_layer == null:
@@ -581,6 +592,8 @@ func _build_consent_popup() -> void:
 		_consent_blocker.visible = true
 		_consent_blocker.move_to_front()
 
+# Called when the player taps ACCEPT on the consent popup.
+# Saves acceptance, restores the main menu UI, and applies debug visibility.
 func _on_consent_accepted() -> void:
 	if SaveManager:
 		SaveManager.accept_privacy()
@@ -694,7 +707,11 @@ func _on_close_credits() -> void:
 	if overlay_blocker: overlay_blocker.visible = false
 	if credits_panel: credits_panel.visible = false
 	_set_main_menu_chrome_visible(true)
-	_set_debug_bar_visible(true)
+	# Refresh editor + debug bar now that credits overlay is gone — dev mode may
+	# have been toggled while credits was open and _toggle_dev_mode intentionally
+	# skips visibility changes until we return to the main menu.
+	_apply_debug_tools_visibility()
+	_fit_menu_buttons()
 
 func _on_editor_pressed() -> void:
 	GlobalGameManager.go_to_scene("res://scenes/level_editor.tscn")

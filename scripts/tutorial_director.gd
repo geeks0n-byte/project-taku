@@ -1,50 +1,84 @@
+# Drives a step-based tutorial sequence for puzzle levels. Controls board input
+# (cell whitelisting, highlighting, focus), displays instructional messages, and
+# manages special modes like free-discovery and rule-teaching before handing
+# control back to the player for the final solve.
 class_name TutorialDirector
 extends Node
 
+# Emitted when the entire tutorial (including the final solve) is complete.
 signal finished
+# Emitted when tools become available after being locked during guided steps.
 signal tools_unlocked
+# Emitted whenever the board grid is rebuilt mid-tutorial (layout/size change).
 signal board_layout_changed
 
 var board_manager: BoardManager
 var ui_manager: UIManager
+# The tile types the player may cycle through on non-tutorial cells; restored when teaching ends.
 var available_tiles: Array = [0, 1, 2]
 
+# Step sequencing state
 var _steps: Array = []
 var _index: int = -1
 var _active: bool = false
 var _script_id: String = ""
+
+# "Next" button interaction state
 var _next_button: Button
 var _awaiting_next: bool = false
+
+# Practice step tracking
 var _practice_succeeded: bool = false
+
+# HUD/tool locking
 var _tools_locked: bool = false
 var _highlight_button_id: String = ""
+
+# Completion tracking
 var _solved_complete: bool = false
+
+# Cached status text for locale refresh
 var _last_status_key: String = ""
 var _last_status_icons: Array = []
 var _last_status_show_next: bool = false
 var _last_status_append_next_prompt: bool = false
+
+# Solve-gating: _block_solve prevents premature solve detection during teaching
 var _block_solve: bool = false
+
+# "Discover rules" mode: player experiments freely until a rule violation triggers teaching
 var _discover_active: bool = false
+# Rule teach shows two explanations in sequence (phase 1 then phase 2)
 var _rule_teach_phase: int = 0
 var _rule_teach_first_key: String = ""
 var _rule_teach_second_key: String = ""
 var _rule_teach_first_icons: Array = []
 var _rule_teach_second_icons: Array = []
+
+# When true, validation errors are suppressed in the UI (tutorial handles feedback itself)
 var _suppress_validation_errors: bool = false
+# True once all steps are done and the player is solving freely
 var _awaiting_solve: bool = false
+# Deferred board rebuild waiting for the player to press Next
 var _pending_rebuild: bool = false
 
+# Wires the director to the board and optional UI manager; must be called before start().
 func setup(board: BoardManager, ui: UIManager = null) -> void:
 	board_manager = board
 	ui_manager = ui
 	_ensure_next_button()
 
+# True while a tutorial script is running (including the final free-solve phase).
 func is_active() -> bool:
 	return _active
 
+# When true the caller should skip showing validation error toasts; the tutorial
+# provides its own contextual feedback instead.
 func suppress_validation_errors() -> bool:
 	return _suppress_validation_errors
 
+# Starts a named tutorial script and locks tools until the teaching phase ends.
+# Resets any previously running tutorial first to avoid stale state.
 func start(script_id: String, tiles: Array) -> void:
 	stop()
 	if not TutorialScripts.has_script(script_id):
@@ -63,6 +97,8 @@ func start(script_id: String, tiles: Array) -> void:
 	refresh_tool_gates()
 	_advance()
 
+# Tears down all tutorial state: clears board gates, hides the Next button,
+# re-enables tools, and resets every internal flag to its default value.
 func stop() -> void:
 	_active = false
 	_awaiting_next = false
@@ -104,6 +140,9 @@ func stop() -> void:
 		if ui_manager.has_method("set_tutorial_mode"):
 			ui_manager.set_tutorial_mode(false)
 
+# Called by BoardManager whenever any cell changes. Routes the event to the
+# appropriate handler depending on the current step type; ignored during
+# discover-rules mode and while waiting for the player to press Next.
 func on_board_changed(_coord: Vector2i = Vector2i(-1, -1)) -> void:
 	if not _active or _solved_complete:
 		return
@@ -120,6 +159,9 @@ func on_board_changed(_coord: Vector2i = Vector2i(-1, -1)) -> void:
 		return
 	_check_wait_condition()
 
+# Called when a move is rejected. Returns true (and advances the step) if the
+# current practice step is specifically waiting for a blocked-shifter error,
+# turning an intentional failure into the expected success condition.
 func on_invalid_move(msg: String) -> bool:
 	if not _active or _solved_complete:
 		return false
@@ -133,6 +175,9 @@ func on_invalid_move(msg: String) -> bool:
 	_on_practice_success(step)
 	return true
 
+# Called after each validation pass during the discover-rules phase. If the player
+# broke the rule-of-two or balance rule, or filled the board successfully, we
+# interrupt free play and begin the two-phase rule-teaching sequence.
 func on_validation_result(results: Dictionary) -> void:
 	if not _active or _solved_complete or not _discover_active:
 		return
@@ -147,6 +192,7 @@ func on_validation_result(results: Dictionary) -> void:
 	if bool(results.get("valid", false)) and board_manager and board_manager.is_board_full():
 		_start_rule_teach(false, false)
 
+# Scans the error list for any THREE-in-a-row violation message.
 func _errors_include_rule_of_two(errors: Array) -> bool:
 	for e in errors:
 		var s := String(e)
@@ -154,12 +200,15 @@ func _errors_include_rule_of_two(errors: Array) -> bool:
 			return true
 	return false
 
+# Scans the error list for any row/column imbalance error (ERR_UNEQUAL_*).
 func _errors_include_balance(errors: Array) -> bool:
 	for e in errors:
 		if String(e).begins_with("ERR_UNEQUAL_"):
 			return true
 	return false
 
+# Begins the two-phase rule explanation after a violation during discover-rules.
+# The violated rule is shown first; if both fired simultaneously, rule-of-two goes first.
 func _start_rule_teach(broke_two: bool, broke_balance: bool) -> void:
 	_discover_active = false
 	_block_solve = true
@@ -188,6 +237,9 @@ func _start_rule_teach(broke_two: bool, broke_balance: bool) -> void:
 	_rule_teach_phase = 1
 	_show_message_key(_rule_teach_first_key, _rule_teach_first_icons, true)
 
+# Called when the validator confirms a complete, valid board. Only triggers
+# during the final free-solve phase (_awaiting_solve), and only if rule-teaching
+# and discover-rules mode are fully finished.
 func on_board_solved() -> void:
 	if not _active or _solved_complete:
 		return
@@ -208,6 +260,9 @@ func on_board_solved() -> void:
 	refresh_tool_gates()
 	_show_message_key("TUT_COMPLETE", [], true)
 
+# Called when the player taps a HUD button. If the current step is a hud_button
+# step expecting exactly this button, the tutorial advances and returns true
+# (signalling to the caller that the action was consumed by the tutorial).
 func consume_hud_action(button_id: String) -> bool:
 	if not _active or _solved_complete:
 		return false
@@ -220,6 +275,8 @@ func consume_hud_action(button_id: String) -> bool:
 	_advance()
 	return true
 
+# Pushes the current lock/highlight state to the UI manager. Called after any
+# step transition that might change which HUD buttons should be enabled or highlighted.
 func refresh_tool_gates() -> void:
 	if not ui_manager:
 		return
@@ -233,11 +290,13 @@ func refresh_tool_gates() -> void:
 	else:
 		ui_manager.highlight_hud_button(_highlight_button_id)
 
+# Safe accessor for the step at _index; returns an empty dict when out of range.
 func _current_step() -> Dictionary:
 	if _index < 0 or _index >= _steps.size():
 		return {}
 	return _steps[_index]
 
+# Moves to the next step, or transitions to the free-solve phase when all steps are done.
 func _advance() -> void:
 	if _solved_complete:
 		return
@@ -249,6 +308,8 @@ func _advance() -> void:
 		return
 	_apply_step(_steps[_index])
 
+# Dispatches a step dictionary to the correct handler based on its "type" field.
+# Unknown types are skipped so future step types don't hard-break old scripts.
 func _apply_step(step: Dictionary) -> void:
 	var kind := String(step.get("type", ""))
 	_suppress_validation_errors = bool(step.get("suppress_errors", false))
@@ -337,6 +398,9 @@ func _apply_step(step: Dictionary) -> void:
 		_:
 			_advance()
 
+# Deferred check used by the "done" step: if the board is already full and valid
+# when the free-solve phase starts, complete the tutorial immediately without
+# requiring the player to make another move.
 func _try_complete_if_full() -> void:
 	if not _active or _solved_complete or _block_solve:
 		return
@@ -351,6 +415,9 @@ func _try_complete_if_full() -> void:
 	if bool(results.get("valid", false)):
 		on_board_solved()
 
+# Transitions into the final free-solve phase: unlocks tools (emitting
+# tools_unlocked if they were previously locked), clears board gates, and
+# shows the "play freely" tip message.
 func _enter_await_solve(tip_key: String = "", tip_icons: Array = []) -> void:
 	_awaiting_solve = true
 	_highlight_button_id = ""
@@ -366,6 +433,8 @@ func _enter_await_solve(tip_key: String = "", tip_icons: Array = []) -> void:
 		key = "TUT_PLAY_FREE"
 	_show_message_key(key, tip_icons, false)
 
+# Removes all highlight, focus, and click-whitelist restrictions from the board.
+# Pass restore_cycles=true to also re-allow all available tile types on every cell.
 func _clear_board_gates(restore_cycles: bool) -> void:
 	if not board_manager:
 		return
@@ -375,10 +444,15 @@ func _clear_board_gates(restore_cycles: bool) -> void:
 	if restore_cycles:
 		board_manager.restore_cell_cycle_tiles(available_tiles)
 
+# Blocks all board cell taps by setting an empty whitelist (no cell is clickable).
 func _freeze_board_input() -> void:
 	if board_manager:
 		board_manager.set_click_whitelist([])
 
+# Applies the visual focus (guide/border highlights) and click-whitelist from a
+# step's mask/highlight/red/border fields, plus any per-cell cycle override.
+# For practice steps the whitelist is restricted to exactly the highlighted cells
+# (plus the shifter "from" cell when applicable).
 func _apply_focus(step: Dictionary) -> void:
 	if not board_manager:
 		return
@@ -420,6 +494,11 @@ func _apply_focus(step: Dictionary) -> void:
 		board_manager.set_cell_cycle_tiles(step["coord"], step["cycle"])
 	refresh_tool_gates()
 
+# Re-evaluates the target cell for a practice step and updates the status message
+# and error highlight accordingly. Handles three distinct practice modes:
+#   wait_blocked_shifter – player must try (and fail) to move a blocked shifter
+#   wait_shifter         – player must move a shifter to its "from" neighbor
+#   default              – player must set the cell to a specific tile state
 func _update_practice_feedback(step: Dictionary) -> void:
 	if not board_manager or not step.has("coord"):
 		return
@@ -464,12 +543,16 @@ func _update_practice_feedback(step: Dictionary) -> void:
 	_show_message_key(wrong_key, step.get("wrong_icons", step.get("icons", [])), false)
 	call_deferred("_reapply_practice_focus")
 
+# Clears the red error highlight from a cell if it supports that method.
 func _clear_practice_error(cell) -> void:
 	if cell == null:
 		return
 	if cell.has_method("clear_highlight"):
 		cell.clear_highlight()
 
+# Guards against double-triggering (practice steps can fire multiple board events).
+# Shows the success message if defined, and either waits for Next or auto-advances
+# depending on the step's require_next_after_success flag.
 func _on_practice_success(step: Dictionary) -> void:
 	if _practice_succeeded:
 		return
@@ -491,11 +574,15 @@ func _on_practice_success(step: Dictionary) -> void:
 		return
 	call_deferred("_advance_after_practice")
 
+# Deferred wrapper around _advance() used after a successful practice step, so
+# the success message has a chance to render before the next step is applied.
 func _advance_after_practice() -> void:
 	if not _active or _solved_complete:
 		return
 	_advance()
 
+# Deferred re-application of focus after showing an error message: ensures the
+# whitelist and highlights are restored once the wrong-key message has been set.
 func _reapply_practice_focus() -> void:
 	if not _active or _solved_complete or _practice_succeeded:
 		return
@@ -504,6 +591,8 @@ func _reapply_practice_focus() -> void:
 		return
 	_apply_focus(step)
 
+# Evaluates the pass condition for wait_cell, wait_shifter, and wait_full_valid
+# steps. Advances the step when met, or shows the Next button for wait_full_valid.
 func _check_wait_condition() -> void:
 	if not _active or _solved_complete or _index < 0 or _index >= _steps.size():
 		return
@@ -532,6 +621,8 @@ func _check_wait_condition() -> void:
 		if bool(results.get("valid", false)):
 			_set_next_visible(true)
 
+# Convenience wrapper that extracts text_key and icons from a step dict and
+# suppresses the Next button when allow_board is true (player acts to proceed).
 func _show_message_from_step(step: Dictionary, show_next: bool) -> void:
 	var allow_board := bool(step.get("allow_board", false))
 	var free_place := bool(step.get("free_place", false))
@@ -544,6 +635,11 @@ func _show_message_from_step(step: Dictionary, show_next: bool) -> void:
 		false
 	)
 
+# Core message display: translates the key, substitutes tile-icon BBCode for each
+# "%s" placeholder in the icons array, applies colour-label gluing, strips any
+# hardcoded "Tap Next" phrase from the translation (the button handles that), then
+# sends the result to the UI. Caches parameters so refresh_for_locale() can re-run
+# this after a language change without needing to re-read the current step.
 func _show_message_key(
 	key: String,
 	icons: Variant,
@@ -563,6 +659,8 @@ func _show_message_key(
 	_set_next_visible(show_next)
 	call_deferred("_position_next_button")
 
+# Replaces each "%s" in the translated text with the BBCode image tag for the
+# corresponding token in the icons array (yellow, blue, lock, etc.).
 func _apply_icon_placeholders(text: String, icons: Array) -> String:
 	var result := text
 	for token in icons:
@@ -574,6 +672,9 @@ func _apply_icon_placeholders(text: String, icons: Array) -> String:
 		result = result.substr(0, idx) + img + result.substr(idx + needle.length())
 	return result
 
+# Some translation strings end with a locale-specific "Tap Next" call-to-action
+# that was added before the Next button existed. This strips those trailing phrases
+# so we don't duplicate the prompt when the button is already visible.
 func _strip_inline_next_prompt(text: String) -> String:
 	var cleaned := text.strip_edges()
 	var markers: Array[String] = [
@@ -594,6 +695,8 @@ func _strip_inline_next_prompt(text: String) -> String:
 				break
 	return cleaned.strip_edges()
 
+# Re-displays the current status message using the new locale. Called by the
+# parent scene when the player changes language mid-tutorial.
 func refresh_for_locale() -> void:
 	if not _active:
 		return
@@ -607,6 +710,9 @@ func refresh_for_locale() -> void:
 	elif _awaiting_next:
 		_set_next_visible(true)
 
+# Shows or hides the Next button and starts/stops its attention-pulse animation.
+# When shown, also clears guide/focus visuals and freezes board input unless the
+# current step is a free_place or hud_button step that needs board access.
 func _set_next_visible(show_next: bool) -> void:
 	_ensure_next_button()
 	_awaiting_next = show_next
@@ -642,6 +748,8 @@ func _set_next_visible(show_next: bool) -> void:
 			HudLayout.stop_toggle_mask_breathe(_next_button)
 			HudLayout.apply_toggle_active_mask(_next_button, false)
 
+# Applies the standard dialog-button style to the Next button, removing any
+# leftover icon container from a previous style pass.
 func _style_tutorial_next_button() -> void:
 	if not _next_button:
 		return
@@ -656,6 +764,9 @@ func _style_tutorial_next_button() -> void:
 	_next_button.set_meta("_use_default_font", HudLayout.prefer_default_font())
 	HudLayout.apply_dialog_button(_next_button)
 
+# Handles the player pressing the Next button. The exact action depends on the
+# current tutorial sub-state: finishing the tutorial, advancing through the two-phase
+# rule-teach, executing a pending board rebuild, or simply moving to the next step.
 func _on_next_pressed() -> void:
 	if not _active or not _awaiting_next:
 		return
@@ -683,6 +794,8 @@ func _on_next_pressed() -> void:
 		return
 	_advance()
 
+# Resets all non-locked, non-shifter cells back to EMPTY before a board transition.
+# Used by free_place message steps so the player starts the next section with a clean slate.
 func _clear_unlocked_player_tiles() -> void:
 	if not board_manager:
 		return
@@ -700,6 +813,9 @@ func _clear_unlocked_player_tiles() -> void:
 	board_manager.clear_highlights()
 	board_manager.trigger_redraw()
 
+# Performs the deferred board rebuild that was queued by a rebuild_board step.
+# The rebuild is deferred until Next is pressed so the player can read the
+# transition message before the layout changes.
 func _execute_pending_rebuild() -> void:
 	_pending_rebuild = false
 	var step := _current_step()
@@ -725,12 +841,17 @@ func _execute_pending_rebuild() -> void:
 	if bool(step.get("allow_board", false)) and board_manager:
 		board_manager.clear_click_whitelist()
 
+# Calls stop() and emits finished if the tutorial was actually running.
+# Checking was_active prevents a spurious signal when stop() is called externally.
 func _finish() -> void:
 	var was_active := _active
 	stop()
 	if was_active:
 		finished.emit()
 
+# Looks up the TutorialNextButton node under the status label's parent and
+# connects its pressed signal once. Safe to call repeatedly; bails out if the
+# button is already valid.
 func _ensure_next_button() -> void:
 	if _next_button and is_instance_valid(_next_button):
 		return
@@ -747,6 +868,9 @@ func _ensure_next_button() -> void:
 		_next_button.pressed.connect(_on_next_pressed)
 	_position_next_button()
 
+# Positions the Next button above the status area. If the status label has
+# overflowed its minimum height, the button is pushed up to avoid overlap.
+# The z_index ensures it renders above other HUD elements.
 func _position_next_button() -> void:
 	if not _next_button:
 		return

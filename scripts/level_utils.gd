@@ -1,12 +1,19 @@
 class_name LevelUtils
 extends RefCounted
 
+# Pure-static utility library for level/board data operations.
+# No state; all functions are safe to call from any context.
+
+# Returns true when every tile in the layout has a negative value (shape/wall-only,
+# no coloured tiles placed). Used to skip solve checks on shape-only boards.
 static func is_shape_only_layout(layout: Dictionary) -> bool:
 	for coord in layout:
 		if int(layout[coord]) >= 0:
 			return false
 	return true
 
+# Validates and de-duplicates a raw tile array from a LevelData resource.
+# Falls back to the default yellow/blue/joker set if the array is empty or entirely invalid.
 static func normalize_available_tiles(raw: Array) -> Array[int]:
 	var out: Array[int] = []
 	var seen: Dictionary = {}
@@ -26,12 +33,14 @@ static func normalize_available_tiles(raw: Array) -> Array[int]:
 		] as Array[int]
 	return out
 
+# Whether the joker tile type is included in a tile set, controlling joker placement in gameplay.
 static func tiles_allow_joker(tiles: Array) -> bool:
 	for tile in tiles:
 		if int(tile) == GameConstants.TileState.JOKER:
 			return true
 	return false
 
+# Whether a specific tile state is present in the allowed-tiles list.
 static func tiles_include(tiles: Array, state: int) -> bool:
 	var want := int(state)
 	for tile in tiles:
@@ -39,6 +48,7 @@ static func tiles_include(tiles: Array, state: int) -> bool:
 			return true
 	return false
 
+# Creates a fully empty layout dictionary spanning the given grid dimensions.
 static func make_empty_layout(width: int, height: int) -> Dictionary:
 	var layout := {}
 	for y in range(height):
@@ -46,6 +56,8 @@ static func make_empty_layout(width: int, height: int) -> Dictionary:
 			layout[Vector2i(x, y)] = GameConstants.TileState.EMPTY
 	return layout
 
+# Fills any missing coordinates in an existing layout with EMPTY so downstream
+# code can iterate the full grid without bounds-checking every cell.
 static func ensure_layout_covers_grid(layout: Dictionary, width: int, height: int) -> Dictionary:
 	var filled: Dictionary = layout.duplicate()
 	for y in range(height):
@@ -55,6 +67,8 @@ static func ensure_layout_covers_grid(layout: Dictionary, width: int, height: in
 				filled[coord] = GameConstants.TileState.EMPTY
 	return filled
 
+# Infers grid size from the bounding box of the layout dictionary's keys.
+# Useful when the level was saved without explicit width/height fields.
 static func get_dimensions_from_layout(layout: Dictionary, fallback_w: int = 6, fallback_h: int = 6) -> Vector2i:
 	if layout.is_empty():
 		return Vector2i(fallback_w, fallback_h)
@@ -67,11 +81,14 @@ static func get_dimensions_from_layout(layout: Dictionary, fallback_w: int = 6, 
 			max_y = coord.y
 	return Vector2i(max_x + 1, max_y + 1)
 
+# Prefers layout-derived dimensions because they reflect the actual cell data;
+# falls back to the stored width/height for older levels without a layout field.
 static func get_dimensions_from_level(level: LevelData) -> Vector2i:
 	if level.layout.size() > 0:
 		return get_dimensions_from_layout(level.layout)
 	return Vector2i(level.width, level.height)
 
+# Derives grid size from an in-memory board_cells dictionary (live Cell nodes, not raw data).
 static func get_dimensions_from_cells(board_cells: Dictionary) -> Vector2i:
 	var max_x := 0
 	var max_y := 0
@@ -82,6 +99,7 @@ static func get_dimensions_from_cells(board_cells: Dictionary) -> Vector2i:
 			max_y = coord.y
 	return Vector2i(max_x + 1, max_y + 1)
 
+# Counts joker tiles stored in a raw layout dictionary (design-time data).
 static func count_jokers_in_layout(layout: Dictionary) -> int:
 	var count := 0
 	for coord in layout:
@@ -89,6 +107,7 @@ static func count_jokers_in_layout(layout: Dictionary) -> int:
 			count += 1
 	return count
 
+# Counts joker tiles on the live board (runtime Cell nodes).
 static func count_jokers_on_board(board_cells: Dictionary) -> int:
 	var count := 0
 	for coord in board_cells:
@@ -96,6 +115,7 @@ static func count_jokers_on_board(board_cells: Dictionary) -> int:
 			count += 1
 	return count
 
+# Counts joker tiles that are not locked, i.e. ones the player has placed and can still move.
 static func count_unlocked_jokers(board_cells: Dictionary) -> int:
 	var count := 0
 	for coord in board_cells:
@@ -104,11 +124,15 @@ static func count_unlocked_jokers(board_cells: Dictionary) -> int:
 			count += 1
 	return count
 
+# Converts a saved required_jokers value of -1 into a concrete number.
+# -1 is the convention for "auto: use the shorter grid dimension".
 static func resolve_required_jokers(saved_required: int, grid_w: int, grid_h: int) -> int:
 	if saved_required < 0:
 		return mini(grid_w, grid_h)
 	return saved_required
 
+# Counts how many shifter pairs are not in their home position.
+# Each displaced pair requires at least one swap move to solve.
 static func compute_required_shifter_moves(shifter_pairs: Array) -> int:
 	var required := 0
 	for pair in shifter_pairs:
@@ -120,6 +144,8 @@ static func compute_required_shifter_moves(shifter_pairs: Array) -> int:
 			required += 1
 	return required
 
+# Converts live board_cells into the flat layout format expected by the solver,
+# and collects a list of unfilled coordinates for backtracking.
 static func build_solve_layout(board_cells: Dictionary) -> Dictionary:
 	var solve_layout := {}
 	var empty_cells: Array = []
@@ -130,6 +156,8 @@ static func build_solve_layout(board_cells: Dictionary) -> Dictionary:
 			empty_cells.append(coord)
 	return {"layout": solve_layout, "empty_cells": empty_cells}
 
+# Produces a solve-ready layout where the SHIFTER tile is placed at the active cell
+# and the inactive partner cell is cleared to EMPTY, matching the logical game state.
 static func layout_with_shifters_for_solve(layout: Dictionary, shifter_pairs: Array) -> Dictionary:
 	var solve_layout: Dictionary = layout.duplicate()
 	for pair in shifter_pairs:
@@ -145,10 +173,12 @@ static func layout_with_shifters_for_solve(layout: Dictionary, shifter_pairs: Ar
 		var other: Vector2i = cell_b if home == cell_a else cell_a
 		if solve_layout.has(home):
 			solve_layout[home] = GameConstants.TileState.SHIFTER
+		# Clear the partner cell only if it was also SHIFTER (avoid wiping a coloured tile).
 		if solve_layout.has(other) and solve_layout[other] == GameConstants.TileState.SHIFTER:
 			solve_layout[other] = GameConstants.TileState.EMPTY
 	return solve_layout
 
+# Returns the first found solution layout, or an empty dict if the puzzle is unsolvable.
 static func solve_reference(
 	layout: Dictionary,
 	empty_cells: Array,
@@ -163,6 +193,8 @@ static func solve_reference(
 		return test_layout
 	return {}
 
+# Counts all valid solutions up to the solver's internal cap.
+# Pass an existing tracker dict as `iter` to chain multiple calls (e.g. batched counting).
 static func count_solutions(
 	layout: Dictionary,
 	empty_cells: Array,
@@ -181,6 +213,8 @@ static func count_solutions(
 		test_layout, test_empty, width, height, tiles, constraints, tracker
 	)
 
+# Extracts a list of EMPTY-state coordinates from a layout dictionary.
+# Convenience wrapper used when preparing data for the solver.
 static func empty_cells_from_layout(layout: Dictionary) -> Array:
 	var empty_cells: Array = []
 	for coord in layout:
@@ -188,12 +222,15 @@ static func empty_cells_from_layout(layout: Dictionary) -> Array:
 			empty_cells.append(coord)
 	return empty_cells
 
+# Order-independent check: returns true if the {a,b} pair exists in either direction.
 static func is_constraint_in_list(a: Vector2i, b: Vector2i, list: Array) -> bool:
 	for pair in list:
 		if (pair["a"] == a and pair["b"] == b) or (pair["a"] == b and pair["b"] == a):
 			return true
 	return false
 
+# Computes the vertical board origin so it appears visually centered in the upper third
+# of the screen for small grids, but pinned just below the HUD for larger ones.
 static func center_board_y(grid_height: int, cell_size: float, screen_height: float) -> float:
 	var board_pixel_height := grid_height * cell_size
 	if grid_height <= 7:
@@ -201,15 +238,21 @@ static func center_board_y(grid_height: int, cell_size: float, screen_height: fl
 		return maxf(centered, GameConstants.TOP_HUD_BOTTOM + GameConstants.BOARD_GAP)
 	return GameConstants.TOP_HUD_BOTTOM + GameConstants.BOARD_GAP
 
+# Centers the board horizontally within the screen.
 static func center_board_x(grid_width: int, cell_size: float, screen_width: float) -> float:
 	var board_pixel_width := grid_width * cell_size
 	return (screen_width - board_pixel_width) / 2.0
 
+# Safe accessor for shifter_pairs that handles older LevelData resources
+# that may not have the field at all.
 static func get_shifter_pairs(level: LevelData) -> Array:
 	if "shifter_pairs" in level:
 		return level.shifter_pairs
 	return []
 
+# Applies lock/playability flags to a cell as if it were being loaded for playtesting.
+# Walls block interaction entirely; pre-placed coloured tiles are locked in place;
+# empty and shifter cells remain freely playable.
 static func apply_playtest_cell_locks(cell) -> void:
 	if cell.state == GameConstants.TileState.WALL:
 		cell.is_playable = false
@@ -221,6 +264,8 @@ static func apply_playtest_cell_locks(cell) -> void:
 		cell.is_playable = true
 		cell.is_locked = false
 
+# Lists all .tres level files in a directory, also resolving .tres.remap paths
+# produced by the export pipeline on Android/iOS where resources are remapped.
 static func scan_directory(path_to_scan: String) -> Array:
 	var found_files: Array = []
 	if not DirAccess.dir_exists_absolute(path_to_scan):
@@ -236,11 +281,14 @@ static func scan_directory(path_to_scan: String) -> Array:
 			if file_name.ends_with(".tres"):
 				found_files.append(base + file_name)
 			elif file_name.ends_with(".tres.remap"):
+				# Strip the .remap suffix so the path points to the logical resource.
 				found_files.append(base + file_name.replace(".remap", ""))
 		file_name = dir.get_next()
 	dir.list_dir_end()
 	return found_files
 
+# Sorts level paths numerically by the number embedded in filenames like "level_42.tres".
+# String sort would produce wrong order (e.g. level_10 < level_9).
 static func sort_level_paths(paths: Array) -> void:
 	paths.sort_custom(func(a, b):
 		var num_a = int(String(a).get_file().get_basename().replace("level_", ""))
@@ -248,6 +296,7 @@ static func sort_level_paths(paths: Array) -> void:
 		return num_a < num_b
 	)
 
+# Returns an ordered list of all campaign level paths across every difficulty folder.
 static func scan_campaign_levels() -> Array:
 	var found: Array = []
 	for folder in [
@@ -261,6 +310,8 @@ static func scan_campaign_levels() -> Array:
 		found.append_array(folder_paths)
 	return found
 
+# Finds the level_number of the first non-tutorial campaign level.
+# Used to offset display numbers so the player always sees "Level 1" for the first real level.
 static func first_campaign_level_number() -> int:
 	for folder in [
 		GameConstants.CAMPAIGN_EASY_DIR,
@@ -275,6 +326,8 @@ static func first_campaign_level_number() -> int:
 				return int(resource.level_number)
 	return 1
 
+# Returns the player-visible level number, remapping campaign levels to start at 1
+# while keeping tutorial numbers as-is.
 static func get_display_level_number(level: LevelData) -> int:
 	if level == null:
 		return 0
@@ -286,5 +339,6 @@ static func get_display_level_number(level: LevelData) -> int:
 		or path.begins_with(GameConstants.CAMPAIGN_MEDIUM_DIR)
 		or path.begins_with(GameConstants.CAMPAIGN_HARD_DIR)
 	):
+		# Subtract the internal offset so the first campaign level always displays as 1.
 		return maxi(1, int(level.level_number) - first_campaign_level_number() + 1)
 	return int(level.level_number)

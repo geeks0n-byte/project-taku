@@ -1,22 +1,36 @@
 class_name UndoStack
 extends RefCounted
 
+# Generic undo/redo stack that stores board-state snapshots (Dictionaries).
+# Each call to record() pushes the previous state onto _undo and clears _redo,
+# preserving the standard "undo invalidates redo history" contract.
+
+# Maximum number of states kept on the undo stack; oldest entries are dropped
+# when the limit is exceeded. 0 means unlimited.
 var max_size: int = GameConstants.UNDO_STACK_LIMIT
 var _undo: Array = []
 var _redo: Array = []
+# The live state — not yet on the undo stack; returned as the restored state
+# when the player undoes back to it.
 var current: Dictionary = {}
 
+# Clears both stacks and sets the starting state (the "clean slate" snapshot).
 func reset(initial_state: Dictionary) -> void:
 	_undo.clear()
 	_redo.clear()
 	current = initial_state
 
+# Saves the current state so it can be restored by undo(), then moves to new_state.
+# Clears the redo stack because a new branch of history has begun.
 func record(new_state: Dictionary) -> void:
 	_undo.append(current)
 	_trim_undo_if_needed()
 	_redo.clear()
 	current = new_state
 
+# Pops the most recent state from the undo stack and makes it current.
+# The state that was current moves onto the redo stack.
+# Returns an empty dict (no-op signal) when there is nothing to undo.
 func undo() -> Dictionary:
 	if _undo.is_empty():
 		return {}
@@ -24,6 +38,9 @@ func undo() -> Dictionary:
 	current = _undo.pop_back()
 	return current
 
+# Re-applies the most recently undone state. Puts the current state back onto
+# the undo stack first (respecting max_size) so undo still works afterwards.
+# Returns an empty dict when there is nothing to redo.
 func redo() -> Dictionary:
 	if _redo.is_empty():
 		return {}
@@ -32,6 +49,8 @@ func redo() -> Dictionary:
 	current = _redo.pop_back()
 	return current
 
+# Removes the oldest undo entries until the stack is within max_size.
+# Called after every push to _undo so memory use stays bounded.
 func _trim_undo_if_needed() -> void:
 	if max_size <= 0:
 		return
@@ -44,6 +63,8 @@ func can_undo() -> bool:
 func can_redo() -> bool:
 	return not _redo.is_empty()
 
+# Serialises the full undo/redo history as a deep-copied dictionary, suitable
+# for saving to disk or transferring between sessions.
 func export_history() -> Dictionary:
 	return {
 		"current": current.duplicate(true),
@@ -51,6 +72,8 @@ func export_history() -> Dictionary:
 		"redo": _redo.duplicate(true),
 	}
 
+# Restores a previously exported history. Deep-copies every snapshot so the
+# stack is independent of the source dict after import.
 func import_history(data: Dictionary) -> void:
 	_undo.clear()
 	_redo.clear()

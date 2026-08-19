@@ -1,17 +1,22 @@
 class_name EditorUIManager
 extends Node2D
 
+# Emitted when the active paint brush changes; state_id matches TileState values
+# (-2 = Wall, -1 = Erase, 0..2 = Yellow/Blue/Joker, 3 = Shifter link tool).
 signal brush_changed(state_id: int, brush_name: String)
 signal save_requested
 signal load_requested
 signal clear_requested
 signal random_requested
 signal main_menu_requested
+# Emitted when the user enters playtest mode from the editor.
 signal test_mode_entered
 signal grid_size_changed(new_width: int, new_height: int)
+# Emitted after the player confirms overwriting an existing level slot.
 signal overwrite_confirmed
 signal editor_undo_requested
 signal editor_redo_requested
+# Emitted whenever any of the allow-yellow/blue/joker toggles changes.
 signal allowed_tiles_changed
 signal editor_hint_toggled(is_on: bool)
 
@@ -71,14 +76,20 @@ var editor_time_limit: int = 0
 var is_playtesting_mode: bool = false
 var editor_difficulty: int = PuzzleGenerator.Difficulty.EASY
 
+# Seconds before a held +/− button starts repeating.
 const HOLD_INITIAL_DELAY := 0.35
+# Seconds between each repeat tick while the button is held.
 const HOLD_REPEAT_INTERVAL := 0.08
 
+# State for the press-and-hold repeat system on increment/decrement buttons.
 var _hold_button: Button = null
 var _hold_target: String = ""
 var _hold_amount: int = 0
 var _hold_timer: Timer = null
 
+# Initialises the entire editor UI for a given starting grid size. Connects all
+# button signals, applies layout/style helpers, and defers a couple of calls that
+# need one extra frame to resolve correct node sizes.
 func setup_ui(grid_width: int, grid_height: int) -> void:
 	editor_width = grid_width
 	editor_height = grid_height
@@ -102,10 +113,14 @@ func setup_ui(grid_width: int, grid_height: int) -> void:
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
 
+# Re-applies locale-dependent UI details (font overrides, label text) when the
+# player changes language without reloading the editor scene.
 func _on_language_changed() -> void:
 	_apply_default_font_to_link_buttons()
 	_apply_star_time_label()
 
+# The hint button is not functional in the editor (no reference solution to hint
+# against), so it is permanently disabled and reset to the off state.
 func _disable_editor_hint_button() -> void:
 	if not editor_hint_button:
 		return
@@ -114,6 +129,9 @@ func _disable_editor_hint_button() -> void:
 	editor_hint_button.button_pressed = false
 	HintController.update_button(editor_hint_button, false)
 
+# The equals (=) and not-equals (×) buttons use Unicode symbols that only render
+# correctly with the fallback system font. This overrides the theme font explicitly
+# so the symbols display consistently across locales and platforms.
 func _apply_default_font_to_link_buttons() -> void:
 	const BRUSH_BTN := Vector2(120, 120)
 	for button in [equals_button, not_equals_button]:
@@ -134,6 +152,8 @@ func _apply_default_font_to_link_buttons() -> void:
 		label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 
+# Sets the time-selector title label text and tooltip so editors know the time
+# limit is the "star time" threshold, not a hard game-over timer.
 func _apply_star_time_label() -> void:
 	var title := get_node_or_null(
 		"../EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/TimeTitleLabel"
@@ -143,6 +163,7 @@ func _apply_star_time_label() -> void:
 	title.text = "TIME:"
 	title.tooltip_text = "Star time: beat this to earn the time star. Infinity = no time star."
 
+# Lazily creates the one-shot Timer used by the press-and-hold repeat system.
 func _ensure_hold_timer() -> void:
 	if _hold_timer:
 		return
@@ -151,6 +172,9 @@ func _ensure_hold_timer() -> void:
 	add_child(_hold_timer)
 	_hold_timer.timeout.connect(_on_hold_timer_timeout)
 
+# Connects button_down/button_up/mouse_exited to the hold-repeat system for a
+# single increment/decrement button. "target" identifies which value to change
+# (width, height, time, level) and "amount" is the signed delta per tick.
 func _bind_hold_button(button: Button, target: String, amount: int) -> void:
 	if not button:
 		return
@@ -161,6 +185,7 @@ func _bind_hold_button(button: Button, target: String, amount: int) -> void:
 			_stop_hold(button)
 	)
 
+# Applies consistent sizing, icon nudges, and mode-label styling to the top bar.
 func _apply_top_bar_buttons() -> void:
 	HudLayout.apply_top_bar_button_cluster(top_bar_row.get_node_or_null("LeftButtons") as HBoxContainer)
 	HudLayout.apply_top_bar_button_cluster(top_bar_row.get_node_or_null("RightButtons") as HBoxContainer)
@@ -173,16 +198,22 @@ func _apply_top_bar_buttons() -> void:
 		top_bar_row.custom_minimum_size.y = float(GameConstants.HUD_BUTTON_HEIGHT)
 	_nudge_editor_control_icons()
 
+# Shifts button icons slightly upward to compensate for the theme's default
+# vertical padding, keeping icons visually centred in their buttons.
 func _nudge_editor_control_icons() -> void:
 	for button in [width_minus, width_plus, height_minus, height_plus, time_minus, time_plus, level_minus, level_plus]:
 		HudLayout.nudge_button_icon_up(button, 2)
 	for button in [wall_button, empty_button, equals_button, not_equals_button]:
 		HudLayout.nudge_button_icon_up(button, 2)
 
+# Fires initial signals so listening systems (board manager, etc.) receive the
+# default brush and grid size immediately after setup completes.
 func _emit_startup_signals() -> void:
 	brush_changed.emit(-2, "Wall")
 	grid_size_changed.emit(editor_width, editor_height)
 
+# Wires every button and toggle in the control panel to the appropriate signal
+# or internal handler. Hold buttons use _bind_hold_button instead of a plain pressed.
 func _connect_ui_signals() -> void:
 	if main_menu_button:
 		main_menu_button.pressed.connect(func(): main_menu_requested.emit())
@@ -266,6 +297,8 @@ func _connect_ui_signals() -> void:
 				overwrite_panel.visible = false
 		)
 
+# Returns the tile types the generated/played puzzle may use.
+# Falls back to all three types if somehow no toggle is active.
 func get_allowed_tiles() -> Array:
 	var tiles: Array = []
 	if allow_yellow and allow_yellow.button_pressed:
@@ -278,6 +311,7 @@ func get_allowed_tiles() -> Array:
 		tiles = [0, 1, 2]
 	return tiles
 
+# Syncs the allow-tile toggles to reflect a loaded level's tile set.
 func set_allowed_tiles(tiles: Array) -> void:
 	if allow_yellow:
 		allow_yellow.button_pressed = (0 in tiles)
@@ -293,11 +327,15 @@ func set_time_limit(val: int) -> void:
 	editor_time_limit = max(0, val)
 	_update_number_labels()
 
+# Updates the internal size state and refreshes labels without emitting
+# grid_size_changed; use this to reflect an externally imposed size change.
 func sync_size_displays(new_w: int, new_h: int) -> void:
 	editor_width = new_w
 	editor_height = new_h
 	_update_number_labels()
 
+# Refreshes all numeric display labels (grid size, time, level) and updates the
+# disabled state of every +/− button so out-of-range values cannot be entered.
 func _update_number_labels() -> void:
 	if width_label:
 		width_label.text = "X:" + str(editor_width)
@@ -319,6 +357,8 @@ func _update_number_labels() -> void:
 		level_label.custom_minimum_size = Vector2(200, 90)
 	_update_selector_button_states()
 
+# Disables each +/− button when its value is already at the allowed limit,
+# then refreshes the icon modulate so the disabled style is applied immediately.
 func _update_selector_button_states() -> void:
 	if width_minus:
 		width_minus.disabled = editor_width <= MIN_GRID_WIDTH
@@ -335,11 +375,15 @@ func _update_selector_button_states() -> void:
 	for button in [width_minus, width_plus, height_minus, height_plus, time_minus, time_plus, level_minus, level_plus]:
 		HudLayout.refresh_button_icon_modulate(button)
 
+# When a settings toggle (keep walls / unique solution) changes, refresh the
+# visual mask and clear the status bar so stale validation results disappear.
 func _on_settings_toggle_pressed() -> void:
 	_refresh_toggle_masks()
 	if not is_playtesting_mode:
 		update_status("", Color.WHITE)
 
+# Re-applies the active/inactive overlay tint to the keep_walls and
+# unique_solution toggles, then updates the difficulty button to match.
 func _refresh_toggle_masks() -> void:
 	if keep_walls_toggle:
 		HudLayout.apply_toggle_active_mask(
@@ -355,12 +399,15 @@ func _refresh_toggle_masks() -> void:
 		)
 	_refresh_difficulty_button()
 
+# Cycles through EASY → MEDIUM → HARD on each press and refreshes the button label.
 func _on_difficulty_pressed() -> void:
 	editor_difficulty = (editor_difficulty + 1) % 3
 	_refresh_difficulty_button()
 	if not is_playtesting_mode:
 		update_status("", Color.WHITE)
 
+# Updates the difficulty button's label text and colour overlay to reflect the
+# current editor_difficulty value.
 func _refresh_difficulty_button() -> void:
 	if not difficulty_button:
 		return
@@ -390,6 +437,8 @@ func set_generation_difficulty(difficulty: int) -> void:
 	)
 	_refresh_difficulty_button()
 
+# Begins a press-and-hold sequence: fires an immediate delta, then starts the
+# initial-delay timer to trigger repeating ticks via _on_hold_timer_timeout.
 func _start_hold(button: Button, target: String, amount: int) -> void:
 	_stop_hold(_hold_button)
 	if not button or button.disabled:
@@ -401,6 +450,8 @@ func _start_hold(button: Button, target: String, amount: int) -> void:
 	if _hold_timer:
 		_hold_timer.start(HOLD_INITIAL_DELAY)
 
+# Cancels an in-progress hold. If button is provided, only stops if it matches
+# _hold_button, so releasing one button doesn't cancel an unrelated hold.
 func _stop_hold(button: Button = null) -> void:
 	if button != null and _hold_button != null and button != _hold_button:
 		return
@@ -410,6 +461,8 @@ func _stop_hold(button: Button = null) -> void:
 	if _hold_timer:
 		_hold_timer.stop()
 
+# Fired repeatedly while a button is held. Applies one delta tick and reschedules
+# itself at the faster HOLD_REPEAT_INTERVAL until the button is released.
 func _on_hold_timer_timeout() -> void:
 	if _hold_button == null or not is_instance_valid(_hold_button):
 		_stop_hold()
@@ -421,6 +474,9 @@ func _on_hold_timer_timeout() -> void:
 	if _hold_timer:
 		_hold_timer.start(HOLD_REPEAT_INTERVAL)
 
+# Applies a signed delta to the named editor value (width/height/time/level),
+# clamps it to valid bounds, then refreshes labels and emits grid_size_changed
+# when the grid dimensions actually change.
 func _adjust_value(target: String, amount: int) -> void:
 	var grid_changed = false
 	match target:
@@ -444,6 +500,9 @@ func _adjust_value(target: String, amount: int) -> void:
 	if grid_changed:
 		grid_size_changed.emit(editor_width, editor_height)
 
+# Displays a status message below the control panel. Pass an empty string to
+# clear it. should_translate=false is used for raw dynamic strings (e.g. solver
+# result text) that should not go through the translation system.
 func update_status(msg: String, text_color: Color = Color.WHITE, should_translate: bool = true) -> void:
 	if not status_label:
 		return
@@ -460,6 +519,8 @@ func update_dynamic_editor_layout(_board_y: float, _board_height: float) -> void
 	if status_label and control_panel:
 		HudLayout.position_editor_status_below_panel(control_panel, status_label)
 
+# Hides the editor HUD and control panel while in playtest mode so the player
+# sees a clean game view without editor chrome.
 func toggle_editor_visibility(is_playtesting: bool) -> void:
 	is_playtesting_mode = is_playtesting
 	if top_hud:
@@ -492,6 +553,8 @@ func is_keep_walls_requested() -> bool:
 		return keep_walls_toggle.button_pressed
 	return true
 
+# Syncs the disabled state of the undo/redo buttons to match the editor's
+# undo stack state, and refreshes icon tinting for the disabled appearance.
 func update_editor_undo_redo_buttons(can_undo: bool, can_redo: bool) -> void:
 	if editor_undo_button:
 		editor_undo_button.disabled = not can_undo
@@ -503,6 +566,9 @@ func update_editor_undo_redo_buttons(can_undo: bool, can_redo: bool) -> void:
 func set_editor_hint_toggle(_is_on: bool) -> void:
 	_disable_editor_hint_button()
 
+# Shows the overwrite confirmation panel when the player tries to save to a
+# slot that already has a level. Brings the panel to the front via z_index so
+# it overlays all other editor UI.
 func show_overwrite_warning() -> void:
 	if not overwrite_panel:
 		return

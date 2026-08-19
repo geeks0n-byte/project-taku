@@ -1,6 +1,11 @@
 class_name EditorCanvasManager
 extends Node2D
 
+# Owns and manages the grid of Cell nodes used by both the level editor and the playtest view.
+# Rendering is delegated to BoardRenderer; this class handles cell pooling, layout loading,
+# and emitting click signals that the parent LevelEditor routes to brush/link logic.
+
+# Emitted when a cell interceptor receives a left-click, forwarding the grid coordinate.
 signal canvas_cell_clicked(coord: Vector2i)
 
 @export var cell_scene: PackedScene = preload("res://scenes/cell.tscn")
@@ -8,31 +13,43 @@ signal canvas_cell_clicked(coord: Vector2i)
 var grid_width: int = 3
 var grid_height: int = 3
 
+# Live Cell node lookup by grid coordinate.
 var board_cells = {}
+# Reusable {cell, interceptor} pairs to avoid instantiating new nodes on every grid resize.
 var cell_pool: Array = []
+# Pre-computed sorted row/column data used by draw passes.
 var cached_lines: Array = []
 
+# Shifter pairs currently loaded on the canvas (mirrors LevelData.shifter_pairs format).
 var loaded_shifter_pairs: Array = []
+# Visible constraint pairs (shown to the player in both editor and play mode).
 var loaded_constraint_pairs: Array = []
+# Auto-derived constraint pairs hidden from the player but visible when editor hints are on.
 var hidden_constraint_pairs: Array = []
 
+# Separate draw nodes so grid lines and constraint symbols have independent z-order and redraw.
 var grid_drawer: Node2D
 var constraint_drawer: Node2D
 
+# When true, cells are configured for play (locked tiles, no editor chrome).
 var is_playtesting: bool = false
+# When true in editor mode, hidden_constraint_pairs are drawn alongside visible ones.
 var show_editor_hints: bool = false
 
 func _ready():
+	# grid_drawer sits above cells (z=10) so grid lines are never hidden by tile backgrounds.
 	grid_drawer = Node2D.new()
 	grid_drawer.z_index = 10
 	grid_drawer.draw.connect(_draw_grid)
 	add_child(grid_drawer)
 
+	# constraint_drawer is at maximum z so symbols always render on top of everything.
 	constraint_drawer = Node2D.new()
 	constraint_drawer.z_index = 4096
 	constraint_drawer.draw.connect(_draw_constraints)
 	add_child(constraint_drawer)
 
+# Forces all draw nodes to re-emit their draw signals on the next frame.
 func trigger_redraw():
 	queue_redraw()
 	if grid_drawer:
@@ -40,6 +57,8 @@ func trigger_redraw():
 	if constraint_drawer:
 		constraint_drawer.queue_redraw()
 
+# Resets the canvas to an empty grid of the given size. Reuses pooled cells where possible
+# to avoid the cost of instantiating and destroying nodes on every grid resize.
 func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 	grid_width = new_width
 	grid_height = new_height
@@ -49,6 +68,7 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 	hidden_constraint_pairs.clear()
 
 	var pool_index = 0
+	# Small inset so the interceptor doesn't cover the cell border, preventing missed clicks.
 	var margin = 5.0
 
 	for y in range(grid_height):
@@ -58,6 +78,7 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 			var interceptor
 
 			if pool_index < cell_pool.size():
+				# Reuse an existing cell/interceptor pair from the pool.
 				var cell_data = cell_pool[pool_index]
 				cell = cell_data["cell"]
 				interceptor = cell_data["interceptor"]
@@ -67,6 +88,8 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 				cell = cell_scene.instantiate()
 				add_child(cell)
 
+				# Transparent overlay that captures mouse events so the cell node itself
+				# doesn't need to handle input, keeping cell logic and input routing separate.
 				interceptor = Control.new()
 				interceptor.mouse_filter = Control.MOUSE_FILTER_STOP
 				add_child(interceptor)
@@ -86,6 +109,7 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 			interceptor.size = Vector2(GameConstants.CELL_SIZE - (2 * margin), GameConstants.CELL_SIZE - (2 * margin))
 			interceptor.position = cell.position + Vector2(margin, margin)
 
+			# Disconnect any previous lambda that captured a stale coord value before reconnecting.
 			for conn in interceptor.gui_input.get_connections():
 				interceptor.gui_input.disconnect(conn.callable)
 
@@ -97,6 +121,7 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 			board_cells[coord] = cell
 			pool_index += 1
 
+	# Hide surplus pool cells from a previous (larger) grid.
 	for i in range(pool_index, cell_pool.size()):
 		cell_pool[i]["cell"].visible = false
 		cell_pool[i]["interceptor"].visible = false
@@ -108,12 +133,15 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 			if cell.state == GameConstants.TileState.EMPTY:
 				cell.update_visuals()
 
+	# Keep draw nodes on top of all cells at all times.
 	move_child(grid_drawer, -1)
 	move_child(constraint_drawer, -1)
 
 	cached_lines = BoardRenderer.cache_board_lines(board_cells)
 	trigger_redraw()
 
+# Populates the canvas from a saved level layout. Generates a blank canvas first so
+# the pool is reset, then applies tile states and reconstructs the shifter visual state.
 func load_layout(new_width: int, new_height: int, layout_data: Dictionary, shifter_pairs: Array = [], constraint_pairs: Array = []):
 	generate_blank_canvas(new_width, new_height)
 	loaded_shifter_pairs = shifter_pairs.duplicate()
@@ -136,6 +164,8 @@ func load_layout(new_width: int, new_height: int, layout_data: Dictionary, shift
 				cell.is_locked = false
 			cell.update_visuals()
 
+	# Restore shifter visuals: the active cell shows the SHIFTER tile with a direction arrow;
+	# the inactive (partner) cell appears empty but is flagged as part of the pair.
 	for pair in loaded_shifter_pairs:
 		if board_cells.has(pair["a"]):
 			board_cells[pair["a"]].is_linked_pair = true
@@ -145,6 +175,7 @@ func load_layout(new_width: int, new_height: int, layout_data: Dictionary, shift
 			var active_coord = pair["active"]
 			var inactive_coord = pair["b"] if active_coord == pair["a"] else pair["a"]
 			board_cells[active_coord].state = GameConstants.TileState.SHIFTER
+			# Direction vector points from the active cell toward its inactive partner.
 			board_cells[active_coord].shifter_direction = inactive_coord - active_coord
 
 	for coord in board_cells:
@@ -161,9 +192,12 @@ func clear_highlights():
 func is_board_full() -> bool:
 	return BoardRenderer.is_board_full(board_cells)
 
+# Called by grid_drawer's draw signal; passes is_playtesting to control full-grid vs play mode drawing.
 func _draw_grid():
 	BoardRenderer.draw_grid(grid_drawer, board_cells, GameConstants.CELL_SIZE, not is_playtesting)
 
+# In editor mode with hints enabled, appends hidden constraint pairs so the designer can see
+# auto-derived constraints without them being visible to the player.
 func _draw_constraints():
 	var pairs_to_draw = loaded_constraint_pairs.duplicate()
 	if not is_playtesting and show_editor_hints:

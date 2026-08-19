@@ -12,8 +12,12 @@ var bgm_enabled: bool = true
 var sfx_enabled: bool = true
 var haptic_enabled: bool = true
 var tutorial_intro_answered: bool = false
+# True once the player has tapped ACCEPT on the first-launch consent popup.
+# Defaults to true for existing saves (no save file key = already accepted).
 var privacy_accepted: bool = false
-var dev_mode_enabled: bool = false  # Runtime-only; not persisted to disk.
+# Unlocked each session by holding the version label in credits for 3 seconds.
+# NOT saved to disk — must be re-activated every launch to prevent save file cheating.
+var dev_mode_enabled: bool = false
 var level_star_bits: Dictionary = {}
 var session_data: Dictionary = {}
 var ads_wins_since_interstitial: int = 0
@@ -221,10 +225,13 @@ func set_haptic_enabled(enabled: bool) -> void:
 	haptic_enabled = enabled
 	save_progress()
 
+# Marks privacy as accepted and persists it. Called by consent_popup.gd via main_menu.gd.
 func accept_privacy() -> void:
 	privacy_accepted = true
 	save_progress()
 
+# Toggles dev mode on/off at runtime (not saved). Returns the new state.
+# To activate: hold the version label in the credits screen for 3 seconds.
 func toggle_dev_mode() -> bool:
 	dev_mode_enabled = not dev_mode_enabled
 	return dev_mode_enabled

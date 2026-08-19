@@ -1,49 +1,67 @@
 extends Node
 
+# Interstitial ads are first shown after this many level-win/restart events in a session.
+# Each shown ad increments the threshold by 1, spacing them out over time.
 const INTERSTITIAL_START_EVERY_N := 5
 
+# AdMob test unit IDs — safe to ship; they never charge real money.
 const TEST_BANNER_UNIT_ID := "ca-app-pub-3940256099942544/6300978111"
 const TEST_INTERSTITIAL_UNIT_ID := "ca-app-pub-3940256099942544/1033173712"
 # Google sample Rewarded Interstitial (matches PROD format).
 const TEST_REWARDED_UNIT_ID := "ca-app-pub-3940256099942544/5354046379"
 
+# Production AdMob unit IDs — only used in release builds.
 const PROD_BANNER_UNIT_ID := "ca-app-pub-1624206851803206/6555942665"
 const PROD_INTERSTITIAL_UNIT_ID := "ca-app-pub-1624206851803206/8878973813"
 const PROD_REWARDED_UNIT_ID := "ca-app-pub-1624206851803206/1850531037"
 
 const PRIVACY_POLICY_URL := "https://geeks0n-byte.github.io/project-taku/privacy-policy.html"
 
+# Emitted when a fullscreen ad (interstitial or rewarded) becomes visible.
+# main.gd uses this to pause the game timer.
 signal fullscreen_ad_started
+# Emitted when the fullscreen ad is dismissed, allowing the timer to resume.
 signal fullscreen_ad_finished
 
 var _initialized: bool = false
 var _initializing: bool = false
+# False on non-Android or when the AdMob plugin singleton is absent.
 var _ads_supported: bool = false
+# Guards against emitting fullscreen_ad_started more than once per ad session.
 var _fullscreen_ad_open: bool = false
 
 var _banner: AdView = null
+# Tracks whether the banner should be visible; used to restore it after fullscreen ads.
 var _banner_wanted_visible: bool = false
 var _banner_loaded: bool = false
 
 var _interstitial: InterstitialAd = null
 var _loading_interstitial: bool = false
+# Called after the interstitial is dismissed (e.g. go-to-next-level callback).
 var _pending_after_ad: Callable = Callable()
 ## Session-only interstitial cadence: first at 5 events, then +1 after each shown ad.
 var _interstitial_progress: int = 0
 var _interstitial_every_n: int = INTERSTITIAL_START_EVERY_N
 
 var _rewarded: RewardedInterstitialAd = null
+# Kept as a member to prevent GC between load request and callback.
 var _rewarded_loader: RewardedInterstitialAdLoader = null
 var _loading_rewarded: bool = false
+# Called only if the user earns the reward before dismissing the ad.
 var _pending_reward_callback: Callable = Callable()
 var _reward_earned: bool = false
+# Queued when the ad is not yet loaded; flushed once the ad becomes available.
 var _queued_reward_callback: Callable = Callable()
+# Retries a failed rewarded ad load after a delay.
 var _rewarded_retry_timer: Timer = null
+# Kills a stuck load request that never called back.
 var _rewarded_load_watchdog: Timer = null
+# Runs several times after app-focus to re-pin the banner once the IME fully closes.
 var _focus_banner_settle_timer: Timer = null
 var _focus_banner_settle_ticks: int = 0
 const REWARDED_RETRY_SEC := 8.0
 const REWARDED_LOAD_TIMEOUT_SEC := 25.0
+# How many settle ticks to run after focus returns before giving up on banner re-pin.
 const FOCUS_BANNER_SETTLE_TRIES := 5
 const FOCUS_BANNER_SETTLE_SEC := 0.2
 
@@ -52,8 +70,10 @@ func _ready() -> void:
 	_focus_banner_settle_timer = _make_timer(_on_banner_focus_settle)
 	_rewarded_retry_timer = _make_timer(_on_rewarded_retry_timeout)
 	_rewarded_load_watchdog = _make_timer(_on_rewarded_load_timeout)
+	# Defer so the scene tree is fully ready before consent flow starts.
 	call_deferred("ensure_started")
 
+# Creates a one-shot Timer and connects it to the given callback.
 func _make_timer(on_timeout: Callable) -> Timer:
 	var t := Timer.new()
 	t.one_shot = true
@@ -61,18 +81,21 @@ func _make_timer(on_timeout: Callable) -> Timer:
 	add_child(t)
 	return t
 
+# Guards against double-emission; the game timer should pause exactly once per ad.
 func _notify_fullscreen_started() -> void:
 	if _fullscreen_ad_open:
 		return
 	_fullscreen_ad_open = true
 	fullscreen_ad_started.emit()
 
+# Symmetric guard for fullscreen_ad_finished.
 func _notify_fullscreen_finished() -> void:
 	if not _fullscreen_ad_open:
 		return
 	_fullscreen_ad_open = false
 	fullscreen_ad_finished.emit()
 
+# Ads are only supported on Android with the PoingGodotAdMob plugin installed.
 func _detect_ads_support() -> bool:
 	if not (OS.has_feature("android") or OS.get_name() == "Android"):
 		return false
@@ -81,12 +104,14 @@ func _detect_ads_support() -> bool:
 func is_ads_available() -> bool:
 	return _ads_supported
 
+# Entry point for the entire ads initialization pipeline. Safe to call multiple times.
 func ensure_started() -> void:
 	if _initialized or _initializing or not _ads_supported:
 		return
 	_initializing = true
 	_request_consent_then_init()
 
+# Starts the UMP consent flow before initializing AdMob, as required by Google policy.
 func _request_consent_then_init() -> void:
 	var params := ConsentRequestParameters.new()
 	UserMessagingPlatform.consent_information.update(
@@ -95,15 +120,19 @@ func _request_consent_then_init() -> void:
 		_on_consent_update_failure
 	)
 
+# If a consent form is available, load it before initializing ads.
+# If no form is available (e.g. outside EEA), initialize immediately.
 func _on_consent_update_success() -> void:
 	if UserMessagingPlatform.consent_information.get_is_consent_form_available():
 		UserMessagingPlatform.load_consent_form(_on_consent_form_loaded, _on_consent_form_load_failed)
 	else:
 		_initialize_mobile_ads()
 
+# Consent update failed (network error etc.) — proceed with ads anyway.
 func _on_consent_update_failure(_error: FormError) -> void:
 	_initialize_mobile_ads()
 
+# Only show the consent form if consent is actually required for this user's region.
 func _on_consent_form_loaded(form: ConsentForm) -> void:
 	var status := UserMessagingPlatform.consent_information.get_consent_status()
 	if status == ConsentInformation.ConsentStatus.REQUIRED:
@@ -111,12 +140,16 @@ func _on_consent_form_loaded(form: ConsentForm) -> void:
 	else:
 		_initialize_mobile_ads()
 
+# Consent form failed to load — proceed with ads anyway.
 func _on_consent_form_load_failed(_error: FormError) -> void:
 	_initialize_mobile_ads()
 
+# Called after the user interacts with the consent form (accept or dismiss).
 func _on_consent_form_dismissed(_error: FormError) -> void:
 	_initialize_mobile_ads()
 
+# Initializes the AdMob SDK. On success, immediately pre-loads all ad formats
+# and shows the banner if it was already requested before initialization completed.
 func _initialize_mobile_ads() -> void:
 	var request_config := RequestConfiguration.new()
 	MobileAds.set_request_configuration(request_config)
@@ -130,9 +163,11 @@ func _initialize_mobile_ads() -> void:
 			_ensure_banner_loaded()
 	MobileAds.initialize(listener)
 
+# Debug builds always use Google's public test ad units to avoid invalid traffic.
 func _use_test_units() -> bool:
 	return OS.is_debug_build()
 
+# Unit-id helpers centralize test-vs-production selection.
 func _banner_unit_id() -> String:
 	return TEST_BANNER_UNIT_ID if _use_test_units() else PROD_BANNER_UNIT_ID
 
@@ -151,6 +186,8 @@ func _notification(what: int) -> void:
 		else:
 			call_deferred("_on_app_focus_in")
 
+# After app-resume, re-pins the banner and warms the rewarded ad.
+# Pinning is deferred once more because the layout may still be settling.
 func _on_app_focus_in() -> void:
 	if not is_inside_tree():
 		return
@@ -182,6 +219,8 @@ func _start_banner_focus_settle_timer() -> void:
 		return
 	_focus_banner_settle_timer.start(FOCUS_BANNER_SETTLE_SEC)
 
+# Fires repeatedly after focus returns to ensure the banner sits at the true bottom
+# once the IME (on-screen keyboard) has finished closing.
 func _on_banner_focus_settle() -> void:
 	_dismiss_soft_keyboard()
 	if _banner_wanted_visible:
@@ -196,6 +235,7 @@ func _on_banner_focus_settle() -> void:
 	if kb_h > 0 or _focus_banner_settle_ticks < 3:
 		_start_banner_focus_settle_timer()
 
+# Shows a bottom banner ad. Records intent so the banner is shown once ads finish initializing.
 func show_menu_banner() -> void:
 	_banner_wanted_visible = true
 	if not _ads_supported:
@@ -207,6 +247,7 @@ func show_menu_banner() -> void:
 	if _banner and _banner_loaded:
 		_show_banner_pinned()
 
+# Destroys and recreates the banner with a fresh adaptive size after rotation or fullscreen.
 func refresh_banner_anchor() -> void:
 	_banner_wanted_visible = true
 	if not _ads_supported:
@@ -217,16 +258,19 @@ func refresh_banner_anchor() -> void:
 	_destroy_banner()
 	_ensure_banner_loaded()
 
+# Hides the banner without destroying it so it can be quickly restored later.
 func hide_menu_banner() -> void:
 	_banner_wanted_visible = false
 	if _banner:
 		_banner.hide()
 
+# Hard-pins the banner to BOTTOM; called repeatedly after focus/fullscreen changes.
 func _pin_banner_bottom() -> void:
 	if _banner == null:
 		return
 	_banner.set_position(AdPosition.BOTTOM)
 
+# Shows banner and re-pins on the next frame to survive transient layout shifts.
 func _show_banner_pinned() -> void:
 	if _banner == null:
 		return
@@ -267,6 +311,7 @@ func _reanchor_banner_after_fullscreen() -> void:
 	refresh_banner_anchor()
 
 
+# Requests an interstitial ad and stores it for later show_interstitial_if_ready().
 func _load_interstitial() -> void:
 	if not _initialized or _loading_interstitial or _interstitial != null:
 		return
@@ -282,6 +327,8 @@ func _load_interstitial() -> void:
 		_interstitial = null
 	loader.load(_interstitial_unit_id(), AdRequest.new(), callback)
 
+# Hooks fullscreen lifecycle so game timer pause/resume and continuation callbacks
+# happen reliably across both success and failure paths.
 func _bind_interstitial_callbacks() -> void:
 	if _interstitial == null:
 		return
@@ -300,11 +347,13 @@ func _bind_interstitial_callbacks() -> void:
 		_load_interstitial()
 	_interstitial.full_screen_content_callback = callbacks
 
+# Releases native interstitial resources.
 func _destroy_interstitial() -> void:
 	if _interstitial:
 		_interstitial.destroy()
 		_interstitial = null
 
+# Runs deferred continuation after interstitial closes and reanchors the banner.
 func _finish_pending_after_ad() -> void:
 	var cb := _pending_after_ad
 	_pending_after_ad = Callable()
@@ -312,17 +361,23 @@ func _finish_pending_after_ad() -> void:
 	if cb.is_valid():
 		cb.call()
 
+# Called when the player completes a level; advances the interstitial cadence counter.
 func record_level_win(is_tutorial: bool) -> void:
 	_record_interstitial_progress(is_tutorial)
 
+# Called when the player restarts a level; also advances the cadence counter.
 func record_level_restart(is_tutorial: bool) -> void:
 	_record_interstitial_progress(is_tutorial)
 
+# Tutorials don't count toward the interstitial threshold (avoids interrupting teaching moments).
 func _record_interstitial_progress(is_tutorial: bool) -> void:
 	if is_tutorial:
 		return
 	_interstitial_progress += 1
 
+# Shows an interstitial if the cadence threshold is met and one is loaded.
+# Calls on_done immediately if no ad is shown, so the game can continue normally.
+# Threshold grows by 1 after each shown ad to spread them out over the session.
 func show_interstitial_if_ready(on_done: Callable = Callable()) -> void:
 	if not _ads_supported or not _initialized:
 		if on_done.is_valid():
@@ -342,21 +397,27 @@ func show_interstitial_if_ready(on_done: Callable = Callable()) -> void:
 	_interstitial.show()
 
 
+# Returns true if a rewarded ad could ever be shown (used to show/hide the hint ad button).
+# In debug builds without ads, always returns true so the flow can be tested.
 func can_offer_rewarded_hint() -> bool:
 	if not _ads_supported:
 		return OS.is_debug_build()
 	return true
 
+# Returns true only when a rewarded ad is fully loaded and ready to display immediately.
 func is_rewarded_hint_ready() -> bool:
 	if not _ads_supported:
 		return OS.is_debug_build()
 	return _initialized and _rewarded != null
 
+# Returns true while the rewarded ad is being loaded, so the UI can show a "loading" message.
 func is_rewarded_hint_loading() -> bool:
 	if not _ads_supported:
 		return false
 	return _initializing or _loading_rewarded
 
+# Pre-loads a rewarded ad so it's ready when the player taps "watch ad for hint".
+# Call this proactively whenever hints are running low.
 func warm_rewarded_hint() -> void:
 	if not _ads_supported:
 		return
@@ -364,6 +425,7 @@ func warm_rewarded_hint() -> void:
 	if _initialized:
 		_load_rewarded()
 
+# Verifies rewarded-interstitial singleton exists in current build/plugin setup.
 func _rewarded_native_available() -> bool:
 	return Engine.has_singleton("PoingGodotAdMobRewardedInterstitialAd")
 
@@ -397,11 +459,13 @@ func _load_rewarded() -> void:
 		_schedule_rewarded_retry()
 	_rewarded_loader.load(_rewarded_unit_id(), AdRequest.new(), callback)
 
+# Starts timeout guard for stuck rewarded loads.
 func _start_rewarded_load_watchdog() -> void:
 	if _rewarded_load_watchdog == null or not _rewarded_load_watchdog.is_inside_tree():
 		return
 	_rewarded_load_watchdog.start(REWARDED_LOAD_TIMEOUT_SEC)
 
+# Stops rewarded timeout guard after success/failure.
 func _stop_rewarded_load_watchdog() -> void:
 	if _rewarded_load_watchdog and not _rewarded_load_watchdog.is_stopped():
 		_rewarded_load_watchdog.stop()
@@ -444,11 +508,13 @@ func _bind_rewarded_callbacks() -> void:
 		_load_rewarded()
 	_rewarded.full_screen_content_callback = callbacks
 
+# Releases native rewarded-interstitial resources.
 func _destroy_rewarded() -> void:
 	if _rewarded:
 		_rewarded.destroy()
 		_rewarded = null
 
+# Schedules delayed retry after rewarded load failure/timeout.
 func _schedule_rewarded_retry() -> void:
 	if not _ads_supported or not _initialized:
 		return
@@ -457,13 +523,16 @@ func _schedule_rewarded_retry() -> void:
 	if _rewarded_retry_timer.is_stopped():
 		_rewarded_retry_timer.start(REWARDED_RETRY_SEC)
 
+# Cancels pending rewarded retry timer.
 func _cancel_rewarded_retry() -> void:
 	if _rewarded_retry_timer and not _rewarded_retry_timer.is_stopped():
 		_rewarded_retry_timer.stop()
 
+# Retry timer callback.
 func _on_rewarded_retry_timeout() -> void:
 	_load_rewarded()
 
+# If UI requested rewarded ad while loading, show it immediately once loaded.
 func _flush_queued_rewarded_show() -> void:
 	if not _queued_reward_callback.is_valid():
 		return
@@ -473,6 +542,10 @@ func _flush_queued_rewarded_show() -> void:
 	_queued_reward_callback = Callable()
 	show_rewarded_for_hint(cb)
 
+# Shows a rewarded interstitial ad and calls on_rewarded only if the player earns the reward.
+# Returns true in all cases where the ad flow was started (including queued/loading states).
+# If the ad is not yet loaded, queues the callback so it fires once the ad loads.
+# In debug builds without AdMob support, immediately invokes a mock that mimics the flow.
 func show_rewarded_for_hint(on_rewarded: Callable = Callable()) -> bool:
 	if not _ads_supported:
 		if OS.is_debug_build() and on_rewarded.is_valid():
@@ -491,6 +564,8 @@ func show_rewarded_for_hint(on_rewarded: Callable = Callable()) -> bool:
 	_pending_reward_callback = on_rewarded
 	_reward_earned = false
 	var reward_listener := OnUserEarnedRewardListener.new()
+	# Flag is set inside the ad's own callback; checked on dismissal to decide
+	# whether to call the reward callback (skipping if the user closed without watching).
 	reward_listener.on_user_earned_reward = func(_item: RewardedItem) -> void:
 		_reward_earned = true
 	_notify_fullscreen_started()
@@ -510,6 +585,8 @@ const PRIVACY_OPTIONS_STATE_LOADING := 1
 const PRIVACY_OPTIONS_STATE_NOT_REQUIRED := 2
 const PRIVACY_OPTIONS_STATE_READY := 3
 
+# Returns one of the PRIVACY_OPTIONS_STATE_* constants so the UI can decide
+# whether to show a "Privacy Options" button (only shown when READY).
 func get_privacy_options_state() -> int:
 	if not _ads_supported:
 		return PRIVACY_OPTIONS_STATE_UNAVAILABLE
@@ -536,6 +613,8 @@ func show_privacy_options_form(on_done: Callable = Callable()) -> bool:
 func open_privacy_policy() -> void:
 	OS.shell_open(PRIVACY_POLICY_URL)
 
+# Clears all pending state and destroys active ad objects before the process exits.
+# Must be called before quit_app() to avoid callbacks firing on freed nodes.
 func prepare_for_app_exit() -> void:
 	_banner_wanted_visible = false
 	_pending_after_ad = Callable()
@@ -551,5 +630,6 @@ func prepare_for_app_exit() -> void:
 	_rewarded_loader = null
 	_notify_fullscreen_finished()
 
+# Safety net cleanup in case app exits without calling quit flow.
 func _exit_tree() -> void:
 	prepare_for_app_exit()

@@ -1,6 +1,9 @@
+# Runs an in-editor playable simulation of the current custom board without
+# leaving the editor scene. Handles playtest HUD, validation, hints, timer, and undo.
 class_name EditorPlaytestController
 extends Node
 
+# Scene collaborators injected by setup().
 var canvas_manager: EditorCanvasManager
 var pt_ui: PlaytestUIManager
 var editor_ui: EditorUIManager
@@ -22,6 +25,7 @@ var hints_used: int = 0
 var _timer: Timer
 var _undo_stack := UndoStack.new()
 
+# Injects dependencies and creates the 1-second timer used by playtest clock.
 func setup(canvas: EditorCanvasManager, playtest_ui: PlaytestUIManager, editor: EditorUIManager) -> void:
 	canvas_manager = canvas
 	pt_ui = playtest_ui
@@ -33,6 +37,8 @@ func setup(canvas: EditorCanvasManager, playtest_ui: PlaytestUIManager, editor: 
 	_timer.timeout.connect(_on_timer_timeout)
 	add_child(_timer)
 
+# Switches from edit mode to playtest mode, captures a snapshot for restore,
+# computes hint reference/hidden pool, and starts timer+validation.
 func enter(current_level_required_jokers: int) -> void:
 	is_active = true
 	canvas_manager.is_playtesting = true
@@ -129,6 +135,7 @@ func enter(current_level_required_jokers: int) -> void:
 	canvas_manager.trigger_redraw()
 	_run_validation()
 
+# Leaves playtest mode and restores original editor board state and constraints.
 func exit() -> void:
 	is_active = false
 	canvas_manager.is_playtesting = false
@@ -153,6 +160,7 @@ func exit() -> void:
 	canvas_manager.trigger_redraw()
 	pt_ui.toggle_playtest_visibility(false)
 
+# Resets playtest to the captured start snapshot without leaving playtest mode.
 func reset() -> void:
 	if not canvas_manager.is_playtesting:
 		return
@@ -178,6 +186,7 @@ func reset() -> void:
 	canvas_manager.trigger_redraw()
 	_run_validation()
 
+# Applies playtest click behavior: cycle normal tiles or move shifter pairs.
 func handle_cell_click(coord: Vector2i) -> void:
 	if not is_active:
 		return
@@ -225,6 +234,7 @@ func handle_cell_click(coord: Vector2i) -> void:
 	_undo_stack.record(_create_snapshot())
 	pt_ui.update_playtest_undo_redo_buttons(_undo_stack.can_undo(), _undo_stack.can_redo())
 
+# Undo/redo actions inside playtest mode.
 func undo() -> void:
 	if not is_active or not _undo_stack.can_undo():
 		return
@@ -237,6 +247,7 @@ func redo() -> void:
 	_apply_snapshot(_undo_stack.redo())
 	pt_ui.update_playtest_undo_redo_buttons(_undo_stack.can_undo(), _undo_stack.can_redo())
 
+# Reveals one hidden hint constraint and updates counters/validation.
 func request_hint() -> void:
 	if not is_active:
 		return
@@ -283,6 +294,7 @@ func request_hint() -> void:
 	else:
 		_refresh_hint_button()
 
+# Hint availability check for playtest HUD button state.
 func _can_use_hint() -> bool:
 	if hints_remaining == 0:
 		return false
@@ -299,6 +311,7 @@ func _refresh_hint_button() -> void:
 	pt_ui.set_playtest_hint_remaining(hints_remaining)
 	pt_ui.set_playtest_hint_button_disabled(not _can_use_hint())
 
+# Used when opening pause/settings overlays during playtest.
 func pause_timer() -> void:
 	_timer.stop()
 
@@ -308,6 +321,7 @@ func resume_timer() -> void:
 		pt_ui.update_playtest_undo_redo_buttons(_undo_stack.can_undo(), _undo_stack.can_redo())
 		_refresh_hint_button()
 
+# Captures board cells + shifter move count for undo stack.
 func _create_snapshot() -> Dictionary:
 	var snap := {}
 	for coord in canvas_manager.board_cells:
@@ -315,6 +329,7 @@ func _create_snapshot() -> Dictionary:
 		snap[coord] = {"state": cell.state, "shifter_direction": cell.shifter_direction}
 	return {"cells": snap, "moves": playtest_shifter_moves}
 
+# Restores an undo snapshot and reruns validation.
 func _apply_snapshot(snap: Dictionary) -> void:
 	playtest_shifter_moves = snap["moves"]
 	for coord in snap["cells"]:
@@ -327,6 +342,7 @@ func _apply_snapshot(snap: Dictionary) -> void:
 	canvas_manager.trigger_redraw()
 	_run_validation()
 
+# Restores the original pre-playtest editor snapshot.
 func _restore_snapshot(cells_snapshot: Dictionary) -> void:
 	for coord in cells_snapshot:
 		var cell = canvas_manager.board_cells[coord]
@@ -337,12 +353,14 @@ func _restore_snapshot(cells_snapshot: Dictionary) -> void:
 		cell.is_editor_mode = false
 		cell.update_visuals()
 
+# Syncs green-tile progress counter in playtest HUD.
 func _update_joker_count() -> void:
 	pt_ui.update_playtest_joker_counter(
 		LevelUtils.count_jokers_on_board(canvas_manager.board_cells),
 		playtest_required_jokers
 	)
 
+# Syncs timer/move counters in playtest HUD.
 func _update_hud() -> void:
 	pt_ui.update_playtest_hud(
 		playtest_elapsed_seconds,
@@ -351,6 +369,7 @@ func _update_hud() -> void:
 		playtest_required_shifter_moves
 	)
 
+# Validates board and either shows error status or triggers playtest victory.
 func _run_validation() -> void:
 	canvas_manager.clear_highlights()
 	var results = PuzzleValidator.validate_board(
@@ -368,6 +387,7 @@ func _run_validation() -> void:
 	if results["valid"] and canvas_manager.is_board_full():
 		_trigger_victory()
 
+# Ends playtest run and opens the playtest victory overlay with preview texture.
 func _trigger_victory() -> void:
 	is_active = false
 	_timer.stop()
@@ -378,6 +398,7 @@ func _trigger_victory() -> void:
 	stats["solved_preview"] = solved_preview
 	pt_ui.show_victory_overlay(stats)
 
+# Builds the stats payload consumed by PlaytestUIManager victory overlay.
 func _build_end_stats() -> Dictionary:
 	var has_shifters := canvas_manager.loaded_shifter_pairs.size() > 0
 	var star_result := LevelStars.evaluate(
@@ -396,6 +417,7 @@ func _build_end_stats() -> Dictionary:
 		"show_moves": has_shifters and playtest_required_shifter_moves > 0,
 	}
 
+# 1-second playtest clock tick.
 func _on_timer_timeout() -> void:
 	if not is_active:
 		return

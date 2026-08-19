@@ -1,11 +1,18 @@
+# Options/settings overlay that handles language, audio, haptic toggles,
+# privacy links, and destructive actions (reset progress, delete custom levels).
 extends CanvasLayer
 
+# Emitted after the save file is erased so the main menu can reset its state.
 signal save_deleted
+# Emitted when the menu is closed so the caller can restore the previous screen.
 signal back_requested
 
+# Locale codes and matching display names kept in parallel arrays for the language picker.
+# Display names are intentionally never translated — they always appear in their own script.
 const LANGUAGES = ["en", "es", "de", "fr", "pl", "ka", "uk"]
 const LANG_NAMES = ["ENGLISH", "ESPAÑOL", "DEUTSCH", "FRANÇAIS", "POLSKI", "ქართული", "УКРАЇНСЬКА"]
 
+# Tracks which destructive action the confirm dialog was opened for.
 enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM }
 
 @onready var title_label: Label = $ScreenHeaderHost/TitleLabel
@@ -29,8 +36,12 @@ enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM }
 @onready var _confirm_yes_btn: Button = $ConfirmBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/YesButton
 @onready var _confirm_no_btn: Button = $ConfirmBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/NoButton
 
+# Which destructive action the confirm dialog is waiting on, or NONE if not shown.
 var _pending_confirm: ConfirmAction = ConfirmAction.NONE
+# When true, destructive buttons (reset progress, delete custom) are visible.
 var _from_main_menu: bool = false
+# Debug buttons (unlock all, delete custom) are only shown when opened from the main menu
+# and GlobalGameManager.debug_tools_enabled is true.
 var _show_debug_options: bool = false
 
 func _ready() -> void:
@@ -69,12 +80,15 @@ func _ready() -> void:
 	_fit_option_buttons()
 	_style_close_button()
 
+# Binds the i18n key and applies the screen-header visual style to the title label.
 func _style_header() -> void:
 	if not title_label:
 		return
 	HudLayout._bind_header_translation_key(title_label, "UI_OPTIONS")
 	HudLayout.apply_screen_header_style(title_label)
 
+# Opens the menu, refreshing all toggle labels and button visibility for the current context.
+# Pass from_main_menu=true to show destructive/debug options not shown in-game.
 func show_menu(from_main_menu: bool = false) -> void:
 	_from_main_menu = from_main_menu
 	_show_debug_options = from_main_menu and GlobalGameManager.debug_tools_enabled
@@ -96,6 +110,8 @@ func hide_menu() -> void:
 	visible = false
 	back_requested.emit()
 
+# Handles the Android system back button. If a confirm dialog is open, closes it first.
+# Returns true if the back event was consumed (so the caller doesn't also navigate back).
 func handle_system_back() -> bool:
 	if not visible:
 		return false
@@ -105,6 +121,8 @@ func handle_system_back() -> bool:
 	hide_menu()
 	return true
 
+# Shows or hides buttons that are only appropriate when accessed from the main menu
+# (reset progress) or in debug mode (unlock all, delete custom levels).
 func _configure_main_menu_buttons() -> void:
 	if del_save_btn:
 		del_save_btn.visible = _from_main_menu
@@ -125,6 +143,8 @@ func _configure_main_menu_buttons() -> void:
 			del_custom_btn.text = "UI_DELETE_CUSTOM"
 			del_custom_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
 
+# The "Privacy Options" button is only visible when UMP has a form ready to display
+# (i.e. the user is in a region that requires consent management).
 func _refresh_privacy_options_visibility() -> void:
 	if not privacy_options_btn:
 		return
@@ -135,6 +155,8 @@ func _refresh_privacy_options_visibility() -> void:
 		)
 	privacy_options_btn.visible = show_privacy_options
 
+# Refreshes the language display label to show the current locale's native name.
+# The lang label always uses the locale's own script (never auto-translated).
 func _update_lang_label() -> void:
 	if not lang_label:
 		return
@@ -166,6 +188,9 @@ func _update_lang_label() -> void:
 		lang_label.add_theme_font_size_override("font_size", font_size)
 		HudLayout.apply_safe_outline(lang_label, GameConstants.MENU_TEXT_OUTLINE)
 
+# Re-measures and resizes all option buttons to fit their translated text,
+# and re-styles the language prev/next arrows and confirm dialog texts.
+# Must be called after any locale change because font metrics differ per locale.
 func _fit_option_buttons() -> void:
 	if title_label:
 		HudLayout._bind_header_translation_key(title_label, "UI_OPTIONS")
@@ -206,6 +231,9 @@ func _fit_option_buttons() -> void:
 	_update_lang_label()
 	_refresh_confirm_texts()
 
+# Applies the gray-dark tile style to a single option button and sizes it so its
+# translated text fits with standard padding. Toggle rows skip text override since
+# their label lives in a ToggleCaptionHost RichTextLabel child.
 func _apply_option_button(button: Button) -> void:
 	if not button or not button.visible:
 		return
@@ -243,6 +271,8 @@ func _apply_option_button(button: Button) -> void:
 	button.add_theme_font_size_override("font_size", font_size)
 	HudLayout.apply_safe_outline(button, GameConstants.MENU_TEXT_OUTLINE)
 
+# Returns the display text for an option button, preferring the ToggleCaptionHost
+# RichTextLabel if present (so toggle buttons don't measure stale .text).
 func _option_button_display_text(button: Button) -> String:
 	if button == null:
 		return ""
@@ -258,6 +288,8 @@ func _option_button_display_text(button: Button) -> String:
 		return String(TranslationServer.translate(raw))
 	return raw
 
+# Applies the 9-slice gray-dark tile texture to all visual states of an option button.
+# Local copy of HudLayout.apply_top_bar_tile_styles so options_menu can be standalone.
 func _apply_button_tile_styles(button: Button) -> void:
 	if not button:
 		return
@@ -281,13 +313,18 @@ func _apply_button_tile_styles(button: Button) -> void:
 			box.modulate_color = Color(0.55, 0.55, 0.55, 1.0)
 		button.add_theme_stylebox_override(style_name, box)
 
+# Delegates close button styling to HudLayout so it matches all other close buttons.
 func _style_close_button() -> void:
 	if close_btn == null:
 		return
 	HudLayout.style_top_bar_close_button(close_btn)
 
+# Gold accent color used to highlight the current value (ON/OFF/DYNAMIC) in toggle captions.
 const _TOGGLE_ACCENT := Color(1.0, 0.84, 0.0, 1.0)
 
+# Renders a toggle button's label as BBCode in a RichTextLabel child,
+# coloring only the value part (after the last colon) in the accent gold.
+# This avoids naive "ON" substring replacement that would match "ON" inside "VIBRATION".
 func _set_toggle_button_caption(button: Button, full_text: String) -> void:
 	if not button:
 		return
@@ -350,6 +387,7 @@ func _set_toggle_button_caption(button: Button, full_text: String) -> void:
 	caption.text = "[center]%s[/center]" % colored
 	_apply_option_button(button)
 
+# Refreshes each toggle button to show the current setting value in gold accent text.
 func _update_background_label() -> void:
 	if not bg_btn:
 		return
@@ -373,6 +411,8 @@ func _update_haptic_label() -> void:
 		haptic_btn, tr("UI_HAPTIC_ON" if SaveManager.haptic_enabled else "UI_HAPTIC_OFF")
 	)
 
+# Cycles to the previous language in the LANGUAGES array (wraps around).
+# Refreshes all toggle labels and button sizes because font metrics change per locale.
 func _on_prev_lang() -> void:
 	var current_locale = TranslationServer.get_locale().substr(0, 2)
 	var idx = LANGUAGES.find(current_locale)
@@ -387,6 +427,7 @@ func _on_prev_lang() -> void:
 	_update_haptic_label()
 	_fit_option_buttons()
 
+# Cycles to the next language in the LANGUAGES array (wraps around).
 func _on_next_lang() -> void:
 	var current_locale = TranslationServer.get_locale().substr(0, 2)
 	var idx = LANGUAGES.find(current_locale)
@@ -401,6 +442,7 @@ func _on_next_lang() -> void:
 	_update_haptic_label()
 	_fit_option_buttons()
 
+# Toggle handlers: flip the saved setting and refresh the button caption immediately.
 func _on_toggle_background() -> void:
 	SaveManager.set_background_static(not SaveManager.background_static)
 	_update_background_label()
@@ -417,12 +459,16 @@ func _on_toggle_haptic() -> void:
 	SaveManager.set_haptic_enabled(not SaveManager.haptic_enabled)
 	_update_haptic_label()
 
+# Opens the privacy policy URL via AdsManager (which knows the canonical URL),
+# or falls back to OS.shell_open if AdsManager is unavailable (editor/desktop).
 func _on_privacy_policy_pressed() -> void:
 	if AdsManager:
 		AdsManager.open_privacy_policy()
 	else:
 		OS.shell_open("https://geeks0n-byte.github.io/project-taku/privacy-policy.html")
 
+# Opens the UMP privacy options form if available. Falls back to the privacy policy URL
+# if the form isn't ready (e.g. outside EEA or ads not yet initialised).
 func _on_privacy_options_pressed() -> void:
 	if AdsManager and AdsManager.get_privacy_options_state() == AdsManager.PRIVACY_OPTIONS_STATE_READY:
 		AdsManager.show_privacy_options_form()
@@ -432,6 +478,8 @@ func _on_privacy_options_pressed() -> void:
 	else:
 		OS.shell_open("https://geeks0n-byte.github.io/project-taku/privacy-policy.html")
 
+# Initializes the confirmation dialog (styling, signal connections, initial text).
+# Called once from _ready; safe to call again after a locale change.
 func _setup_confirm_panel() -> void:
 	if _confirm_blocker:
 		_confirm_blocker.visible = false
@@ -447,6 +495,8 @@ func _setup_confirm_panel() -> void:
 	_copy_button_styles(_confirm_no_btn)
 	_refresh_confirm_texts()
 
+# Copies the tile StyleBox from an existing styled button so confirm dialog buttons
+# look consistent without needing their own StyleBoxTexture resources in the scene.
 func _copy_button_styles(target: Button) -> void:
 	var source := close_btn if close_btn else del_save_btn
 	if not source or not target:
@@ -458,6 +508,8 @@ func _copy_button_styles(target: Button) -> void:
 	target.add_theme_color_override("font_outline_color", Color.BLACK)
 	HudLayout.apply_safe_outline(target, GameConstants.MENU_TEXT_OUTLINE)
 
+# Re-translates the confirm dialog button labels and prompt text.
+# Must be called after a locale change so the dialog doesn't show stale text.
 func _refresh_confirm_texts() -> void:
 	if _confirm_yes_btn:
 		_confirm_yes_btn.text = tr("UI_YES")
@@ -476,6 +528,7 @@ func _refresh_confirm_texts() -> void:
 					_confirm_label.text = tr("CONFIRM_RESET_PROGRESS")
 		HudLayout.apply_popup_label(_confirm_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
 
+# Shows the confirmation overlay for a destructive action with the appropriate message.
 func _show_confirm(action: ConfirmAction, message: String) -> void:
 	_pending_confirm = action
 	if _confirm_label:
@@ -489,6 +542,7 @@ func _hide_confirm() -> void:
 	if _confirm_blocker:
 		_confirm_blocker.visible = false
 
+# Dispatches the confirmed destructive action and clears the pending state.
 func _on_confirm_yes() -> void:
 	var action := _pending_confirm
 	_hide_confirm()
@@ -504,6 +558,7 @@ func _on_delete_save_pressed() -> void:
 func _on_delete_custom_pressed() -> void:
 	_show_confirm(ConfirmAction.DELETE_CUSTOM, tr("CONFIRM_DELETE_CUSTOM"))
 
+# Debug tool: unlocks every campaign level and shows a green confirmation message.
 func _on_unlock_all_pressed() -> void:
 	SaveManager.unlock_all_levels()
 	if status_label:
@@ -518,12 +573,15 @@ func _on_unlock_all_pressed() -> void:
 			status_label.text = msg
 			HudLayout.apply_body_label(status_label, GameConstants.UI_BODY_FONT_SIZE)
 
+# Wipes the save file and emits save_deleted so callers (main menu) can react.
 func _do_delete_save() -> void:
 	SaveManager.delete_save_file()
 	if status_label:
 		status_label.text = ""
 	save_deleted.emit()
 
+# Deletes all .tres and .remap files from the user's custom levels directory.
+# Shows a status message in gold to confirm the deletion.
 func _do_delete_custom() -> void:
 	if DirAccess.dir_exists_absolute(GameConstants.DEV_LEVELS_DIR):
 		var dir = DirAccess.open(GameConstants.DEV_LEVELS_DIR)

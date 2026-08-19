@@ -1,34 +1,46 @@
 extends TextureButton
 
+# Emitted when the player taps the tile (cycles its state).
 signal cell_clicked(coord: Vector2i)
+# Emitted when the player holds the tile long enough to clear it.
 signal cell_hold_cleared(coord: Vector2i)
+# Emitted when a shifter tile is tapped (toggles its direction).
 signal shifter_toggled(coord: Vector2i)
 
+# Grid position of this cell, set by BoardManager when the board is built.
 var coord: Vector2i
 var state: int = -1
 var is_playable: bool = true
 var is_locked: bool = false
 var is_linked_pair: bool = false
 var shifter_direction: Vector2i = Vector2i.ZERO
+# Which tile states the player can cycle through on this cell.
 var allowed_cycle_tiles: Array[int] = [0, 1, 2]
 var tutorial_blocked: bool = false
 var guide_active: bool = false
 var focus_active: bool = false
 var validation_error_active: bool = false
 
+# How long the player must hold before the tile is cleared.
 const HOLD_TO_CLEAR_SEC := 0.8
+# How long into the hold before the shake animation starts (gives early feedback).
 const HOLD_SHAKE_START_SEC := 0.15
+
+# Hold-to-clear state — all reset when the finger is lifted.
 var _hold_pressed: bool = false
 var _hold_elapsed: float = 0.0
-var _hold_cleared: bool = false
+var _hold_cleared: bool = false   # True once the clear has triggered this press.
 var _hold_shaking: bool = false
 var _hold_shake_tween: Tween
-var _hold_clear_tween: Tween
+var _hold_clear_tween: Tween      # Stored so it can be killed if the node exits.
 var _hold_rest_rotation: float = 0.0
 
+# Guide highlight (white overlay on cells the hint system points to).
 const GUIDE_COLOR := Color(1.0, 1.0, 1.0, 0.45)
 const GUIDE_ALPHA_MIN := 0.22
 const GUIDE_ALPHA_MAX := 0.72
+
+# Focus/error border drawn around the cell.
 const FOCUS_BORDER_COLOR := Color(1.0, 1.0, 1.0, 1.0)
 const FOCUS_BORDER_ALPHA_MIN := 0.35
 const FOCUS_BORDER_ALPHA_MAX := 1.0
@@ -36,19 +48,20 @@ const ERROR_BORDER_COLOR := Color.RED
 
 var _guide_breathe_tween: Tween
 var _focus_breathe_tween: Tween
-var _shake_tween: Tween
+var _shake_tween: Tween           # Used for the blocked-move lateral shake.
 var _focus_border_alpha: float = 1.0
 var _shake_rest_position: Vector2 = Vector2.ZERO
 
+# Tile textures — assigned in the scene editor, overridable per cell type.
 @export var tex_empty: Texture2D = preload("res://resources/tiles/tile_empty.svg")
 @export var tex_empty_editor: Texture2D = preload("res://resources/tiles/tile_empty_editor.svg")
-
 @export var tex_wall: Texture2D = preload("res://resources/tiles/tile_wall.svg")
 @export var tex_yellow: Texture2D = preload("res://resources/tiles/tile_yellow.svg")
 @export var tex_blue: Texture2D = preload("res://resources/tiles/tile_blue.svg")
 @export var tex_joker: Texture2D = preload("res://resources/tiles/tile_green.svg")
 @export var tex_shifter: Texture2D = preload("res://resources/tiles/tile_shifter.svg")
 
+# Chevron textures for shifter direction indicators.
 @export var tex_chevron_up: Texture2D
 @export var tex_chevron_down: Texture2D
 @export var tex_chevron_left: Texture2D
@@ -60,9 +73,12 @@ var _shake_rest_position: Vector2 = Vector2.ZERO
 @onready var tile_icon = $TileIcon
 @onready var chevron_icon = get_node_or_null("ChevronIcon")
 
+# Pixels of margin from the tile edge that are ignored for tap detection.
 const CLICK_MARGIN = 5.0
 var is_editor_mode: bool = false
 
+# Kill all active tweens when the node leaves the tree to prevent
+# callbacks firing on a freed object (e.g. during board reset).
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_EXIT_TREE:
 		for tw in [_hold_shake_tween, _hold_clear_tween, _guide_breathe_tween, _focus_breathe_tween, _shake_tween]:
@@ -123,12 +139,14 @@ func _stretch_node_to_parent(node: Control, margin: float = 0.0):
 		node.offset_right = margin
 		node.offset_bottom = margin
 
+# Handles tap/hold input on the tile.
+# On press: starts the hold-to-clear timer.
+# On release: either fires the normal tile cycle (tap) or does nothing (hold already cleared).
 func _gui_input(event):
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			if event.position.x > CLICK_MARGIN and event.position.x < (size.x - CLICK_MARGIN) and \
 			   event.position.y > CLICK_MARGIN and event.position.y < (size.y - CLICK_MARGIN):
-				# Start hold-clear timer; action fires on release.
 				_hold_pressed = true
 				_hold_elapsed = 0.0
 				_hold_cleared = false
@@ -136,6 +154,8 @@ func _gui_input(event):
 		else:
 			_on_release()
 
+# Cycles the tile to its next allowed state, or toggles the shifter direction.
+# Called on finger release if no hold-clear happened.
 func _perform_action():
 	if not is_playable or is_locked or tutorial_blocked:
 		return
@@ -166,6 +186,8 @@ func _perform_action():
 		update_visuals()
 		cell_clicked.emit(coord)
 
+# Returns true if the current tile state and flags allow a hold-clear.
+# Wall, empty, and shifter tiles cannot be cleared this way.
 func _can_hold_clear() -> bool:
 	if is_editor_mode or is_locked or tutorial_blocked or not is_playable:
 		return false
@@ -173,6 +195,9 @@ func _can_hold_clear() -> bool:
 		return false
 	return true
 
+# Runs every frame while the player is holding the tile.
+# Triggers the shake animation after HOLD_SHAKE_START_SEC,
+# then clears the tile after HOLD_TO_CLEAR_SEC.
 func _process(delta: float) -> void:
 	if not _hold_pressed:
 		set_process(false)
@@ -183,6 +208,7 @@ func _process(delta: float) -> void:
 	if _hold_elapsed >= HOLD_TO_CLEAR_SEC and _can_hold_clear():
 		_finish_hold_clear()
 
+# Called when the finger is lifted. If no clear happened, performs the normal tap action.
 func _on_release() -> void:
 	var was_cleared := _hold_cleared
 	_hold_pressed = false
@@ -194,6 +220,7 @@ func _on_release() -> void:
 	if not was_cleared:
 		_perform_action()
 
+# Cancels the hold without firing any action (e.g. called externally to interrupt).
 func _cancel_hold() -> void:
 	_hold_pressed = false
 	_hold_elapsed = 0.0
@@ -202,6 +229,7 @@ func _cancel_hold() -> void:
 		_stop_hold_shake()
 	set_process(false)
 
+# Starts a looping left-right rotation tween to signal an imminent clear.
 func _start_hold_shake() -> void:
 	_hold_shaking = true
 	_hold_rest_rotation = rotation
@@ -214,6 +242,7 @@ func _start_hold_shake() -> void:
 	_hold_shake_tween.tween_property(self, "rotation", _hold_rest_rotation - intensity, 0.08).set_trans(Tween.TRANS_SINE)
 	_hold_shake_tween.tween_property(self, "rotation", _hold_rest_rotation, 0.04).set_trans(Tween.TRANS_SINE)
 
+# Stops the shake tween and snaps the tile back to its original rotation.
 func _stop_hold_shake() -> void:
 	_hold_shaking = false
 	if _hold_shake_tween and _hold_shake_tween.is_valid():
@@ -221,6 +250,8 @@ func _stop_hold_shake() -> void:
 		_hold_shake_tween = null
 	rotation = _hold_rest_rotation
 
+# Locks in the clear, plays haptic, then runs the pop-out shrink animation.
+# _apply_hold_clear is called at the end of the tween to actually reset the tile.
 func _finish_hold_clear() -> void:
 	_hold_pressed = false
 	_hold_cleared = true
@@ -239,6 +270,7 @@ func _finish_hold_clear() -> void:
 	_hold_clear_tween.tween_property(self, "rotation", _hold_rest_rotation + deg_to_rad(15.0), 0.18).set_trans(Tween.TRANS_SINE)
 	_hold_clear_tween.chain().tween_callback(_apply_hold_clear)
 
+# Tween callback: resets scale/rotation, sets state to EMPTY, and emits the signal.
 func _apply_hold_clear() -> void:
 	scale = Vector2(1.0, 1.0)
 	rotation = _hold_rest_rotation
