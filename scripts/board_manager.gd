@@ -2,6 +2,7 @@ class_name BoardManager
 extends Node2D
 
 signal cell_changed(coord: Vector2i)
+signal cell_hold_cleared(coord: Vector2i)
 signal shifter_move_made
 signal invalid_move_attempted(message: String)
 
@@ -70,6 +71,10 @@ func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shi
 			cell.cell_clicked.connect(func(c):
 				clear_highlights()
 				cell_changed.emit(c)
+			)
+			cell.cell_hold_cleared.connect(func(c):
+				clear_highlights()
+				cell_hold_cleared.emit(c)
 			)
 			add_child(cell)
 			cell_pool.append(cell)

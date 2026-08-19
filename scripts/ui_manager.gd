@@ -85,7 +85,18 @@ var _move_count: int = 0
 var _move_required: int = -1
 var _last_timer_text: String = ""
 
+# Hold-to-repeat undo/redo
+var _hold_undo_active: bool = false
+var _hold_redo_active: bool = false
+var _hold_repeat_elapsed: float = 0.0
+var _hold_repeat_interval: float = 0.0
+const _HOLD_INITIAL_DELAY := 0.4
+const _HOLD_REPEAT_START := 0.3
+const _HOLD_REPEAT_MIN := 0.05
+const _HOLD_REPEAT_ACCEL := 0.82
+
 func _ready() -> void:
+	set_process(false)
 	_layout_how_to_play()
 	_setup_how_to_play_font()
 	_refresh_how_to_play_text()
@@ -171,8 +182,14 @@ func _connect_signals() -> void:
 		hint_button.pressed.connect(_on_hint_requested)
 	if undo_button and not undo_button.pressed.is_connected(_on_undo_requested):
 		undo_button.pressed.connect(_on_undo_requested)
+	if undo_button and not undo_button.button_down.is_connected(_on_undo_button_down):
+		undo_button.button_down.connect(_on_undo_button_down)
+		undo_button.button_up.connect(_on_undo_button_up)
 	if redo_button and not redo_button.pressed.is_connected(_on_redo_requested):
 		redo_button.pressed.connect(_on_redo_requested)
+	if redo_button and not redo_button.button_down.is_connected(_on_redo_button_down):
+		redo_button.button_down.connect(_on_redo_button_down)
+		redo_button.button_up.connect(_on_redo_button_up)
 	if restart_button and not restart_button.pressed.is_connected(_on_victory_next_pressed):
 		restart_button.pressed.connect(_on_victory_next_pressed)
 	if main_menu_button and not main_menu_button.pressed.is_connected(_on_main_menu_pressed):
@@ -216,6 +233,48 @@ func _on_undo_requested() -> void:
 
 func _on_redo_requested() -> void:
 	redo_requested.emit()
+
+func _on_undo_button_down() -> void:
+	_hold_undo_active = true
+	_hold_redo_active = false
+	_hold_repeat_elapsed = 0.0
+	_hold_repeat_interval = _HOLD_REPEAT_START
+	set_process(true)
+
+func _on_undo_button_up() -> void:
+	_hold_undo_active = false
+	if not _hold_redo_active:
+		set_process(false)
+
+func _on_redo_button_down() -> void:
+	_hold_redo_active = true
+	_hold_undo_active = false
+	_hold_repeat_elapsed = 0.0
+	_hold_repeat_interval = _HOLD_REPEAT_START
+	set_process(true)
+
+func _on_redo_button_up() -> void:
+	_hold_redo_active = false
+	if not _hold_undo_active:
+		set_process(false)
+
+func _process(delta: float) -> void:
+	if not _hold_undo_active and not _hold_redo_active:
+		set_process(false)
+		return
+	_hold_repeat_elapsed += delta
+	if _hold_repeat_elapsed < _HOLD_INITIAL_DELAY:
+		return
+	var time_since_start := _hold_repeat_elapsed - _HOLD_INITIAL_DELAY
+	# Check if next repeat is due.
+	if time_since_start < _hold_repeat_interval:
+		return
+	_hold_repeat_elapsed = _HOLD_INITIAL_DELAY + 0.0
+	_hold_repeat_interval = maxf(_hold_repeat_interval * _HOLD_REPEAT_ACCEL, _HOLD_REPEAT_MIN)
+	if _hold_undo_active:
+		undo_requested.emit()
+	elif _hold_redo_active:
+		redo_requested.emit()
 
 func _on_tutorial_back_pressed() -> void:
 	if how_to_play_container:

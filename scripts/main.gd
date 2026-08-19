@@ -174,6 +174,7 @@ func _bind_submanager_signals():
 	ui_manager.undo_requested.connect(_on_undo_requested)
 	ui_manager.redo_requested.connect(_on_redo_requested)
 	board_manager.cell_changed.connect(_on_cell_changed)
+	board_manager.cell_hold_cleared.connect(_on_cell_changed)
 	board_manager.shifter_move_made.connect(_on_shifter_move_made)
 	board_manager.invalid_move_attempted.connect(_on_invalid_move_attempted)
 	if tutorial_director and not tutorial_director.finished.is_connected(_on_tutorial_finished):

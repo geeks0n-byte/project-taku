@@ -926,6 +926,44 @@ static func apply_panel_button(button: Button) -> void:
 	fit_text_button(button, GameConstants.UI_BTN_PANEL_FONT, GameConstants.UI_BTN_PANEL_FONT_MIN)
 	_fit_panel_button_captions(button)
 
+## Applies the gray-dark tile texture style to a button.
+## Height is fixed to [param height]; width auto-fits the text label.
+## Font is set to [param font_size] (scaled). Used for consent and similar overlay buttons.
+static func apply_tile_button(
+	button: Button,
+	texture: Texture2D,
+	font_size: int = 52,
+	height: float = 118.0
+) -> void:
+	if not button:
+		return
+	button.focus_mode = Control.FOCUS_NONE
+	button.flat = false
+	button.autowrap_mode = TextServer.AUTOWRAP_OFF
+	button.clip_text = false
+	button.custom_minimum_size = Vector2(0.0, height)
+	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	button.add_theme_color_override("font_outline_color", Color.BLACK)
+	for style_name in ["normal", "pressed", "hover", "disabled", "focus"]:
+		var box := StyleBoxTexture.new()
+		box.texture = texture
+		box.texture_margin_left = 16.0
+		box.texture_margin_top = 16.0
+		box.texture_margin_right = 16.0
+		box.texture_margin_bottom = 16.0
+		box.content_margin_left = 48.0
+		box.content_margin_top = 8.0
+		box.content_margin_right = 48.0
+		box.content_margin_bottom = 8.0
+		match style_name:
+			"hover":    box.modulate_color = Color(1.2, 1.2, 1.2, 1.0)
+			"pressed":  box.modulate_color = Color(0.8, 0.8, 0.8, 1.0)
+			"disabled": box.modulate_color = Color(0.55, 0.55, 0.55, 1.0)
+		button.add_theme_stylebox_override(style_name, box)
+	apply_locale_font_to_control(button)
+	button.add_theme_font_size_override("font_size", scaled_font_size(font_size))
+	apply_safe_outline(button, GameConstants.MENU_TEXT_OUTLINE)
+
 static func _fit_panel_button_captions(button: Button) -> void:
 	if not button:
 		return

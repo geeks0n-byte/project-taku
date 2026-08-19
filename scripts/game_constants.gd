@@ -15,6 +15,8 @@ enum BrushTool {
 	NOT_EQUALS = 5,
 }
 
+const PRIVACY_POLICY_URL := "https://geeks0n-byte.github.io/project-taku/privacy-policy.html"
+
 const CELL_SIZE := 120
 const TOP_HUD_BOTTOM := 236.0
 const BOARD_GAP := 40.0
@@ -61,7 +63,7 @@ const HUD_SIDE_MARGIN := 24.0
 const HUD_TOP_BAR_ICON_NUDGE := 2
 const LEVEL_PREVIEW_SIZE := 112
 
-const SCREEN_HEADER_FONT_SIZE := 64
+const SCREEN_HEADER_FONT_SIZE := 72
 const SCREEN_HEADER_OUTLINE := 12
 const SCREEN_HEADER_TOP := 260.0
 const SCREEN_HEADER_HEIGHT := 152.0

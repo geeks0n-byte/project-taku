@@ -1,0 +1,79 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/consent_popup.gd" id="1_script"]
+
+[node name="ConsentBlocker" type="ColorRect"]
+script = ExtResource("1_script")
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0)
+mouse_filter = 1
+visible = false
+
+[node name="Outer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="SpacerTop" type="Control" parent="Outer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Content" type="VBoxContainer" parent="Outer"]
+layout_mode = 2
+size_flags_horizontal = 4
+custom_minimum_size = Vector2(760, 0)
+theme_override_constants/separation = 0
+
+[node name="ConsentTitle" type="Label" parent="Outer/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+text = "UI_CONSENT_TITLE"
+horizontal_alignment = 1
+auto_translate_mode = 1
+
+[node name="GapTitleBody" type="Control" parent="Outer/Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 48)
+
+[node name="ConsentBody" type="Label" parent="Outer/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 0.92)
+text = "UI_CONSENT_BODY"
+horizontal_alignment = 1
+autowrap_mode = 3
+auto_translate_mode = 1
+
+[node name="GapBodyButtons" type="Control" parent="Outer/Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 72)
+
+[node name="ReadPolicyButton" type="Button" parent="Outer/Content"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "UI_CONSENT_READ_POLICY"
+auto_translate_mode = 1
+
+[node name="GapBetweenButtons" type="Control" parent="Outer/Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 24)
+
+[node name="AcceptButton" type="Button" parent="Outer/Content"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "UI_CONSENT_ACCEPT"
+auto_translate_mode = 1
+
+[node name="SpacerBot" type="Control" parent="Outer"]
+layout_mode = 2
+size_flags_vertical = 3

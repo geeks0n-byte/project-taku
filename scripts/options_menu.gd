@@ -72,8 +72,6 @@ func _ready() -> void:
 func _style_header() -> void:
 	if not title_label:
 		return
-	title_label.set_meta("_screen_header_font_size", 72)
-	title_label.set_meta("_screen_header_outline", GameConstants.SCREEN_HEADER_OUTLINE)
 	HudLayout._bind_header_translation_key(title_label, "UI_OPTIONS")
 	HudLayout.apply_screen_header_style(title_label)
 
@@ -170,8 +168,6 @@ func _update_lang_label() -> void:
 
 func _fit_option_buttons() -> void:
 	if title_label:
-		title_label.set_meta("_screen_header_font_size", 72)
-		title_label.set_meta("_screen_header_outline", GameConstants.SCREEN_HEADER_OUTLINE)
 		HudLayout._bind_header_translation_key(title_label, "UI_OPTIONS")
 		HudLayout.apply_screen_header_style(title_label)
 	if privacy_btn:

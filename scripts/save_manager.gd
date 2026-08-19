@@ -12,6 +12,8 @@ var bgm_enabled: bool = true
 var sfx_enabled: bool = true
 var haptic_enabled: bool = true
 var tutorial_intro_answered: bool = false
+var privacy_accepted: bool = false
+var dev_mode_enabled: bool = false  # Runtime-only; not persisted to disk.
 var level_star_bits: Dictionary = {}
 var session_data: Dictionary = {}
 var ads_wins_since_interstitial: int = 0
@@ -106,6 +108,11 @@ func load_progress() -> void:
 			tutorial_intro_answered = bool(config.get_value("Progression", "tutorial_intro_answered", false))
 		else:
 			tutorial_intro_answered = true
+		if config.has_section_key("Progression", "privacy_accepted"):
+			privacy_accepted = bool(config.get_value("Progression", "privacy_accepted", false))
+		else:
+			privacy_accepted = true  # Existing install; treat as already accepted.
+		# dev_mode_enabled is intentionally not loaded — must be re-activated each session.
 		level_star_bits = config.get_value("Progression", "level_star_bits", {})
 		if typeof(level_star_bits) != TYPE_DICTIONARY:
 			level_star_bits = {}
@@ -146,6 +153,8 @@ func save_progress() -> void:
 	config.set_value("Progression", "sfx_enabled", sfx_enabled)
 	config.set_value("Progression", "haptic_enabled", haptic_enabled)
 	config.set_value("Progression", "tutorial_intro_answered", tutorial_intro_answered)
+	config.set_value("Progression", "privacy_accepted", privacy_accepted)
+	# dev_mode_enabled is not saved — it resets each session by design.
 	config.set_value("Progression", "level_star_bits", level_star_bits)
 	config.set_value("Ads", "wins_since_interstitial", ads_wins_since_interstitial)
 	if session_data.is_empty():
@@ -212,6 +221,14 @@ func set_haptic_enabled(enabled: bool) -> void:
 	haptic_enabled = enabled
 	save_progress()
 
+func accept_privacy() -> void:
+	privacy_accepted = true
+	save_progress()
+
+func toggle_dev_mode() -> bool:
+	dev_mode_enabled = not dev_mode_enabled
+	return dev_mode_enabled
+
 func _apply_background_mode() -> void:
 	if SpaceBackground and SpaceBackground.has_method("set_static_mode"):
 		SpaceBackground.set_static_mode(background_static)
@@ -276,6 +293,7 @@ func delete_save_file() -> void:
 	level_star_bits.clear()
 	session_data = {}
 	tutorial_intro_answered = false
+	privacy_accepted = false
 	ads_wins_since_interstitial = 0
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(SAVE_PATH)

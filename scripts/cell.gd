@@ -1,6 +1,7 @@
 extends TextureButton
 
 signal cell_clicked(coord: Vector2i)
+signal cell_hold_cleared(coord: Vector2i)
 signal shifter_toggled(coord: Vector2i)
 
 var coord: Vector2i
@@ -14,6 +15,16 @@ var tutorial_blocked: bool = false
 var guide_active: bool = false
 var focus_active: bool = false
 var validation_error_active: bool = false
+
+const HOLD_TO_CLEAR_SEC := 0.8
+const HOLD_SHAKE_START_SEC := 0.15
+var _hold_pressed: bool = false
+var _hold_elapsed: float = 0.0
+var _hold_cleared: bool = false
+var _hold_shaking: bool = false
+var _hold_shake_tween: Tween
+var _hold_clear_tween: Tween
+var _hold_rest_rotation: float = 0.0
 
 const GUIDE_COLOR := Color(1.0, 1.0, 1.0, 0.45)
 const GUIDE_ALPHA_MIN := 0.22
@@ -52,7 +63,14 @@ var _shake_rest_position: Vector2 = Vector2.ZERO
 const CLICK_MARGIN = 5.0
 var is_editor_mode: bool = false
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_EXIT_TREE:
+		for tw in [_hold_shake_tween, _hold_clear_tween, _guide_breathe_tween, _focus_breathe_tween, _shake_tween]:
+			if tw and tw.is_valid():
+				tw.kill()
+
 func _ready():
+	set_process(false)
 	custom_minimum_size = Vector2(120, 120)
 
 	_stretch_node_to_parent(error_highlight, 0.0)
@@ -106,10 +124,17 @@ func _stretch_node_to_parent(node: Control, margin: float = 0.0):
 		node.offset_bottom = margin
 
 func _gui_input(event):
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.position.x > CLICK_MARGIN and event.position.x < (size.x - CLICK_MARGIN) and \
-		   event.position.y > CLICK_MARGIN and event.position.y < (size.y - CLICK_MARGIN):
-			_perform_action()
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			if event.position.x > CLICK_MARGIN and event.position.x < (size.x - CLICK_MARGIN) and \
+			   event.position.y > CLICK_MARGIN and event.position.y < (size.y - CLICK_MARGIN):
+				# Start hold-clear timer; action fires on release.
+				_hold_pressed = true
+				_hold_elapsed = 0.0
+				_hold_cleared = false
+				set_process(true)
+		else:
+			_on_release()
 
 func _perform_action():
 	if not is_playable or is_locked or tutorial_blocked:
@@ -140,6 +165,87 @@ func _perform_action():
 
 		update_visuals()
 		cell_clicked.emit(coord)
+
+func _can_hold_clear() -> bool:
+	if is_editor_mode or is_locked or tutorial_blocked or not is_playable:
+		return false
+	if state == GameConstants.TileState.EMPTY or state == GameConstants.TileState.WALL or state == GameConstants.TileState.SHIFTER:
+		return false
+	return true
+
+func _process(delta: float) -> void:
+	if not _hold_pressed:
+		set_process(false)
+		return
+	_hold_elapsed += delta
+	if _hold_elapsed >= HOLD_SHAKE_START_SEC and not _hold_shaking and _can_hold_clear():
+		_start_hold_shake()
+	if _hold_elapsed >= HOLD_TO_CLEAR_SEC and _can_hold_clear():
+		_finish_hold_clear()
+
+func _on_release() -> void:
+	var was_cleared := _hold_cleared
+	_hold_pressed = false
+	_hold_elapsed = 0.0
+	_hold_cleared = false
+	if _hold_shaking:
+		_stop_hold_shake()
+	set_process(false)
+	if not was_cleared:
+		_perform_action()
+
+func _cancel_hold() -> void:
+	_hold_pressed = false
+	_hold_elapsed = 0.0
+	_hold_cleared = false
+	if _hold_shaking:
+		_stop_hold_shake()
+	set_process(false)
+
+func _start_hold_shake() -> void:
+	_hold_shaking = true
+	_hold_rest_rotation = rotation
+	pivot_offset = size / 2.0
+	if _hold_shake_tween and _hold_shake_tween.is_valid():
+		_hold_shake_tween.kill()
+	_hold_shake_tween = create_tween().set_loops()
+	var intensity := deg_to_rad(3.0)
+	_hold_shake_tween.tween_property(self, "rotation", _hold_rest_rotation + intensity, 0.04).set_trans(Tween.TRANS_SINE)
+	_hold_shake_tween.tween_property(self, "rotation", _hold_rest_rotation - intensity, 0.08).set_trans(Tween.TRANS_SINE)
+	_hold_shake_tween.tween_property(self, "rotation", _hold_rest_rotation, 0.04).set_trans(Tween.TRANS_SINE)
+
+func _stop_hold_shake() -> void:
+	_hold_shaking = false
+	if _hold_shake_tween and _hold_shake_tween.is_valid():
+		_hold_shake_tween.kill()
+		_hold_shake_tween = null
+	rotation = _hold_rest_rotation
+
+func _finish_hold_clear() -> void:
+	_hold_pressed = false
+	_hold_cleared = true
+	set_process(false)
+	if _hold_shake_tween and _hold_shake_tween.is_valid():
+		_hold_shake_tween.kill()
+		_hold_shake_tween = null
+	if UiSfx:
+		UiSfx.play_clear_haptic()
+	pivot_offset = size / 2.0
+	if _hold_clear_tween and _hold_clear_tween.is_valid():
+		_hold_clear_tween.kill()
+	_hold_clear_tween = create_tween()
+	_hold_clear_tween.set_parallel(true)
+	_hold_clear_tween.tween_property(self, "scale", Vector2(0.0, 0.0), 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	_hold_clear_tween.tween_property(self, "rotation", _hold_rest_rotation + deg_to_rad(15.0), 0.18).set_trans(Tween.TRANS_SINE)
+	_hold_clear_tween.chain().tween_callback(_apply_hold_clear)
+
+func _apply_hold_clear() -> void:
+	scale = Vector2(1.0, 1.0)
+	rotation = _hold_rest_rotation
+	_hold_shaking = false
+	state = GameConstants.TileState.EMPTY
+	update_visuals()
+	cell_hold_cleared.emit(coord)
 
 func update_visuals():
 	if lock_icon:

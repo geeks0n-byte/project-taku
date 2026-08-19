@@ -61,6 +61,13 @@ const MENU_FADE_IN := 0.65
 var _htp_header: Label
 var _htp_page: int = 0
 
+var _consent_blocker: ColorRect  # Instance of consent_popup.tscn
+
+# Dev mode long-press on version label
+var _version_hold_active: bool = false
+var _version_hold_elapsed: float = 0.0
+const _VERSION_HOLD_SEC := 3.0
+
 func _ready() -> void:
 	_apply_debug_tools_visibility()
 	_apply_editor_button_label()
@@ -98,6 +105,7 @@ func _ready() -> void:
 	if _tutorial_intro_yes: _tutorial_intro_yes.pressed.connect(_on_tutorial_intro_yes)
 	if _tutorial_intro_no: _tutorial_intro_no.pressed.connect(_on_tutorial_intro_no)
 	_mount_credits_header()
+	_build_consent_popup()
 
 	if options_menu:
 		options_menu.back_requested.connect(_on_options_back)
@@ -129,6 +137,9 @@ func _notification(what: int) -> void:
 			options_menu.handle_system_back()
 		elif options_menu.has_method("hide_menu"):
 			options_menu.hide_menu()
+		return
+	if _consent_blocker and _consent_blocker.visible:
+		GlobalGameManager.quit_app()
 		return
 	if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
 		_hide_tutorial_intro_prompt()
@@ -400,7 +411,8 @@ func _refresh_credits_version() -> void:
 	if not credits_version_label:
 		return
 	credits_version_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	var version_text := "v%s" % _app_version_string()
+	var dev_on := SaveManager != null and SaveManager.dev_mode_enabled
+	var version_text := "v%s%s" % [_app_version_string(), " [DEV]" if dev_on else ""]
 	credits_version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	credits_version_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	HudLayout.apply_raster_pixel_label(
@@ -409,6 +421,43 @@ func _refresh_credits_version() -> void:
 		28,
 		Color(0.67, 0.67, 0.67, 1)
 	)
+	credits_version_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	if not credits_version_label.gui_input.is_connected(_on_version_label_input):
+		credits_version_label.gui_input.connect(_on_version_label_input)
+
+func _on_version_label_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_version_hold_active = true
+			_version_hold_elapsed = 0.0
+			set_process(true)
+		else:
+			_version_hold_active = false
+
+func _process(delta: float) -> void:
+	if not _version_hold_active:
+		set_process(false)
+		return
+	_version_hold_elapsed += delta
+	if _version_hold_elapsed >= _VERSION_HOLD_SEC:
+		_version_hold_active = false
+		set_process(false)
+		_toggle_dev_mode()
+
+func _toggle_dev_mode() -> void:
+	if SaveManager == null:
+		return
+	var now_on := SaveManager.toggle_dev_mode()
+	# Only update the global flag; don't touch debug_bar visibility here because
+	# we may be inside the credits overlay where the bar must stay hidden.
+	GlobalGameManager.debug_tools_enabled = _is_debug_enabled()
+	_refresh_credits_version()
+	# Brief flash on the version label as confirmation.
+	if credits_version_label:
+		var tw := create_tween()
+		var target_color := Color(0.2, 1.0, 0.4, 1.0) if now_on else Color(1.0, 0.3, 0.3, 1.0)
+		tw.tween_property(credits_version_label, "modulate", target_color, 0.15)
+		tw.tween_property(credits_version_label, "modulate", Color.WHITE, 0.4)
 
 func _apply_editor_button_label() -> void:
 	if not editor_btn:
@@ -416,16 +465,20 @@ func _apply_editor_button_label() -> void:
 	editor_btn.text = "EDITOR"
 	editor_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 
+func _is_debug_enabled() -> bool:
+	return show_debug_tools or (SaveManager != null and SaveManager.dev_mode_enabled)
+
 func _apply_debug_tools_visibility() -> void:
-	GlobalGameManager.debug_tools_enabled = show_debug_tools
+	var enabled := _is_debug_enabled()
+	GlobalGameManager.debug_tools_enabled = enabled
 	if editor_btn:
-		editor_btn.visible = show_debug_tools
+		editor_btn.visible = enabled
 	if debug_bar:
-		debug_bar.visible = show_debug_tools
+		debug_bar.visible = enabled
 
 func _set_debug_bar_visible(should_show: bool) -> void:
 	if debug_bar:
-		debug_bar.visible = show_debug_tools and should_show
+		debug_bar.visible = _is_debug_enabled() and should_show
 
 func _on_tutorial_pressed() -> void:
 	_apply_debug_tools_visibility()
@@ -512,6 +565,27 @@ func _on_htp_close() -> void:
 		_htp_host.visible = false
 	_set_main_menu_chrome_visible(true)
 	_set_debug_bar_visible(true)
+
+const _CONSENT_POPUP_SCENE := preload("res://scenes/consent_popup.tscn")
+
+func _build_consent_popup() -> void:
+	var ui_layer := get_node_or_null("UILayer") as CanvasLayer
+	if ui_layer == null:
+		return
+	var popup := _CONSENT_POPUP_SCENE.instantiate()
+	ui_layer.add_child(popup)
+	_consent_blocker = popup as ColorRect
+	popup.accepted.connect(_on_consent_accepted)
+	if SaveManager and not SaveManager.privacy_accepted:
+		_set_main_menu_chrome_visible(false)
+		_consent_blocker.visible = true
+		_consent_blocker.move_to_front()
+
+func _on_consent_accepted() -> void:
+	if SaveManager:
+		SaveManager.accept_privacy()
+	_set_main_menu_chrome_visible(true)
+	_apply_debug_tools_visibility()
 
 func _setup_tutorial_intro_panel() -> void:
 	if _tutorial_intro_blocker:

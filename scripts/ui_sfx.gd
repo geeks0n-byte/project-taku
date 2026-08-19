@@ -36,7 +36,11 @@ func play_click() -> void:
 	_player.play()
 
 func play_click_haptic() -> void:
-	_vibrate(25, 0.4)
+	_vibrate(10, 0.15)
+
+## Medium buzz when a tile is removed via long-press.
+func play_clear_haptic() -> void:
+	_vibrate(50, 0.5)
 
 ## Short bump for a blocked purple move. Android only; needs VIBRATE in the export.
 func play_blocked_haptic() -> void:
