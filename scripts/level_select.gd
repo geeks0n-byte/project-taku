@@ -307,10 +307,10 @@ func populate_level_menu() -> void:
 		var title: String
 		var locked := false
 		if current_view == ViewMode.CUSTOM:
-			title = "%d." % int(resource.level_number)
+			title = str(int(resource.level_number))
 		else:
 			var display_num := LevelUtils.get_display_level_number(resource)
-			title = "%d." % int(display_num)
+			title = str(int(display_num))
 			locked = not SaveManager.is_level_unlocked(resource.level_number)
 		_level_entries.append({
 			"resource": resource,
@@ -436,9 +436,9 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 	content.name = "LevelContent"
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	content.offset_left = 10.0
-	content.offset_top = 10.0
-	content.offset_right = -10.0
+	content.offset_left = 18.0
+	content.offset_top = 18.0
+	content.offset_right = -18.0
 	content.offset_bottom = -14.0
 
 	var label := Label.new()
@@ -448,24 +448,25 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 	label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	label.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	# Extra inset so the number isn't flush against the card edge/bevel.
+	label.offset_left = 10.0
+	label.offset_top = 8.0
 	label.grow_horizontal = Control.GROW_DIRECTION_END
 	label.grow_vertical = Control.GROW_DIRECTION_END
-	const TITLE_FONT := 28
+	const TITLE_FONT := 32
+	var title_color := Color(0.55, 0.55, 0.55, 1.0) if locked else Color.WHITE
 	if HudLayout.uses_pixel_font():
-		HudLayout.apply_raster_pixel_label(label, title, TITLE_FONT, Color.WHITE, 0, true)
+		HudLayout.apply_raster_pixel_label(label, title, TITLE_FONT, title_color, 0, true)
 	else:
 		label.text = title
 		label.add_theme_font_override("font", HudLayout.ui_font())
 		label.add_theme_font_size_override("font_size", HudLayout.scaled_font_size(TITLE_FONT))
 		HudLayout.apply_safe_outline(label, GameConstants.MENU_TEXT_OUTLINE)
-	if locked:
-		label.add_theme_color_override("font_color", btn.get_theme_color("font_disabled_color"))
-	else:
-		label.add_theme_color_override("font_color", btn.get_theme_color("font_color"))
+		label.add_theme_color_override("font_color", title_color)
 	content.add_child(label)
 
-	# Leave room under the corner number so previews share one Y on locked/unlocked cards.
-	const PREVIEW_TOP := 36.0
+	# Small top inset for the preview stack (independent of the corner number overlay).
+	const PREVIEW_TOP := 24.0
 	var vbox := VBoxContainer.new()
 	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -500,6 +501,8 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 		vbox.add_child(star_row)
 
 	content.add_child(vbox)
+	# Keep the number above the preview if they overlap.
+	content.move_child(label, content.get_child_count() - 1)
 
 	if locked:
 		var half := LEVEL_LOCK_ICON_SIZE * 0.5

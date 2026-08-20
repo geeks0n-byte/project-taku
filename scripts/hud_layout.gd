@@ -283,7 +283,7 @@ static func layout_how_to_play_stack(
 		GameConstants.HTP_PANEL_MIN_HEIGHT,
 		nav_top - GameConstants.HTP_PANEL_TOP - GameConstants.SCREEN_NAV_GAP
 	)
-	var panel_h := clampf(content_h, GameConstants.HTP_PANEL_MIN_HEIGHT, mini(max_panel_h, max_under_nav))
+	var panel_h := clampf(content_h, GameConstants.HTP_PANEL_MIN_HEIGHT, minf(max_panel_h, max_under_nav))
 	panel.offset_bottom = GameConstants.HTP_PANEL_TOP + panel_h
 	if rules:
 		var needs_scroll := content_h > panel_h + 1.0
@@ -1333,14 +1333,22 @@ static func _sync_button_attention_pivot(button: Button) -> void:
 	if button:
 		button.pivot_offset = button.size * 0.5
 
-# Dims the IconContainer when the button is disabled so the icon looks greyed out.
+# Dims IconContainer (and hint count badge) when the button is disabled.
 # Connected to button.draw so it re-evaluates whenever the disabled state changes.
 static func refresh_button_icon_modulate(button: Button) -> void:
 	if not button:
 		return
+	var dim := GameConstants.DISABLED_ICON_MODULATE if button.disabled else Color.WHITE
 	var icon_root := button.get_node_or_null("IconContainer") as CanvasItem
 	if icon_root:
-		icon_root.modulate = GameConstants.DISABLED_ICON_MODULATE if button.disabled else Color.WHITE
+		icon_root.modulate = dim
+	# Infinity / ad badge sits outside IconContainer — dim it with the button too.
+	var count_icon := button.get_node_or_null("HintCountIcon") as CanvasItem
+	if count_icon:
+		count_icon.modulate = dim
+	var count_label := button.get_node_or_null("HintCountLabel") as CanvasItem
+	if count_label:
+		count_label.modulate = dim
 
 # Translates a mode name (e.g. "EASY MODE") and replaces spaces with newlines
 # so it fits on two lines in the top-bar centre label.

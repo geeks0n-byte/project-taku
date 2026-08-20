@@ -878,7 +878,8 @@ func _position_next_button() -> void:
 	if btn_size.x <= 0.0 or btn_size.y <= 0.0:
 		btn_size = GameConstants.UI_BTN_DIALOG_SIZE
 	var half_w := btn_size.x * 0.5
-	var bottom_margin := 480.0 + GameConstants.AD_BANNER_RESERVE
+	# One button-height lower than the status-area baseline.
+	var bottom_margin := 480.0 + GameConstants.AD_BANNER_RESERVE - btn_size.y
 	_next_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_next_button.offset_left = -half_w
 	_next_button.offset_right = half_w

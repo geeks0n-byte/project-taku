@@ -25,8 +25,8 @@ static func update_button(button: Button, has_action: bool, remaining: int = -1)
 	if icon:
 		var use_on := remaining != 0
 		icon.texture = ICON_HINT_ON if use_on else ICON_HINT_OFF
-	HudLayout.refresh_button_icon_modulate(button)
 	_update_count_badge(button, remaining)
+	HudLayout.refresh_button_icon_modulate(button)
 
 ## Updates a toggle-style hint button (e.g. highlight toggle) — no count badge shown.
 static func update_toggle_button(button: Button, is_on: bool) -> void:
