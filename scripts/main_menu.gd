@@ -239,6 +239,7 @@ func _on_language_changed() -> void:
 	_refresh_start_button_label()
 	_fit_menu_buttons()
 	HudLayout.apply_locale_fonts_to_tree(self)
+	HudLayout.clear_how_to_play_nav_lock(_htp_host)
 	_refresh_how_to_play_text()
 
 func _refresh_start_button_label() -> void:
@@ -253,6 +254,9 @@ func _refresh_start_button_label() -> void:
 func _on_save_deleted() -> void:
 	_refresh_start_button_label()
 	_fit_menu_buttons()
+	# Privacy agreement is cleared with the profile — show consent immediately
+	# (not only after a later main-menu reload via Level Select).
+	_show_privacy_consent_if_needed(true)
 
 func _fit_menu_buttons() -> void:
 	for btn in [start_btn, tutorial_btn, levels_btn, how_to_play_btn, options_btn, credits_btn, editor_btn]:
@@ -299,7 +303,7 @@ func _apply_main_menu_button(button: Button) -> void:
 	if display.is_empty():
 		display = key
 	if HudLayout.uses_pixel_font():
-		# Fixed cell grid — Press Start left bearings make P–L / A–Y look uneven.
+		# Natural advances + geometric centering (Label captions can shift long titles).
 		HudLayout.apply_pixel_mono_button(button, display, font_size, Color.WHITE)
 	else:
 		HudLayout._clear_pixel_raster(button)
@@ -558,7 +562,9 @@ func _refresh_how_to_play_text() -> void:
 	call_deferred("_layout_how_to_play_stack")
 
 func _layout_how_to_play_stack() -> void:
-	HudLayout.layout_how_to_play_stack(_htp_host, _htp_panel, _htp_rules, _htp_nav)
+	HudLayout.layout_how_to_play_stack(
+		_htp_host, _htp_panel, _htp_rules, _htp_nav, _htp_page == 0
+	)
 
 func _on_htp_prev() -> void:
 	_htp_page = maxi(_htp_page - 1, 0)
@@ -587,10 +593,33 @@ func _build_consent_popup() -> void:
 	ui_layer.add_child(popup)
 	_consent_blocker = popup as ColorRect
 	popup.accepted.connect(_on_consent_accepted)
-	if SaveManager and not SaveManager.privacy_accepted:
-		_set_main_menu_chrome_visible(false)
-		_consent_blocker.visible = true
-		_consent_blocker.move_to_front()
+	_bias_consent_popup_up()
+	_show_privacy_consent_if_needed(false)
+
+# Raises the consent card above true center for easier reach on tall phones.
+func _bias_consent_popup_up() -> void:
+	if _consent_blocker == null:
+		return
+	var top := _consent_blocker.get_node_or_null("Outer/SpacerTop") as Control
+	var bot := _consent_blocker.get_node_or_null("Outer/SpacerBot") as Control
+	if top:
+		top.size_flags_stretch_ratio = 1.0
+	if bot:
+		bot.size_flags_stretch_ratio = 1.0 + GameConstants.UI_DIALOG_RAISE_PX / 480.0
+
+# Shows the privacy consent overlay when the profile has not accepted it yet.
+# If close_options is true, closes Options first so the consent is unobstructed.
+func _show_privacy_consent_if_needed(close_options: bool = false) -> void:
+	if SaveManager == null or SaveManager.privacy_accepted:
+		return
+	if _consent_blocker == null:
+		return
+	if close_options and options_menu and options_menu.visible:
+		options_menu.visible = false
+	_set_main_menu_chrome_visible(false)
+	_set_debug_bar_visible(false)
+	_consent_blocker.visible = true
+	_consent_blocker.move_to_front()
 
 # Called when the player taps ACCEPT on the consent popup.
 # Saves acceptance, restores the main menu UI, and applies debug visibility.
@@ -604,6 +633,13 @@ func _setup_tutorial_intro_panel() -> void:
 	if _tutorial_intro_blocker:
 		_tutorial_intro_blocker.visible = false
 		_tutorial_intro_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+	var center := (
+		_tutorial_intro_blocker.get_node_or_null("CenterContainer") as Control
+		if _tutorial_intro_blocker
+		else null
+	)
+	if center:
+		HudLayout.raise_centered_dialog_host(center)
 	var panel := _tutorial_intro_blocker.get_node_or_null("CenterContainer/Panel") as Panel if _tutorial_intro_blocker else null
 	if panel:
 		panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
@@ -672,6 +708,7 @@ func _on_how_to_play_pressed() -> void:
 	_set_main_menu_chrome_visible(false)
 	_set_debug_bar_visible(false)
 	_htp_page = 0
+	HudLayout.clear_how_to_play_nav_lock(_htp_host)
 	_refresh_how_to_play_text()
 	if _htp_host:
 		_htp_host.visible = true
@@ -688,6 +725,7 @@ func _on_options_back() -> void:
 	_set_debug_bar_visible(true)
 	_refresh_start_button_label()
 	_fit_menu_buttons()
+	_show_privacy_consent_if_needed(false)
 
 func _on_credits_pressed() -> void:
 	_set_main_menu_chrome_visible(false)

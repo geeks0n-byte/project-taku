@@ -868,9 +868,8 @@ func _ensure_next_button() -> void:
 		_next_button.pressed.connect(_on_next_pressed)
 	_position_next_button()
 
-# Positions the Next button above the status area. If the status label has
-# overflowed its minimum height, the button is pushed up to avoid overlap.
-# The z_index ensures it renders above other HUD elements.
+# Positions the Next button at a fixed height above the status area.
+# Stays put across steps so longer status copy does not shove it around.
 func _position_next_button() -> void:
 	if not _next_button:
 		return
@@ -879,18 +878,7 @@ func _position_next_button() -> void:
 	if btn_size.x <= 0.0 or btn_size.y <= 0.0:
 		btn_size = GameConstants.UI_BTN_DIALOG_SIZE
 	var half_w := btn_size.x * 0.5
-	var base_bottom := 480.0 + GameConstants.AD_BANNER_RESERVE
-	var bottom_margin := base_bottom
-	if ui_manager and ui_manager.status_label:
-		var status := ui_manager.status_label
-		var content_h := float(status.get_content_height())
-		var overflow := maxf(0.0, content_h - GameConstants.HUD_STATUS_MIN_HEIGHT)
-		if overflow > 0.0:
-			status.offset_bottom = status.offset_top + content_h + 12.0
-		bottom_margin = maxf(
-			220.0 + GameConstants.AD_BANNER_RESERVE,
-			base_bottom - overflow
-		)
+	var bottom_margin := 480.0 + GameConstants.AD_BANNER_RESERVE
 	_next_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_next_button.offset_left = -half_w
 	_next_button.offset_right = half_w

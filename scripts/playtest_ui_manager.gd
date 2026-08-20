@@ -67,6 +67,7 @@ func _ready() -> void:
 func _on_language_changed() -> void:
 	HudLayout.apply_locale_fonts_to_tree(self)
 	_apply_top_bar_buttons()
+	HudLayout.clear_how_to_play_nav_lock(how_to_play_container)
 	_refresh_how_to_play_text()
 
 func _layout_how_to_play() -> void:
@@ -373,11 +374,16 @@ func _refresh_how_to_play_text() -> void:
 
 func _layout_how_to_play_stack() -> void:
 	HudLayout.layout_how_to_play_stack(
-		how_to_play_container, how_to_play_panel, rules_label, how_to_play_nav
+		how_to_play_container,
+		how_to_play_panel,
+		rules_label,
+		how_to_play_nav,
+		_htp_page == 0
 	)
 
 func show_how_to_play() -> void:
 	_htp_page = 0
+	HudLayout.clear_how_to_play_nav_lock(how_to_play_container)
 	_refresh_how_to_play_text()
 	if how_to_play_container:
 		how_to_play_container.visible = true

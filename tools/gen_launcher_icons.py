@@ -11,6 +11,7 @@ import zlib
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "resources", "icons")
 TILES_ROOT = os.path.join(os.path.dirname(__file__), "..", "resources", "tiles")
+BG_ROOT = os.path.join(os.path.dirname(__file__), "..", "resources", "background")
 STORE_ROOT = os.path.join(os.path.dirname(__file__), "..", "docs", "store-assets")
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "..")
 SVG_COSMOS = os.path.join(ROOT, "app_icon_cosmos.svg")
@@ -43,20 +44,25 @@ ICON_TILE_HALO = 1  # transparent padding on Godot 128→16 rasters
 ICON_TILE_STRIDE = ICON_TILE_DST - 2 * ICON_TILE_HALO + ICON_TILE_GAP
 ICON_TILE_MARGIN = (ICON_SIZE - (ICON_TILE_STRIDE + ICON_TILE_DST)) // 2
 
+# Match space_background layer colors (bg_1 dust, bg_2 stars, bg_3 accents, bg_4 sparklers).
+BG_VOID = "#00123a"
+BG_DUST = "#404040"
+BG_STAR = "#ffffff"
+BG_ACCENT_CYAN = "#abffe6"
+BG_ACCENT_PINK = "#ff77a8"
+ICON_ASTEROID_DST = 8
 STAR_SEED = 7369215
-STAR_DIM_COUNT = 7
-STAR_BRIGHT_COUNT = 9
-STAR_MIN_DIST = 4
+STAR_DUST_COUNT = 10
+STAR_BRIGHT_COUNT = 8
+STAR_ACCENT_CYAN_COUNT = 3
+STAR_ACCENT_PINK_COUNT = 2
+STAR_SPARKLER_COUNT = 2
+STAR_MIN_DIST = 3
 STAR_TILE_PAD = 1
-ASTEROID_DIM_RECTS = [
-	(9, 12, 4, 2),
-	(10, 11, 2, 1),
-	(49, 48, 4, 2),
-	(50, 50, 2, 1),
-]
-ASTEROID_BRIGHT_RECTS = [
-	(10, 12, 1, 1),
-	(50, 49, 1, 1),
+# Corner placements keep in-game asteroid sprites in the outer ring only.
+ICON_ASTEROID_PLACEMENTS = [
+	("fx_asteroid_1.svg", 3, 5),
+	("fx_asteroid_2.svg", 50, 47),
 ]
 
 
@@ -319,8 +325,150 @@ def stars_to_path(stars: list[tuple[int, int]]) -> str:
 	return " ".join(f"M{x} {y}h1v1h-1z" for x, y in stars)
 
 
-def rects_to_path(rects: list[tuple[int, int, int, int]]) -> str:
-	return " ".join(f"M{x} {y}h{w}v{h}h-{w}z" for x, y, w, h in rects)
+def pixels_to_svg_groups(
+	pixels: list[tuple[int, int, tuple[int, int, int]]],
+) -> list[str]:
+	"""Group icon-background pixels by color into SVG path elements."""
+	by_color: dict[str, list[tuple[int, int]]] = {}
+	for x, y, rgb in pixels:
+		by_color.setdefault(_rgb_to_hex(rgb), []).append((x, y))
+	lines: list[str] = []
+	for color, pts in by_color.items():
+		lines.append(f'    <g fill="{color}">')
+		lines.append(f'      <path d="{stars_to_path(pts)}" />')
+		lines.append("    </g>")
+	return lines
+
+
+def _line_pixels(x0: int, y0: int, x1: int, y1: int) -> list[tuple[int, int]]:
+	pts: list[tuple[int, int]] = []
+	dx = abs(x1 - x0)
+	dy = abs(y1 - y0)
+	sx = 1 if x0 < x1 else -1
+	sy = 1 if y0 < y1 else -1
+	err = dx - dy
+	x, y = x0, y0
+	while True:
+		pts.append((x, y))
+		if x == x1 and y == y1:
+			break
+		e2 = 2 * err
+		if e2 > -dy:
+			err -= dy
+			x += sx
+		if e2 < dx:
+			err += dx
+			y += sy
+	return pts
+
+
+def rasterize_svg_path_fill(d: str, size: int = 16) -> set[tuple[int, int]]:
+	"""Fill a crisp M/h/v/z path into a size×size mask (used for asteroid SVGs)."""
+	tokens = re.findall(r"[MmHhVvZz]|-?\d+", d)
+	i = 0
+	x = y = 0
+	start: tuple[int, int] | None = None
+	outline: set[tuple[int, int]] = set()
+
+	def mark(px: int, py: int) -> None:
+		if 0 <= px < size and 0 <= py < size:
+			outline.add((px, py))
+
+	def line_to(nx: int, ny: int) -> None:
+		nonlocal x, y
+		for px, py in _line_pixels(x, y, nx, ny):
+			mark(px, py)
+		x, y = nx, ny
+
+	while i < len(tokens):
+		t = tokens[i]
+		if t in "Mm":
+			i += 1
+			nx, ny = int(tokens[i]), int(tokens[i + 1])
+			i += 2
+			if t == "m" and start is not None:
+				nx += x
+				ny += y
+			x, y = nx, ny
+			start = (x, y)
+			mark(x, y)
+		elif t == "h":
+			i += 1
+			line_to(x + int(tokens[i]), y)
+			i += 1
+		elif t == "H":
+			i += 1
+			line_to(int(tokens[i]), y)
+			i += 1
+		elif t == "v":
+			i += 1
+			line_to(x, y + int(tokens[i]))
+			i += 1
+		elif t == "V":
+			i += 1
+			line_to(x, int(tokens[i]))
+			i += 1
+		elif t in "Zz":
+			if start is not None:
+				line_to(*start)
+			i += 1
+		else:
+			i += 1
+
+	from collections import deque
+
+	outside: set[tuple[int, int]] = set()
+	q: deque[tuple[int, int]] = deque()
+	for ox in range(size):
+		for oy in (0, size - 1):
+			if (ox, oy) not in outline:
+				q.append((ox, oy))
+				outside.add((ox, oy))
+	for oy in range(size):
+		for ox in (0, size - 1):
+			if (ox, oy) not in outline and (ox, oy) not in outside:
+				q.append((ox, oy))
+				outside.add((ox, oy))
+	while q:
+		cx, cy = q.popleft()
+		for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+			if (
+				0 <= nx < size
+				and 0 <= ny < size
+				and (nx, ny) not in outline
+				and (nx, ny) not in outside
+			):
+				outside.add((nx, ny))
+				q.append((nx, ny))
+	return {
+		(px, py)
+		for px in range(size)
+		for py in range(size)
+		if (px, py) not in outside
+	}
+
+
+def load_asteroid_pixels(filename: str, dst: int = ICON_ASTEROID_DST) -> list[tuple[int, int, int, int]]:
+	"""Load fx_asteroid_*.svg as a dst×dst RGBA nearest-neighbor stamp."""
+	path = os.path.join(BG_ROOT, filename)
+	text = open(path, encoding="utf-8").read()
+	buf = [(0, 0, 0, 0)] * (16 * 16)
+	for m in re.finditer(r'<path d="([^"]+)" fill="(#[0-9a-fA-F]+)"', text):
+		rgb = hex_rgb(m.group(2))
+		for x, y in rasterize_svg_path_fill(m.group(1), 16):
+			buf[y * 16 + x] = (*rgb, 255)
+	return scale_nn(buf, 16, 16, dst, dst)
+
+
+def sparkler_pixels(cx: int, cy: int) -> list[tuple[int, int]]:
+	"""bg_4 style + cross (3px arms)."""
+	return [
+		(cx, cy - 1),
+		(cx - 1, cy),
+		(cx, cy),
+		(cx + 1, cy),
+		(cx, cy + 1),
+	]
 
 
 def in_rounded_rect(x: int, y: int, size: int = 64, rx: int = 14) -> bool:
@@ -366,19 +514,39 @@ def _far_from_stars(x: int, y: int, stars: list[tuple[int, int]]) -> bool:
 	return all(abs(x - sx) + abs(y - sy) >= STAR_MIN_DIST for sx, sy in stars)
 
 
-def generate_stars(
-	seed: int, dim_count: int, bright_count: int
-) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
+def _asteroid_footprints() -> list[tuple[int, int, int, int]]:
+	foot: list[tuple[int, int, int, int]] = []
+	for _file, ox, oy in ICON_ASTEROID_PLACEMENTS:
+		foot.append((ox, oy, ox + ICON_ASTEROID_DST - 1, oy + ICON_ASTEROID_DST - 1))
+	return foot
+
+
+def _on_asteroid(x: int, y: int, pad: int = 1) -> bool:
+	for x1, y1, x2, y2 in _asteroid_footprints():
+		if x1 - pad <= x <= x2 + pad and y1 - pad <= y <= y2 + pad:
+			return True
+	return False
+
+
+def generate_star_field(
+	seed: int,
+) -> tuple[
+	list[tuple[int, int]],
+	list[tuple[int, int]],
+	list[tuple[int, int]],
+	list[tuple[int, int]],
+	list[tuple[int, int]],
+]:
 	rng = random.Random(seed)
 	placed: list[tuple[int, int]] = []
 
 	def place_one() -> tuple[int, int]:
-		for _ in range(12000):
+		for _ in range(16000):
 			x = rng.randint(0, ICON_SIZE - 1)
 			y = rng.randint(0, ICON_SIZE - 1)
 			if not in_rounded_rect(x, y):
 				continue
-			if _on_tile(x, y):
+			if _on_tile(x, y) or _on_asteroid(x, y):
 				continue
 			if not _far_from_stars(x, y, placed):
 				continue
@@ -386,12 +554,30 @@ def generate_stars(
 			return x, y
 		raise RuntimeError("failed to place star field")
 
-	dim = [place_one() for _ in range(dim_count)]
-	bright = [place_one() for _ in range(bright_count)]
-	return dim, bright
-
-
-STAR_DIM, STAR_BRIGHT = generate_stars(STAR_SEED, STAR_DIM_COUNT, STAR_BRIGHT_COUNT)
+	dust = [place_one() for _ in range(STAR_DUST_COUNT)]
+	bright = [place_one() for _ in range(STAR_BRIGHT_COUNT)]
+	cyan = [place_one() for _ in range(STAR_ACCENT_CYAN_COUNT)]
+	pink = [place_one() for _ in range(STAR_ACCENT_PINK_COUNT)]
+	sparklers: list[tuple[int, int]] = []
+	for _ in range(STAR_SPARKLER_COUNT):
+		for _attempt in range(16000):
+			cx = rng.randint(2, ICON_SIZE - 3)
+			cy = rng.randint(2, ICON_SIZE - 3)
+			pts = sparkler_pixels(cx, cy)
+			if any(
+				not in_rounded_rect(x, y) or _on_tile(x, y) or _on_asteroid(x, y)
+				for x, y in pts
+			):
+				continue
+			if any(not _far_from_stars(x, y, placed) for x, y in pts):
+				continue
+			for x, y in pts:
+				placed.append((x, y))
+			sparklers.append((cx, cy))
+			break
+		else:
+			raise RuntimeError("failed to place sparkler")
+	return dust, bright, cyan, pink, sparklers
 
 
 def render_tile_godot_raster(
@@ -516,25 +702,40 @@ def build_svg_tile_section(godot_tiles: list[tuple[int, int, int, int]] | None =
 
 
 def build_svg_bg_with_stars_section() -> str:
-	return "\n".join(
+	lines = [
+		'  <g clip-path="url(#app-clip)">',
+		f'    <rect width="64" height="64" fill="{BG_VOID}" />',
+	]
+	# Asteroids first (behind stars), then dust / accents / sparklers / bright stars.
+	asteroid_px: list[tuple[int, int, tuple[int, int, int]]] = []
+	for ox, oy, stamp in ICON_ASTEROID_STAMPS:
+		for y in range(ICON_ASTEROID_DST):
+			for x in range(ICON_ASTEROID_DST):
+				r, g, b, a = stamp[y * ICON_ASTEROID_DST + x]
+				if a > 0:
+					asteroid_px.append((ox + x, oy + y, (r, g, b)))
+	lines.extend(pixels_to_svg_groups(asteroid_px))
+	lines.extend(
 		[
-			'  <g clip-path="url(#app-clip)">',
-			'    <rect width="64" height="64" fill="#00123a" />',
-			'    <g fill="#5a5a68">',
-			f'      <path d="{rects_to_path(ASTEROID_DIM_RECTS)}" />',
+			f'    <g fill="{BG_DUST}">',
+			f'      <path d="{stars_to_path(STAR_DUST)}" />',
 			"    </g>",
-			'    <g fill="#8b8b9d">',
-			f'      <path d="{rects_to_path(ASTEROID_BRIGHT_RECTS)}" />',
+			f'    <g fill="{BG_ACCENT_CYAN}">',
+			f'      <path d="{stars_to_path(STAR_CYAN)}" />',
 			"    </g>",
-			'    <g fill="#404040">',
-			f'      <path d="{stars_to_path(STAR_DIM)}" />',
+			f'    <g fill="{BG_ACCENT_PINK}">',
+			f'      <path d="{stars_to_path(STAR_PINK)}" />',
 			"    </g>",
-			'    <g fill="#ffffff">',
+			f'    <g fill="{BG_STAR}">',
 			f'      <path d="{stars_to_path(STAR_BRIGHT)}" />',
+			"    </g>",
+			f'    <g fill="{BG_STAR}">',
+			f'      <path d="{stars_to_path([p for c in STAR_SPARKLERS for p in sparkler_pixels(*c)])}" />',
 			"    </g>",
 			"  </g>",
 		]
 	)
+	return "\n".join(lines)
 
 
 def sync_icon_svgs(godot_tiles: list[tuple[int, int, int, int]] | None = None) -> None:
@@ -570,7 +771,7 @@ def sync_icon_svgs(godot_tiles: list[tuple[int, int, int, int]] | None = None) -
 
 def render_base_64(godot_tiles: list[tuple[int, int, int, int]] | None = None) -> list[tuple[int, int, int, int]]:
 	px = [(0, 0, 0, 0)] * (64 * 64)
-	bg = hex_rgb("#00123a")
+	bg = hex_rgb(BG_VOID)
 
 	def setp_bg(x: int, y: int, rgb: tuple[int, int, int], a: int = 255) -> None:
 		if 0 <= x < 64 and 0 <= y < 64 and in_rounded_rect(x, y):
@@ -585,19 +786,24 @@ def render_base_64(godot_tiles: list[tuple[int, int, int, int]] | None = None) -
 			if in_rounded_rect(x, y):
 				px[y * 64 + x] = (*bg, 255)
 
-	for x, y, w, h in ASTEROID_DIM_RECTS:
-		for yy in range(y, y + h):
-			for xx in range(x, x + w):
-				setp_bg(xx, yy, hex_rgb("#5a5a68"))
-	for x, y, w, h in ASTEROID_BRIGHT_RECTS:
-		for yy in range(y, y + h):
-			for xx in range(x, x + w):
-				setp_bg(xx, yy, hex_rgb("#8b8b9d"))
+	for ox, oy, stamp in ICON_ASTEROID_STAMPS:
+		for y in range(ICON_ASTEROID_DST):
+			for x in range(ICON_ASTEROID_DST):
+				r, g, b, a = stamp[y * ICON_ASTEROID_DST + x]
+				if a > 0:
+					setp_bg(ox + x, oy + y, (r, g, b), a)
 
-	for x, y in STAR_DIM:
-		setp_bg(x, y, hex_rgb("#404040"))
+	for x, y in STAR_DUST:
+		setp_bg(x, y, hex_rgb(BG_DUST))
+	for x, y in STAR_CYAN:
+		setp_bg(x, y, hex_rgb(BG_ACCENT_CYAN))
+	for x, y in STAR_PINK:
+		setp_bg(x, y, hex_rgb(BG_ACCENT_PINK))
 	for x, y in STAR_BRIGHT:
-		setp_bg(x, y, hex_rgb("#ffffff"))
+		setp_bg(x, y, hex_rgb(BG_STAR))
+	for cx, cy in STAR_SPARKLERS:
+		for x, y in sparkler_pixels(cx, cy):
+			setp_bg(x, y, hex_rgb(BG_STAR))
 
 	if godot_tiles is not None:
 		for y in range(ICON_SIZE):
@@ -624,6 +830,13 @@ def scale_nn(
 	return out
 
 
+STAR_DUST, STAR_BRIGHT, STAR_CYAN, STAR_PINK, STAR_SPARKLERS = generate_star_field(STAR_SEED)
+ICON_ASTEROID_STAMPS = [
+	(ox, oy, load_asteroid_pixels(file_name))
+	for file_name, ox, oy in ICON_ASTEROID_PLACEMENTS
+]
+
+
 def make_adaptive_fg(base64: list[tuple[int, int, int, int]]) -> list[tuple[int, int, int, int]]:
 	inner = scale_nn(base64, 64, 64, 288, 288)
 	out = [(0, 0, 0, 0)] * (432 * 432)
@@ -636,7 +849,7 @@ def make_adaptive_fg(base64: list[tuple[int, int, int, int]]) -> list[tuple[int,
 
 
 def make_adaptive_bg() -> list[tuple[int, int, int, int]]:
-	rgb = hex_rgb("#00123a")
+	rgb = hex_rgb(BG_VOID)
 	return [(*rgb, 255)] * (432 * 432)
 
 

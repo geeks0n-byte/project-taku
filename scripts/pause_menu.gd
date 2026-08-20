@@ -88,12 +88,34 @@ func _fit_menu_buttons() -> void:
 		quit_btn.text = "UI_MAIN_MENU"
 		quit_btn.set_meta("_tr_key", "UI_MAIN_MENU")
 	var row_h := _menu_row_height()
-	for btn in [resume_btn, restart_btn, level_select_btn, settings_btn, quit_btn, auto_win_btn]:
+	for btn in [resume_btn, restart_btn, level_select_btn, settings_btn, quit_btn]:
 		_apply_pause_button(btn, row_h)
+	_style_auto_win_button(row_h)
 	if title_label:
 		title_label.set_meta("_screen_header_font_size", PAUSE_TITLE_FONT_SIZE)
 		HudLayout._bind_header_translation_key(title_label, "PAUSED")
 		HudLayout.apply_screen_header_style(title_label)
+
+# Keeps Auto Win in the same pause-menu slot, but fully invisible while still clickable.
+func _style_auto_win_button(row_h: float = MENU_BTN_ROW_H) -> void:
+	if not auto_win_btn or not auto_win_btn.visible:
+		return
+	_clear_pause_icon(auto_win_btn)
+	HudLayout._clear_pixel_raster(auto_win_btn)
+	auto_win_btn.remove_meta("_safe_pixel_label")
+	auto_win_btn.focus_mode = Control.FOCUS_NONE
+	auto_win_btn.flat = true
+	auto_win_btn.text = ""
+	auto_win_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	auto_win_btn.modulate = Color(1, 1, 1, 0)
+	auto_win_btn.self_modulate = Color(1, 1, 1, 0)
+	var empty := StyleBoxEmpty.new()
+	for style_name in ["normal", "pressed", "hover", "disabled", "focus"]:
+		auto_win_btn.add_theme_stylebox_override(style_name, empty)
+	auto_win_btn.custom_minimum_size = Vector2(MENU_BTN_WIDTH, row_h)
+	auto_win_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	auto_win_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	auto_win_btn.mouse_default_cursor_shape = Control.CURSOR_ARROW
 
 func _apply_pause_button(button: Button, row_h: float = MENU_BTN_ROW_H) -> void:
 	if not button or not button.visible:

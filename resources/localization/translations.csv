@@ -26,8 +26,8 @@ UI_NO,NO,NO,NEIN,NON,NIE,არა,НІ
 UI_SAVE,SAVE,GUARDAR,SPEICHERN,SAUVEGARDER,ZAPISZ,შენახვა,ЗБЕРЕГТИ
 UI_LOAD,LOAD,CARGAR,LADEN,CHARGER,WCZYTAJ,ჩატვირთვა,ЗАВАНТАЖИТИ
 UI_LOADING,LOADING,CARGANDO,LADEN,CHARGEMENT,ŁADOWANIE,იტვირთება,ЗАВАНТАЖЕННЯ
-UI_RESET_PROGRESS,RESET PROGRESS,RESTABLECER PROGRESO,FORTSCHRITT ZURÜCKSETZEN,RÉINITIALISER LA PROGRESSION,ZRESETUJ POSTĘP,პროგრესის განულება,СКИНУТИ ПРОГРЕС
-CONFIRM_RESET_PROGRESS,RESET ALL PROGRESS?,¿RESTABLECER TODO EL PROGRESO?,GESAMTEN FORTSCHRITT ZURÜCKSETZEN?,RÉINITIALISER TOUTE LA PROGRESSION ?,ZRESETOWAĆ CAŁY POSTĘP?,გსურთ პროგრესის განულება?,СКИНУТИ ВЕСЬ ПРОГРЕС?
+UI_RESET_PROGRESS,RESET PROFILE,RESTABLECER PERFIL,PROFIL ZURÜCKSETZEN,RÉINITIALISER LE PROFIL,ZRESETUJ PROFIL,პროფილის განულება,СКИНУТИ ПРОФІЛЬ
+CONFIRM_RESET_PROGRESS,"RESET PROFILE?\nThis clears progress and the privacy policy agreement.","¿RESTABLECER PERFIL?\nSe borrará el progreso y el acuerdo de privacidad.","PROFIL ZURÜCKSETZEN?\nFortschritt und Datenschutzerklärung-Zustimmung werden gelöscht.","RÉINITIALISER LE PROFIL ?\nLa progression et l'accord de confidentialité seront effacés.","ZRESETOWAĆ PROFIL?\nPostęp i zgoda na politykę prywatności zostaną usunięte.","გსურთ პროფილის განულება?\nპროგრესი და კონფიდენციალურობის შეთანხმება წაიშლება.","СКИНУТИ ПРОФІЛЬ?\nБуде скинуто прогрес і згоду з політикою конфіденційності."
 CONFIRM_NEW_PUZZLE,NEW PUZZLE?\nCurrent progress will be lost.,¿NUEVO PUZLE?\nSe perderá el progreso actual.,NEUES RÄTSEL?\nAktueller Fortschritt geht verloren.,NOUVEAU PUZZLE ?\nLa progression actuelle sera perdue.,NOWA ZAGADKA?\nBieżący postęp zostanie utracony.,ახალი თავსატეხი?\nმიმდინარე პროგრესი დაიკარგება.,НОВА ГОЛОВОЛОМКА?\nПоточний прогрес буде втрачено.
 CONFIRM_RESTART_LEVEL,RESTART LEVEL?\nCurrent progress will be lost.,¿REINICIAR NIVEL?\nSe perderá el progreso actual.,LEVEL NEUSTARTEN?\nAktueller Fortschritt geht verloren.,RECOMMENCER LE NIVEAU ?\nLa progression actuelle sera perdue.,ZRESTARTOWAĆ POZIOM?\nBieżący postęp zostanie utracony.,დონის თავიდან დაწყება?\nმიმდინარე პროგრესი დაიკარგება.,ПЕРЕЗАПУСТИТИ РІВЕНЬ?\nПоточний прогрес буде втрачено.
 CONFIRM_DELETE_CUSTOM,DELETE ALL CUSTOM LEVELS FROM THIS DEVICE?,¿BORRAR TODOS LOS NIVELES PERSONALIZADOS DE ESTE DISPOSITIVO?,ALLE BENUTZERDEFINIERTEN LEVEL VON DIESEM GERÄT LÖSCHEN?,SUPPRIMER TOUS LES NIVEAUX PERSONNALISÉS DE CET APPAREIL ?,USUNĄĆ WSZYSTKIE WŁASNE POZIOMY Z TEGO URZĄDZENIA?,გსურთ ყველა საკუთარი დონის წაშლა ამ მოწყობილობიდან?,ВИДАЛИТИ ВСІ КОРИСТУВАЦЬКІ РІВНІ З ЦЬОГО ПРИСТРОЮ?
@@ -67,11 +67,13 @@ CUSTOM_LVL,CUSTOM LVL,NIVEL PERSONALIZADO,EIGENER LVL,NIV PERSO,WŁASNY POZ.,ს
 LEVEL,LEVEL,NIVEL,LEVEL,NIVEAU,POZIOM,დონე,РІВЕНЬ
 LOCKED,LOCKED,BLOQUEADO,GESPERRT,VERROUILLÉ,ZABLOKOWANE,დაბლოკილია,ЗАБЛОКОВАНО
 NO_PLAYABLE_LEVELS,NO PLAYABLE LEVELS FOUND!,¡NO SE ENCONTRARON NIVELES JUGABLES!,KEINE SPIELBAREN LEVEL GEFUNDEN!,AUCUN NIVEAU JOUABLE TROUVÉ !,BRAK POZIOMÓW DO GRY!,სათამაშო დონეები არ მოიძებნა!,ІГРОВІ РІВНІ НЕ ЗНАЙДЕНО!
+NO_CUSTOM_LEVELS,NO CUSTOM LEVELS FOUND,NO HAY NIVELES PERSONALIZADOS,KEINE BENUTZERDEFINIERTEN LEVEL,AUCUN NIVEAU PERSONNALISÉ,BRAK WŁASNYCH POZIOMÓW,საკუთარი დონეები არ მოიძებნა,КОРИСТУВАЦЬКІ РІВНІ НЕ ЗНАЙДЕНО
 TIME,TIME,TIEMPO,ZEIT,TEMPS,CZAS,დრო,ЧАС
 MOVES,MOVES,MOVIMIENTOS,ZÜGE,COUPS,RUCHY,სვლები,ХОДИ
 COUNTER_GREEN,GREEN,VERDE,GRÜN,VERT,ZIELONE,მწვანე,ЗЕЛЕНІ
-STAR_TIME,TIME,TIEMPO,ZEIT,TEMPS,CZAS,დრო,ЧАС
+STAR_TIME,TIME:,TIEMPO:,ZEIT:,TEMPS :,CZAS:,დრო:,ЧАС:
 STAR_HINTS,NO HINTS USED,SIN PISTAS USADAS,KEINE TIPPS GENUTZT,AUCUN INDICE UTILISÉ,BEZ UŻYTYCH PODPOWIEDZI,მინიშნება არ გამოყენებულა,БЕЗ ВИКОРИСТАНИХ ПІДКАЗОК
+STAR_HINTS_USED,HINTS USED,PISTAS USADAS,TIPPS GENUTZT,INDICES UTILISÉS,UŻYTO PODPOWIEDZI,მინიშნება გამოყენებულია,ПІДКАЗКИ ВИКОРИСТАНО
 STAR_GREEN,NO HINTS USED,SIN PISTAS USADAS,KEINE TIPPS GENUTZT,AUCUN INDICE UTILISÉ,BEZ UŻYTYCH PODPOWIEDZI,მინიშნება არ გამოყენებულა,БЕЗ ВИКОРИСТАНИХ ПІДКАЗОК
 STAR_COMPLETE,SOLVED,RESUELTO,GELÖST,RÉSOLU,ROZWIĄZANE,ამოხსნილია,РОЗВ’ЯЗАНО
 STAR_MOVES,MOVES,MOVIMIENTOS,ZÜGE,COUPS,RUCHY,სვლები,ХОДИ

@@ -7,17 +7,29 @@
 
   <g clip-path="url(#app-clip)">
     <rect width="64" height="64" fill="#00123a" />
-    <g fill="#5a5a68">
-      <path d="M9 12h4v2h-4z M10 11h2v1h-2z M49 48h4v2h-4z M50 50h2v1h-2z" />
+    <g fill="#696d77">
+      <path d="M6 6h1v1h-1z M7 6h1v1h-1z M8 6h1v1h-1z M5 7h1v1h-1z M6 7h1v1h-1z M9 8h1v1h-1z M53 49h1v1h-1z M54 49h1v1h-1z M55 49h1v1h-1z M52 50h1v1h-1z M56 50h1v1h-1z M56 51h1v1h-1z" />
     </g>
-    <g fill="#8b8b9d">
-      <path d="M10 12h1v1h-1z M50 49h1v1h-1z" />
+    <g fill="#292b30">
+      <path d="M9 6h1v1h-1z M9 7h1v1h-1z M6 8h1v1h-1z M7 8h1v1h-1z M5 9h1v1h-1z M6 9h1v1h-1z M7 9h1v1h-1z M8 9h1v1h-1z M10 9h1v1h-1z M5 10h1v1h-1z M10 10h1v1h-1z M6 11h1v1h-1z M7 11h1v1h-1z M8 11h1v1h-1z M9 11h1v1h-1z M10 11h1v1h-1z M56 49h1v1h-1z M52 51h1v1h-1z M53 51h1v1h-1z M55 51h1v1h-1z M52 52h1v1h-1z M53 52h1v1h-1z M55 52h1v1h-1z M56 52h1v1h-1z M57 52h1v1h-1z M52 53h1v1h-1z M53 53h1v1h-1z M54 53h1v1h-1z M55 53h1v1h-1z M56 53h1v1h-1z" />
+    </g>
+    <g fill="#4a4d55">
+      <path d="M4 7h1v1h-1z M7 7h1v1h-1z M8 7h1v1h-1z M10 7h1v1h-1z M4 8h1v1h-1z M5 8h1v1h-1z M8 8h1v1h-1z M10 8h1v1h-1z M4 9h1v1h-1z M9 9h1v1h-1z M4 10h1v1h-1z M6 10h1v1h-1z M7 10h1v1h-1z M8 10h1v1h-1z M9 10h1v1h-1z M5 11h1v1h-1z M6 12h1v1h-1z M7 12h1v1h-1z M8 12h1v1h-1z M52 49h1v1h-1z M53 50h1v1h-1z M54 50h1v1h-1z M55 50h1v1h-1z M51 51h1v1h-1z M54 51h1v1h-1z M57 51h1v1h-1z M51 52h1v1h-1z M54 52h1v1h-1z M53 54h1v1h-1z M54 54h1v1h-1z" />
     </g>
     <g fill="#404040">
-      <path d="M45 48h1v1h-1z M21 57h1v1h-1z M3 13h1v1h-1z M50 15h1v1h-1z M61 52h1v1h-1z M12 62h1v1h-1z M63 23h1v1h-1z" />
+      <path d="M45 48h1v1h-1z M21 57h1v1h-1z M50 15h1v1h-1z M61 52h1v1h-1z M19 58h1v1h-1z M12 62h1v1h-1z M63 23h1v1h-1z M52 43h1v1h-1z M5 39h1v1h-1z M61 14h1v1h-1z" />
+    </g>
+    <g fill="#abffe6">
+      <path d="M58 13h1v1h-1z M13 42h1v1h-1z M49 40h1v1h-1z" />
+    </g>
+    <g fill="#ff77a8">
+      <path d="M4 37h1v1h-1z M24 50h1v1h-1z" />
     </g>
     <g fill="#ffffff">
-      <path d="M52 43h1v1h-1z M5 39h1v1h-1z M61 14h1v1h-1z M11 20h1v1h-1z M41 8h1v1h-1z M42 2h1v1h-1z M13 1h1v1h-1z M21 48h1v1h-1z M16 12h1v1h-1z" />
+      <path d="M11 20h1v1h-1z M41 8h1v1h-1z M42 2h1v1h-1z M13 1h1v1h-1z M21 48h1v1h-1z M12 3h1v1h-1z M16 12h1v1h-1z M21 63h1v1h-1z" />
+    </g>
+    <g fill="#ffffff">
+      <path d="M61 24h1v1h-1z M60 25h1v1h-1z M61 25h1v1h-1z M62 25h1v1h-1z M61 26h1v1h-1z M31 57h1v1h-1z M30 58h1v1h-1z M31 58h1v1h-1z M32 58h1v1h-1z M31 59h1v1h-1z" />
     </g>
   </g>
 

@@ -484,6 +484,9 @@ func _setup_confirm_panel() -> void:
 	if _confirm_blocker:
 		_confirm_blocker.visible = false
 		_confirm_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+	var center := _confirm_blocker.get_node_or_null("CenterContainer") as Control if _confirm_blocker else null
+	if center:
+		HudLayout.raise_centered_dialog_host(center)
 	var panel := _confirm_blocker.get_node_or_null("CenterContainer/Panel") as Panel if _confirm_blocker else null
 	if panel:
 		panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())

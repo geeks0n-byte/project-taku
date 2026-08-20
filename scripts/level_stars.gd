@@ -17,11 +17,13 @@ const ALL_GOAL_MASKS: Array = [BIT_COMPLETE, BIT_NO_HINTS, BIT_TIME]
 const ICON_STAR_ON: Texture2D = preload("res://resources/icons/icon_star_on.svg")
 const ICON_STAR_OFF: Texture2D = preload("res://resources/icons/icon_star_off.svg")
 const STAR_ICON_SIZE := 56.0
-const SELECT_STAR_ICON_SIZE := 34.0
+const SELECT_STAR_ICON_SIZE := 44.0
 const ROW_HEIGHT := 72.0
 const RESULTS_CONTENT_WIDTH := 620.0
 const RESULTS_TITLE_FONT := 34
 const RESULTS_ROW_FONT := 28
+const COLOR_STAR_EARNED := Color(0.45, 1.0, 0.45, 1.0)
+const COLOR_STAR_FAILED := Color(1.0, 0.35, 0.35, 1.0)
 
 ## Counts how many of the three star goals are set in `bits`.
 static func count_earned_bits(bits: int) -> int:
@@ -38,7 +40,7 @@ static func make_select_star_row(_level: LevelData, earned_bits: int) -> Control
 	row.name = "StarRow"
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 6)
+	row.add_theme_constant_override("separation", 8)
 	row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	for mask in ALL_GOAL_MASKS:
 		var earned: bool = (earned_bits & int(mask)) != 0
@@ -87,7 +89,9 @@ static func evaluate(
 	goals.append({
 		"id": "no_hints",
 		"earned": no_hints_earned,
-		"title": TranslationServer.translate("STAR_HINTS"),
+		"title": TranslationServer.translate(
+			"STAR_HINTS" if no_hints_earned else "STAR_HINTS_USED"
+		),
 		"detail": "",
 	})
 
@@ -223,7 +227,7 @@ static func _make_text_row(text: String, color: Color, font_size: int) -> Label:
 	return label
 
 ## Builds one full-width HBox row for a single star goal: star icon | title | optional detail.
-## Earned goals use a bright color; unearned goals are dimmed to indicate they weren't met.
+## Earned goals use green text; missed goals use red (and hints swap to HINTS USED).
 static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 	var earned := bool(goal.get("earned", false))
 	var row := HBoxContainer.new()
@@ -274,9 +278,7 @@ static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	var title_color := (
-		Color(1.0, 0.9, 0.45, 1.0) if earned else Color(0.72, 0.72, 0.76, 1.0)
-	)
+	var title_color := COLOR_STAR_EARNED if earned else COLOR_STAR_FAILED
 	HudLayout.apply_raster_pixel_label(
 		title, str(goal.get("title", "")), RESULTS_ROW_FONT, title_color
 	)
@@ -289,9 +291,7 @@ static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 		detail.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		var detail_color := (
-			Color(0.92, 0.92, 0.94, 1.0) if earned else Color(0.78, 0.78, 0.82, 1.0)
-		)
+		var detail_color := COLOR_STAR_EARNED if earned else COLOR_STAR_FAILED
 		HudLayout.apply_raster_pixel_label(
 			detail, detail_text, RESULTS_ROW_FONT, detail_color
 		)

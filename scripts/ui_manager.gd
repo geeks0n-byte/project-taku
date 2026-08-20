@@ -140,6 +140,7 @@ func _on_language_changed() -> void:
 		display_level(_level_display_num, _level_display_custom, _level_display_tutorial)
 	locale_refresh_requested.emit()
 	_refresh_status_label()
+	HudLayout.clear_how_to_play_nav_lock(how_to_play_container)
 	_refresh_how_to_play_text()
 	# Re-assert Press Start + fixed size after locale font walk (digits only).
 	if timer_label and not _last_timer_text.is_empty():
@@ -652,6 +653,7 @@ func set_overlays_hidden() -> void:
 # Shows the reset/restart confirmation panel over a transparent dimmer.
 # The prompt text varies based on whether reset restarts a fixed layout or generates a new one.
 func show_reset_confirm() -> void:
+	_set_end_dialog_raised(true)
 	if end_dimmer:
 		end_dimmer.color = Color(0, 0, 0, 0)
 	_set_end_dimmer_visible(true)
@@ -683,6 +685,18 @@ func hide_reset_confirm() -> void:
 		and (resume_panel == null or not resume_panel.visible)
 	):
 		_set_end_dimmer_visible(false)
+		_set_end_dialog_raised(false)
+
+# Biases EndLayer centered dialogs upward for confirm/resume/victory.
+func _set_end_dialog_raised(
+	raised: bool, raise_px: float = GameConstants.UI_DIALOG_RAISE_PX
+) -> void:
+	if end_center == null:
+		return
+	if raised:
+		HudLayout.raise_centered_dialog_host(end_center, raise_px)
+	else:
+		end_center.offset_bottom = 0.0
 
 # Reset confirm panel button handlers.
 func _on_reset_confirm_yes() -> void:
@@ -696,6 +710,7 @@ func _on_reset_confirm_no() -> void:
 # Shows the "Resume or New Layout?" panel when the player returns to a level
 # that has an autosaved session. Styles and sizes all three action buttons.
 func show_session_resume_prompt() -> void:
+	_set_end_dialog_raised(true)
 	if end_dimmer:
 		end_dimmer.color = Color(0, 0, 0, 0)
 	_set_end_dimmer_visible(true)
@@ -736,6 +751,7 @@ func hide_session_resume_prompt() -> void:
 		resume_panel.visible = false
 	if victory_panel == null or not victory_panel.visible:
 		_set_end_dimmer_visible(false)
+		_set_end_dialog_raised(false)
 
 # Session resume panel button handlers.
 func _on_session_continue_pressed() -> void:
@@ -806,12 +822,17 @@ func _refresh_how_to_play_text() -> void:
 # Applies final panel/nav placement after rules_label measured its content height.
 func _layout_how_to_play_stack() -> void:
 	HudLayout.layout_how_to_play_stack(
-		how_to_play_container, how_to_play_panel, rules_label, how_to_play_nav
+		how_to_play_container,
+		how_to_play_panel,
+		rules_label,
+		how_to_play_nav,
+		_htp_page == 0
 	)
 
 # Opens the HTP overlay from page 0 and disables in-game HUD controls.
 func show_how_to_play() -> void:
 	_htp_page = 0
+	HudLayout.clear_how_to_play_nav_lock(how_to_play_container)
 	_refresh_how_to_play_text()
 	if how_to_play_container:
 		how_to_play_container.visible = true
@@ -827,6 +848,7 @@ func show_victory(
 	is_tutorial: bool = false,
 	solved_preview: Texture2D = null
 ) -> void:
+	_set_end_dialog_raised(true, GameConstants.UI_VICTORY_RAISE_PX)
 	_is_last_level_completed = is_last_level
 	_victory_display_num = display_num
 	_victory_is_custom = is_custom

@@ -180,9 +180,10 @@ func _pin_level_list_to_top() -> void:
 		empty_state_label.size_flags_horizontal = 0
 		empty_state_label.size_flags_vertical = 0
 		var label_h := empty_state_label.get_combined_minimum_size().y
-		empty_state_label.position = Vector2.ZERO
+		const EMPTY_STATE_TOP := 160.0
+		empty_state_label.position = Vector2(0, EMPTY_STATE_TOP)
 		empty_state_label.size = Vector2(host_w, maxf(label_h, 1.0))
-		host.custom_minimum_size = Vector2(0, maxf(label_h, 1.0))
+		host.custom_minimum_size = Vector2(0, EMPTY_STATE_TOP + maxf(label_h, 1.0))
 		host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
 ## Shows or hides the Custom tab depending on whether dev/debug tools are enabled.
@@ -231,7 +232,7 @@ func _update_tab_button_visuals() -> void:
 		[easy_tab_button, ViewMode.EASY, Color(0.45, 1.0, 0.45)],
 		[medium_tab_button, ViewMode.MEDIUM, Color(1.0, 0.85, 0.35)],
 		[hard_tab_button, ViewMode.HARD, Color(1.0, 0.45, 0.4)],
-		[custom_tab_button, ViewMode.CUSTOM, Color(1.0, 0.84, 0.0)],
+		[custom_tab_button, ViewMode.CUSTOM, Color(0.72, 0.48, 1.0)],
 	]
 	for entry in tabs:
 		var btn: Button = entry[0]
@@ -306,10 +307,10 @@ func populate_level_menu() -> void:
 		var title: String
 		var locked := false
 		if current_view == ViewMode.CUSTOM:
-			title = tr("CUSTOM_LVL") + " " + str(resource.level_number)
+			title = "%d." % int(resource.level_number)
 		else:
 			var display_num := LevelUtils.get_display_level_number(resource)
-			title = tr("LEVEL") + " " + str(display_num)
+			title = "%d." % int(display_num)
 			locked = not SaveManager.is_level_unlocked(resource.level_number)
 		_level_entries.append({
 			"resource": resource,
@@ -346,7 +347,19 @@ func _refresh_page() -> void:
 	if empty_state_label:
 		empty_state_label.visible = valid_level_count == 0
 		if empty_state_label.visible:
-			HudLayout.apply_body_label(empty_state_label, GameConstants.UI_BODY_FONT_SIZE)
+			var empty_key := (
+				"NO_CUSTOM_LEVELS"
+				if current_view == ViewMode.CUSTOM
+				else "NO_PLAYABLE_LEVELS"
+			)
+			empty_state_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+			empty_state_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			var empty_text := str(TranslationServer.translate(empty_key))
+			# Pixel/display font used by menus; larger than body copy.
+			const EMPTY_FONT := 40
+			HudLayout.apply_raster_pixel_label(
+				empty_state_label, empty_text, EMPTY_FONT, Color(1, 1, 1, 1)
+			)
 		empty_state_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	if level_grid:
 		level_grid.visible = valid_level_count > 0
@@ -408,8 +421,9 @@ func _folder_for_view(view: ViewMode) -> String:
 		_:
 			return GameConstants.CAMPAIGN_EASY_DIR
 
-## Populates a level button with a preview thumbnail, title label, and star row.
+## Populates a level button with a corner number, preview thumbnail, and star row.
 ## Locked levels get a greyed-out preview and a centered lock icon overlay instead of stars.
+## Preview Y is top-aligned so locked and unlocked cards share the same thumbnail height.
 func _apply_level_button_content(btn: Button, level: LevelData, title: String, locked: bool) -> void:
 	btn.text = ""
 	btn.custom_minimum_size = Vector2(260, 240)
@@ -422,16 +436,42 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 	content.name = "LevelContent"
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	content.offset_left = 14.0
-	content.offset_top = 22.0
-	content.offset_right = -14.0
-	content.offset_bottom = -34.0
+	content.offset_left = 10.0
+	content.offset_top = 10.0
+	content.offset_right = -10.0
+	content.offset_bottom = -14.0
 
+	var label := Label.new()
+	label.name = "Title"
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	label.grow_horizontal = Control.GROW_DIRECTION_END
+	label.grow_vertical = Control.GROW_DIRECTION_END
+	const TITLE_FONT := 28
+	if HudLayout.uses_pixel_font():
+		HudLayout.apply_raster_pixel_label(label, title, TITLE_FONT, Color.WHITE, 0, true)
+	else:
+		label.text = title
+		label.add_theme_font_override("font", HudLayout.ui_font())
+		label.add_theme_font_size_override("font_size", HudLayout.scaled_font_size(TITLE_FONT))
+		HudLayout.apply_safe_outline(label, GameConstants.MENU_TEXT_OUTLINE)
+	if locked:
+		label.add_theme_color_override("font_color", btn.get_theme_color("font_disabled_color"))
+	else:
+		label.add_theme_color_override("font_color", btn.get_theme_color("font_color"))
+	content.add_child(label)
+
+	# Leave room under the corner number so previews share one Y on locked/unlocked cards.
+	const PREVIEW_TOP := 36.0
 	var vbox := VBoxContainer.new()
 	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	vbox.add_theme_constant_override("separation", 4)
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.offset_top = PREVIEW_TOP
+	vbox.add_theme_constant_override("separation", 8)
+	vbox.alignment = BoxContainer.ALIGNMENT_BEGIN
 
 	var preview_frame := PanelContainer.new()
 	preview_frame.name = "PreviewFrame"
@@ -454,31 +494,6 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 	preview_frame.add_child(preview)
 	vbox.add_child(preview_frame)
 
-	var preview_label_gap := Control.new()
-	preview_label_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	preview_label_gap.custom_minimum_size = Vector2(0, 10)
-	vbox.add_child(preview_label_gap)
-
-	var label := Label.new()
-	label.name = "Title"
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.text = title
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	label.add_theme_font_override("font", HudLayout.ui_font())
-	label.add_theme_font_size_override(
-		"font_size", HudLayout.scaled_font_size(GameConstants.UI_BTN_SECONDARY_FONT)
-	)
-	label.add_theme_color_override("font_outline_color", Color.BLACK)
-	HudLayout.apply_safe_outline(label, GameConstants.MENU_TEXT_OUTLINE)
-	if locked:
-		label.add_theme_color_override("font_color", btn.get_theme_color("font_disabled_color"))
-	else:
-		label.add_theme_color_override("font_color", btn.get_theme_color("font_color"))
-	vbox.add_child(label)
-
 	if not locked:
 		var earned_bits := SaveManager.get_level_star_bits(level.level_number)
 		var star_row := LevelStars.make_select_star_row(level, earned_bits)
@@ -496,11 +511,16 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 		lock_overlay.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		lock_overlay.modulate = Color(1, 1, 1, 0.9)
 		lock_overlay.custom_minimum_size = Vector2(LEVEL_LOCK_ICON_SIZE, LEVEL_LOCK_ICON_SIZE)
-		lock_overlay.set_anchors_preset(Control.PRESET_CENTER)
+		# Overlay on the preview (top-aligned); keep out of layout so card size stays stable.
+		lock_overlay.anchor_left = 0.5
+		lock_overlay.anchor_right = 0.5
+		lock_overlay.anchor_top = 0.0
+		lock_overlay.anchor_bottom = 0.0
+		var preview_mid_y := PREVIEW_TOP + PREVIEW_SIZE * 0.5
 		lock_overlay.offset_left = -half
-		lock_overlay.offset_top = -half - 28.0
 		lock_overlay.offset_right = half
-		lock_overlay.offset_bottom = half - 28.0
+		lock_overlay.offset_top = preview_mid_y - half
+		lock_overlay.offset_bottom = preview_mid_y + half
 		content.add_child(lock_overlay)
 
 	btn.add_child(content)

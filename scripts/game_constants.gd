@@ -93,6 +93,10 @@ const UI_BTN_SECONDARY_FONT_MIN := 14
 const UI_BTN_DIALOG_SIZE := Vector2(220, 100)
 const UI_BTN_DIALOG_FONT := 24
 const UI_BTN_DIALOG_FONT_MIN := 14
+# Lift confirm/consent dialogs above true vertical center for easier reach on phones.
+const UI_DIALOG_RAISE_PX := 160.0
+# Milder lift for the victory screen so the layout stays readable.
+const UI_VICTORY_RAISE_PX := 100.0
 
 const UI_BTN_NAV_SIZE := Vector2(108, 114)
 const UI_BTN_NAV_FONT := 22

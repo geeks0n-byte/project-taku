@@ -225,12 +225,18 @@ static func ensure_how_to_play_page_header(host: Control) -> Label:
 		return null
 	return host.get_node_or_null("HowToPlayPageHeader") as Label
 
-## Size the rules panel to its text and park PREV/NEXT directly under it.
+## Size the rules panel to its text. PREV/NEXT stay at a fixed Y locked from the
+## first layout after the lock is cleared (callers clear on open at page 0).
+static func clear_how_to_play_nav_lock(host: Control) -> void:
+	if host and host.has_meta("_htp_nav_top"):
+		host.remove_meta("_htp_nav_top")
+
 static func layout_how_to_play_stack(
 	host: Control,
 	panel: Control,
 	rules: RichTextLabel,
-	nav: Control
+	nav: Control,
+	update_nav_lock: bool = false
 ) -> void:
 	if host == null or panel == null or nav == null:
 		return
@@ -264,14 +270,26 @@ static func layout_how_to_play_stack(
 		rules.scroll_active = false
 		rules.custom_minimum_size = Vector2(0, 0)
 		content_h = maxf(rules.get_content_height() + 24.0, GameConstants.HTP_PANEL_MIN_HEIGHT)
-	var panel_h := clampf(content_h, GameConstants.HTP_PANEL_MIN_HEIGHT, max_panel_h)
+	var natural_panel_h := clampf(content_h, GameConstants.HTP_PANEL_MIN_HEIGHT, max_panel_h)
+
+	# Capture nav Y from this page (typically page 0) once; later pages keep it.
+	if update_nav_lock or not host.has_meta("_htp_nav_top"):
+		host.set_meta(
+			"_htp_nav_top",
+			GameConstants.HTP_PANEL_TOP + natural_panel_h + GameConstants.SCREEN_NAV_GAP
+		)
+	var nav_top: float = float(host.get_meta("_htp_nav_top"))
+	var max_under_nav := maxf(
+		GameConstants.HTP_PANEL_MIN_HEIGHT,
+		nav_top - GameConstants.HTP_PANEL_TOP - GameConstants.SCREEN_NAV_GAP
+	)
+	var panel_h := clampf(content_h, GameConstants.HTP_PANEL_MIN_HEIGHT, mini(max_panel_h, max_under_nav))
 	panel.offset_bottom = GameConstants.HTP_PANEL_TOP + panel_h
 	if rules:
 		var needs_scroll := content_h > panel_h + 1.0
 		rules.scroll_active = needs_scroll
 		rules.fit_content = not needs_scroll
 
-	var nav_top := panel.offset_bottom + GameConstants.SCREEN_NAV_GAP
 	nav.anchor_left = 0.0
 	nav.anchor_right = 1.0
 	nav.anchor_top = 0.0
@@ -602,7 +620,8 @@ static func _clear_pixel_raster(host: Control) -> void:
 			host.remove_child(holder)
 			holder.free()
 
-## English Press Start on a fixed cell grid (cancels uneven left bearings).
+## English Press Start centered with natural glyph advances (fills the button;
+## does not inflate button minimum size the way a Caption Label can).
 static func apply_pixel_mono_button(
 	button: Button, text: String, font_size: int, color: Color = Color.WHITE
 ) -> void:
@@ -1191,6 +1210,15 @@ static func make_dialog_panel_style() -> StyleBoxFlat:
 	style.border_color = Color(1.0, 0.84, 0.0, 0.4)
 	style.set_border_width_all(3)
 	return style
+
+# Biases a full-rect CenterContainer upward by shrinking it from the bottom.
+# Visual raise ≈ raise_px because children are re-centered in the shorter host.
+static func raise_centered_dialog_host(
+	center: Control, raise_px: float = GameConstants.UI_DIALOG_RAISE_PX
+) -> void:
+	if center == null or not is_instance_valid(center):
+		return
+	center.offset_bottom = -absf(raise_px) * 2.0
 
 # Applies the locale-correct body font to a plain Label. Always uses the scalable
 # font (not Press Start), suitable for longer readable text blocks.

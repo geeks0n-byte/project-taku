@@ -1,6 +1,6 @@
 extends Control
-## Draws Press Start (and similar) on a fixed cell grid, cancelling left bearings
-## so pairs like P–L / A–Y don't open uneven gaps.
+## Draws Press Start (and similar) centered in this control using the font's
+## natural glyph advances — no fixed per-character cell width.
 
 var text: String = ""
 var font_size: int = 64
@@ -31,28 +31,19 @@ func _notification(what: int) -> void:
 func _draw() -> void:
 	if font == null or text.is_empty() or font_size <= 0:
 		return
-	# Treat font_size as the per-character cell width so all glyphs advance equally.
-	var cell := float(font_size)
-	var total_w := cell * float(text.length())
+	var total_w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	# Center the full string block horizontally within the control's bounds.
 	var x := (size.x - total_w) * 0.5
 	var ascent := font.get_ascent(font_size)
 	var descent := font.get_descent(font_size)
 	# Vertically center using the font metrics so the visual midpoint aligns with the control center.
 	var baseline := (size.y + ascent - descent) * 0.5
-	var ci := get_canvas_item()
-	for i in text.length():
-		var code: int = text.unicode_at(i)
-		# Space has no glyph to draw; advance the cursor by one cell width.
-		if code == 32:
-			x += cell
-			continue
-		var glyph: int = font.get_glyph_index(font_size, code, 0)
-		var offset: Vector2 = Vector2.ZERO
-		if font is FontFile:
-			# get_glyph_offset returns the glyph's left bearing; subtracting it
-			# pins every glyph's ink origin to the same pixel-grid column.
-			offset = (font as FontFile).get_glyph_offset(0, Vector2i(font_size, 0), glyph)
-		# Cancel left bearing so every glyph sits on the same pixel grid.
-		font.draw_char(ci, Vector2(x - offset.x, baseline), code, font_size, font_color)
-		x += cell
+	font.draw_string(
+		get_canvas_item(),
+		Vector2(x, baseline),
+		text,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		font_size,
+		font_color
+	)
