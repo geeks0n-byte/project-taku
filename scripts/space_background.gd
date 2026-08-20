@@ -68,10 +68,15 @@ var _asteroid_pool_root: Node2D
 var _active_asteroid_count: int = 0
 # Shared physics material instance reused by all pooled asteroids (bouncy, no friction-damp).
 var _asteroid_phys_mat: PhysicsMaterial
+# Per-launch seed so static composites and parallax start offsets differ each run.
+var _bg_seed: int = 0
+var _bg_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 func _ready() -> void:
 	# layer = -2 so the entire parallax background renders behind all game UI layers.
 	layer = -2
+	_bg_seed = randi()
+	_bg_rng.seed = _bg_seed
 	get_viewport().size_changed.connect(_on_viewport_size_changed)
 	_build_background_layers()
 	_build_foreground_fx_layer()
@@ -372,10 +377,13 @@ func _hide_static_composite() -> void:
 # CPU-composites all background SVG layers onto a fixed 1080x1920 image.
 # Using a fixed resolution keeps the baked texture small while still covering
 # portrait phone screens at maximum quality.
+# Layer tile phases come from _bg_seed so each launch gets a different static sky.
 func _bake_static_texture() -> Texture2D:
 	var size := Vector2i(1080, 1920)
 	var img := Image.create(size.x, size.y, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0.04, 0.04, 0.08, 1.0))
+	var bake_rng := RandomNumberGenerator.new()
+	bake_rng.seed = _bg_seed
 	for key in ["void", "dust", "stars_mid", "accents", "sparklers"]:
 		var path: String = ASSET_DIR + ASSET_FILES[key]
 		if not ResourceLoader.exists(path):
@@ -389,19 +397,23 @@ func _bake_static_texture() -> Texture2D:
 		if src.get_format() != Image.FORMAT_RGBA8:
 			src = src.duplicate()
 			src.convert(Image.FORMAT_RGBA8)
-		_blit_tiled(img, src)
+		var phase := Vector2i(bake_rng.randi(), bake_rng.randi())
+		_blit_tiled(img, src, phase)
 	return ImageTexture.create_from_image(img)
 
 # Tiles src over dest using alpha-blending so each layer composites on top of the previous.
 # Handles SVGs whose native size is smaller than the target canvas.
-func _blit_tiled(dest: Image, src: Image) -> void:
+# `phase` shifts the tile origin (mod tile size) so seeded bakes look different per run.
+func _blit_tiled(dest: Image, src: Image, phase: Vector2i = Vector2i.ZERO) -> void:
 	var sw := src.get_width()
 	var sh := src.get_height()
 	if sw <= 0 or sh <= 0:
 		return
-	var y := 0
+	var ox := posmod(phase.x, sw)
+	var oy := posmod(phase.y, sh)
+	var y := -oy
 	while y < dest.get_height():
-		var x := 0
+		var x := -ox
 		while x < dest.get_width():
 			dest.blend_rect(src, Rect2i(0, 0, sw, sh), Vector2i(x, y))
 			x += sw
@@ -550,14 +562,17 @@ func _release_offscreen_asteroids() -> void:
 				_release_asteroid(rb)
 
 # Creates a parallax layer for a given texture.
-# motion_offset is randomised so layers don't all start aligned, adding visual variety on first load.
+# motion_offset is seeded so layers don't all start aligned and each launch differs.
 # motion_mirroring wraps the scaled layer during scroll; the TextureRect itself is not tiled.
 func _build_parallax_layer(tex: Texture2D, speed_scale: Vector2, view_size: Vector2 = Vector2.ZERO) -> ParallaxLayer:
 	if view_size == Vector2.ZERO:
 		view_size = _cover_size()
 	var p_layer = ParallaxLayer.new()
 	p_layer.motion_scale = speed_scale
-	p_layer.motion_offset = Vector2(randf_range(0.0, view_size.x), randf_range(0.0, view_size.y))
+	p_layer.motion_offset = Vector2(
+		_bg_rng.randf_range(0.0, view_size.x),
+		_bg_rng.randf_range(0.0, view_size.y)
+	)
 	p_layer.motion_mirroring = view_size
 	p_layer.add_child(_create_pixel_rect(tex, view_size))
 	add_child(p_layer)
