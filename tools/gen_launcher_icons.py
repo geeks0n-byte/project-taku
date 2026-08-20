@@ -36,18 +36,28 @@ ICON_SIZE = 64
 ICON_TILE_SRC = 16
 # Godot rasterizes tile SVGs at width/height=128 (see tile_*.svg + .import svg/scale=1.0).
 ICON_TILE_GODOT_RASTER = 128
-# Downscale 128→32 preserves bevel strips (128/4 → 2px per strip).
-ICON_TILE_DST = 32
-ICON_TILE_GAP = 0
-ICON_TILE_HALO = 2  # transparent padding on Godot 128→32 rasters
+# Downscale 128→16 preserves bevel strips (128/8 → 1px per strip).
+ICON_TILE_DST = 16
+ICON_TILE_GAP = 3
+ICON_TILE_HALO = 1  # transparent padding on Godot 128→16 rasters
 ICON_TILE_STRIDE = ICON_TILE_DST - 2 * ICON_TILE_HALO + ICON_TILE_GAP
 ICON_TILE_MARGIN = (ICON_SIZE - (ICON_TILE_STRIDE + ICON_TILE_DST)) // 2
 
-STAR_SEED = 10482937
+STAR_SEED = 7369215
 STAR_DIM_COUNT = 7
 STAR_BRIGHT_COUNT = 9
 STAR_MIN_DIST = 4
 STAR_TILE_PAD = 1
+ASTEROID_DIM_RECTS = [
+	(9, 12, 4, 2),
+	(10, 11, 2, 1),
+	(49, 48, 4, 2),
+	(50, 50, 2, 1),
+]
+ASTEROID_BRIGHT_RECTS = [
+	(10, 12, 1, 1),
+	(50, 49, 1, 1),
+]
 
 
 def load_tile_rects(filename: str) -> list:
@@ -309,6 +319,10 @@ def stars_to_path(stars: list[tuple[int, int]]) -> str:
 	return " ".join(f"M{x} {y}h1v1h-1z" for x, y in stars)
 
 
+def rects_to_path(rects: list[tuple[int, int, int, int]]) -> str:
+	return " ".join(f"M{x} {y}h{w}v{h}h-{w}z" for x, y, w, h in rects)
+
+
 def in_rounded_rect(x: int, y: int, size: int = 64, rx: int = 14) -> bool:
 	if x < 0 or y < 0 or x >= size or y >= size:
 		return False
@@ -506,6 +520,12 @@ def build_svg_bg_with_stars_section() -> str:
 		[
 			'  <g clip-path="url(#app-clip)">',
 			'    <rect width="64" height="64" fill="#00123a" />',
+			'    <g fill="#5a5a68">',
+			f'      <path d="{rects_to_path(ASTEROID_DIM_RECTS)}" />',
+			"    </g>",
+			'    <g fill="#8b8b9d">',
+			f'      <path d="{rects_to_path(ASTEROID_BRIGHT_RECTS)}" />',
+			"    </g>",
 			'    <g fill="#404040">',
 			f'      <path d="{stars_to_path(STAR_DIM)}" />',
 			"    </g>",
@@ -564,6 +584,15 @@ def render_base_64(godot_tiles: list[tuple[int, int, int, int]] | None = None) -
 		for x in range(64):
 			if in_rounded_rect(x, y):
 				px[y * 64 + x] = (*bg, 255)
+
+	for x, y, w, h in ASTEROID_DIM_RECTS:
+		for yy in range(y, y + h):
+			for xx in range(x, x + w):
+				setp_bg(xx, yy, hex_rgb("#5a5a68"))
+	for x, y, w, h in ASTEROID_BRIGHT_RECTS:
+		for yy in range(y, y + h):
+			for xx in range(x, x + w):
+				setp_bg(xx, yy, hex_rgb("#8b8b9d"))
 
 	for x, y in STAR_DIM:
 		setp_bg(x, y, hex_rgb("#404040"))

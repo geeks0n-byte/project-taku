@@ -2,85 +2,85 @@
   <!-- App Icon Background -->
   <rect x="0" y="0" width="64" height="64" fill="#2d2d2d" rx="14" />
 
-  <!-- 2×2 tile grid: 32px tiles (Godot SVG textures), 2px margin, 0px gap -->
+  <!-- 2×2 tile grid: 16px tiles (Godot SVG textures), 15px margin, 3px gap -->
   <!-- Top-Left: Shifter (purple) -->
   <!-- Shifter (purple) -->
-  <g transform="translate(2,2)">
-    <rect x="2" y="2" width="26" height="2" fill="#ff77a8" />
-    <rect x="28" y="2" width="2" height="2" fill="#7e2553" />
-    <rect x="2" y="4" width="2" height="22" fill="#ff77a8" />
-    <rect x="4" y="4" width="24" height="2" fill="#7e2553" />
-    <rect x="28" y="4" width="2" height="24" fill="#1d2b53" />
-    <rect x="4" y="6" width="2" height="20" fill="#7e2553" />
-    <rect x="6" y="6" width="20" height="2" fill="#ff77a8" />
-    <rect x="26" y="6" width="2" height="20" fill="#7e2553" />
-    <rect x="6" y="8" width="2" height="14" fill="#ff77a8" />
-    <rect x="8" y="8" width="16" height="18" fill="#7e2553" />
-    <rect x="24" y="8" width="2" height="14" fill="#ff77a8" />
-    <rect x="6" y="22" width="2" height="4" fill="#7e2553" />
-    <rect x="24" y="22" width="2" height="4" fill="#7e2553" />
-    <rect x="2" y="26" width="2" height="2" fill="#7e2553" />
-    <rect x="4" y="26" width="24" height="2" fill="#1d2b53" />
-    <rect x="2" y="28" width="28" height="2" fill="#1a1a1a" />
+  <g transform="translate(15,15)">
+    <rect x="1" y="1" width="13" height="1" fill="#ff77a8" />
+    <rect x="14" y="1" width="1" height="1" fill="#7e2553" />
+    <rect x="1" y="2" width="1" height="11" fill="#ff77a8" />
+    <rect x="2" y="2" width="12" height="1" fill="#7e2553" />
+    <rect x="14" y="2" width="1" height="12" fill="#1d2b53" />
+    <rect x="2" y="3" width="1" height="10" fill="#7e2553" />
+    <rect x="3" y="3" width="10" height="1" fill="#ff77a8" />
+    <rect x="13" y="3" width="1" height="10" fill="#7e2553" />
+    <rect x="3" y="4" width="1" height="7" fill="#ff77a8" />
+    <rect x="4" y="4" width="8" height="9" fill="#7e2553" />
+    <rect x="12" y="4" width="1" height="7" fill="#ff77a8" />
+    <rect x="3" y="11" width="1" height="2" fill="#7e2553" />
+    <rect x="12" y="11" width="1" height="2" fill="#7e2553" />
+    <rect x="1" y="13" width="1" height="1" fill="#7e2553" />
+    <rect x="2" y="13" width="12" height="1" fill="#1d2b53" />
+    <rect x="1" y="14" width="14" height="1" fill="#1a1a1a" />
   </g>
   <!-- Top-Right: Yellow -->
   <!-- Yellow -->
-  <g transform="translate(30,2)">
-    <rect x="2" y="2" width="26" height="2" fill="#ffe066" />
-    <rect x="28" y="2" width="2" height="2" fill="#c49c00" />
-    <rect x="2" y="4" width="2" height="22" fill="#ffe066" />
-    <rect x="4" y="4" width="24" height="2" fill="#c49c00" />
-    <rect x="28" y="4" width="2" height="24" fill="#704700" />
-    <rect x="4" y="6" width="2" height="20" fill="#c49c00" />
-    <rect x="6" y="6" width="20" height="2" fill="#ffe066" />
-    <rect x="26" y="6" width="2" height="20" fill="#c49c00" />
-    <rect x="6" y="8" width="2" height="14" fill="#ffe066" />
-    <rect x="8" y="8" width="16" height="18" fill="#c49c00" />
-    <rect x="24" y="8" width="2" height="14" fill="#ffe066" />
-    <rect x="6" y="22" width="2" height="4" fill="#c49c00" />
-    <rect x="24" y="22" width="2" height="4" fill="#c49c00" />
-    <rect x="2" y="26" width="2" height="2" fill="#c49c00" />
-    <rect x="4" y="26" width="24" height="2" fill="#704700" />
-    <rect x="2" y="28" width="28" height="2" fill="#1a1a1a" />
+  <g transform="translate(32,15)">
+    <rect x="1" y="1" width="13" height="1" fill="#ffe066" />
+    <rect x="14" y="1" width="1" height="1" fill="#c49c00" />
+    <rect x="1" y="2" width="1" height="11" fill="#ffe066" />
+    <rect x="2" y="2" width="12" height="1" fill="#c49c00" />
+    <rect x="14" y="2" width="1" height="12" fill="#704700" />
+    <rect x="2" y="3" width="1" height="10" fill="#c49c00" />
+    <rect x="3" y="3" width="10" height="1" fill="#ffe066" />
+    <rect x="13" y="3" width="1" height="10" fill="#c49c00" />
+    <rect x="3" y="4" width="1" height="7" fill="#ffe066" />
+    <rect x="4" y="4" width="8" height="9" fill="#c49c00" />
+    <rect x="12" y="4" width="1" height="7" fill="#ffe066" />
+    <rect x="3" y="11" width="1" height="2" fill="#c49c00" />
+    <rect x="12" y="11" width="1" height="2" fill="#c49c00" />
+    <rect x="1" y="13" width="1" height="1" fill="#c49c00" />
+    <rect x="2" y="13" width="12" height="1" fill="#704700" />
+    <rect x="1" y="14" width="14" height="1" fill="#1a1a1a" />
   </g>
   <!-- Bottom-Left: Blue -->
   <!-- Blue -->
-  <g transform="translate(2,30)">
-    <rect x="2" y="2" width="26" height="2" fill="#abffe6" />
-    <rect x="28" y="2" width="2" height="2" fill="#29adff" />
-    <rect x="2" y="4" width="2" height="22" fill="#abffe6" />
-    <rect x="4" y="4" width="24" height="2" fill="#29adff" />
-    <rect x="28" y="4" width="2" height="24" fill="#1d2b53" />
-    <rect x="4" y="6" width="2" height="20" fill="#29adff" />
-    <rect x="6" y="6" width="20" height="2" fill="#abffe6" />
-    <rect x="26" y="6" width="2" height="20" fill="#29adff" />
-    <rect x="6" y="8" width="2" height="14" fill="#abffe6" />
-    <rect x="8" y="8" width="16" height="18" fill="#29adff" />
-    <rect x="24" y="8" width="2" height="14" fill="#abffe6" />
-    <rect x="6" y="22" width="2" height="4" fill="#29adff" />
-    <rect x="24" y="22" width="2" height="4" fill="#29adff" />
-    <rect x="2" y="26" width="2" height="2" fill="#29adff" />
-    <rect x="4" y="26" width="24" height="2" fill="#1d2b53" />
-    <rect x="2" y="28" width="28" height="2" fill="#1a1a1a" />
+  <g transform="translate(15,32)">
+    <rect x="1" y="1" width="13" height="1" fill="#abffe6" />
+    <rect x="14" y="1" width="1" height="1" fill="#29adff" />
+    <rect x="1" y="2" width="1" height="11" fill="#abffe6" />
+    <rect x="2" y="2" width="12" height="1" fill="#29adff" />
+    <rect x="14" y="2" width="1" height="12" fill="#1d2b53" />
+    <rect x="2" y="3" width="1" height="10" fill="#29adff" />
+    <rect x="3" y="3" width="10" height="1" fill="#abffe6" />
+    <rect x="13" y="3" width="1" height="10" fill="#29adff" />
+    <rect x="3" y="4" width="1" height="7" fill="#abffe6" />
+    <rect x="4" y="4" width="8" height="9" fill="#29adff" />
+    <rect x="12" y="4" width="1" height="7" fill="#abffe6" />
+    <rect x="3" y="11" width="1" height="2" fill="#29adff" />
+    <rect x="12" y="11" width="1" height="2" fill="#29adff" />
+    <rect x="1" y="13" width="1" height="1" fill="#29adff" />
+    <rect x="2" y="13" width="12" height="1" fill="#1d2b53" />
+    <rect x="1" y="14" width="14" height="1" fill="#1a1a1a" />
   </g>
   <!-- Bottom-Right: Green (joker) -->
   <!-- Green (joker) -->
-  <g transform="translate(30,30)">
-    <rect x="2" y="2" width="26" height="2" fill="#a1ff00" />
-    <rect x="28" y="2" width="2" height="2" fill="#00e436" />
-    <rect x="2" y="4" width="2" height="22" fill="#a1ff00" />
-    <rect x="4" y="4" width="24" height="2" fill="#00e436" />
-    <rect x="28" y="4" width="2" height="24" fill="#1f5125" />
-    <rect x="4" y="6" width="2" height="20" fill="#00e436" />
-    <rect x="6" y="6" width="20" height="2" fill="#a1ff00" />
-    <rect x="26" y="6" width="2" height="20" fill="#00e436" />
-    <rect x="6" y="8" width="2" height="14" fill="#a1ff00" />
-    <rect x="8" y="8" width="16" height="18" fill="#00e436" />
-    <rect x="24" y="8" width="2" height="14" fill="#a1ff00" />
-    <rect x="6" y="22" width="2" height="4" fill="#00e436" />
-    <rect x="24" y="22" width="2" height="4" fill="#00e436" />
-    <rect x="2" y="26" width="2" height="2" fill="#00e436" />
-    <rect x="4" y="26" width="24" height="2" fill="#1f5125" />
-    <rect x="2" y="28" width="28" height="2" fill="#1a1a1a" />
+  <g transform="translate(32,32)">
+    <rect x="1" y="1" width="13" height="1" fill="#a1ff00" />
+    <rect x="14" y="1" width="1" height="1" fill="#00e436" />
+    <rect x="1" y="2" width="1" height="11" fill="#a1ff00" />
+    <rect x="2" y="2" width="12" height="1" fill="#00e436" />
+    <rect x="14" y="2" width="1" height="12" fill="#1f5125" />
+    <rect x="2" y="3" width="1" height="10" fill="#00e436" />
+    <rect x="3" y="3" width="10" height="1" fill="#a1ff00" />
+    <rect x="13" y="3" width="1" height="10" fill="#00e436" />
+    <rect x="3" y="4" width="1" height="7" fill="#a1ff00" />
+    <rect x="4" y="4" width="8" height="9" fill="#00e436" />
+    <rect x="12" y="4" width="1" height="7" fill="#a1ff00" />
+    <rect x="3" y="11" width="1" height="2" fill="#00e436" />
+    <rect x="12" y="11" width="1" height="2" fill="#00e436" />
+    <rect x="1" y="13" width="1" height="1" fill="#00e436" />
+    <rect x="2" y="13" width="12" height="1" fill="#1f5125" />
+    <rect x="1" y="14" width="14" height="1" fill="#1a1a1a" />
   </g>
 </svg>
