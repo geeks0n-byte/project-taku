@@ -382,16 +382,42 @@ func _set_main_menu_chrome_visible(should_show: bool) -> void:
 		title_layer.visible = should_show
 
 func _apply_credits_fonts(credits_text_node: RichTextLabel) -> void:
-	if HudLayout.uses_pixel_font():
-		# English credits: Press Start without theme outlines.
-		credits_text_node.set_meta("_use_default_font", false)
-		HudLayout.apply_live_pixel_richtext(credits_text_node, CREDITS_BODY_SIZE)
-	else:
-		credits_text_node.set_meta("_use_default_font", true)
-		HudLayout.apply_body_richtext(credits_text_node, CREDITS_BODY_SIZE)
-		HudLayout.apply_safe_outline(credits_text_node, GameConstants.MENU_TEXT_OUTLINE)
+	if not credits_text_node:
+		return
+	# Don't expand-fill the panel — that + a huge theme font size stretches blank lines.
+	credits_text_node.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	credits_text_node.fit_content = true
 	credits_text_node.scroll_active = false
 	credits_text_node.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+	var bbcode := String(TranslationServer.translate("CREDITS_TEXT"))
+	if HudLayout.uses_pixel_font():
+		# English: Press Start; BBCode [font_size=…] sizes stay as authored.
+		credits_text_node.set_meta("_use_default_font", false)
+		HudLayout.apply_live_pixel_richtext(credits_text_node, CREDITS_BODY_SIZE)
+		credits_text_node.text = bbcode
+	else:
+		# Default font: keep theme size at body BBCode size so empty lines don't tower.
+		credits_text_node.set_meta("_use_default_font", true)
+		HudLayout.apply_locale_font_to_control(credits_text_node)
+		var ka := TranslationServer.get_locale().substr(0, 2) == "ka"
+		var ka_mul := GameConstants.GEORGIAN_FONT_SCALE if ka else 1.0
+		var header_sz := int(round(34.0 * ka_mul))
+		var body_sz := int(round(26.0 * ka_mul))
+		var foot_sz := int(round(22.0 * ka_mul))
+		for size_name in [
+			"normal_font_size",
+			"bold_font_size",
+			"italics_font_size",
+			"bold_italics_font_size",
+			"mono_font_size",
+		]:
+			credits_text_node.add_theme_font_size_override(size_name, body_sz)
+		bbcode = bbcode.replace("[font_size=34]", "[font_size=%d]" % header_sz)
+		bbcode = bbcode.replace("[font_size=26]", "[font_size=%d]" % body_sz)
+		bbcode = bbcode.replace("[font_size=22]", "[font_size=%d]" % foot_sz)
+		credits_text_node.text = bbcode
+		HudLayout.apply_safe_outline(credits_text_node, GameConstants.MENU_TEXT_OUTLINE)
 	_refresh_credits_version()
 
 func _app_version_string() -> String:
@@ -734,7 +760,6 @@ func _on_credits_pressed() -> void:
 	if credits_panel: credits_panel.visible = true
 	var credits_text = credits_panel.get_node_or_null("VBoxContainer/CreditsText") if credits_panel else null
 	if credits_text:
-		credits_text.text = tr("CREDITS_TEXT")
 		_apply_credits_fonts(credits_text)
 	else:
 		_refresh_credits_version()

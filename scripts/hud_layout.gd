@@ -446,27 +446,26 @@ static func format_centered_status(msg: String, force_english: bool = false) -> 
 	return "[center]" + translate_status_text(msg, force_english) + "[/center]"
 
 # Returns the composite font scale for the current locale and font type.
-# Georgian (ka) gets an extra 15% because the script has naturally larger glyphs.
-# Press Start (pixel font) is not scaled — it's designed on an 8px grid.
+# Georgian is slightly reduced (glyphs read large). Press Start is not scaled.
 static func font_scale() -> float:
 	var scale := 1.0
 	if not uses_pixel_font():
 		scale = GameConstants.DEFAULT_FONT_SCALE
 	var locale := TranslationServer.get_locale().substr(0, 2)
 	if locale == "ka":
-		scale *= 1.15
+		scale *= GameConstants.GEORGIAN_FONT_SCALE
 	return scale
 
 # Scales a font size by font_scale() and snaps to the nearest valid Press Start grid size.
 static func scaled_font_size(base: int) -> int:
 	return snap_pixel_font_size(int(round(float(base) * font_scale())))
 
-# Scales a font size for the non-pixel (scalable) font path. Georgian gets an extra bump.
+# Scales a font size for the non-pixel (scalable) font path.
 static func body_font_size(base: int) -> int:
 	var scale := GameConstants.DEFAULT_FONT_SCALE
 	var locale := TranslationServer.get_locale().substr(0, 2)
 	if locale == "ka":
-		scale *= 1.15
+		scale *= GameConstants.GEORGIAN_FONT_SCALE
 	return int(round(float(base) * scale))
 
 ## Press Start is an 8px grid font — odd sizes create uneven gaps between letters.
@@ -737,7 +736,7 @@ static func is_status_label(node: Node) -> bool:
 	return n == "StatusLabel" or n == "PlaytestStatusLabel" or n.ends_with("StatusLabel")
 
 # Sets up a RichTextLabel to render status/feedback text at a slightly enlarged size
-# (×1.2 of base) with word-wrap and auto-height. Georgian gets a further 15% boost.
+# (×1.2 of base) with word-wrap and auto-height. Georgian uses GEORGIAN_FONT_SCALE.
 static func apply_status_font(label: RichTextLabel, base_size: int = GameConstants.HUD_STATUS_FONT_SIZE) -> void:
 	if not label:
 		return
@@ -750,7 +749,7 @@ static func apply_status_font(label: RichTextLabel, base_size: int = GameConstan
 	var size := int(round(float(base_size) * 1.2))
 	var locale := TranslationServer.get_locale().substr(0, 2)
 	if locale == "ka":
-		size = int(round(float(size) * 1.15))
+		size = int(round(float(size) * GameConstants.GEORGIAN_FONT_SCALE))
 	for size_name in [
 		"normal_font_size",
 		"bold_font_size",
