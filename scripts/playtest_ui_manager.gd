@@ -207,11 +207,15 @@ func _process(delta: float) -> void:
 		if undo_button and undo_button.disabled:
 			_on_undo_button_up()
 			return
+		if UiSfx:
+			UiSfx.play_click()
 		playtest_undo_requested.emit()
 	elif _hold_redo_active:
 		if redo_button and redo_button.disabled:
 			_on_redo_button_up()
 			return
+		if UiSfx:
+			UiSfx.play_click()
 		playtest_redo_requested.emit()
 
 

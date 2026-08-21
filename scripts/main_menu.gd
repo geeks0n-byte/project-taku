@@ -496,8 +496,8 @@ func _toggle_dev_mode() -> void:
 func _apply_editor_button_label() -> void:
 	if not editor_btn:
 		return
-	editor_btn.text = "EDITOR"
-	editor_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	editor_btn.text = "UI_EDITOR"
+	editor_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
 
 # Debug tools are enabled either via the export flag (editor/testing builds)
 # or via the in-game dev mode unlock (runtime, session-only).

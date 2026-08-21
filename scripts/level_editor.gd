@@ -21,8 +21,6 @@ var current_level_required_jokers: int = -1
 var editor_undo := UndoStack.new()
 # True while the primary mouse/touch button is held down during a paint drag.
 var _is_painting: bool = false
-# True if at least one cell was modified during the current paint stroke, so undo is recorded on release.
-var _paint_dirty: bool = false
 # Tracks the last cell painted during a drag to avoid repainting the same cell each motion event.
 var _last_painted_coord: Vector2i = Vector2i(-9999, -9999)
 var _loading_overlay: LoadingOverlay
@@ -51,39 +49,46 @@ func _ready():
 
 # Handles raw mouse/touch input for painting tiles via drag. Link brushes use a
 # two-click flow routed through canvas_cell_clicked instead, so they are excluded here.
+# Each painted cell records its own undo step (same as playtest), so undoing a drag
+# does not wipe the whole stroke at once.
 func _input(event: InputEvent) -> void:
 	if playtest_controller and playtest_controller.is_active:
 		return
 	if _is_link_brush():
+		# Never leave a paint stroke armed while using two-click link tools.
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+			_is_painting = false
+		elif event is InputEventScreenTouch and event.index == 0 and not event.pressed:
+			_is_painting = false
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		_is_painting = event.pressed
 		if event.pressed:
-			_paint_dirty = false
+			var coord := _coord_from_global(canvas_manager.get_global_mouse_position())
+			if not canvas_manager.board_cells.has(coord):
+				_is_painting = false
+				return
+			_is_painting = true
 			_last_painted_coord = Vector2i(-9999, -9999)
-			_try_paint_at_mouse(false)
+			_try_paint_at_mouse()
 		else:
-			_finish_paint_stroke()
+			_is_painting = false
+			_last_painted_coord = Vector2i(-9999, -9999)
 	elif event is InputEventMouseMotion and _is_painting:
-		_try_paint_at_mouse(false)
+		_try_paint_at_mouse()
 	elif event is InputEventScreenTouch and event.index == 0:
-		_is_painting = event.pressed
 		if event.pressed:
-			_paint_dirty = false
+			var coord := _coord_from_global(canvas_manager.get_global_mouse_position())
+			if not canvas_manager.board_cells.has(coord):
+				_is_painting = false
+				return
+			_is_painting = true
 			_last_painted_coord = Vector2i(-9999, -9999)
-			_try_paint_at_mouse(false)
+			_try_paint_at_mouse()
 		else:
-			_finish_paint_stroke()
+			_is_painting = false
+			_last_painted_coord = Vector2i(-9999, -9999)
 	elif event is InputEventScreenDrag and event.index == 0 and _is_painting:
-		_try_paint_at_mouse(false)
-
-# Called when the paint button is released. Records a single undo entry for the whole stroke
-# rather than one per cell, keeping the undo history manageable.
-func _finish_paint_stroke() -> void:
-	if _paint_dirty:
-		_record_editor_change()
-		_paint_dirty = false
-	_last_painted_coord = Vector2i(-9999, -9999)
+		_try_paint_at_mouse()
 
 # Link brushes (shifter, equals, not-equals) require selecting two cells rather than painting,
 # so they are handled separately via canvas_cell_clicked rather than the drag input path.
@@ -99,15 +104,16 @@ func _coord_from_global(global_pos: Vector2) -> Vector2i:
 	var local := canvas_manager.to_local(global_pos)
 	return Vector2i(floori(local.x / float(GameConstants.CELL_SIZE)), floori(local.y / float(GameConstants.CELL_SIZE)))
 
-func _try_paint_at_mouse(record_undo: bool) -> void:
+func _try_paint_at_mouse() -> void:
+	if _is_link_brush():
+		return
 	var coord := _coord_from_global(canvas_manager.get_global_mouse_position())
 	if not canvas_manager.board_cells.has(coord):
 		return
 	if coord == _last_painted_coord:
 		return
 	_last_painted_coord = coord
-	if _apply_paint_brush(coord, record_undo):
-		_paint_dirty = true
+	if _apply_paint_brush(coord, true):
 		_update_editor_joker_counter_display()
 
 # Repositions the canvas_manager so the grid is visually centered, then tells the UI
@@ -177,29 +183,41 @@ func _create_editor_snapshot() -> Dictionary:
 # Restores the editor state from a snapshot produced by _create_editor_snapshot.
 # Called by undo and redo; pairs are deep-copied so subsequent edits don't corrupt history.
 func _apply_editor_snapshot(snap: Dictionary):
-	for coord in snap["cells"]:
+	if snap.is_empty() or not snap.has("cells"):
+		return
+	var cells: Dictionary = snap["cells"]
+	if cells.is_empty():
+		return
+	for coord in cells:
+		if not canvas_manager.board_cells.has(coord):
+			continue
 		var cell = canvas_manager.board_cells[coord]
-		cell.state = snap["cells"][coord]["state"]
-		cell.shifter_direction = snap["cells"][coord]["shifter_direction"]
-		cell.is_locked = snap["cells"][coord]["is_locked"]
-		cell.is_playable = snap["cells"][coord]["is_playable"]
-		cell.is_linked_pair = snap["cells"][coord]["is_linked_pair"]
+		var data: Dictionary = cells[coord]
+		cell.state = data["state"]
+		cell.shifter_direction = data["shifter_direction"]
+		cell.is_locked = data["is_locked"]
+		cell.is_playable = data["is_playable"]
+		cell.is_linked_pair = data["is_linked_pair"]
 		cell.update_visuals()
 
-	canvas_manager.loaded_shifter_pairs = snap["shifters"].duplicate(true)
-	canvas_manager.loaded_constraint_pairs = snap["constraints"].duplicate(true)
+	canvas_manager.loaded_shifter_pairs = snap.get("shifters", []).duplicate(true)
+	canvas_manager.loaded_constraint_pairs = snap.get("constraints", []).duplicate(true)
 	canvas_manager.hidden_constraint_pairs = snap.get("hidden_constraints", []).duplicate(true)
-	current_level_required_jokers = snap["jokers"]
+	current_level_required_jokers = snap.get("jokers", current_level_required_jokers)
 	canvas_manager.trigger_redraw()
 	_update_editor_joker_counter_display()
 
 # Saves the current editor state to the undo stack and refreshes the undo/redo buttons.
 # Also regenerates hidden hint constraints when the hint overlay is active so they stay in sync.
+# Skips no-op records so identical consecutive states cannot create phantom undo steps.
 func _record_editor_change():
 	if canvas_manager.show_editor_hints:
 		_rebuild_editor_hidden_hints()
 		canvas_manager.trigger_redraw()
-	editor_undo.record(_create_editor_snapshot())
+	var snap := _create_editor_snapshot()
+	if not editor_undo.current.is_empty() and snap.hash() == editor_undo.current.hash():
+		return
+	editor_undo.record(snap)
 	editor_ui.update_editor_undo_redo_buttons(editor_undo.can_undo(), editor_undo.can_redo())
 
 func _on_editor_undo_requested():
@@ -280,6 +298,8 @@ func _on_grid_size_changed(new_width: int, new_height: int):
 func _on_brush_changed(state_id: int, _brush_name: String):
 	if playtest_controller.is_active:
 		return
+	_is_painting = false
+	_last_painted_coord = Vector2i(-9999, -9999)
 	if link_first_selection != null:
 		canvas_manager.board_cells[link_first_selection].update_visuals()
 		editor_ui.update_status("ERR_PLACEMENT_ABORTED", Color.WHITE)
@@ -308,11 +328,11 @@ func _handle_link_brush_click(coord: Vector2i) -> void:
 		link_first_selection = coord
 		cell.set_mask_color(Color(1.0, 1.0, 1.0, 0.4))
 		if current_brush_state == GameConstants.TileState.SHIFTER:
-			editor_ui.update_status("ED_HINT_SELECT_SHIFTER", Color.YELLOW)
+			editor_ui.update_status("ED_HINT_SELECT_SHIFTER", Color.WHITE)
 		elif current_brush_state == GameConstants.BrushTool.EQUALS:
-			editor_ui.update_status("ED_HINT_SELECT_EQUALS", Color.YELLOW)
+			editor_ui.update_status("ED_HINT_SELECT_EQUALS", Color.WHITE)
 		elif current_brush_state == GameConstants.BrushTool.NOT_EQUALS:
-			editor_ui.update_status("ED_HINT_SELECT_NOT_EQUALS", Color.YELLOW)
+			editor_ui.update_status("ED_HINT_SELECT_NOT_EQUALS", Color.WHITE)
 	else:
 		var first_coord = link_first_selection
 		link_first_selection = null
@@ -324,21 +344,23 @@ func _handle_link_brush_click(coord: Vector2i) -> void:
 		if (diff.x == 1 and diff.y == 0) or (diff.x == 0 and diff.y == 1):
 			if current_brush_state == GameConstants.TileState.SHIFTER:
 				_execute_pair_link_creation(first_coord, coord)
-				editor_ui.update_status("ED_MSG_SHIFTER_PLACED", Color(0.4, 1.0, 0.4))
+				editor_ui.update_status("ED_MSG_SHIFTER_PLACED", Color.WHITE)
 			elif current_brush_state == GameConstants.BrushTool.EQUALS:
 				_execute_constraint_creation(first_coord, coord, "equals")
-				editor_ui.update_status("ED_MSG_EQUALS_PLACED", Color(0.4, 1.0, 0.4))
+				editor_ui.update_status("ED_MSG_EQUALS_PLACED", Color.WHITE)
 			elif current_brush_state == GameConstants.BrushTool.NOT_EQUALS:
 				_execute_constraint_creation(first_coord, coord, "not_equals")
-				editor_ui.update_status("ED_MSG_NOT_EQUALS_PLACED", Color(0.4, 1.0, 0.4))
+				editor_ui.update_status("ED_MSG_NOT_EQUALS_PLACED", Color.WHITE)
 			_record_editor_change()
 			if UiSfx:
 				UiSfx.play_click()
 		else:
 			canvas_manager.board_cells[first_coord].update_visuals()
-			editor_ui.update_status("ERR_CELLS_NOT_ADJACENT", Color(1.0, 0.4, 0.4))
+			editor_ui.update_status("ERR_CELLS_NOT_ADJACENT", Color.WHITE)
 
 func _apply_paint_brush(coord: Vector2i, record_undo: bool) -> bool:
+	if _is_link_brush():
+		return false
 	if not canvas_manager.board_cells.has(coord):
 		return false
 	var cell = canvas_manager.board_cells[coord]

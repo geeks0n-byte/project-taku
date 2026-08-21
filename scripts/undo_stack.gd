@@ -18,15 +18,16 @@ var current: Dictionary = {}
 func reset(initial_state: Dictionary) -> void:
 	_undo.clear()
 	_redo.clear()
-	current = initial_state
+	current = initial_state.duplicate(true)
 
 # Saves the current state so it can be restored by undo(), then moves to new_state.
 # Clears the redo stack because a new branch of history has begun.
+# Snapshots are deep-copied so later board mutations cannot corrupt history.
 func record(new_state: Dictionary) -> void:
-	_undo.append(current)
+	_undo.append(current.duplicate(true))
 	_trim_undo_if_needed()
 	_redo.clear()
-	current = new_state
+	current = new_state.duplicate(true)
 
 # Pops the most recent state from the undo stack and makes it current.
 # The state that was current moves onto the redo stack.
@@ -34,9 +35,9 @@ func record(new_state: Dictionary) -> void:
 func undo() -> Dictionary:
 	if _undo.is_empty():
 		return {}
-	_redo.append(current)
+	_redo.append(current.duplicate(true))
 	current = _undo.pop_back()
-	return current
+	return current.duplicate(true)
 
 # Re-applies the most recently undone state. Puts the current state back onto
 # the undo stack first (respecting max_size) so undo still works afterwards.
@@ -44,10 +45,10 @@ func undo() -> Dictionary:
 func redo() -> Dictionary:
 	if _redo.is_empty():
 		return {}
-	_undo.append(current)
+	_undo.append(current.duplicate(true))
 	_trim_undo_if_needed()
 	current = _redo.pop_back()
-	return current
+	return current.duplicate(true)
 
 # Removes the oldest undo entries until the stack is within max_size.
 # Called after every push to _undo so memory use stays bounded.

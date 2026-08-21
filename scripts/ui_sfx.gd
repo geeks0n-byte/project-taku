@@ -47,6 +47,16 @@ func play_click_haptic() -> void:
 func play_clear_haptic() -> void:
 	_vibrate(50, 0.5)
 
+# Hold-to-clear feedback: clear haptic plus the usual click sound.
+func play_clear() -> void:
+	play_clear_haptic()
+	if SaveManager and not SaveManager.sfx_enabled:
+		return
+	if _player == null or _click_stream == null:
+		return
+	_player.stream = _click_stream
+	_player.play()
+
 # Stronger bump for a blocked move (e.g. shifter hitting a wall).
 # Android only — requires VIBRATE permission in the export preset.
 func play_blocked_haptic() -> void:

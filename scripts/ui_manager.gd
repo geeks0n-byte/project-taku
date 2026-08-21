@@ -305,8 +305,12 @@ func _process(delta: float) -> void:
 	_hold_repeat_elapsed = _HOLD_INITIAL_DELAY + 0.0
 	_hold_repeat_interval = maxf(_hold_repeat_interval * _HOLD_REPEAT_ACCEL, _HOLD_REPEAT_MIN)
 	if _hold_undo_active:
+		if UiSfx:
+			UiSfx.play_click()
 		undo_requested.emit()
 	elif _hold_redo_active:
+		if UiSfx:
+			UiSfx.play_click()
 		redo_requested.emit()
 
 # Closes the HTP overlay and tells main.gd to return to paused gameplay.

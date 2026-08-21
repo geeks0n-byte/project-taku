@@ -620,11 +620,15 @@ func _process(delta: float) -> void:
 		if editor_undo_button and editor_undo_button.disabled:
 			_on_editor_undo_button_up()
 			return
+		if UiSfx:
+			UiSfx.play_click()
 		editor_undo_requested.emit()
 	elif _hold_redo_active:
 		if editor_redo_button and editor_redo_button.disabled:
 			_on_editor_redo_button_up()
 			return
+		if UiSfx:
+			UiSfx.play_click()
 		editor_redo_requested.emit()
 
 

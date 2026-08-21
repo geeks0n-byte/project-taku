@@ -143,6 +143,9 @@ func _stretch_node_to_parent(node: Control, margin: float = 0.0):
 # On press: starts the hold-to-clear timer.
 # On release: either fires the normal tile cycle (tap) or does nothing (hold already cleared).
 func _gui_input(event):
+	# Editor placement uses canvas interceptors / brush input — never cycle here.
+	if is_editor_mode:
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			if event.position.x > CLICK_MARGIN and event.position.x < (size.x - CLICK_MARGIN) and \
@@ -157,6 +160,8 @@ func _gui_input(event):
 # Cycles the tile to its next allowed state, or toggles the shifter direction.
 # Called on finger release if no hold-clear happened.
 func _perform_action():
+	if is_editor_mode:
+		return
 	if not is_playable or is_locked or tutorial_blocked:
 		return
 
@@ -262,7 +267,7 @@ func _finish_hold_clear() -> void:
 		_hold_shake_tween.kill()
 		_hold_shake_tween = null
 	if UiSfx:
-		UiSfx.play_clear_haptic()
+		UiSfx.play_clear()
 	pivot_offset = size / 2.0
 	if _hold_clear_tween and _hold_clear_tween.is_valid():
 		_hold_clear_tween.kill()

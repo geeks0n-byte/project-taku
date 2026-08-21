@@ -72,8 +72,6 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 	hidden_constraint_pairs.clear()
 
 	var pool_index = 0
-	# Small inset so the interceptor doesn't cover the cell border, preventing missed clicks.
-	var margin = 5.0
 
 	for y in range(grid_height):
 		for x in range(grid_width):
@@ -110,13 +108,22 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 			cell.is_linked_pair = false
 			cell.shifter_direction = Vector2i.ZERO
 			cell.is_editor_mode = not is_playtesting
+			if cell is Control:
+				cell.mouse_filter = (
+					Control.MOUSE_FILTER_IGNORE if not is_playtesting else Control.MOUSE_FILTER_STOP
+				)
 			cell.update_visuals()
 
-			interceptor.size = Vector2(GameConstants.CELL_SIZE - (2 * margin), GameConstants.CELL_SIZE - (2 * margin))
-			interceptor.position = cell.position + Vector2(margin, margin)
+			# Full-cell hit target so border clicks cannot fall through to Cell
+			# (which would cycle EMPTY → YELLOW while a link brush is active).
+			interceptor.size = Vector2(GameConstants.CELL_SIZE, GameConstants.CELL_SIZE)
+			interceptor.position = cell.position
 			interceptor.mouse_filter = (
 				Control.MOUSE_FILTER_IGNORE if is_playtesting else Control.MOUSE_FILTER_STOP
 			)
+			interceptor.z_index = 1
+			if cell is CanvasItem:
+				cell.z_index = 0
 
 			# Disconnect any previous lambda that captured a stale coord value before reconnecting.
 			for conn in interceptor.gui_input.get_connections():
@@ -159,6 +166,10 @@ func set_playtest_input_mode(enabled: bool) -> void:
 		var interceptor: Control = entry["interceptor"]
 		if cell and "is_editor_mode" in cell:
 			cell.is_editor_mode = not enabled
+		if cell is Control:
+			cell.mouse_filter = (
+				Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
+			)
 		if interceptor:
 			interceptor.mouse_filter = (
 				Control.MOUSE_FILTER_IGNORE if enabled else Control.MOUSE_FILTER_STOP
