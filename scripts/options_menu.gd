@@ -218,7 +218,7 @@ func _update_lang_label() -> void:
 		HudLayout.clear_label_settings(lang_label)
 		lang_label.set_meta("_use_default_font", true)
 		lang_label.text = name_text
-		lang_label.add_theme_font_override("font", ThemeDB.fallback_font)
+		lang_label.add_theme_font_override("font", HudFonts.default_font())
 		lang_label.add_theme_font_size_override("font_size", font_size)
 		HudLayout.apply_safe_outline(lang_label, GameConstants.MENU_TEXT_OUTLINE)
 
@@ -282,10 +282,10 @@ func _apply_option_button(button: Button) -> void:
 	var font_size := HudLayout.scaled_font_size(GameConstants.UI_BTN_PRIMARY_FONT)
 	var display := _option_button_display_text(button)
 	var font: Font = (
-		ThemeDB.fallback_font if button.get_meta("_use_default_font", false) else HudLayout.ui_font()
+		HudFonts.default_font() if button.get_meta("_use_default_font", false) else HudLayout.ui_font()
 	)
 	if font == null:
-		font = ThemeDB.fallback_font
+		font = HudFonts.default_font()
 	var measured := font.get_string_size(
 		display if not display.is_empty() else "M", HORIZONTAL_ALIGNMENT_CENTER, -1, font_size
 	)
@@ -400,11 +400,11 @@ func _set_toggle_button_caption(button: Button, full_text: String) -> void:
 		# English: Press Start, no theme outline (outline scrambles glyphs).
 		HudLayout.apply_live_pixel_richtext(caption, font_size)
 	else:
-		caption.add_theme_font_override("normal_font", ThemeDB.fallback_font)
-		caption.add_theme_font_override("bold_font", ThemeDB.fallback_font)
-		caption.add_theme_font_override("italics_font", ThemeDB.fallback_font)
-		caption.add_theme_font_override("bold_italics_font", ThemeDB.fallback_font)
-		caption.add_theme_font_override("mono_font", ThemeDB.fallback_font)
+		caption.add_theme_font_override("normal_font", HudFonts.default_font())
+		caption.add_theme_font_override("bold_font", HudFonts.default_font())
+		caption.add_theme_font_override("italics_font", HudFonts.default_font())
+		caption.add_theme_font_override("bold_italics_font", HudFonts.default_font())
+		caption.add_theme_font_override("mono_font", HudFonts.default_font())
 		caption.add_theme_color_override("font_outline_color", Color.BLACK)
 		HudLayout.apply_safe_outline(caption, GameConstants.MENU_TEXT_OUTLINE)
 		caption.add_theme_font_size_override("normal_font_size", font_size)

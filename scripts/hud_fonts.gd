@@ -3,18 +3,21 @@ extends RefCounted
 ## Font policy for Spaceblox UI.
 ##
 ## Press Start (pixel) is used for every locale except Georgian and Ukrainian,
-## which need the scalable default font for mkhedruli / Cyrillic.
+## which need a scalable font with mkhedruli / Cyrillic coverage.
 ##
 ## Editor chrome is English-only and may force Press Start via
 ## [method mark_force_pixel_subtree] even when the game language is ka/uk.
 
 const PIXEL_FONT: Font = preload("res://resources/fonts/PressStart2P-vaV7.ttf")
 const PIXEL_FONT_PATH := "res://resources/fonts/PressStart2P-vaV7.ttf"
+const NOTO_SANS_PATH := "res://resources/fonts/NotoSans-Regular.ttf"
+const NOTO_GEORGIAN_PATH := "res://resources/fonts/NotoSansGeorgian-Regular.ttf"
 
 ## Locales that must not use Press Start (missing / poorly covered glyphs).
 const SCALABLE_SCRIPT_LOCALES := ["ka", "uk"]
 
 static var _pixel_font_with_fallback: Font
+static var _default_ui_font: Font
 static var _force_pixel_depth: int = 0
 
 static func locale_code() -> String:
@@ -71,11 +74,40 @@ static func pixel_font() -> Font:
 static func pixel_font_clean() -> Font:
 	return pixel_font()
 
+## Scalable UI face: Noto Sans (Latin/Cyrillic) with Georgian fallback for mkhedruli.
+## Loaded at runtime (FontFile) so headless/CI works before .import exists.
+static func default_font() -> Font:
+	if _default_ui_font != null:
+		return _default_ui_font
+	var base := _load_font_file(NOTO_SANS_PATH)
+	if base == null:
+		_default_ui_font = ThemeDB.fallback_font
+		return _default_ui_font
+	var georgian := _load_font_file(NOTO_GEORGIAN_PATH)
+	if georgian != null:
+		base.fallbacks = [georgian]
+	_default_ui_font = base
+	return _default_ui_font
+
+static func _load_font_file(path: String) -> Font:
+	if path.is_empty() or not FileAccess.file_exists(path):
+		return null
+	if ResourceLoader.exists(path):
+		var imported := load(path) as Font
+		if imported != null:
+			return imported.duplicate()
+	var font := FontFile.new()
+	var err := font.load_dynamic_font(path)
+	if err != OK:
+		push_warning("HudFonts: failed to load %s (%s)" % [path, error_string(err)])
+		return null
+	return font
+
 static func clear_pixel_text_cache() -> void:
 	pass
 
 static func ui_font() -> Font:
-	return pixel_font() if uses_pixel_font() else ThemeDB.fallback_font
+	return pixel_font() if uses_pixel_font() else default_font()
 
 static func prefer_default_font() -> bool:
 	return not uses_pixel_font()

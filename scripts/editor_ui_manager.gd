@@ -143,7 +143,7 @@ func _apply_default_font_to_link_buttons() -> void:
 		if not label:
 			continue
 		label.set_meta("_use_default_font", true)
-		label.add_theme_font_override("font", ThemeDB.fallback_font)
+		label.add_theme_font_override("font", HudFonts.default_font())
 		label.add_theme_font_size_override("font_size", 52)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER

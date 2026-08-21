@@ -156,7 +156,7 @@ func _lock_loading_label_width() -> void:
 		font = _label.get_theme_font("font")
 		font_size = HudLayout.scaled_font_size(font_size)
 	if font == null:
-		font = ThemeDB.fallback_font
+		font = HudFonts.default_font()
 	var measured := font.get_string_size(full, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 	_label.custom_minimum_size = Vector2(ceili(measured.x) + pad, 0)
 

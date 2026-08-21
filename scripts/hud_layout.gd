@@ -61,7 +61,7 @@ static func align_counter_row(counter_row: Control) -> void:
 			slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			slot.size_flags_stretch_ratio = 1.0
 
-# Cached fallback font reference so we don't call ThemeDB.fallback_font on every frame.
+# Cached fallback font reference so we don't call HudFonts.default_font() on every frame.
 static var _screen_header_font_default: Font
 
 # Returns the font to use for screen headers. Press Start except ka/uk;
@@ -70,7 +70,7 @@ static func screen_header_font(force_pixel: bool = false) -> Font:
 	if force_pixel or uses_pixel_font():
 		return pixel_font()
 	if _screen_header_font_default == null:
-		_screen_header_font_default = ThemeDB.fallback_font
+		_screen_header_font_default = HudFonts.default_font()
 	return _screen_header_font_default
 
 # Returns true when text looks like a raw i18n key (all-caps ASCII + digits + underscores).
@@ -215,7 +215,7 @@ static func apply_end_screen_header_style(label: Label, base_size: int = 48) -> 
 	label.set_meta("_use_default_font", true)
 	clear_label_settings(label)
 	_clear_pixel_raster(label)
-	label.add_theme_font_override("font", ThemeDB.fallback_font)
+	label.add_theme_font_override("font", HudFonts.default_font())
 	label.add_theme_font_size_override("font_size", body_font_size(size))
 	label.add_theme_color_override("font_color", GameConstants.SCREEN_HEADER_COLOR)
 	apply_safe_outline(label, 8)
@@ -675,7 +675,7 @@ static func apply_raster_pixel_label(
 	label.text = text
 	label.clip_text = false
 	label.clip_contents = false
-	label.add_theme_font_override("font", ThemeDB.fallback_font)
+	label.add_theme_font_override("font", HudFonts.default_font())
 	label.add_theme_font_size_override("font_size", body_font_size(font_size))
 	label.add_theme_color_override("font_color", color)
 	apply_safe_outline(label, 8)
@@ -723,13 +723,13 @@ static func apply_raster_pixel_button(
 	button.set_meta("_use_default_font", true)
 	button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	button.text = text
-	button.add_theme_font_override("font", ThemeDB.fallback_font)
+	button.add_theme_font_override("font", HudFonts.default_font())
 	button.add_theme_font_size_override("font_size", body_font_size(font_size))
 	apply_safe_outline(button, 8)
 
 # Returns the appropriate UI font for the active locale.
 static func ui_font() -> Font:
-	return pixel_font() if uses_pixel_font() else ThemeDB.fallback_font
+	return pixel_font() if uses_pixel_font() else HudFonts.default_font()
 
 # Returns true for any node whose name marks it as a status/feedback label.
 # Used by apply_locale_font_to_control to route these to apply_status_font instead.
@@ -745,7 +745,7 @@ static func is_status_label(node: Node) -> bool:
 static func apply_status_font(label: RichTextLabel, base_size: int = GameConstants.HUD_STATUS_FONT_SIZE) -> void:
 	if not label:
 		return
-	var font := ThemeDB.fallback_font
+	var font := HudFonts.default_font()
 	label.set_meta("_force_pixel_font", false)
 	label.set_meta("_use_default_font", true)
 	label.add_theme_font_override("normal_font", font)
@@ -817,9 +817,9 @@ static func apply_locale_font_to_control(node: Node) -> void:
 		_apply_forced_pixel_font(node)
 		_strip_live_pixel_outline(node as Control)
 		return
-	var font := ThemeDB.fallback_font if use_default else ui_font()
+	var font := HudFonts.default_font() if use_default else ui_font()
 	if font == null:
-		font = ThemeDB.fallback_font
+		font = HudFonts.default_font()
 	if font == null:
 		return
 	if node is Button or node is Label or node is LineEdit or node is OptionButton:
@@ -895,12 +895,12 @@ static func fit_text_button(button: Button, base_font_size: int = 36, min_font_s
 	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var use_pixel := control_uses_pixel_font(button)
 	var font: Font = (
-		ThemeDB.fallback_font if button.get_meta("_use_default_font", false) else (
+		HudFonts.default_font() if button.get_meta("_use_default_font", false) else (
 			pixel_font() if use_pixel else ui_font()
 		)
 	)
 	if font == null:
-		font = ThemeDB.fallback_font
+		font = HudFonts.default_font()
 	var target_w := maxf(40.0, button.custom_minimum_size.x - 28.0)
 	var target_h := maxf(40.0, button.custom_minimum_size.y - 24.0)
 	var display := button.text
@@ -943,12 +943,12 @@ static func fit_text_button_single_line(button: Button, base_font_size: int = 36
 	button.autowrap_mode = TextServer.AUTOWRAP_OFF
 	var use_pixel := control_uses_pixel_font(button)
 	var font: Font = (
-		ThemeDB.fallback_font if button.get_meta("_use_default_font", false) else (
+		HudFonts.default_font() if button.get_meta("_use_default_font", false) else (
 			pixel_font() if use_pixel else ui_font()
 		)
 	)
 	if font == null:
-		font = ThemeDB.fallback_font
+		font = HudFonts.default_font()
 	var target_w := maxf(40.0, button.custom_minimum_size.x - 36.0)
 	var display := button.text
 	if button.auto_translate_mode != Node.AUTO_TRANSLATE_MODE_DISABLED:
@@ -1129,8 +1129,22 @@ static func apply_tile_button(
 			"pressed":  box.modulate_color = Color(0.8, 0.8, 0.8, 1.0)
 			"disabled": box.modulate_color = Color(0.55, 0.55, 0.55, 1.0)
 		button.add_theme_stylebox_override(style_name, box)
+	var use_default := prefer_default_font()
+	button.set_meta("_use_default_font", use_default)
+	button.set_meta("_force_pixel_font", false)
+	if button.has_theme_font_override("font"):
+		button.remove_theme_font_override("font")
+	button.add_theme_font_override("font", HudFonts.default_font() if use_default else pixel_font())
 	apply_locale_font_to_control(button)
 	button.add_theme_font_size_override("font_size", scaled_font_size(font_size))
+	# Long privacy-policy labels need room; grow width to the fitted text.
+	fit_text_button_single_line(button, font_size, maxi(18, font_size - 24))
+	var font := button.get_theme_font("font")
+	var size := button.get_theme_font_size("font_size")
+	var display := button.text
+	if font and not display.is_empty():
+		var text_w := font.get_string_size(display, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+		button.custom_minimum_size = Vector2(maxf(text_w + 96.0, 280.0), height)
 	apply_safe_outline(button, GameConstants.MENU_TEXT_OUTLINE)
 
 # Iterates all Label descendants of a panel button and shrinks each one's font
@@ -1174,9 +1188,9 @@ static func _fit_caption_label(
 	if _is_message_key(display):
 		display = String(TranslationServer.translate(display))
 	var use_pixel := control_uses_pixel_font(label)
-	var font: Font = pixel_font_clean() if use_pixel else ThemeDB.fallback_font
+	var font: Font = pixel_font_clean() if use_pixel else HudFonts.default_font()
 	if font == null:
-		font = ThemeDB.fallback_font
+		font = HudFonts.default_font()
 	if font == null:
 		return
 	var target_w := maxf(40.0, button_size.x - 36.0)
@@ -1245,8 +1259,13 @@ static func apply_popup_label(label: Label, base_size: int = GameConstants.UI_BO
 	clear_label_settings(label)
 	var use_default := prefer_default_font()
 	label.set_meta("_use_default_font", use_default)
+	label.set_meta("_force_pixel_font", false)
+	# Drop scene-baked Press Start so ka/uk can show real glyphs.
+	if label.has_theme_font_override("font"):
+		label.remove_theme_font_override("font")
 	label.text = _popup_prompt_with_title_gap(label.text, false)
 	apply_locale_font_to_control(label)
+	label.add_theme_font_override("font", HudFonts.default_font() if use_default else pixel_font())
 	var size := body_font_size(base_size) if use_default else base_size
 	label.add_theme_font_size_override("font_size", size)
 	# Default fonts already read taller than Press Start — keep gaps tight.
@@ -1651,7 +1670,7 @@ static func fit_top_bar_two_line_font_size(body: String) -> int:
 	var size := scaled_font_size(base) if not uses_pixel_font() else base
 	var font: Font = pixel_font() if uses_pixel_font() else ui_font()
 	if font == null:
-		font = ThemeDB.fallback_font
+		font = HudFonts.default_font()
 	if font == null:
 		return size
 	var bar_h := float(GameConstants.HUD_BUTTON_HEIGHT)

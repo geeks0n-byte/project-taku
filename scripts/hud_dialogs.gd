@@ -162,7 +162,7 @@ static func _measure_wrapped_label_height(label: Label, width: float) -> float:
 		if label.label_settings.font_size > 0:
 			font_size = label.label_settings.font_size
 	if font == null:
-		font = ThemeDB.fallback_font
+		font = HudFonts.default_font()
 	var text := String(label.text)
 	if text.is_empty():
 		return float(font_size)
