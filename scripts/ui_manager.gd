@@ -899,7 +899,7 @@ func _refresh_victory_locale() -> void:
 		else:
 			win_label.text = (tr("LEVEL_COMPLETED") % _victory_display_num) + "\n" + tr("COMPLETED")
 		HudLayout.apply_end_screen_header_style(win_label, 48)
-		win_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		win_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		win_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	if victory_restart_label:
@@ -1011,13 +1011,27 @@ func _populate_victory_results(star_result: Dictionary) -> void:
 
 # Computes and applies absolute pixel positions for all victory panel elements:
 # results host, optional board preview, and the action buttons stacked below.
-# Panel minimum height adapts to whether a preview is shown and the goal count.
+# Panel height follows title/results/preview/buttons so long locales keep margins.
 func _layout_victory_panel(star_result: Dictionary) -> void:
 	if not victory_panel:
 		return
 	var goal_count := int(star_result.get("total_count", 0))
 	var untimed := bool(star_result.get("untimed", false))
-	var title_bottom := 220.0
+	var panel_w := 840.0
+	var title_top := 28.0
+	var title_side := 24.0
+	var title_h := 82.0
+	if win_label:
+		win_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		title_h = maxf(
+			82.0,
+			HudDialogs.measure_label_height(win_label, panel_w - title_side * 2.0)
+		)
+		win_label.offset_left = title_side
+		win_label.offset_right = -title_side
+		win_label.offset_top = title_top
+		win_label.offset_bottom = title_top + title_h
+	var title_bottom := title_top + title_h
 	var results_h := 0.0
 	if not untimed:
 		results_h = float(maxi(1, goal_count)) * (LevelStars.ROW_HEIGHT + 14.0) + 24.0
@@ -1059,9 +1073,10 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 	if main_menu_button:
 		_place_victory_button(main_menu_button, buttons_top, row)
 		row += 1
-	var buttons_bottom := buttons_top + float(row) * 130.0 + 20.0
-	var min_h := 980.0 if preview_h > 0.0 else (620.0 if untimed else 900.0)
-	victory_panel.custom_minimum_size = Vector2(840, maxf(min_h, buttons_bottom + 40.0))
+	var buttons_bottom := buttons_top + float(row) * 130.0
+	var height := buttons_bottom + 40.0 + HudDialogs.DIALOG_EXTRA_PAD_V
+	var soft_min := 560.0 if preview_h > 0.0 else (400.0 if untimed else 520.0)
+	victory_panel.custom_minimum_size = Vector2(panel_w, maxf(soft_min, height))
 
 # Positions a victory button at the given row below buttons_top, centred horizontally.
 func _place_victory_button(button: Button, buttons_top: float, row: int) -> void:

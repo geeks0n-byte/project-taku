@@ -145,6 +145,12 @@ static func _sync_center_anchor_offsets(panel: Control) -> void:
 	panel.offset_top = -size.y * 0.5
 	panel.offset_bottom = size.y * 0.5
 
+static func measure_control_height(control: Control, width: float) -> float:
+	return _measure_control_height(control, width)
+
+static func measure_label_height(label: Label, width: float) -> float:
+	return _measure_wrapped_label_height(label, width)
+
 static func _measure_wrapped_label_height(label: Label, width: float) -> float:
 	if label == null:
 		return 0.0

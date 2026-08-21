@@ -97,31 +97,9 @@ static func register_settings() -> void:
 
 
 static func _register_translations() -> bool:
-	var csv_path := "res://addons/admob/gdscript/sample/translations/admob_sample.csv"
-	if not FileAccess.file_exists(csv_path):
-		return false
-
-	var translations : Array[String] = [
-		"res://addons/admob/gdscript/sample/translations/admob_sample.en.translation",
-		"res://addons/admob/gdscript/sample/translations/admob_sample.pt_BR.translation",
-		"res://addons/admob/gdscript/sample/translations/admob_sample.es.translation",
-		"res://addons/admob/gdscript/sample/translations/admob_sample.zh_CN.translation",
-		"res://addons/admob/gdscript/sample/translations/admob_sample.ja.translation"
-	]
-
-	var current_translations := PackedStringArray()
-	if ProjectSettings.has_setting("internationalization/locale/translations"):
-		current_translations = ProjectSettings.get_setting("internationalization/locale/translations")
-
-	var modified := false
-	for t in translations:
-		if not t in current_translations:
-			current_translations.append(t)
-			modified = true
-
-	if modified:
-		ProjectSettings.set_setting("internationalization/locale/translations", current_translations)
-	return modified
+	# Spaceblox ships its own locales only. Skip injecting AdMob sample translations
+	# into Project Settings (they would otherwise reappear on every editor open).
+	return false
 
 
 static func _cleanup_obsolete_settings(active_names: Array[String]) -> bool:

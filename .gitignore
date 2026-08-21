@@ -1,3 +1,10 @@
+# Godot 4+ editor cache / imports — never commit these
+.godot/
+.import/
+*.import
+export.cfg
+export_presets.cfg
+
 # Local CI Godot download cache
 .godot-ci/
 

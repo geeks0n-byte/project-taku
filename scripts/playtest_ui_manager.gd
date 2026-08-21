@@ -264,12 +264,26 @@ func _style_end_buttons() -> void:
 
 ## Calculates and applies offsets for all children of the victory panel based on how
 ## many star-goal rows the result contains and whether a board preview is shown.
-## Heights are computed manually because the panel uses absolute anchoring, not a VBox.
+## Heights follow title/results/preview/buttons so long copy keeps top/bottom margin.
 func _layout_victory_panel(star_result: Dictionary) -> void:
 	if not _victory_panel or not _victory_results_host:
 		return
 	var goal_count := int(star_result.get("total_count", 0))
-	var title_bottom := 200.0
+	var panel_w := 840.0
+	var title_top := 28.0
+	var title_side := 24.0
+	var title_h := 82.0
+	if _victory_title:
+		_victory_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		title_h = maxf(
+			82.0,
+			HudDialogs.measure_label_height(_victory_title, panel_w - title_side * 2.0)
+		)
+		_victory_title.offset_left = title_side
+		_victory_title.offset_right = -title_side
+		_victory_title.offset_top = title_top
+		_victory_title.offset_bottom = title_top + title_h
+	var title_bottom := title_top + title_h
 	var results_h := float(maxi(1, goal_count)) * (LevelStars.ROW_HEIGHT + 14.0) + 24.0
 	_victory_results_host.offset_top = title_bottom + 8.0
 	_victory_results_host.offset_bottom = title_bottom + 8.0 + results_h
@@ -299,11 +313,17 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 	elif frame:
 		frame.visible = false
 	var buttons_top := cursor + 28.0
+	var buttons_h := 260.0
 	if _victory_buttons:
+		buttons_h = maxf(
+			260.0,
+			HudDialogs.measure_control_height(_victory_buttons, 480.0)
+		)
 		_victory_buttons.offset_top = buttons_top
-		_victory_buttons.offset_bottom = buttons_top + 260.0
-	var min_h := 980.0 if preview_h > 0.0 else 900.0
-	_victory_panel.custom_minimum_size = Vector2(840, maxf(min_h, buttons_top + 300.0))
+		_victory_buttons.offset_bottom = buttons_top + buttons_h
+	var height := buttons_top + buttons_h + 40.0 + HudDialogs.DIALOG_EXTRA_PAD_V
+	var soft_min := 560.0 if preview_h > 0.0 else 520.0
+	_victory_panel.custom_minimum_size = Vector2(panel_w, maxf(soft_min, height))
 
 ## Disables (or re-enables) all playtest action buttons.
 ## Reset is always kept disabled regardless of `disabled` — it is only enabled by
