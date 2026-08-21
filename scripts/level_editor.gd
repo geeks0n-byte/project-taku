@@ -27,6 +27,15 @@ var _loading_overlay: LoadingOverlay
 # Prevents stacking multiple async generation requests if the user clicks rapidly.
 var _is_generating: bool = false
 
+func _enter_tree() -> void:
+	# Runs before child _ready — mark English-only editor chrome for Press Start.
+	var editor_ui_root := get_node_or_null("EditorUI")
+	if editor_ui_root:
+		HudLayout.mark_force_pixel_subtree(editor_ui_root)
+	var playtest_end := get_node_or_null("PlaytestEndLayer")
+	if playtest_end:
+		HudLayout.mark_force_pixel_subtree(playtest_end)
+
 func _ready():
 	if AdsManager:
 		AdsManager.hide_menu_banner()

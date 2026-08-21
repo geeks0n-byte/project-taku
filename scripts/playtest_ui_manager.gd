@@ -75,10 +75,17 @@ func _ready() -> void:
 		SaveManager.language_changed.connect(_on_language_changed)
 
 func _on_language_changed() -> void:
-	HudLayout.apply_locale_fonts_to_tree(self)
 	_apply_top_bar_buttons()
 	HudLayout.clear_how_to_play_nav_lock(how_to_play_container)
 	_refresh_how_to_play_text()
+	_setup_how_to_play_font()
+	# Editor playtest HUD stays Press Start; How-To-Play keeps locale fonts.
+	var editor_root := get_node_or_null("../EditorUI")
+	if editor_root:
+		HudLayout.apply_locale_fonts_to_tree(editor_root)
+	var end_root := get_node_or_null("../PlaytestEndLayer")
+	if end_root:
+		HudLayout.apply_locale_fonts_to_tree(end_root)
 
 func _layout_how_to_play() -> void:
 	for btn in [htp_prev_button, htp_next_button]:
@@ -169,10 +176,15 @@ func _on_undo_button_down() -> void:
 	_hold_repeat_elapsed = 0.0
 	_hold_repeat_interval = _HOLD_REPEAT_START
 	set_process(true)
+	if UiSfx and undo_button:
+		UiSfx.suppress_next_pressed_click(undo_button)
+		UiSfx.play_click()
 
 
 func _on_undo_button_up() -> void:
 	_hold_undo_active = false
+	if UiSfx and undo_button:
+		UiSfx.clear_pressed_click_suppress(undo_button)
 	if not _hold_redo_active:
 		set_process(false)
 
@@ -183,10 +195,15 @@ func _on_redo_button_down() -> void:
 	_hold_repeat_elapsed = 0.0
 	_hold_repeat_interval = _HOLD_REPEAT_START
 	set_process(true)
+	if UiSfx and redo_button:
+		UiSfx.suppress_next_pressed_click(redo_button)
+		UiSfx.play_click()
 
 
 func _on_redo_button_up() -> void:
 	_hold_redo_active = false
+	if UiSfx and redo_button:
+		UiSfx.clear_pressed_click_suppress(redo_button)
 	if not _hold_undo_active:
 		set_process(false)
 
@@ -365,12 +382,18 @@ func show_victory_overlay(stats: Dictionary) -> void:
 		_end_dimmer.color = Color(0, 0, 0, 0)
 		_end_dimmer.visible = true
 		_end_dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
+	if _victory_panel:
+		_victory_panel.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	if _victory_title:
-		_victory_title.text = tr("ED_VICTORY_SOLVABLE")
+		_victory_title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		_victory_title.text = HudLayout.english("ED_VICTORY_SOLVABLE")
 		HudLayout.apply_end_screen_header_style(_victory_title, 48)
 	var star_result: Dictionary = stats.get("star_result", {})
 	if _victory_results_host:
+		_victory_results_host.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		HudLayout.begin_force_pixel_font()
 		LevelStars.populate_results(_victory_results_host, star_result)
+		HudLayout.end_force_pixel_font()
 	_ensure_victory_preview()
 	var preview_tex = stats.get("solved_preview", null)
 	if _victory_preview:
@@ -384,10 +407,12 @@ func show_victory_overlay(stats: Dictionary) -> void:
 	if _victory_panel:
 		_victory_panel.visible = true
 	if _try_again_button:
-		_try_again_button.text = tr("UI_TRY_AGAIN")
+		_try_again_button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		_try_again_button.text = HudLayout.english("UI_TRY_AGAIN")
 		HudLayout.apply_panel_button(_try_again_button)
 	if _return_button:
-		_return_button.text = tr("RETURN")
+		_return_button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		_return_button.text = HudLayout.english("RETURN")
 		HudLayout.apply_panel_button(_return_button)
 
 func _ensure_victory_preview() -> void:

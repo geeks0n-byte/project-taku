@@ -111,14 +111,30 @@ func setup_ui(grid_width: int, grid_height: int) -> void:
 	call_deferred("_apply_default_font_to_link_buttons")
 	call_deferred("_apply_star_time_label")
 	call_deferred("_disable_editor_hint_button")
+	call_deferred("_refresh_editor_pixel_fonts")
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
+
+func _refresh_editor_pixel_fonts() -> void:
+	var editor_root := get_node_or_null("../EditorUI")
+	if editor_root:
+		HudLayout.apply_locale_fonts_to_tree(editor_root)
+	_apply_default_font_to_link_buttons()
+	_apply_top_bar_buttons()
 
 # Re-applies locale-dependent UI details (font overrides, label text) when the
 # player changes language without reloading the editor scene.
 func _on_language_changed() -> void:
 	_apply_default_font_to_link_buttons()
 	_apply_star_time_label()
+	_apply_top_bar_buttons()
+	if status_label:
+		HudLayout.apply_status_font(status_label, GameConstants.HUD_EDITOR_STATUS_FONT_SIZE)
+	# Re-apply Press Start to editor chrome after a global locale font walk.
+	var editor_root := get_node_or_null("../EditorUI")
+	if editor_root:
+		HudLayout.apply_locale_fonts_to_tree(editor_root)
+	_apply_default_font_to_link_buttons()
 
 # The hint button is not functional in the editor (no reference solution to hint
 # against), so it is permanently disabled and reset to the off state.
@@ -453,9 +469,10 @@ func _start_hold(button: Button, target: String, amount: int) -> void:
 	_hold_target = target
 	_hold_amount = amount
 	_adjust_value(target, amount)
-	# Disabling mid-press cancels BaseButton.pressed, so UiSfx never fires —
-	# play the click haptic explicitly when this press hits a limit.
-	if button.disabled and UiSfx:
+	# Own the first-tick click: BaseButton.pressed is often cancelled when hold
+	# handlers run (or when this press disables the +/- at a limit).
+	if UiSfx:
+		UiSfx.suppress_next_pressed_click(button)
 		UiSfx.play_click()
 	if _hold_timer:
 		_hold_timer.start(HOLD_INITIAL_DELAY)
@@ -465,6 +482,8 @@ func _start_hold(button: Button, target: String, amount: int) -> void:
 func _stop_hold(button: Button = null) -> void:
 	if button != null and _hold_button != null and button != _hold_button:
 		return
+	if UiSfx and _hold_button:
+		UiSfx.clear_pressed_click_suppress(_hold_button)
 	_hold_button = null
 	_hold_target = ""
 	_hold_amount = 0
@@ -481,7 +500,8 @@ func _on_hold_timer_timeout() -> void:
 		_stop_hold(_hold_button)
 		return
 	_adjust_value(_hold_target, _hold_amount)
-	if _hold_button.disabled and UiSfx:
+	# Hold-repeat does not emit BaseButton.pressed — match undo/redo feedback.
+	if UiSfx:
 		UiSfx.play_click()
 	if _hold_timer:
 		_hold_timer.start(HOLD_REPEAT_INTERVAL)
@@ -582,10 +602,17 @@ func _on_editor_undo_button_down() -> void:
 	_hold_undo_elapsed = 0.0
 	_hold_undo_interval = _UNDO_HOLD_REPEAT_START
 	set_process(true)
+	# First undo still comes from pressed; guarantee click on down (pressed SFX
+	# can be skipped if the stack empties and disables the button mid-press).
+	if UiSfx and editor_undo_button:
+		UiSfx.suppress_next_pressed_click(editor_undo_button)
+		UiSfx.play_click()
 
 
 func _on_editor_undo_button_up() -> void:
 	_hold_undo_active = false
+	if UiSfx and editor_undo_button:
+		UiSfx.clear_pressed_click_suppress(editor_undo_button)
 	if not _hold_redo_active:
 		set_process(false)
 
@@ -596,10 +623,15 @@ func _on_editor_redo_button_down() -> void:
 	_hold_undo_elapsed = 0.0
 	_hold_undo_interval = _UNDO_HOLD_REPEAT_START
 	set_process(true)
+	if UiSfx and editor_redo_button:
+		UiSfx.suppress_next_pressed_click(editor_redo_button)
+		UiSfx.play_click()
 
 
 func _on_editor_redo_button_up() -> void:
 	_hold_redo_active = false
+	if UiSfx and editor_redo_button:
+		UiSfx.clear_pressed_click_suppress(editor_redo_button)
 	if not _hold_undo_active:
 		set_process(false)
 
@@ -662,10 +694,12 @@ func show_overwrite_warning() -> void:
 		warning_label.text = HudLayout.english("LEVEL_EXISTS_OVERWRITE")
 		HudLayout.apply_popup_label(warning_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
 	if confirm_button:
-		confirm_button.text = "UI_YES"
+		confirm_button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		confirm_button.text = HudLayout.english("UI_YES")
 		HudLayout.apply_dialog_button(confirm_button)
 	if cancel_button:
-		cancel_button.text = "UI_NO"
+		cancel_button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		cancel_button.text = HudLayout.english("UI_NO")
 		HudLayout.apply_dialog_button(cancel_button)
 	overwrite_blocker.z_index = 4096
 	overwrite_blocker.move_to_front()

@@ -268,10 +268,15 @@ func _on_undo_button_down() -> void:
 	_hold_repeat_elapsed = 0.0
 	_hold_repeat_interval = _HOLD_REPEAT_START
 	set_process(true)
+	if UiSfx and undo_button:
+		UiSfx.suppress_next_pressed_click(undo_button)
+		UiSfx.play_click()
 
 # Stops hold-to-repeat for undo when the user releases the button.
 func _on_undo_button_up() -> void:
 	_hold_undo_active = false
+	if UiSfx and undo_button:
+		UiSfx.clear_pressed_click_suppress(undo_button)
 	if not _hold_redo_active:
 		set_process(false)
 
@@ -282,10 +287,15 @@ func _on_redo_button_down() -> void:
 	_hold_repeat_elapsed = 0.0
 	_hold_repeat_interval = _HOLD_REPEAT_START
 	set_process(true)
+	if UiSfx and redo_button:
+		UiSfx.suppress_next_pressed_click(redo_button)
+		UiSfx.play_click()
 
 # Stops hold-to-repeat for redo when the user releases the button.
 func _on_redo_button_up() -> void:
 	_hold_redo_active = false
+	if UiSfx and redo_button:
+		UiSfx.clear_pressed_click_suppress(redo_button)
 	if not _hold_undo_active:
 		set_process(false)
 

@@ -90,7 +90,24 @@ func _hook_button(button: BaseButton) -> void:
 	if script != null and String(script.resource_path).ends_with("cell.gd"):
 		return
 	button.set_meta("_ui_sfx_hooked", true)
-	button.pressed.connect(play_click)
+	button.pressed.connect(_on_hooked_pressed.bind(button))
+
+# Hold buttons play click on button_down; skip the automatic pressed click once
+# so a single press does not double-fire SFX/haptic.
+func suppress_next_pressed_click(button: BaseButton) -> void:
+	if button:
+		button.set_meta("_ui_sfx_suppress_once", true)
+
+# Clears a pending suppress (e.g. pressed was cancelled because the button disabled).
+func clear_pressed_click_suppress(button: BaseButton) -> void:
+	if button and button.has_meta("_ui_sfx_suppress_once"):
+		button.set_meta("_ui_sfx_suppress_once", false)
+
+func _on_hooked_pressed(button: BaseButton) -> void:
+	if button != null and bool(button.get_meta("_ui_sfx_suppress_once", false)):
+		button.set_meta("_ui_sfx_suppress_once", false)
+		return
+	play_click()
 
 # Tries each candidate audio file path in order. Falls back to a
 # procedurally generated click tone if none are found on disk.

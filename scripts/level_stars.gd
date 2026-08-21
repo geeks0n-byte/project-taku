@@ -22,6 +22,8 @@ const ROW_HEIGHT := 72.0
 const RESULTS_CONTENT_WIDTH := 620.0
 const RESULTS_TITLE_FONT := 34
 const RESULTS_ROW_FONT := 28
+# Slightly larger than row font so the English ∞ icon reads clearly on victory.
+const RESULTS_INFINITY_ICON_SIZE := 34
 const COLOR_STAR_EARNED := Color(0.45, 1.0, 0.45, 1.0)
 const COLOR_STAR_FAILED := Color(1.0, 0.35, 0.35, 1.0)
 
@@ -61,7 +63,9 @@ static func format_clock(total_seconds: int) -> String:
 
 ## Limit side of a time goal: clock text, or infinity when untimed.
 ## Custom infinity icon is English / Press Start only; other locales use ∞.
-static func format_time_limit_detail(time_limit: int, icon_size: int = RESULTS_ROW_FONT) -> String:
+static func format_time_limit_detail(
+	time_limit: int, icon_size: int = RESULTS_INFINITY_ICON_SIZE
+) -> String:
 	if time_limit > 0:
 		return format_clock(time_limit)
 	if HudLayout.uses_pixel_font():
@@ -78,13 +82,15 @@ static func _time_detail_uses_infinity_icon(detail: String) -> bool:
 ## Scores a completed puzzle session and returns the full star result dict.
 ## `_moves_used`, `_move_target`, `_has_shifters` are reserved for future goal types
 ## and currently have no effect on the returned bits.
+## When [param force_english] is true (playtest victory), titles stay English.
 static func evaluate(
 	elapsed_sec: int,
 	time_limit: int,
 	hints_used: int,
 	_moves_used: int = 0,
 	_move_target: int = 0,
-	_has_shifters: bool = false
+	_has_shifters: bool = false,
+	force_english: bool = false
 ) -> Dictionary:
 	var goals: Array = []
 	var bits := 0
@@ -94,7 +100,7 @@ static func evaluate(
 	goals.append({
 		"id": "complete",
 		"earned": true,
-		"title": TranslationServer.translate("STAR_COMPLETE"),
+		"title": _goal_title("STAR_COMPLETE", force_english),
 		"detail": "",
 	})
 
@@ -105,8 +111,8 @@ static func evaluate(
 	goals.append({
 		"id": "no_hints",
 		"earned": no_hints_earned,
-		"title": TranslationServer.translate(
-			"STAR_HINTS" if no_hints_earned else "STAR_HINTS_USED"
+		"title": _goal_title(
+			"STAR_HINTS" if no_hints_earned else "STAR_HINTS_USED", force_english
 		),
 		"detail": "",
 	})
@@ -115,12 +121,13 @@ static func evaluate(
 	var time_earned := time_limit <= 0 or elapsed_sec <= time_limit
 	if time_earned:
 		bits |= BIT_TIME
+	var use_pixel_detail := force_english or HudLayout.uses_pixel_font()
 	goals.append({
 		"id": "time",
 		"earned": time_earned,
-		"title": TranslationServer.translate("STAR_TIME"),
+		"title": _goal_title("STAR_TIME", force_english),
 		"detail": format_time_goal_detail(elapsed_sec, time_limit),
-		"detail_bbcode": time_limit <= 0 and HudLayout.uses_pixel_font(),
+		"detail_bbcode": time_limit <= 0 and use_pixel_detail,
 	})
 
 	var earned_count := 0
@@ -135,6 +142,11 @@ static func evaluate(
 		"total_count": goals.size(),
 		"elapsed_sec": elapsed_sec,
 	}
+
+static func _goal_title(key: String, force_english: bool) -> String:
+	if force_english:
+		return HudLayout.english(key)
+	return String(TranslationServer.translate(key))
 
 ## Builds a star result dict representing the goals for a level without running it.
 ## Used to preview requirements on the level-select info panel, with previously-earned
@@ -303,6 +315,14 @@ static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 		var detail_color := COLOR_STAR_EARNED if earned else COLOR_STAR_FAILED
 		# Never render the custom infinity icon outside English.
 		if not HudLayout.uses_pixel_font() and detail_text.contains("[img"):
+			detail_text = detail_text.replace(
+				"[img=%dx%d]%s[/img]" % [
+					RESULTS_INFINITY_ICON_SIZE,
+					RESULTS_INFINITY_ICON_SIZE,
+					GameConstants.ICON_INFINITY,
+				],
+				"∞"
+			)
 			detail_text = detail_text.replace(
 				"[img=%dx%d]%s[/img]" % [RESULTS_ROW_FONT, RESULTS_ROW_FONT, GameConstants.ICON_INFINITY],
 				"∞"

@@ -420,11 +420,17 @@ func _trigger_victory() -> void:
 # Builds the stats payload consumed by PlaytestUIManager victory overlay.
 func _build_end_stats() -> Dictionary:
 	var has_shifters := canvas_manager.loaded_shifter_pairs.size() > 0
+	HudLayout.begin_force_pixel_font()
 	var star_result := LevelStars.evaluate(
 		playtest_elapsed_seconds,
 		playtest_star_time_limit,
-		hints_used
+		hints_used,
+		0,
+		0,
+		false,
+		true
 	)
+	HudLayout.end_force_pixel_font()
 	return {
 		"star_result": star_result,
 		"time_text": LevelStars.format_clock(playtest_elapsed_seconds),
