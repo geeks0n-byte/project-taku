@@ -210,7 +210,7 @@ func _update_lang_label() -> void:
 	if lang_label.has_theme_font_override("font"):
 		lang_label.remove_theme_font_override("font")
 	var font_size := HudLayout.scaled_font_size(GameConstants.UI_BODY_FONT_SIZE_LARGE)
-	if current_locale == "en":
+	if HudLayout.uses_pixel_font():
 		HudLayout.apply_live_pixel_label_settings(lang_label, name_text, font_size, Color.WHITE)
 		# Re-assert after settings — guards against theme/locale pass races.
 		lang_label.text = name_text

@@ -33,7 +33,6 @@ var _hold_cleared: bool = false   # True once the clear has triggered this press
 var _hold_shaking: bool = false
 var _hold_shake_tween: Tween
 var _hold_clear_tween: Tween      # Stored so it can be killed if the node exits.
-var _hold_rest_rotation: float = 0.0
 
 # Guide highlight (white overlay on cells the hint system points to).
 const GUIDE_COLOR := Color(1.0, 1.0, 1.0, 0.45)
@@ -237,25 +236,26 @@ func _cancel_hold() -> void:
 	set_process(false)
 
 # Starts a looping left-right rotation tween to signal an imminent clear.
+# Animates tile visuals only so error/focus borders stay fixed in place.
 func _start_hold_shake() -> void:
 	_hold_shaking = true
-	_hold_rest_rotation = rotation
-	pivot_offset = size / 2.0
+	_prepare_hold_visual_pivots()
+	_reset_hold_visual_transforms()
 	if _hold_shake_tween and _hold_shake_tween.is_valid():
 		_hold_shake_tween.kill()
 	_hold_shake_tween = create_tween().set_loops()
 	var intensity := deg_to_rad(3.0)
-	_hold_shake_tween.tween_property(self, "rotation", _hold_rest_rotation + intensity, 0.04).set_trans(Tween.TRANS_SINE)
-	_hold_shake_tween.tween_property(self, "rotation", _hold_rest_rotation - intensity, 0.08).set_trans(Tween.TRANS_SINE)
-	_hold_shake_tween.tween_property(self, "rotation", _hold_rest_rotation, 0.04).set_trans(Tween.TRANS_SINE)
+	_hold_shake_tween.tween_method(_set_hold_visual_rotation, 0.0, intensity, 0.04).set_trans(Tween.TRANS_SINE)
+	_hold_shake_tween.tween_method(_set_hold_visual_rotation, intensity, -intensity, 0.08).set_trans(Tween.TRANS_SINE)
+	_hold_shake_tween.tween_method(_set_hold_visual_rotation, -intensity, 0.0, 0.04).set_trans(Tween.TRANS_SINE)
 
-# Stops the shake tween and snaps the tile back to its original rotation.
+# Stops the shake tween and snaps tile visuals back to rest.
 func _stop_hold_shake() -> void:
 	_hold_shaking = false
 	if _hold_shake_tween and _hold_shake_tween.is_valid():
 		_hold_shake_tween.kill()
 		_hold_shake_tween = null
-	rotation = _hold_rest_rotation
+	_reset_hold_visual_transforms()
 
 # Locks in the clear, plays haptic, then runs the pop-out shrink animation.
 # _apply_hold_clear is called at the end of the tween to actually reset the tile.
@@ -268,23 +268,50 @@ func _finish_hold_clear() -> void:
 		_hold_shake_tween = null
 	if UiSfx:
 		UiSfx.play_clear()
-	pivot_offset = size / 2.0
+	_prepare_hold_visual_pivots()
 	if _hold_clear_tween and _hold_clear_tween.is_valid():
 		_hold_clear_tween.kill()
 	_hold_clear_tween = create_tween()
 	_hold_clear_tween.set_parallel(true)
-	_hold_clear_tween.tween_property(self, "scale", Vector2(0.0, 0.0), 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
-	_hold_clear_tween.tween_property(self, "rotation", _hold_rest_rotation + deg_to_rad(15.0), 0.18).set_trans(Tween.TRANS_SINE)
+	_hold_clear_tween.tween_method(
+		_set_hold_visual_scale, Vector2.ONE, Vector2.ZERO, 0.18
+	).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	_hold_clear_tween.tween_method(
+		_set_hold_visual_rotation, 0.0, deg_to_rad(15.0), 0.18
+	).set_trans(Tween.TRANS_SINE)
 	_hold_clear_tween.chain().tween_callback(_apply_hold_clear)
 
-# Tween callback: resets scale/rotation, sets state to EMPTY, and emits the signal.
+# Tween callback: resets visual transforms, sets state to EMPTY, and emits the signal.
 func _apply_hold_clear() -> void:
-	scale = Vector2(1.0, 1.0)
-	rotation = _hold_rest_rotation
+	_reset_hold_visual_transforms()
 	_hold_shaking = false
 	state = GameConstants.TileState.EMPTY
 	update_visuals()
 	cell_hold_cleared.emit(coord)
+
+func _hold_visual_nodes() -> Array[Control]:
+	var nodes: Array[Control] = []
+	for n in [tile_icon, lock_icon, chevron_icon, link_highlight]:
+		if n:
+			nodes.append(n)
+	return nodes
+
+func _prepare_hold_visual_pivots() -> void:
+	for n in _hold_visual_nodes():
+		n.pivot_offset = n.size * 0.5
+
+func _set_hold_visual_rotation(radians: float) -> void:
+	for n in _hold_visual_nodes():
+		n.rotation = radians
+
+func _set_hold_visual_scale(s: Vector2) -> void:
+	for n in _hold_visual_nodes():
+		n.scale = s
+
+func _reset_hold_visual_transforms() -> void:
+	for n in _hold_visual_nodes():
+		n.scale = Vector2.ONE
+		n.rotation = 0.0
 
 func update_visuals():
 	if lock_icon:

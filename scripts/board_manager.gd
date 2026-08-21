@@ -24,8 +24,10 @@ var _focus_bridge_coords: Array = []
 var _error_bridge_coords: Array = []
 
 func _ready():
+	# Grid lines sit behind tiles so hold-to-clear shrink animations aren't
+	# crossed by the static border (tile art already leaves an edge margin).
 	grid_drawer = Node2D.new()
-	grid_drawer.z_index = 10
+	grid_drawer.z_index = -1
 	grid_drawer.draw.connect(_draw_grid)
 	add_child(grid_drawer)
 

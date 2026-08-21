@@ -64,7 +64,7 @@ static func align_counter_row(counter_row: Control) -> void:
 # Cached fallback font reference so we don't call ThemeDB.fallback_font on every frame.
 static var _screen_header_font_default: Font
 
-# Returns the font to use for screen headers. Press Start is used in English;
+# Returns the font to use for screen headers. Press Start except Georgian;
 # all other locales fall back to the theme's default scalable font.
 static func screen_header_font(force_pixel: bool = false) -> Font:
 	if force_pixel or uses_pixel_font():
@@ -147,7 +147,7 @@ static func _bind_header_translation_key(label: Label, key: String) -> void:
 	label.notification(Node.NOTIFICATION_TRANSLATION_CHANGED)
 
 # Applies the canonical screen-header look: centred, correct font, outline, colour.
-# Handles both the pixel-font (English) and scalable-font (other locales) paths,
+# Handles both the pixel-font and scalable-font (Georgian) paths,
 # and ensures the translation key stays in .text rather than a baked string.
 static func apply_screen_header_style(label: Label) -> void:
 	if not label:
@@ -188,7 +188,7 @@ static func apply_screen_header_style(label: Label) -> void:
 	apply_safe_outline(label, outline_size)
 
 # Styles the victory/completion header label. Reduces font size on mobile to prevent
-# overflow, and uses the pixel font path when the locale is English.
+# overflow, and uses the pixel font path except for Georgian.
 static func apply_end_screen_header_style(label: Label, base_size: int = 48) -> void:
 	if not label:
 		return
@@ -486,7 +486,7 @@ const PIXEL_FONT: Font = preload("res://resources/fonts/PressStart2P-vaV7.ttf")
 const _PIXEL_MONO_TEXT_SCRIPT: Script = preload("res://scripts/pixel_mono_text.gd")
 static var _pixel_font_with_fallback: Font
 
-# Press Start 2P is only used in English; all other locales use the fallback font.
+# Press Start 2P for every locale except Georgian (mkhedruli needs the scalable font).
 # Editor tooling can opt a subtree into Press Start via mark_force_pixel_subtree().
 # begin_force_pixel_font() temporarily forces Press Start for non-Control call sites.
 static var _force_pixel_depth: int = 0
@@ -494,7 +494,7 @@ static var _force_pixel_depth: int = 0
 static func uses_pixel_font() -> bool:
 	if _force_pixel_depth > 0:
 		return true
-	return TranslationServer.get_locale().substr(0, 2) == "en"
+	return TranslationServer.get_locale().substr(0, 2) != "ka"
 
 ## True when this control (or an ancestor) should render Press Start regardless of locale.
 static func control_uses_pixel_font(control: Node = null) -> bool:
@@ -1254,7 +1254,7 @@ static func apply_tab_button(button: Button) -> void:
 	button.custom_minimum_size = GameConstants.UI_BTN_TAB_SIZE
 	fit_text_button(button, GameConstants.UI_BTN_TAB_FONT, GameConstants.UI_BTN_TAB_FONT_MIN)
 
-# Styles a popup/dialog body label. In English uses the pixel label path;
+# Styles a popup/dialog body label. Uses the pixel label path except Georgian;
 # in other locales applies body font scaling and a safe outline.
 static func apply_popup_label(label: Label, base_size: int = GameConstants.UI_BODY_FONT_SIZE) -> void:
 	if not label:

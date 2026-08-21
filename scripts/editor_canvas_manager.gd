@@ -41,9 +41,10 @@ var is_playtesting: bool = false
 var show_editor_hints: bool = false
 
 func _ready():
-	# grid_drawer sits above cells (z=10) so grid lines are never hidden by tile backgrounds.
+	# Grid lines sit behind tiles so hold-to-clear shrink animations aren't
+	# crossed by the static border (tile art already leaves an edge margin).
 	grid_drawer = Node2D.new()
-	grid_drawer.z_index = 10
+	grid_drawer.z_index = -1
 	grid_drawer.draw.connect(_draw_grid)
 	add_child(grid_drawer)
 

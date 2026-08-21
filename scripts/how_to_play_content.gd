@@ -108,7 +108,7 @@ static func _page_examples(force_english: bool) -> String:
 	]
 	return "\n".join(lines)
 
-## VALID / INVALID: Press Start on English. Outline is forced off — theme outline
+## VALID / INVALID: Press Start except Georgian. Outline is forced off — theme outline
 ## on Press Start scrambles glyphs under GL Compatibility.
 static func _example_column_label(text: String, force_english: bool) -> String:
 	if force_english or HudLayout.uses_pixel_font():

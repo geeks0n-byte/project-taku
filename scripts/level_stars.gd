@@ -22,7 +22,7 @@ const ROW_HEIGHT := 72.0
 const RESULTS_CONTENT_WIDTH := 620.0
 const RESULTS_TITLE_FONT := 34
 const RESULTS_ROW_FONT := 28
-# Slightly larger than row font so the English ∞ icon reads clearly on victory.
+# Slightly larger than row font so the ∞ icon reads clearly on victory.
 const RESULTS_INFINITY_ICON_SIZE := 34
 const COLOR_STAR_EARNED := Color(0.45, 1.0, 0.45, 1.0)
 const COLOR_STAR_FAILED := Color(1.0, 0.35, 0.35, 1.0)
@@ -62,7 +62,7 @@ static func format_clock(total_seconds: int) -> String:
 	return "%02d:%02d" % [int(secs / 60.0), secs % 60]
 
 ## Limit side of a time goal: clock text, or infinity when untimed.
-## Custom infinity icon is English / Press Start only; other locales use ∞.
+## Custom infinity icon with Press Start locales; Georgian uses ∞.
 static func format_time_limit_detail(
 	time_limit: int, icon_size: int = RESULTS_INFINITY_ICON_SIZE
 ) -> String:
@@ -313,7 +313,7 @@ static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 	var detail_text := str(goal.get("detail", "")).strip_edges()
 	if not detail_text.is_empty():
 		var detail_color := COLOR_STAR_EARNED if earned else COLOR_STAR_FAILED
-		# Never render the custom infinity icon outside English.
+		# Georgian (and any non-pixel locale): never render the custom infinity icon.
 		if not HudLayout.uses_pixel_font() and detail_text.contains("[img"):
 			detail_text = detail_text.replace(
 				"[img=%dx%d]%s[/img]" % [

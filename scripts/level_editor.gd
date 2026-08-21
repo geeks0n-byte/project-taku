@@ -336,12 +336,10 @@ func _handle_link_brush_click(coord: Vector2i) -> void:
 	if link_first_selection == null:
 		link_first_selection = coord
 		cell.set_mask_color(Color(1.0, 1.0, 1.0, 0.4))
-		if current_brush_state == GameConstants.TileState.SHIFTER:
-			editor_ui.update_status("ED_HINT_SELECT_SHIFTER", Color.WHITE)
-		elif current_brush_state == GameConstants.BrushTool.EQUALS:
-			editor_ui.update_status("ED_HINT_SELECT_EQUALS", Color.WHITE)
-		elif current_brush_state == GameConstants.BrushTool.NOT_EQUALS:
-			editor_ui.update_status("ED_HINT_SELECT_NOT_EQUALS", Color.WHITE)
+		if current_brush_state == GameConstants.TileState.SHIFTER \
+			or current_brush_state == GameConstants.BrushTool.EQUALS \
+			or current_brush_state == GameConstants.BrushTool.NOT_EQUALS:
+			editor_ui.update_status("SELECT SECOND CELL", Color.WHITE, false)
 	else:
 		var first_coord = link_first_selection
 		link_first_selection = null
@@ -353,13 +351,13 @@ func _handle_link_brush_click(coord: Vector2i) -> void:
 		if (diff.x == 1 and diff.y == 0) or (diff.x == 0 and diff.y == 1):
 			if current_brush_state == GameConstants.TileState.SHIFTER:
 				_execute_pair_link_creation(first_coord, coord)
-				editor_ui.update_status("ED_MSG_SHIFTER_PLACED", Color.WHITE)
+				editor_ui.update_status("PURPLE TILE PLACED", Color.WHITE, false)
 			elif current_brush_state == GameConstants.BrushTool.EQUALS:
 				_execute_constraint_creation(first_coord, coord, "equals")
-				editor_ui.update_status("ED_MSG_EQUALS_PLACED", Color.WHITE)
+				editor_ui.update_status("= LINK PLACED", Color.WHITE, false)
 			elif current_brush_state == GameConstants.BrushTool.NOT_EQUALS:
 				_execute_constraint_creation(first_coord, coord, "not_equals")
-				editor_ui.update_status("ED_MSG_NOT_EQUALS_PLACED", Color.WHITE)
+				editor_ui.update_status("× LINK PLACED", Color.WHITE, false)
 			_record_editor_change()
 			if UiSfx:
 				UiSfx.play_click()
