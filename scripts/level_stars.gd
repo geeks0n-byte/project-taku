@@ -59,6 +59,22 @@ static func format_clock(total_seconds: int) -> String:
 	var secs := maxi(0, total_seconds)
 	return "%02d:%02d" % [int(secs / 60.0), secs % 60]
 
+## Limit side of a time goal: clock text, or infinity when untimed.
+## Custom infinity icon is English / Press Start only; other locales use ∞.
+static func format_time_limit_detail(time_limit: int, icon_size: int = RESULTS_ROW_FONT) -> String:
+	if time_limit > 0:
+		return format_clock(time_limit)
+	if HudLayout.uses_pixel_font():
+		return "[img=%dx%d]%s[/img]" % [icon_size, icon_size, GameConstants.ICON_INFINITY]
+	return "∞"
+
+## Full "elapsed / limit" detail for the time star row.
+static func format_time_goal_detail(elapsed_sec: int, time_limit: int) -> String:
+	return "%s / %s" % [format_clock(elapsed_sec), format_time_limit_detail(time_limit)]
+
+static func _time_detail_uses_infinity_icon(detail: String) -> bool:
+	return HudLayout.uses_pixel_font() and detail.contains("[img")
+
 ## Scores a completed puzzle session and returns the full star result dict.
 ## `_moves_used`, `_move_target`, `_has_shifters` are reserved for future goal types
 ## and currently have no effect on the returned bits.
@@ -95,19 +111,16 @@ static func evaluate(
 		"detail": "",
 	})
 
-	# 3) Time limit (only when the level defines one).
-	var time_earned := time_limit > 0 and elapsed_sec <= time_limit
+	# 3) Time: beat the limit, or always award when the limit is infinity (0).
+	var time_earned := time_limit <= 0 or elapsed_sec <= time_limit
 	if time_earned:
 		bits |= BIT_TIME
 	goals.append({
 		"id": "time",
 		"earned": time_earned,
 		"title": TranslationServer.translate("STAR_TIME"),
-		"detail": (
-			"%s / %s" % [format_clock(elapsed_sec), format_clock(time_limit)]
-			if time_limit > 0
-			else "%s / —" % format_clock(elapsed_sec)
-		),
+		"detail": format_time_goal_detail(elapsed_sec, time_limit),
+		"detail_bbcode": time_limit <= 0 and HudLayout.uses_pixel_font(),
 	})
 
 	var earned_count := 0
@@ -156,7 +169,8 @@ static func build_requirements(level: LevelData, earned_bits: int = 0) -> Dictio
 		"id": "time",
 		"earned": (bits & BIT_TIME) != 0,
 		"title": TranslationServer.translate("STAR_TIME"),
-		"detail": format_clock(time_limit) if time_limit > 0 else "—",
+		"detail": format_time_limit_detail(time_limit),
+		"detail_bbcode": time_limit <= 0 and HudLayout.uses_pixel_font(),
 	})
 
 	var earned_count := count_earned_bits(bits)
@@ -286,15 +300,45 @@ static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 
 	var detail_text := str(goal.get("detail", "")).strip_edges()
 	if not detail_text.is_empty():
-		var detail := Label.new()
-		detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		detail.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		var detail_color := COLOR_STAR_EARNED if earned else COLOR_STAR_FAILED
-		HudLayout.apply_raster_pixel_label(
-			detail, detail_text, RESULTS_ROW_FONT, detail_color
-		)
-		row.add_child(detail)
+		# Never render the custom infinity icon outside English.
+		if not HudLayout.uses_pixel_font() and detail_text.contains("[img"):
+			detail_text = detail_text.replace(
+				"[img=%dx%d]%s[/img]" % [RESULTS_ROW_FONT, RESULTS_ROW_FONT, GameConstants.ICON_INFINITY],
+				"∞"
+			)
+			# Fallback if icon size differed when the string was built.
+			var img_start := detail_text.find("[img=")
+			while img_start >= 0:
+				var img_end := detail_text.find("]", img_start)
+				if img_end < 0:
+					break
+				detail_text = detail_text.substr(0, img_start) + "∞" + detail_text.substr(img_end + 1)
+				img_start = detail_text.find("[img=")
+		var use_bbcode := _time_detail_uses_infinity_icon(detail_text) \
+			or (bool(goal.get("detail_bbcode", false)) and HudLayout.uses_pixel_font())
+		if use_bbcode:
+			var detail := RichTextLabel.new()
+			detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			detail.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			detail.fit_content = true
+			detail.scroll_active = false
+			detail.bbcode_enabled = true
+			detail.autowrap_mode = TextServer.AUTOWRAP_OFF
+			detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			HudLayout.apply_live_pixel_richtext(detail, RESULTS_ROW_FONT)
+			detail.add_theme_color_override("default_color", detail_color)
+			detail.text = "[right]%s[/right]" % detail_text
+			row.add_child(detail)
+		else:
+			var detail := Label.new()
+			detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			detail.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			HudLayout.apply_raster_pixel_label(
+				detail, detail_text, RESULTS_ROW_FONT, detail_color
+			)
+			row.add_child(detail)
 
 	return row

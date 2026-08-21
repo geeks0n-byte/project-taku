@@ -26,6 +26,9 @@ const TAB_LOCK_ALPHA := 0.9
 @onready var tab_container: HBoxContainer = $"UILayer/CenterContainer/VBoxContainer/TabContainer"
 @onready var tab_list_gap: Control = $"UILayer/CenterContainer/VBoxContainer/TabListGap"
 @onready var _title_label: Label = $"UILayer/ScreenHeaderHost/TitleLabel"
+@onready var _ui_layer: CanvasLayer = $UILayer
+@onready var _close_button_host: Control = $"UILayer/CloseButtonHost"
+@onready var _screen_header_host: Control = $"UILayer/ScreenHeaderHost"
 
 ## Corresponds to the four difficulty tabs; CUSTOM is only visible in debug builds.
 enum ViewMode { EASY, MEDIUM, HARD, CUSTOM }
@@ -34,6 +37,12 @@ var current_view: ViewMode = ViewMode.EASY
 var _level_entries: Array = []
 # Zero-based page currently displayed; clamped to valid range before each refresh.
 var _page_index: int = 0
+# Level chosen before the first-run tutorial intro prompt; played if the player declines.
+var _pending_level: LevelData = null
+var _tutorial_intro_blocker: ColorRect
+var _tutorial_intro_label: Label
+var _tutorial_intro_yes: Button
+var _tutorial_intro_no: Button
 
 func _ready() -> void:
 	if AdsManager:
@@ -66,6 +75,7 @@ func _ready() -> void:
 	_fit_chrome_buttons()
 	_update_tab_button_visuals()
 	populate_level_menu()
+	_setup_tutorial_intro_panel()
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
 
@@ -73,6 +83,9 @@ func _notification(what: int) -> void:
 	# Handle the Android/iOS hardware back button — treat it the same as the UI back button.
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		if GlobalGameManager and GlobalGameManager.consume_system_back():
+			if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
+				_hide_tutorial_intro_prompt()
+				return
 			_on_back_pressed()
 
 ## Applies consistent styling to all chrome buttons (tabs, page nav, close).
@@ -529,9 +542,161 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 	btn.add_child(content)
 
 ## Stores the chosen level on GlobalGameManager and loads the gameplay scene.
+## First-time players see the tutorial intro prompt before entering gameplay.
 func _on_level_selected(resource: LevelData) -> void:
+	if SaveManager and not SaveManager.tutorial_intro_answered:
+		_pending_level = resource
+		_show_tutorial_intro_prompt()
+		return
+	_enter_gameplay(resource)
+
+func _enter_gameplay(resource: LevelData) -> void:
 	GlobalGameManager.selected_level_resource = resource
 	GlobalGameManager.go_to_scene("res://scenes/main.tscn")
 
 func _on_back_pressed() -> void:
+	if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
+		_hide_tutorial_intro_prompt()
+		return
 	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")
+
+func _setup_tutorial_intro_panel() -> void:
+	if _tutorial_intro_blocker != null or _ui_layer == null:
+		return
+	_tutorial_intro_blocker = ColorRect.new()
+	_tutorial_intro_blocker.name = "TutorialIntroBlocker"
+	_tutorial_intro_blocker.visible = false
+	_tutorial_intro_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+	_tutorial_intro_blocker.color = Color(0, 0, 0, 0)
+	_tutorial_intro_blocker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_ui_layer.add_child(_tutorial_intro_blocker)
+
+	var center := Control.new()
+	center.name = "CenterContainer"
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tutorial_intro_blocker.add_child(center)
+	HudLayout.raise_centered_dialog_host(center)
+
+	var panel := Panel.new()
+	panel.name = "Panel"
+	panel.custom_minimum_size = Vector2(680, 380)
+	panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
+	center.add_child(panel)
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	panel.offset_left = -340.0
+	panel.offset_right = 340.0
+	panel.offset_top = -190.0
+	panel.offset_bottom = 190.0
+
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	vbox.offset_left = 36.0
+	vbox.offset_top = 36.0
+	vbox.offset_right = -36.0
+	vbox.offset_bottom = -36.0
+	vbox.add_theme_constant_override("separation", 28)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	panel.add_child(vbox)
+
+	_tutorial_intro_label = Label.new()
+	_tutorial_intro_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_tutorial_intro_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_tutorial_intro_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_tutorial_intro_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_tutorial_intro_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.55, 1.0))
+	vbox.add_child(_tutorial_intro_label)
+
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 40)
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(buttons)
+
+	_tutorial_intro_yes = Button.new()
+	_tutorial_intro_no = Button.new()
+	buttons.add_child(_tutorial_intro_yes)
+	buttons.add_child(_tutorial_intro_no)
+	_copy_dialog_button_styles(_tutorial_intro_yes)
+	_copy_dialog_button_styles(_tutorial_intro_no)
+	_tutorial_intro_yes.pressed.connect(_on_tutorial_intro_yes)
+	_tutorial_intro_no.pressed.connect(_on_tutorial_intro_no)
+
+func _copy_dialog_button_styles(target: Button) -> void:
+	var source: Button = easy_tab_button if easy_tab_button else button_template
+	if not source or not target:
+		return
+	for style_name in ["normal", "pressed", "hover", "disabled"]:
+		var style := source.get_theme_stylebox(style_name)
+		if style and not (style is StyleBoxEmpty):
+			target.add_theme_stylebox_override(style_name, style)
+	target.add_theme_color_override("font_outline_color", Color.BLACK)
+	HudLayout.apply_safe_outline(target, GameConstants.MENU_TEXT_OUTLINE)
+
+func _set_level_select_chrome_visible(should_show: bool) -> void:
+	if content_root:
+		content_root.visible = should_show
+	if _screen_header_host:
+		_screen_header_host.visible = should_show
+	if _close_button_host:
+		_close_button_host.visible = should_show
+	if custom_tab_button:
+		custom_tab_button.visible = should_show and (
+			GlobalGameManager != null and GlobalGameManager.debug_tools_enabled
+		)
+
+func _show_tutorial_intro_prompt() -> void:
+	_set_level_select_chrome_visible(false)
+	if _tutorial_intro_label:
+		_tutorial_intro_label.text = tr("TUTORIAL_INTRO_PROMPT")
+		HudLayout.apply_popup_label(
+			_tutorial_intro_label, GameConstants.UI_BODY_FONT_SIZE_LARGE
+		)
+	if _tutorial_intro_yes:
+		_tutorial_intro_yes.text = tr("UI_YES")
+		_copy_dialog_button_styles(_tutorial_intro_yes)
+		HudLayout.apply_dialog_button(_tutorial_intro_yes)
+	if _tutorial_intro_no:
+		_tutorial_intro_no.text = tr("UI_NO")
+		_copy_dialog_button_styles(_tutorial_intro_no)
+		HudLayout.apply_dialog_button(_tutorial_intro_no)
+	if _tutorial_intro_blocker:
+		_tutorial_intro_blocker.color = Color(0, 0, 0, 0)
+		_tutorial_intro_blocker.visible = true
+		_tutorial_intro_blocker.move_to_front()
+
+func _hide_tutorial_intro_prompt() -> void:
+	_pending_level = null
+	if _tutorial_intro_blocker:
+		_tutorial_intro_blocker.visible = false
+	_set_level_select_chrome_visible(true)
+	_configure_custom_tab()
+
+func _on_tutorial_intro_yes() -> void:
+	var fallback := _pending_level
+	_hide_tutorial_intro_prompt()
+	if SaveManager:
+		SaveManager.set_tutorial_intro_answered(true)
+	var tutorial := _first_tutorial_level()
+	if tutorial:
+		_enter_gameplay(tutorial)
+	elif fallback:
+		_enter_gameplay(fallback)
+
+func _on_tutorial_intro_no() -> void:
+	var chosen := _pending_level
+	_hide_tutorial_intro_prompt()
+	if SaveManager:
+		SaveManager.set_tutorial_intro_answered(true)
+	if chosen:
+		_enter_gameplay(chosen)
+
+func _first_tutorial_level() -> LevelData:
+	var paths := LevelUtils.scan_directory(GameConstants.CAMPAIGN_TUTORIALS_DIR)
+	LevelUtils.sort_level_paths(paths)
+	for path in paths:
+		var resource = load(path)
+		if resource is LevelData:
+			return resource
+	return null

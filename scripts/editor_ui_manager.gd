@@ -162,7 +162,7 @@ func _apply_star_time_label() -> void:
 	if not title:
 		return
 	title.text = "TIME:"
-	title.tooltip_text = "Star time: beat this to earn the time star. Infinity = no time star."
+	title.tooltip_text = "Star time: beat this to earn the time star. Infinity = time star always awarded."
 
 # Lazily creates the one-shot Timer used by the press-and-hold repeat system.
 func _ensure_hold_timer() -> void:
