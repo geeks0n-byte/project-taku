@@ -62,13 +62,13 @@ static func format_clock(total_seconds: int) -> String:
 	return "%02d:%02d" % [int(secs / 60.0), secs % 60]
 
 ## Limit side of a time goal: clock text, or infinity when untimed.
-## Custom infinity icon with Press Start locales; Georgian uses ∞.
+## Custom infinity icon with Press Start locales; ka/uk use ∞.
 static func format_time_limit_detail(
 	time_limit: int, icon_size: int = RESULTS_INFINITY_ICON_SIZE
 ) -> String:
 	if time_limit > 0:
 		return format_clock(time_limit)
-	if HudLayout.uses_pixel_font():
+	if HudFonts.uses_pixel_font():
 		return "[img=%dx%d]%s[/img]" % [icon_size, icon_size, GameConstants.ICON_INFINITY]
 	return "∞"
 
@@ -77,7 +77,7 @@ static func format_time_goal_detail(elapsed_sec: int, time_limit: int) -> String
 	return "%s / %s" % [format_clock(elapsed_sec), format_time_limit_detail(time_limit)]
 
 static func _time_detail_uses_infinity_icon(detail: String) -> bool:
-	return HudLayout.uses_pixel_font() and detail.contains("[img")
+	return HudFonts.uses_pixel_font() and detail.contains("[img")
 
 ## Scores a completed puzzle session and returns the full star result dict.
 ## `_moves_used`, `_move_target`, `_has_shifters` are reserved for future goal types
@@ -121,7 +121,7 @@ static func evaluate(
 	var time_earned := time_limit <= 0 or elapsed_sec <= time_limit
 	if time_earned:
 		bits |= BIT_TIME
-	var use_pixel_detail := force_english or HudLayout.uses_pixel_font()
+	var use_pixel_detail := force_english or HudFonts.uses_pixel_font()
 	goals.append({
 		"id": "time",
 		"earned": time_earned,
@@ -182,7 +182,7 @@ static func build_requirements(level: LevelData, earned_bits: int = 0) -> Dictio
 		"earned": (bits & BIT_TIME) != 0,
 		"title": TranslationServer.translate("STAR_TIME"),
 		"detail": format_time_limit_detail(time_limit),
-		"detail_bbcode": time_limit <= 0 and HudLayout.uses_pixel_font(),
+		"detail_bbcode": time_limit <= 0 and HudFonts.uses_pixel_font(),
 	})
 
 	var earned_count := count_earned_bits(bits)
@@ -313,8 +313,8 @@ static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 	var detail_text := str(goal.get("detail", "")).strip_edges()
 	if not detail_text.is_empty():
 		var detail_color := COLOR_STAR_EARNED if earned else COLOR_STAR_FAILED
-		# Georgian (and any non-pixel locale): never render the custom infinity icon.
-		if not HudLayout.uses_pixel_font() and detail_text.contains("[img"):
+		# Non-pixel locales (ka/uk): never render the custom infinity icon.
+		if not HudFonts.uses_pixel_font() and detail_text.contains("[img"):
 			detail_text = detail_text.replace(
 				"[img=%dx%d]%s[/img]" % [
 					RESULTS_INFINITY_ICON_SIZE,
@@ -336,7 +336,7 @@ static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 				detail_text = detail_text.substr(0, img_start) + "∞" + detail_text.substr(img_end + 1)
 				img_start = detail_text.find("[img=")
 		var use_bbcode := _time_detail_uses_infinity_icon(detail_text) \
-			or (bool(goal.get("detail_bbcode", false)) and HudLayout.uses_pixel_font())
+			or (bool(goal.get("detail_bbcode", false)) and HudFonts.uses_pixel_font())
 		if use_bbcode:
 			var detail := RichTextLabel.new()
 			detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL

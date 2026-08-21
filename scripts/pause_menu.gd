@@ -126,7 +126,7 @@ func _apply_pause_button(button: Button, row_h: float = MENU_BTN_ROW_H) -> void:
 	var empty := StyleBoxEmpty.new()
 	for style_name in ["normal", "pressed", "hover", "disabled", "focus"]:
 		button.add_theme_stylebox_override(style_name, empty)
-	button.set_meta("_use_default_font", not HudLayout.uses_pixel_font())
+	button.set_meta("_use_default_font", not HudFonts.uses_pixel_font())
 	button.custom_minimum_size = Vector2(MENU_BTN_WIDTH, row_h)
 	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	button.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -138,7 +138,7 @@ func _apply_pause_button(button: Button, row_h: float = MENU_BTN_ROW_H) -> void:
 	var display := String(TranslationServer.translate(key)) if not key.is_empty() else button.text
 	if display.is_empty():
 		display = key
-	if HudLayout.uses_pixel_font():
+	if HudFonts.uses_pixel_font():
 		HudLayout.apply_pixel_mono_button(button, display, MENU_BTN_FONT, Color.WHITE)
 	else:
 		HudLayout._clear_pixel_raster(button)

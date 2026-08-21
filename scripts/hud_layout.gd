@@ -64,7 +64,7 @@ static func align_counter_row(counter_row: Control) -> void:
 # Cached fallback font reference so we don't call ThemeDB.fallback_font on every frame.
 static var _screen_header_font_default: Font
 
-# Returns the font to use for screen headers. Press Start except Georgian;
+# Returns the font to use for screen headers. Press Start except ka/uk;
 # all other locales fall back to the theme's default scalable font.
 static func screen_header_font(force_pixel: bool = false) -> Font:
 	if force_pixel or uses_pixel_font():
@@ -147,7 +147,7 @@ static func _bind_header_translation_key(label: Label, key: String) -> void:
 	label.notification(Node.NOTIFICATION_TRANSLATION_CHANGED)
 
 # Applies the canonical screen-header look: centred, correct font, outline, colour.
-# Handles both the pixel-font and scalable-font (Georgian) paths,
+# Handles both the pixel-font and scalable-font (ka/uk) paths,
 # and ensures the translation key stays in .text rather than a baked string.
 static func apply_screen_header_style(label: Label) -> void:
 	if not label:
@@ -188,7 +188,7 @@ static func apply_screen_header_style(label: Label) -> void:
 	apply_safe_outline(label, outline_size)
 
 # Styles the victory/completion header label. Reduces font size on mobile to prevent
-# overflow, and uses the pixel font path except for Georgian.
+# overflow, and uses the pixel font path except for ka/uk.
 static func apply_end_screen_header_style(label: Label, base_size: int = 48) -> void:
 	if not label:
 		return
@@ -448,14 +448,12 @@ static func format_centered_status(msg: String, force_english: bool = false) -> 
 	return "[center]" + translate_status_text(msg, force_english) + "[/center]"
 
 # Returns the composite font scale for the current locale and font type.
-# Georgian is slightly reduced (glyphs read large). Press Start is not scaled.
+# Georgian/Ukrainian are slightly reduced (glyphs read large). Press Start is not scaled.
 static func font_scale() -> float:
 	var scale := 1.0
 	if not uses_pixel_font():
 		scale = GameConstants.DEFAULT_FONT_SCALE
-	var locale := TranslationServer.get_locale().substr(0, 2)
-	if locale == "ka":
-		scale *= GameConstants.GEORGIAN_FONT_SCALE
+	scale *= HudFonts.non_pixel_locale_scale()
 	return scale
 
 # Scales a font size by font_scale() and snaps to the nearest valid Press Start grid size.
@@ -467,10 +465,7 @@ static func scaled_font_size(base: int) -> int:
 
 # Scales a font size for the non-pixel (scalable) font path.
 static func body_font_size(base: int) -> int:
-	var scale := GameConstants.DEFAULT_FONT_SCALE
-	var locale := TranslationServer.get_locale().substr(0, 2)
-	if locale == "ka":
-		scale *= GameConstants.GEORGIAN_FONT_SCALE
+	var scale := GameConstants.DEFAULT_FONT_SCALE * HudFonts.non_pixel_locale_scale()
 	return int(round(float(base) * scale))
 
 ## Press Start is an 8px grid font — odd sizes create uneven gaps between letters.
@@ -484,64 +479,35 @@ const PIXEL_FONT_PATH := "res://resources/fonts/PressStart2P-vaV7.ttf"
 ## Canonical English pixel font (imported FontFile). Do not rebuild from bytes.
 const PIXEL_FONT: Font = preload("res://resources/fonts/PressStart2P-vaV7.ttf")
 const _PIXEL_MONO_TEXT_SCRIPT: Script = preload("res://scripts/pixel_mono_text.gd")
-static var _pixel_font_with_fallback: Font
 
-# Press Start 2P for every locale except Georgian (mkhedruli needs the scalable font).
+# Press Start for every locale except Georgian / Ukrainian (see HudFonts).
 # Editor tooling can opt a subtree into Press Start via mark_force_pixel_subtree().
-# begin_force_pixel_font() temporarily forces Press Start for non-Control call sites.
-static var _force_pixel_depth: int = 0
 
 static func uses_pixel_font() -> bool:
-	if _force_pixel_depth > 0:
-		return true
-	return TranslationServer.get_locale().substr(0, 2) != "ka"
+	return HudFonts.uses_pixel_font()
 
 ## True when this control (or an ancestor) should render Press Start regardless of locale.
 static func control_uses_pixel_font(control: Node = null) -> bool:
-	if control != null and _in_force_pixel_subtree(control):
-		return true
-	return uses_pixel_font()
+	return HudFonts.control_uses_pixel_font(control)
 
 static func _in_force_pixel_subtree(node: Node) -> bool:
-	var n := node
-	while n != null:
-		if bool(n.get_meta("_force_pixel_subtree", false)):
-			return true
-		n = n.get_parent()
-	return false
+	return HudFonts._in_force_pixel_subtree(node)
 
 ## Marks a UI root so all text under it uses Press Start (editor is English-only).
 static func mark_force_pixel_subtree(root: Node) -> void:
-	if root:
-		root.set_meta("_force_pixel_subtree", true)
+	HudFonts.mark_force_pixel_subtree(root)
 
 static func begin_force_pixel_font() -> void:
-	_force_pixel_depth += 1
+	HudFonts.begin_force_pixel_font()
 
 static func end_force_pixel_font() -> void:
-	_force_pixel_depth = maxi(0, _force_pixel_depth - 1)
+	HudFonts.end_force_pixel_font()
 
-# Loads the Press Start font, preferring the preloaded constant to avoid disk reads.
-static func _load_press_start_font() -> Font:
-	if PIXEL_FONT != null:
-		return PIXEL_FONT
-	if ResourceLoader.exists(PIXEL_FONT_PATH):
-		var loaded := load(PIXEL_FONT_PATH) as Font
-		if loaded != null:
-			return loaded
-	return ThemeDB.fallback_font
-
-# Returns the Press Start font, falling back to the theme font if somehow missing.
-# Result is cached after first call to avoid repeated ResourceLoader hits.
 static func pixel_font() -> Font:
-	if _pixel_font_with_fallback == null:
-		_pixel_font_with_fallback = _load_press_start_font()
-	return _pixel_font_with_fallback if _pixel_font_with_fallback else ThemeDB.fallback_font
+	return HudFonts.pixel_font()
 
 static func pixel_font_clean() -> Font:
-	# Same imported face as pixel_font(). Isolation is outline_size == 0 only —
-	# runtime FontFile copies and the extra safe.ttf import produced fd-null crashes.
-	return pixel_font()
+	return HudFonts.pixel_font_clean()
 
 # True when the current locale uses Press Start; callers use this to decide
 # whether to create a pixel caption overlay instead of using the theme font.
@@ -551,8 +517,7 @@ static func needs_pixel_text_raster() -> bool:
 # No-op kept for call-site compatibility. The imported FontFile must remain alive
 # in memory; clearing the cached reference caused fd-null crashes in older builds.
 static func clear_pixel_text_cache() -> void:
-	# Keep the imported FontFile reference alive; clearing it caused fd-null.
-	pass
+	HudFonts.clear_pixel_text_cache()
 
 # Applies Press Start directly to a Label via theme overrides (not LabelSettings).
 # LabelSettings advances glyphs differently from the menu theme path and produces
@@ -775,7 +740,7 @@ static func is_status_label(node: Node) -> bool:
 	return n == "StatusLabel" or n == "PlaytestStatusLabel" or n.ends_with("StatusLabel")
 
 # Sets up a RichTextLabel to render status/feedback text at a slightly enlarged size
-# (×1.2 of base) with word-wrap and auto-height. Georgian uses GEORGIAN_FONT_SCALE.
+# (×1.2 of base) with word-wrap and auto-height. ka/uk use NON_PIXEL_LOCALE_FONT_SCALE.
 # Status/error copy always uses the default font — never Press Start.
 static func apply_status_font(label: RichTextLabel, base_size: int = GameConstants.HUD_STATUS_FONT_SIZE) -> void:
 	if not label:
@@ -789,9 +754,7 @@ static func apply_status_font(label: RichTextLabel, base_size: int = GameConstan
 	label.add_theme_font_override("bold_italics_font", font)
 	label.add_theme_font_override("mono_font", font)
 	var size := int(round(float(base_size) * 1.2))
-	var locale := TranslationServer.get_locale().substr(0, 2)
-	if locale == "ka":
-		size = int(round(float(size) * GameConstants.GEORGIAN_FONT_SCALE))
+	size = int(round(float(size) * HudFonts.non_pixel_locale_scale()))
 	for size_name in [
 		"normal_font_size",
 		"bold_font_size",
@@ -1254,7 +1217,7 @@ static func apply_tab_button(button: Button) -> void:
 	button.custom_minimum_size = GameConstants.UI_BTN_TAB_SIZE
 	fit_text_button(button, GameConstants.UI_BTN_TAB_FONT, GameConstants.UI_BTN_TAB_FONT_MIN)
 
-# Styles a popup/dialog body label. Uses the pixel label path except Georgian;
+# Styles a popup/dialog body label. Uses the pixel label path except ka/uk;
 # in other locales applies body font scaling and a safe outline.
 static func apply_popup_label(label: Label, base_size: int = GameConstants.UI_BODY_FONT_SIZE) -> void:
 	if not label:
@@ -1310,22 +1273,23 @@ static func _popup_prompt_with_title_gap(text: String, use_pixel_gap: bool = fal
 # Creates the near-opaque dark panel StyleBox used by all confirmation dialogs
 # (reset progress, session resume, etc.). Gold border gives it a premium feel.
 static func make_dialog_panel_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.08, 0.1, 0.98)
-	style.set_corner_radius_all(16)
-	style.set_content_margin_all(28)
-	style.border_color = Color(1.0, 0.84, 0.0, 0.4)
-	style.set_border_width_all(3)
-	return style
+	return HudDialogs.make_dialog_panel_style()
 
 # Biases a full-rect CenterContainer upward by shrinking it from the bottom.
 # Visual raise ≈ raise_px because children are re-centered in the shorter host.
 static func raise_centered_dialog_host(
 	center: Control, raise_px: float = GameConstants.UI_DIALOG_RAISE_PX
 ) -> void:
-	if center == null or not is_instance_valid(center):
-		return
-	center.offset_bottom = -absf(raise_px) * 2.0
+	HudDialogs.raise_centered_dialog_host(center, raise_px)
+
+## Fit a Yes/No dialog panel height to current locale text (+ top/bottom margin).
+static func fit_dialog_panel(panel: Panel, width: float = 640.0) -> void:
+	HudDialogs.fit_vbox_dialog_panel(panel, width)
+
+static func fit_session_resume_panel(
+	panel: Panel, prompt: Label, buttons: Control, width: float = 820.0
+) -> void:
+	HudDialogs.fit_session_resume_panel(panel, prompt, buttons, width)
 
 # Applies the locale-correct body font to a plain Label. Always uses the scalable
 # font (not Press Start), suitable for longer readable text blocks.
@@ -1510,10 +1474,16 @@ static func apply_square_top_bar_button(button: Button) -> void:
 static func apply_top_bar_button_cluster(cluster: HBoxContainer) -> void:
 	if not cluster:
 		return
-	cluster.custom_minimum_size = Vector2(
-		GameConstants.HUD_BUTTON_CLUSTER_WIDTH,
-		GameConstants.HUD_BUTTON_HEIGHT
+	var visible_buttons := 0
+	for child in cluster.get_children():
+		if child is Button and (child as CanvasItem).visible:
+			visible_buttons += 1
+	var count := maxi(visible_buttons, 1)
+	var width := (
+		GameConstants.HUD_BUTTON_WIDTH * count
+		+ GameConstants.HUD_BUTTON_SEPARATION * maxi(count - 1, 0)
 	)
+	cluster.custom_minimum_size = Vector2(width, GameConstants.HUD_BUTTON_HEIGHT)
 	cluster.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	cluster.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	cluster.add_theme_constant_override("separation", GameConstants.HUD_BUTTON_SEPARATION)

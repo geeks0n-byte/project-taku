@@ -132,6 +132,8 @@ func _on_language_changed() -> void:
 	if _title_label:
 		HudLayout._bind_header_translation_key(_title_label, "UI_SELECT_LEVEL")
 		HudLayout.apply_screen_header_style(_title_label)
+	if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
+		_show_tutorial_intro_prompt()
 
 func _layout_level_select() -> void:
 	if _title_label:
@@ -468,7 +470,7 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 	label.grow_vertical = Control.GROW_DIRECTION_END
 	const TITLE_FONT := 32
 	var title_color := Color(0.55, 0.55, 0.55, 1.0) if locked else Color.WHITE
-	if HudLayout.uses_pixel_font():
+	if HudFonts.uses_pixel_font():
 		HudLayout.apply_raster_pixel_label(label, title, TITLE_FONT, title_color, 0, true)
 	else:
 		label.text = title
@@ -661,6 +663,9 @@ func _show_tutorial_intro_prompt() -> void:
 		_tutorial_intro_no.text = tr("UI_NO")
 		_copy_dialog_button_styles(_tutorial_intro_no)
 		HudLayout.apply_dialog_button(_tutorial_intro_no)
+	var panel := _tutorial_intro_blocker.get_node_or_null("CenterContainer/Panel") as Panel if _tutorial_intro_blocker else null
+	if panel:
+		HudLayout.fit_dialog_panel(panel, 680.0)
 	if _tutorial_intro_blocker:
 		_tutorial_intro_blocker.color = Color(0, 0, 0, 0)
 		_tutorial_intro_blocker.visible = true

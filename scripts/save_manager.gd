@@ -1,6 +1,7 @@
 extends Node
 
 const SAVE_PATH = "user://progression.cfg"
+const SAVE_FORMAT_VERSION := 2
 const SUPPORTED_LANGUAGES := ["en", "es", "de", "fr", "pl", "ka", "uk"]
 
 signal language_changed
@@ -24,6 +25,7 @@ var ads_wins_since_interstitial: int = 0
 
 func _ready() -> void:
 	_sync_translations_from_csv()
+	_verify_translation_hygiene()
 	load_progress()
 	_apply_background_mode()
 	if not get_tree().node_added.is_connected(_on_tree_node_added):
@@ -82,6 +84,38 @@ func _sync_translations_from_csv() -> void:
 			(locale_translations[idx] as Translation).add_message(key, message.c_unescape())
 	file.close()
 
+## Editor-only: warn when CSV locales are missing or rows have empty cells.
+func _verify_translation_hygiene() -> void:
+	if not OS.has_feature("editor"):
+		return
+	const CSV_PATH := "res://resources/localization/translations.csv"
+	if not FileAccess.file_exists(CSV_PATH):
+		push_warning("translations.csv missing — exported builds rely on .translation files")
+		return
+	var file := FileAccess.open(CSV_PATH, FileAccess.READ)
+	if file == null:
+		return
+	var headers: PackedStringArray = file.get_csv_line()
+	var expected := headers.size()
+	var empty_cells := 0
+	var rows := 0
+	while not file.eof_reached():
+		var row: PackedStringArray = file.get_csv_line()
+		if row.is_empty() or String(row[0]).strip_edges().is_empty():
+			continue
+		rows += 1
+		if row.size() != expected:
+			continue
+		for i in range(1, expected):
+			if String(row[i]).is_empty():
+				empty_cells += 1
+	file.close()
+	for code in SUPPORTED_LANGUAGES:
+		if not headers.has(code):
+			push_warning("translations.csv missing locale column: %s" % code)
+	if empty_cells > 0:
+		push_warning("translations.csv: %d empty cell(s) across %d keys — fill before shipping" % [empty_cells, rows])
+
 func get_campaign_start_unlock() -> int:
 	var easy_paths := LevelUtils.scan_directory(GameConstants.CAMPAIGN_EASY_DIR)
 	LevelUtils.sort_level_paths(easy_paths)
@@ -102,6 +136,8 @@ func load_progress() -> void:
 	var err = config.load(SAVE_PATH)
 
 	if err == OK:
+		var save_version := int(config.get_value("Meta", "version", 1))
+		_migrate_save(config, save_version)
 		max_unlocked_level = config.get_value("Progression", "max_unlocked_level", 1)
 		current_language = config.get_value("Progression", "current_language", "en")
 		background_static = bool(config.get_value("Progression", "background_static", false))
@@ -127,6 +163,8 @@ func load_progress() -> void:
 		if not SUPPORTED_LANGUAGES.has(current_language):
 			current_language = "en"
 		TranslationServer.set_locale(current_language)
+		if save_version < SAVE_FORMAT_VERSION:
+			save_progress()
 	else:
 		current_language = _detect_system_language()
 		TranslationServer.set_locale(current_language)
@@ -136,6 +174,11 @@ func load_progress() -> void:
 		max_unlocked_level = get_campaign_start_unlock()
 		save_progress()
 	_ensure_campaign_start_unlock()
+
+## Migrates older progression.cfg shapes in-place before fields are read.
+func _migrate_save(config: ConfigFile, from_version: int) -> void:
+	const Migration := preload("res://scripts/save_migration.gd")
+	Migration.migrate_config(config, from_version)
 
 func _detect_system_language() -> String:
 	var lang := OS.get_locale_language().to_lower()
@@ -150,6 +193,7 @@ func _detect_system_language() -> String:
 
 func save_progress() -> void:
 	var config = ConfigFile.new()
+	config.set_value("Meta", "version", SAVE_FORMAT_VERSION)
 	config.set_value("Progression", "max_unlocked_level", max_unlocked_level)
 	config.set_value("Progression", "current_language", current_language)
 	config.set_value("Progression", "background_static", background_static)
@@ -182,7 +226,7 @@ func consume_interstitial_wins() -> void:
 func set_language(lang_code: String) -> void:
 	current_language = lang_code
 	TranslationServer.set_locale(lang_code)
-	HudLayout.clear_pixel_text_cache()
+	HudFonts.clear_pixel_text_cache()
 	save_progress()
 	apply_locale_fonts()
 	language_changed.emit()

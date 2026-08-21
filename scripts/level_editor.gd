@@ -29,12 +29,7 @@ var _is_generating: bool = false
 
 func _enter_tree() -> void:
 	# Runs before child _ready — mark English-only editor chrome for Press Start.
-	var editor_ui_root := get_node_or_null("EditorUI")
-	if editor_ui_root:
-		HudLayout.mark_force_pixel_subtree(editor_ui_root)
-	var playtest_end := get_node_or_null("PlaytestEndLayer")
-	if playtest_end:
-		HudLayout.mark_force_pixel_subtree(playtest_end)
+	EditorUiPolicy.mark_editor_pixel_roots(self)
 
 func _ready():
 	if AdsManager:
@@ -146,7 +141,6 @@ func _bind_signals():
 	editor_ui.test_mode_entered.connect(_on_test_mode_entered)
 	editor_ui.grid_size_changed.connect(_on_grid_size_changed)
 	editor_ui.overwrite_confirmed.connect(_execute_save)
-	editor_ui.editor_hint_toggled.connect(_on_editor_hint_toggled)
 	editor_ui.editor_undo_requested.connect(_on_editor_undo_requested)
 	editor_ui.editor_redo_requested.connect(_on_editor_redo_requested)
 	editor_ui.allowed_tiles_changed.connect(_on_allowed_tiles_changed)
@@ -163,10 +157,6 @@ func _bind_signals():
 	canvas_manager.canvas_cell_played.connect(func(c): playtest_controller.handle_cell_played(c))
 	canvas_manager.canvas_cell_hold_cleared.connect(func(c): playtest_controller.handle_cell_hold_cleared(c))
 	canvas_manager.canvas_shifter_toggled.connect(func(c): playtest_controller.handle_shifter_toggled(c))
-
-func _on_editor_hint_toggled(_is_on: bool):
-	canvas_manager.show_editor_hints = false
-	canvas_manager.trigger_redraw()
 
 # Captures the complete mutable editor state — cell data, shifter/constraint pairs,
 # and the joker count — into a deep-copied dictionary suitable for undo/redo storage.
@@ -217,12 +207,8 @@ func _apply_editor_snapshot(snap: Dictionary):
 	_update_editor_joker_counter_display()
 
 # Saves the current editor state to the undo stack and refreshes the undo/redo buttons.
-# Also regenerates hidden hint constraints when the hint overlay is active so they stay in sync.
 # Skips no-op records so identical consecutive states cannot create phantom undo steps.
 func _record_editor_change():
-	if canvas_manager.show_editor_hints:
-		_rebuild_editor_hidden_hints()
-		canvas_manager.trigger_redraw()
 	var snap := _create_editor_snapshot()
 	if not editor_undo.current.is_empty() and snap.hash() == editor_undo.current.hash():
 		return

@@ -210,7 +210,7 @@ func _update_lang_label() -> void:
 	if lang_label.has_theme_font_override("font"):
 		lang_label.remove_theme_font_override("font")
 	var font_size := HudLayout.scaled_font_size(GameConstants.UI_BODY_FONT_SIZE_LARGE)
-	if HudLayout.uses_pixel_font():
+	if HudFonts.uses_pixel_font():
 		HudLayout.apply_live_pixel_label_settings(lang_label, name_text, font_size, Color.WHITE)
 		# Re-assert after settings — guards against theme/locale pass races.
 		lang_label.text = name_text
@@ -393,7 +393,7 @@ func _set_toggle_button_caption(button: Button, full_text: String) -> void:
 		caption.add_theme_color_override("default_color", Color.WHITE)
 		host.add_child(caption)
 	button.move_child(host, -1)
-	var use_pixel := HudLayout.uses_pixel_font()
+	var use_pixel := HudFonts.uses_pixel_font()
 	caption.set_meta("_use_default_font", not use_pixel)
 	button.set_meta("_use_default_font", not use_pixel)
 	if use_pixel:
@@ -584,6 +584,10 @@ func _refresh_confirm_texts() -> void:
 		)
 		_confirm_label.add_theme_color_override("font_color", prompt_color)
 		HudLayout.apply_popup_label(_confirm_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
+	if _confirm_blocker and _confirm_blocker.visible:
+		var panel := _confirm_blocker.get_node_or_null("CenterContainer/Panel") as Panel
+		if panel:
+			HudLayout.fit_dialog_panel(panel, 640.0)
 
 # Shows the confirmation overlay for a destructive action with the appropriate message.
 func _show_confirm(action: ConfirmAction, message: String) -> void:
@@ -593,9 +597,7 @@ func _show_confirm(action: ConfirmAction, message: String) -> void:
 	_refresh_confirm_texts()
 	var panel := _confirm_blocker.get_node_or_null("CenterContainer/Panel") as Panel if _confirm_blocker else null
 	if panel:
-		# Reset profile copy is longer — give it a bit more vertical room.
-		var h := 420.0 if action == ConfirmAction.RESET_PROGRESS else 360.0
-		panel.custom_minimum_size = Vector2(640, h)
+		HudLayout.fit_dialog_panel(panel, 640.0)
 	_set_options_chrome_visible(false)
 	if _confirm_blocker:
 		_confirm_blocker.color = Color(0, 0, 0, 0)

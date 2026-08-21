@@ -18,14 +18,36 @@ const _TILE_TEX := preload("res://resources/buttons/button_tile_gray_dark.svg")
 func _ready() -> void:
 	_read_btn.pressed.connect(_on_read_policy)
 	_accept_btn.pressed.connect(_on_accepted)
-	# Visual layout is defined in consent_popup.tscn.
-	# These calls apply dynamic font sizing that can't be set in the scene editor.
-	HudLayout.apply_popup_label(_title, 80)
-	HudLayout.apply_safe_outline(_title, GameConstants.MENU_TEXT_OUTLINE)
-	HudLayout.apply_popup_label(_body, 44)
-	HudLayout.apply_safe_outline(_body, GameConstants.MENU_TEXT_OUTLINE)
-	HudLayout.apply_tile_button(_read_btn, _TILE_TEX)
-	HudLayout.apply_tile_button(_accept_btn, _TILE_TEX)
+	refresh_locale()
+	if SaveManager and not SaveManager.language_changed.is_connected(refresh_locale):
+		SaveManager.language_changed.connect(refresh_locale)
+
+# Re-applies translated copy + fonts for the active locale.
+# Must run whenever the popup is shown after a language change (e.g. reset profile).
+func refresh_locale() -> void:
+	if _title:
+		_title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		_title.set_meta("_tr_key", "UI_CONSENT_TITLE")
+		_title.text = tr("UI_CONSENT_TITLE")
+		HudLayout.apply_popup_label(_title, 80)
+		HudLayout.apply_safe_outline(_title, GameConstants.MENU_TEXT_OUTLINE)
+	if _body:
+		_body.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		_body.set_meta("_tr_key", "UI_CONSENT_BODY")
+		_body.text = tr("UI_CONSENT_BODY")
+		HudLayout.apply_popup_label(_body, 44)
+		HudLayout.apply_safe_outline(_body, GameConstants.MENU_TEXT_OUTLINE)
+	if _read_btn:
+		_read_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		_read_btn.text = tr("UI_CONSENT_READ_POLICY")
+		HudLayout.apply_tile_button(_read_btn, _TILE_TEX)
+	if _accept_btn:
+		_accept_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		_accept_btn.text = tr("UI_CONSENT_ACCEPT")
+		HudLayout.apply_tile_button(_accept_btn, _TILE_TEX)
+	var content := get_node_or_null("Outer/Content") as Control
+	if content:
+		HudDialogs.fit_content_column(content, 760.0)
 
 # Opens the privacy policy URL in the device's default browser.
 func _on_read_policy() -> void:

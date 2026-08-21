@@ -1,14 +1,7 @@
 extends Node
 
-# Candidate paths for the click sound file.
-# The first one that exists on disk is used.
-const CLICK_CANDIDATES := [
-	"res://resources/audio/ui_click.mp3",
-	"res://resources/audio/ui_click.wav",
-	"res://resources/audio/ui_click.ogg",
-	"res://resources/audio/click.mp3",
-	"res://resources/audio/click.wav",
-]
+# Prefer the authored click; synthesize only if the asset is missing.
+const CLICK_STREAM_PATH := "res://resources/audio/ui_click.wav"
 
 var _player: AudioStreamPlayer
 var _click_stream: AudioStream
@@ -109,15 +102,33 @@ func _on_hooked_pressed(button: BaseButton) -> void:
 		return
 	play_click()
 
-# Tries each candidate audio file path in order. Falls back to a
-# procedurally generated click tone if none are found on disk.
+# Loads the authored click WAV. Falls back to a procedural tone if missing.
 func _load_or_make_click() -> AudioStream:
-	for path in CLICK_CANDIDATES:
-		if ResourceLoader.exists(path):
-			var stream := load(path) as AudioStream
-			if stream:
-				return stream
+	# ResourceLoader only sees imported assets; FileAccess works before first import.
+	if FileAccess.file_exists(CLICK_STREAM_PATH):
+		if ResourceLoader.exists(CLICK_STREAM_PATH):
+			var imported := load(CLICK_STREAM_PATH) as AudioStream
+			if imported:
+				return imported
+		var from_file := _load_wav_pcm16_mono(CLICK_STREAM_PATH)
+		if from_file:
+			return from_file
+	push_warning("UiSfx: missing %s — using procedural click" % CLICK_STREAM_PATH)
 	return _make_procedural_click()
+
+## Loads a known PCM16 mono WAV (44-byte header) without waiting on .import.
+func _load_wav_pcm16_mono(path: String) -> AudioStreamWAV:
+	var bytes := FileAccess.get_file_as_bytes(path)
+	if bytes.size() <= 44:
+		return null
+	# Standard RIFF WAV header is 44 bytes for PCM.
+	var pcm := bytes.slice(44)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = 22050
+	stream.stereo = false
+	stream.data = pcm
+	return stream
 
 # Generates a short 980 Hz sine-wave click with exponential decay.
 # Used as a fallback when no audio file is present.

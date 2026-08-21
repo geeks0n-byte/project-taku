@@ -235,6 +235,10 @@ func _on_language_changed() -> void:
 	HudLayout.apply_locale_fonts_to_tree(self)
 	HudLayout.clear_how_to_play_nav_lock(_htp_host)
 	_refresh_how_to_play_text()
+	if _consent_blocker and _consent_blocker.visible and _consent_blocker.has_method("refresh_locale"):
+		_consent_blocker.refresh_locale()
+	if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
+		_show_tutorial_intro_prompt()
 
 func _refresh_start_button_label() -> void:
 	if not start_btn:
@@ -272,7 +276,7 @@ func _apply_main_menu_button(button: Button) -> void:
 	for style_name in ["normal", "pressed", "hover", "disabled", "focus"]:
 		button.add_theme_stylebox_override(style_name, empty)
 	button.flat = true
-	button.set_meta("_use_default_font", not HudLayout.uses_pixel_font())
+	button.set_meta("_use_default_font", not HudFonts.uses_pixel_font())
 	var is_play: bool = button == start_btn
 	var row_h := 148.0 if is_play else 118.0
 	var row_w := 780.0 if is_play else 720.0
@@ -288,7 +292,7 @@ func _apply_main_menu_button(button: Button) -> void:
 	var display := String(TranslationServer.translate(key)) if not key.is_empty() else ""
 	if display.is_empty():
 		display = key
-	if HudLayout.uses_pixel_font():
+	if HudFonts.uses_pixel_font():
 		# Natural advances + geometric centering (Label captions can shift long titles).
 		HudLayout.apply_pixel_mono_button(button, display, font_size, Color.WHITE)
 	else:
@@ -377,11 +381,10 @@ func _apply_credits_fonts(credits_text_node: RichTextLabel) -> void:
 	credits_text_node.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 	var bbcode := String(TranslationServer.translate("CREDITS_TEXT"))
-	var ka := TranslationServer.get_locale().substr(0, 2) == "ka"
-	var ka_mul := GameConstants.GEORGIAN_FONT_SCALE if ka else 1.0
-	if HudLayout.uses_pixel_font():
-		var header_sz := int(round(float(CREDITS_HEADER_SIZE) * ka_mul))
-		var body_sz := int(round(float(CREDITS_NAME_SIZE) * ka_mul))
+	var locale_mul := HudFonts.non_pixel_locale_scale()
+	if HudFonts.uses_pixel_font():
+		var header_sz := int(round(float(CREDITS_HEADER_SIZE) * locale_mul))
+		var body_sz := int(round(float(CREDITS_NAME_SIZE) * locale_mul))
 		# Normalize authored BBCode sizes so the name stays on one line.
 		bbcode = bbcode.replace("[font_size=48]", "[font_size=%d]" % header_sz)
 		bbcode = bbcode.replace("[font_size=42]", "[font_size=%d]" % header_sz)
@@ -394,8 +397,8 @@ func _apply_credits_fonts(credits_text_node: RichTextLabel) -> void:
 		credits_text_node.text = bbcode
 	else:
 		# Default fonts read smaller than Press Start at the same nominal size.
-		var header_sz := int(round(float(CREDITS_HEADER_LOCALE_SIZE) * ka_mul))
-		var body_sz := int(round(float(CREDITS_NAME_LOCALE_SIZE) * ka_mul))
+		var header_sz := int(round(float(CREDITS_HEADER_LOCALE_SIZE) * locale_mul))
+		var body_sz := int(round(float(CREDITS_NAME_LOCALE_SIZE) * locale_mul))
 		bbcode = bbcode.replace("[font_size=48]", "[font_size=%d]" % header_sz)
 		bbcode = bbcode.replace("[font_size=42]", "[font_size=%d]" % header_sz)
 		bbcode = bbcode.replace("[font_size=40]", "[font_size=%d]" % body_sz)
@@ -642,6 +645,9 @@ func _show_privacy_consent_if_needed(close_options: bool = false) -> void:
 		options_menu.visible = false
 	_set_main_menu_chrome_visible(false)
 	_set_debug_bar_visible(false)
+	# Refresh copy/fonts for the current locale (reset can reopen after a language change).
+	if _consent_blocker.has_method("refresh_locale"):
+		_consent_blocker.refresh_locale()
 	_consent_blocker.visible = true
 	_consent_blocker.move_to_front()
 
@@ -698,6 +704,13 @@ func _show_tutorial_intro_prompt() -> void:
 	if _tutorial_intro_no:
 		_tutorial_intro_no.text = tr("UI_NO")
 		HudLayout.apply_dialog_button(_tutorial_intro_no)
+	var panel := (
+		_tutorial_intro_blocker.get_node_or_null("CenterContainer/Panel") as Panel
+		if _tutorial_intro_blocker
+		else null
+	)
+	if panel:
+		HudLayout.fit_dialog_panel(panel, 680.0)
 	if _tutorial_intro_blocker:
 		_tutorial_intro_blocker.color = Color(0, 0, 0, 0)
 		_tutorial_intro_blocker.visible = true

@@ -9,10 +9,6 @@ const EXAMPLE_TILE_SIZE := 72
 const ARROW_TILE_SIZE := 64
 const LOCK_ICON_SIZE := 96
 
-# Convenience alias for the first page (the core rules) used by other systems.
-static func get_rules_text(force_english: bool = false) -> String:
-	return get_page_text(0, force_english)
-
 # Returns the i18n key for the page's header label, clamped to valid range.
 static func get_page_title_key(page_index: int) -> String:
 	var page := clampi(page_index, 0, PAGE_COUNT - 1)
@@ -46,7 +42,7 @@ static func get_page_text(page_index: int, force_english: bool = false) -> Strin
 			raw = _page_stars(force_english)
 	return HudLayout.glue_tile_icon_color_labels(raw)
 
-# Body text font size, scaled for locale (Georgian needs ~15% larger).
+# Body text font size, scaled for locale (ka/uk use NON_PIXEL_LOCALE_FONT_SCALE).
 static func _body_size() -> int:
 	return HudLayout.body_font_size(GameConstants.UI_BODY_FONT_SIZE_LARGE)
 
@@ -108,12 +104,12 @@ static func _page_examples(force_english: bool) -> String:
 	]
 	return "\n".join(lines)
 
-## VALID / INVALID: Press Start except Georgian. Outline is forced off — theme outline
+## VALID / INVALID: Press Start except ka/uk. Outline is forced off — theme outline
 ## on Press Start scrambles glyphs under GL Compatibility.
 static func _example_column_label(text: String, force_english: bool) -> String:
-	if force_english or HudLayout.uses_pixel_font():
+	if force_english or HudFonts.uses_pixel_font():
 		return "[outline_size=0][font=%s]%s[/font][/outline_size]" % [
-			HudLayout.PIXEL_FONT_PATH, text
+			HudFonts.PIXEL_FONT_PATH, text
 		]
 	return "[b]%s[/b]" % text
 

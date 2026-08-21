@@ -28,7 +28,7 @@ var cached_lines: Array = []
 var loaded_shifter_pairs: Array = []
 # Visible constraint pairs (shown to the player in both editor and play mode).
 var loaded_constraint_pairs: Array = []
-# Auto-derived constraint pairs hidden from the player but visible when editor hints are on.
+# Auto-derived constraint pairs used by playtest hints (not drawn in the editor).
 var hidden_constraint_pairs: Array = []
 
 # Separate draw nodes so grid lines and constraint symbols have independent z-order and redraw.
@@ -37,8 +37,6 @@ var constraint_drawer: Node2D
 
 # When true, cells are configured for play (locked tiles, no editor chrome).
 var is_playtesting: bool = false
-# When true in editor mode, hidden_constraint_pairs are drawn alongside visible ones.
-var show_editor_hints: bool = false
 
 func _ready():
 	# Grid lines sit behind tiles so hold-to-clear shrink animations aren't
@@ -259,10 +257,8 @@ func is_board_full() -> bool:
 func _draw_grid():
 	BoardRenderer.draw_grid(grid_drawer, board_cells, GameConstants.CELL_SIZE, not is_playtesting)
 
-# In editor mode with hints enabled, appends hidden constraint pairs so the designer can see
-# auto-derived constraints without them being visible to the player.
+# Draws authored constraint pairs only (hidden hint pairs stay off in the editor).
 func _draw_constraints():
-	var pairs_to_draw = loaded_constraint_pairs.duplicate()
-	if not is_playtesting and show_editor_hints:
-		pairs_to_draw.append_array(hidden_constraint_pairs)
-	BoardRenderer.draw_constraints(constraint_drawer, board_cells, pairs_to_draw, GameConstants.CELL_SIZE)
+	BoardRenderer.draw_constraints(
+		constraint_drawer, board_cells, loaded_constraint_pairs, GameConstants.CELL_SIZE
+	)

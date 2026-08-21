@@ -686,6 +686,7 @@ func show_reset_confirm() -> void:
 		resume_panel.visible = false
 	if reset_confirm_panel:
 		reset_confirm_panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
+		HudLayout.fit_dialog_panel(reset_confirm_panel, 640.0)
 		reset_confirm_panel.visible = true
 		reset_confirm_panel.move_to_front()
 	set_hud_buttons_disabled(true)
@@ -760,6 +761,8 @@ func show_session_resume_prompt() -> void:
 		victory_panel.visible = false
 	if resume_panel:
 		resume_panel.add_theme_stylebox_override("panel", _make_end_screen_panel_style())
+		var buttons := resume_panel.get_node_or_null("Buttons") as Control
+		HudLayout.fit_session_resume_panel(resume_panel, resume_prompt_label, buttons, 820.0)
 		resume_panel.visible = true
 	set_hud_buttons_disabled(true)
 

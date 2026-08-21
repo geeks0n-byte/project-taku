@@ -268,41 +268,11 @@ size_flags_stretch_ratio = 0.0
 mouse_filter = 2
 
 [node name="RightButtons" type="HBoxContainer" parent="EditorUI/TopHUD/TopBarRow" unique_id=1187871861]
-custom_minimum_size = Vector2(428, 140)
+custom_minimum_size = Vector2(284, 140)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 8
 theme_override_constants/separation = 4
-
-[node name="EditorHintButton" type="Button" parent="EditorUI/TopHUD/TopBarRow/RightButtons" unique_id=827994585]
-custom_minimum_size = Vector2(140, 140)
-layout_mode = 2
-size_flags_horizontal = 8
-size_flags_vertical = 8
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
-toggle_mode = true
-
-[node name="IconContainer" type="MarginContainer" parent="EditorUI/TopHUD/TopBarRow/RightButtons/EditorHintButton" unique_id=1318201818]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="Icon" type="TextureRect" parent="EditorUI/TopHUD/TopBarRow/RightButtons/EditorHintButton/IconContainer" unique_id=1329909136]
-custom_minimum_size = Vector2(83, 83)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-mouse_filter = 2
-texture = ExtResource("tex_hint")
-expand_mode = 1
-stretch_mode = 5
 
 [node name="EditorUndoButton" type="Button" parent="EditorUI/TopHUD/TopBarRow/RightButtons" unique_id=21033591]
 custom_minimum_size = Vector2(140, 140)

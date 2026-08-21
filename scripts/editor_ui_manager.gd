@@ -18,7 +18,6 @@ signal editor_undo_requested
 signal editor_redo_requested
 # Emitted whenever any of the allow-yellow/blue/joker toggles changes.
 signal allowed_tiles_changed
-signal editor_hint_toggled(is_on: bool)
 
 const MIN_GRID_WIDTH: int = 3
 const MAX_GRID_WIDTH: int = 8
@@ -32,7 +31,6 @@ const MAX_GRID_HEIGHT: int = 8
 @onready var clear_button: Button = $"../EditorUI/TopHUD/TopBarRow/LeftButtons/ClearButton"
 @onready var editor_undo_button: Button = $"../EditorUI/TopHUD/TopBarRow/RightButtons/EditorUndoButton"
 @onready var editor_redo_button: Button = $"../EditorUI/TopHUD/TopBarRow/RightButtons/EditorRedoButton"
-@onready var editor_hint_button: Button = $"../EditorUI/TopHUD/TopBarRow/RightButtons/EditorHintButton"
 @onready var editor_mode_label: RichTextLabel = $"../EditorUI/TopHUD/TopBarRow/EditorModeLabelWrap/EditorModeLabelInset/EditorModeLabel"
 @onready var control_panel: Panel = $"../EditorUI/ControlPanel"
 @onready var status_label: RichTextLabel = $"../EditorUI/StatusLabel"
@@ -104,21 +102,17 @@ func setup_ui(grid_width: int, grid_height: int) -> void:
 	_refresh_difficulty_button()
 	_apply_default_font_to_link_buttons()
 	_apply_star_time_label()
-	_disable_editor_hint_button()
 	if status_label and control_panel:
 		HudLayout.position_editor_status_below_panel(control_panel, status_label)
 	call_deferred("_emit_startup_signals")
 	call_deferred("_apply_default_font_to_link_buttons")
 	call_deferred("_apply_star_time_label")
-	call_deferred("_disable_editor_hint_button")
 	call_deferred("_refresh_editor_pixel_fonts")
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
 
 func _refresh_editor_pixel_fonts() -> void:
-	var editor_root := get_node_or_null("../EditorUI")
-	if editor_root:
-		HudLayout.apply_locale_fonts_to_tree(editor_root)
+	EditorUiPolicy.refresh_editor_pixel_fonts(get_node_or_null("../EditorUI"))
 	_apply_default_font_to_link_buttons()
 	_apply_top_bar_buttons()
 
@@ -131,20 +125,8 @@ func _on_language_changed() -> void:
 	if status_label:
 		HudLayout.apply_status_font(status_label, GameConstants.HUD_EDITOR_STATUS_FONT_SIZE)
 	# Re-apply Press Start to editor chrome after a global locale font walk.
-	var editor_root := get_node_or_null("../EditorUI")
-	if editor_root:
-		HudLayout.apply_locale_fonts_to_tree(editor_root)
+	EditorUiPolicy.refresh_editor_pixel_fonts(get_node_or_null("../EditorUI"))
 	_apply_default_font_to_link_buttons()
-
-# The hint button is not functional in the editor (no reference solution to hint
-# against), so it is permanently disabled and reset to the off state.
-func _disable_editor_hint_button() -> void:
-	if not editor_hint_button:
-		return
-	editor_hint_button.disabled = true
-	editor_hint_button.toggle_mode = true
-	editor_hint_button.button_pressed = false
-	HintController.update_button(editor_hint_button, false)
 
 # The equals (=) and not-equals (×) buttons use Unicode symbols that only render
 # correctly with the fallback system font. This overrides the theme font explicitly
@@ -206,7 +188,7 @@ func _bind_hold_button(button: Button, target: String, amount: int) -> void:
 func _apply_top_bar_buttons() -> void:
 	HudLayout.apply_top_bar_button_cluster(top_bar_row.get_node_or_null("LeftButtons") as HBoxContainer)
 	HudLayout.apply_top_bar_button_cluster(top_bar_row.get_node_or_null("RightButtons") as HBoxContainer)
-	for button in [main_menu_button, test_button, clear_button, editor_hint_button, editor_undo_button, editor_redo_button]:
+	for button in [main_menu_button, test_button, clear_button, editor_undo_button, editor_redo_button]:
 		HudLayout.apply_square_top_bar_button(button)
 	HudLayout.apply_top_bar_mode_label(editor_mode_label)
 	if top_hud:
@@ -246,8 +228,6 @@ func _connect_ui_signals() -> void:
 		editor_redo_button.pressed.connect(func(): editor_redo_requested.emit())
 		editor_redo_button.button_down.connect(_on_editor_redo_button_down)
 		editor_redo_button.button_up.connect(_on_editor_redo_button_up)
-	if editor_hint_button:
-		editor_hint_button.toggled.connect(func(is_on: bool): editor_hint_toggled.emit(is_on))
 
 	if width_minus:
 		_bind_hold_button(width_minus, "width", -1)
@@ -674,9 +654,6 @@ func update_editor_undo_redo_buttons(can_undo: bool, can_redo: bool) -> void:
 		editor_redo_button.disabled = not can_redo
 		HudLayout.refresh_button_icon_modulate(editor_redo_button)
 
-func set_editor_hint_toggle(_is_on: bool) -> void:
-	_disable_editor_hint_button()
-
 # Shows the overwrite confirmation dialog (same panel style as reset-profile,
 # but with a dimmed backdrop so the editor stays visible underneath).
 func show_overwrite_warning() -> void:
@@ -686,7 +663,6 @@ func show_overwrite_warning() -> void:
 	if center:
 		HudLayout.raise_centered_dialog_host(center)
 	overwrite_panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
-	overwrite_panel.custom_minimum_size = Vector2(640, 360)
 	var warning_label := overwrite_panel.get_node_or_null("VBoxContainer/WarningLabel") as Label
 	if warning_label:
 		warning_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
@@ -701,6 +677,7 @@ func show_overwrite_warning() -> void:
 		cancel_button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		cancel_button.text = HudLayout.english("UI_NO")
 		HudLayout.apply_dialog_button(cancel_button)
+	HudLayout.fit_dialog_panel(overwrite_panel, 640.0)
 	overwrite_blocker.z_index = 4096
 	overwrite_blocker.move_to_front()
 	overwrite_blocker.visible = true

@@ -150,7 +150,7 @@ func _lock_loading_label_width() -> void:
 	var font: Font = null
 	var pad := 8
 	if HudLayout.needs_pixel_text_raster():
-		font = HudLayout.pixel_font()
+		font = HudFonts.pixel_font()
 		pad = 10
 	else:
 		font = _label.get_theme_font("font")

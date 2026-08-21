@@ -391,9 +391,9 @@ func show_victory_overlay(stats: Dictionary) -> void:
 	var star_result: Dictionary = stats.get("star_result", {})
 	if _victory_results_host:
 		_victory_results_host.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		HudLayout.begin_force_pixel_font()
+		HudFonts.begin_force_pixel_font()
 		LevelStars.populate_results(_victory_results_host, star_result)
-		HudLayout.end_force_pixel_font()
+		HudFonts.end_force_pixel_font()
 	_ensure_victory_preview()
 	var preview_tex = stats.get("solved_preview", null)
 	if _victory_preview:

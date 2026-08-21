@@ -131,8 +131,10 @@ const TILE_SHIFTER_LEFT := "res://resources/tiles/tile_shifter_left.svg"
 const TILE_SHIFTER_RIGHT := "res://resources/tiles/tile_shifter_right.svg"
 const TILE_LOCK := "res://resources/tiles/tile_lock.svg"
 const DEFAULT_FONT_SCALE := 1.1
-## Georgian glyphs read large — keep slightly under other non-English locales.
-const GEORGIAN_FONT_SCALE := 0.9
+## Georgian / Ukrainian glyphs read large — keep slightly under other locales.
+const NON_PIXEL_LOCALE_FONT_SCALE := 0.9
+## Alias kept for existing call sites.
+const GEORGIAN_FONT_SCALE := NON_PIXEL_LOCALE_FONT_SCALE
 const DISABLED_ICON_MODULATE := Color(0.55, 0.55, 0.55, 1.0)
 const TOGGLE_MASK_AMBER := Color(1.0, 0.78, 0.2, 0.4)
 const TOGGLE_MASK_LOCK := Color(0.95, 0.28, 0.38, 0.45)

@@ -1,16 +1,20 @@
-# Godot 4+ specific ignores
-.godot/
-.import/
-export.cfg
-export_presets.cfg
-*.import
+# Local CI Godot download cache
+.godot-ci/
 
-# Build and platform-specific
+# Build / platform
 /build/
 /android/
 /ios/
+.mono/
+bin/
+obj/
 
-# Editor and System files
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Editor / OS junk
 .DS_Store
 .DS_Store?
 ._*
@@ -19,12 +23,26 @@ export_presets.cfg
 ehthumbs.db
 Thumbs.db
 desktop.ini
+*.lnk
+*.tmp
+*~
+*.bak
 
-# VS Code / IDE files (Optional - remove if you don't use these)
+# IDE
 .vscode/
 .vs/
 .idea/
+.cursor/
 
-# Godot logs or temporary data
-*.log
-*.tscn*.tmp
+# Godot C# / Mono leftovers
+*.csproj.user
+*.userprefs
+*.mono
+
+# Android signing — never commit
+*.keystore
+*.jks
+*.p12
+
+# Local scratch / review pads (source of truth is translations.csv)
+resources/localization/english_copy_review.txt
