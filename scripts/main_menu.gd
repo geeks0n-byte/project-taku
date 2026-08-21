@@ -29,7 +29,7 @@ const _DEBUG_BTN_SIZE := Vector2(96, 96)
 @onready var options_menu = $UILayer/OptionsMenu
 @onready var overlay_blocker = $UILayer/OverlayBlocker
 @onready var credits_panel = $UILayer/OverlayBlocker/CreditsPanel
-@onready var credits_version_label: Label = $UILayer/OverlayBlocker/CreditsPanel/VBoxContainer/VersionLabel
+@onready var credits_version_label: Label = $UILayer/OverlayBlocker/CreditsPanel/VersionLabel
 @onready var close_credits_btn = $UILayer/OverlayBlocker/CloseCreditsButton
 @onready var _htp_host: Control = $UILayer/HowToPlayHost
 @onready var _htp_panel: Control = $UILayer/HowToPlayHost/HowToPlayPanel
@@ -53,9 +53,11 @@ const TITLE_FONT_SIZE := 96
 const TITLE_OUTLINE := 14
 const MENU_BTN_FONT := 64
 const MENU_BTN_OUTLINE := GameConstants.MENU_TEXT_OUTLINE
-const CREDITS_HEADER_SIZE := 80
-const CREDITS_HEADER_OUTLINE := 14
-const CREDITS_BODY_SIZE := 54
+const CREDITS_BODY_SIZE := 48
+const CREDITS_HEADER_SIZE := 42
+const CREDITS_NAME_SIZE := 34
+const CREDITS_HEADER_LOCALE_SIZE := 52
+const CREDITS_NAME_LOCALE_SIZE := 42
 const MENU_FADE_IN := 0.65
 
 var _htp_header: Label
@@ -108,7 +110,7 @@ func _ready() -> void:
 	if _htp_next: _htp_next.pressed.connect(_on_htp_next)
 	if _tutorial_intro_yes: _tutorial_intro_yes.pressed.connect(_on_tutorial_intro_yes)
 	if _tutorial_intro_no: _tutorial_intro_no.pressed.connect(_on_tutorial_intro_no)
-	_mount_credits_header()
+	_mount_credits_close_button()
 	_build_consent_popup()
 
 	if options_menu:
@@ -223,15 +225,7 @@ func _style_title_label(title: Label) -> void:
 	title.set_meta("_screen_header_outline", TITLE_OUTLINE)
 	HudLayout.apply_screen_header_style(title)
 
-func _mount_credits_header() -> void:
-	var credits_title = null
-	if overlay_blocker:
-		credits_title = overlay_blocker.get_node_or_null("CreditsTitle") as Label
-	if credits_title:
-		credits_title.set_meta("_screen_header_font_size", CREDITS_HEADER_SIZE)
-		credits_title.set_meta("_screen_header_outline", CREDITS_HEADER_OUTLINE)
-		HudLayout._bind_header_translation_key(credits_title, "UI_CREDITS")
-		HudLayout.apply_screen_header_style(credits_title)
+func _mount_credits_close_button() -> void:
 	if close_credits_btn:
 		HudLayout.style_top_bar_close_button(close_credits_btn)
 
@@ -267,15 +261,7 @@ func _fit_menu_buttons() -> void:
 	var title = get_node_or_null("TitleLayer/TitleHost/TitleCluster/TitleLabel") as Label
 	if title:
 		_style_title_label(title)
-	var credits_title = null
-	if overlay_blocker:
-		credits_title = overlay_blocker.get_node_or_null("CreditsTitle") as Label
-	if credits_title:
-		credits_title.set_meta("_screen_header_font_size", CREDITS_HEADER_SIZE)
-		credits_title.set_meta("_screen_header_outline", CREDITS_HEADER_OUTLINE)
-		HudLayout._bind_header_translation_key(credits_title, "UI_CREDITS")
-		HudLayout.apply_screen_header_style(credits_title)
-	var credits_text_node = credits_panel.get_node_or_null("VBoxContainer/CreditsText") if credits_panel else null
+	var credits_text_node = credits_panel.get_node_or_null("CreditsText") if credits_panel else null
 	if credits_text_node:
 		_apply_credits_fonts(credits_text_node)
 
@@ -391,20 +377,33 @@ func _apply_credits_fonts(credits_text_node: RichTextLabel) -> void:
 	credits_text_node.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 	var bbcode := String(TranslationServer.translate("CREDITS_TEXT"))
+	var ka := TranslationServer.get_locale().substr(0, 2) == "ka"
+	var ka_mul := GameConstants.GEORGIAN_FONT_SCALE if ka else 1.0
 	if HudLayout.uses_pixel_font():
-		# English: Press Start; BBCode [font_size=…] sizes stay as authored.
+		var header_sz := int(round(float(CREDITS_HEADER_SIZE) * ka_mul))
+		var body_sz := int(round(float(CREDITS_NAME_SIZE) * ka_mul))
+		# Normalize authored BBCode sizes so the name stays on one line.
+		bbcode = bbcode.replace("[font_size=48]", "[font_size=%d]" % header_sz)
+		bbcode = bbcode.replace("[font_size=42]", "[font_size=%d]" % header_sz)
+		bbcode = bbcode.replace("[font_size=40]", "[font_size=%d]" % body_sz)
+		bbcode = bbcode.replace("[font_size=36]", "[font_size=%d]" % header_sz)
+		bbcode = bbcode.replace("[font_size=34]", "[font_size=%d]" % body_sz)
+		bbcode = bbcode.replace("[font_size=28]", "[font_size=%d]" % body_sz)
 		credits_text_node.set_meta("_use_default_font", false)
 		HudLayout.apply_live_pixel_richtext(credits_text_node, CREDITS_BODY_SIZE)
 		credits_text_node.text = bbcode
 	else:
-		# Default font: keep theme size at body BBCode size so empty lines don't tower.
+		# Default fonts read smaller than Press Start at the same nominal size.
+		var header_sz := int(round(float(CREDITS_HEADER_LOCALE_SIZE) * ka_mul))
+		var body_sz := int(round(float(CREDITS_NAME_LOCALE_SIZE) * ka_mul))
+		bbcode = bbcode.replace("[font_size=48]", "[font_size=%d]" % header_sz)
+		bbcode = bbcode.replace("[font_size=42]", "[font_size=%d]" % header_sz)
+		bbcode = bbcode.replace("[font_size=40]", "[font_size=%d]" % body_sz)
+		bbcode = bbcode.replace("[font_size=36]", "[font_size=%d]" % header_sz)
+		bbcode = bbcode.replace("[font_size=34]", "[font_size=%d]" % body_sz)
+		bbcode = bbcode.replace("[font_size=28]", "[font_size=%d]" % body_sz)
 		credits_text_node.set_meta("_use_default_font", true)
 		HudLayout.apply_locale_font_to_control(credits_text_node)
-		var ka := TranslationServer.get_locale().substr(0, 2) == "ka"
-		var ka_mul := GameConstants.GEORGIAN_FONT_SCALE if ka else 1.0
-		var header_sz := int(round(34.0 * ka_mul))
-		var body_sz := int(round(26.0 * ka_mul))
-		var foot_sz := int(round(22.0 * ka_mul))
 		for size_name in [
 			"normal_font_size",
 			"bold_font_size",
@@ -413,9 +412,6 @@ func _apply_credits_fonts(credits_text_node: RichTextLabel) -> void:
 			"mono_font_size",
 		]:
 			credits_text_node.add_theme_font_size_override(size_name, body_sz)
-		bbcode = bbcode.replace("[font_size=34]", "[font_size=%d]" % header_sz)
-		bbcode = bbcode.replace("[font_size=26]", "[font_size=%d]" % body_sz)
-		bbcode = bbcode.replace("[font_size=22]", "[font_size=%d]" % foot_sz)
 		credits_text_node.text = bbcode
 		HudLayout.apply_safe_outline(credits_text_node, GameConstants.MENU_TEXT_OUTLINE)
 	_refresh_credits_version()
@@ -453,7 +449,9 @@ func _refresh_credits_version() -> void:
 		credits_version_label,
 		version_text,
 		28,
-		Color(0.67, 0.67, 0.67, 1)
+		Color(0.67, 0.67, 0.67, 1),
+		0,
+		true
 	)
 	credits_version_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	if not credits_version_label.gui_input.is_connected(_on_version_label_input):
@@ -659,6 +657,8 @@ func _setup_tutorial_intro_panel() -> void:
 	if _tutorial_intro_blocker:
 		_tutorial_intro_blocker.visible = false
 		_tutorial_intro_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+		# Match other popups: no dim overlay — menu chrome is hidden instead.
+		_tutorial_intro_blocker.color = Color(0, 0, 0, 0)
 	var center := (
 		_tutorial_intro_blocker.get_node_or_null("CenterContainer") as Control
 		if _tutorial_intro_blocker
@@ -672,7 +672,6 @@ func _setup_tutorial_intro_panel() -> void:
 	if _tutorial_intro_label:
 		_tutorial_intro_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.55, 1.0))
 		HudLayout.apply_popup_label(_tutorial_intro_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
-		HudLayout.apply_safe_outline(_tutorial_intro_label, GameConstants.MENU_TEXT_OUTLINE)
 	_copy_menu_button_styles(_tutorial_intro_yes)
 	_copy_menu_button_styles(_tutorial_intro_no)
 
@@ -688,6 +687,8 @@ func _copy_menu_button_styles(target: Button) -> void:
 	HudLayout.apply_safe_outline(target, GameConstants.MENU_TEXT_OUTLINE)
 
 func _show_tutorial_intro_prompt() -> void:
+	_set_main_menu_chrome_visible(false)
+	_set_debug_bar_visible(false)
 	if _tutorial_intro_label:
 		_tutorial_intro_label.text = tr("TUTORIAL_INTRO_PROMPT")
 		HudLayout.apply_popup_label(_tutorial_intro_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
@@ -698,12 +699,15 @@ func _show_tutorial_intro_prompt() -> void:
 		_tutorial_intro_no.text = tr("UI_NO")
 		HudLayout.apply_dialog_button(_tutorial_intro_no)
 	if _tutorial_intro_blocker:
+		_tutorial_intro_blocker.color = Color(0, 0, 0, 0)
 		_tutorial_intro_blocker.visible = true
 		_tutorial_intro_blocker.move_to_front()
 
 func _hide_tutorial_intro_prompt() -> void:
 	if _tutorial_intro_blocker:
 		_tutorial_intro_blocker.visible = false
+	_set_main_menu_chrome_visible(true)
+	_set_debug_bar_visible(true)
 
 func _on_tutorial_intro_yes() -> void:
 	_hide_tutorial_intro_prompt()
@@ -758,7 +762,7 @@ func _on_credits_pressed() -> void:
 	_set_debug_bar_visible(false)
 	if overlay_blocker: overlay_blocker.visible = true
 	if credits_panel: credits_panel.visible = true
-	var credits_text = credits_panel.get_node_or_null("VBoxContainer/CreditsText") if credits_panel else null
+	var credits_text = credits_panel.get_node_or_null("CreditsText") if credits_panel else null
 	if credits_text:
 		_apply_credits_fonts(credits_text)
 	else:

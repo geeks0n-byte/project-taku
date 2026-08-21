@@ -45,7 +45,7 @@ const MAX_GRID_HEIGHT: int = 8
 @onready var keep_walls_toggle: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/KeepWallsToggle"
 @onready var unique_solution_toggle: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/UniqueSolutionToggle"
 @onready var difficulty_button: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/DifficultyButton"
-@onready var random_button: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/RandomButton"
+@onready var random_button: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GridSizeContainer/RandomButton"
 @onready var wall_button: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/WallButton"
 @onready var empty_button: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/EmptyButton"
 @onready var yellow_button: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/YellowButton"
@@ -54,9 +54,9 @@ const MAX_GRID_HEIGHT: int = 8
 @onready var shifter_button: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/ShifterButton"
 @onready var equals_button: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/EqualsButton"
 @onready var not_equals_button: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/BrushContainer/NotEqualsButton"
-@onready var time_minus: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/TimeSelector/TimeMinus"
-@onready var time_label: RichTextLabel = $"../EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/TimeSelector/TimeLabel"
-@onready var time_plus: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/TimeSelector/TimePlus"
+@onready var time_minus: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/TimeSelector/TimeMinus"
+@onready var time_label: RichTextLabel = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/TimeSelector/TimeLabel"
+@onready var time_plus: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/TimeSelector/TimePlus"
 @onready var allow_yellow: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/AllowYellow"
 @onready var allow_blue: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/AllowBlue"
 @onready var allow_joker: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/AllowJoker"
@@ -65,9 +65,10 @@ const MAX_GRID_HEIGHT: int = 8
 @onready var level_minus: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/ConfigContainer/LevelSelector/LevelMinus"
 @onready var level_label: RichTextLabel = $"../EditorUI/ControlPanel/ScrollContainer/VBox/ConfigContainer/LevelSelector/LevelLabel"
 @onready var level_plus: Button = $"../EditorUI/ControlPanel/ScrollContainer/VBox/ConfigContainer/LevelSelector/LevelPlus"
-@onready var overwrite_panel: Panel = $"../EditorUI/OverwritePanel"
-@onready var confirm_button: Button = $"../EditorUI/OverwritePanel/ButtonRow/ConfirmButton"
-@onready var cancel_button: Button = $"../EditorUI/OverwritePanel/ButtonRow/CancelButton"
+@onready var overwrite_blocker: ColorRect = $"../EditorUI/OverwriteBlocker"
+@onready var overwrite_panel: Panel = $"../EditorUI/OverwriteBlocker/CenterContainer/Panel"
+@onready var confirm_button: Button = $"../EditorUI/OverwriteBlocker/CenterContainer/Panel/VBoxContainer/ButtonRow/ConfirmButton"
+@onready var cancel_button: Button = $"../EditorUI/OverwriteBlocker/CenterContainer/Panel/VBoxContainer/ButtonRow/CancelButton"
 
 var editor_width: int = 3
 var editor_height: int = 3
@@ -156,7 +157,7 @@ func _apply_default_font_to_link_buttons() -> void:
 # limit is the "star time" threshold, not a hard game-over timer.
 func _apply_star_time_label() -> void:
 	var title := get_node_or_null(
-		"../EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/TimeTitleLabel"
+		"../EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/TimeSelector/TimeTitleLabel"
 	) as Label
 	if not title:
 		return
@@ -223,8 +224,12 @@ func _connect_ui_signals() -> void:
 		clear_button.pressed.connect(func(): clear_requested.emit())
 	if editor_undo_button:
 		editor_undo_button.pressed.connect(func(): editor_undo_requested.emit())
+		editor_undo_button.button_down.connect(_on_editor_undo_button_down)
+		editor_undo_button.button_up.connect(_on_editor_undo_button_up)
 	if editor_redo_button:
 		editor_redo_button.pressed.connect(func(): editor_redo_requested.emit())
+		editor_redo_button.button_down.connect(_on_editor_redo_button_down)
+		editor_redo_button.button_up.connect(_on_editor_redo_button_up)
 	if editor_hint_button:
 		editor_hint_button.toggled.connect(func(is_on: bool): editor_hint_toggled.emit(is_on))
 
@@ -287,14 +292,12 @@ func _connect_ui_signals() -> void:
 		_bind_hold_button(level_plus, "level", 1)
 	if confirm_button:
 		confirm_button.pressed.connect(func():
-			if overwrite_panel:
-				overwrite_panel.visible = false
+			_hide_overwrite_warning()
 			overwrite_confirmed.emit()
 		)
 	if cancel_button:
 		cancel_button.pressed.connect(func():
-			if overwrite_panel:
-				overwrite_panel.visible = false
+			_hide_overwrite_warning()
 		)
 
 # Returns the tile types the generated/played puzzle may use.
@@ -353,8 +356,11 @@ func _update_number_labels() -> void:
 			var seconds := editor_time_limit % 60
 			time_label.text = "[center]%d:%02d[/center]" % [minutes, seconds]
 	if level_label:
-		level_label.text = "[center]" + HudLayout.english("LEVEL") + " " + str(editor_level) + "[/center]"
-		level_label.custom_minimum_size = Vector2(200, 90)
+		level_label.text = "[center]LVL " + str(editor_level) + "[/center]"
+		level_label.custom_minimum_size = Vector2(240, 90)
+		level_label.fit_content = false
+		level_label.scroll_active = false
+		level_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_update_selector_button_states()
 
 # Disables each +/− button when its value is already at the allowed limit,
@@ -447,6 +453,10 @@ func _start_hold(button: Button, target: String, amount: int) -> void:
 	_hold_target = target
 	_hold_amount = amount
 	_adjust_value(target, amount)
+	# Disabling mid-press cancels BaseButton.pressed, so UiSfx never fires —
+	# play the click haptic explicitly when this press hits a limit.
+	if button.disabled and UiSfx:
+		UiSfx.play_click()
 	if _hold_timer:
 		_hold_timer.start(HOLD_INITIAL_DELAY)
 
@@ -471,6 +481,8 @@ func _on_hold_timer_timeout() -> void:
 		_stop_hold(_hold_button)
 		return
 	_adjust_value(_hold_target, _hold_amount)
+	if _hold_button.disabled and UiSfx:
+		UiSfx.play_click()
 	if _hold_timer:
 		_hold_timer.start(HOLD_REPEAT_INTERVAL)
 
@@ -553,6 +565,69 @@ func is_keep_walls_requested() -> bool:
 		return keep_walls_toggle.button_pressed
 	return true
 
+# Hold-to-repeat for editor undo/redo (matches main-game HUD timing).
+const _UNDO_HOLD_INITIAL_DELAY := 0.4
+const _UNDO_HOLD_REPEAT_START := 0.3
+const _UNDO_HOLD_REPEAT_MIN := 0.05
+const _UNDO_HOLD_REPEAT_ACCEL := 0.82
+var _hold_undo_active: bool = false
+var _hold_redo_active: bool = false
+var _hold_undo_elapsed: float = 0.0
+var _hold_undo_interval: float = 0.0
+
+
+func _on_editor_undo_button_down() -> void:
+	_hold_undo_active = true
+	_hold_redo_active = false
+	_hold_undo_elapsed = 0.0
+	_hold_undo_interval = _UNDO_HOLD_REPEAT_START
+	set_process(true)
+
+
+func _on_editor_undo_button_up() -> void:
+	_hold_undo_active = false
+	if not _hold_redo_active:
+		set_process(false)
+
+
+func _on_editor_redo_button_down() -> void:
+	_hold_redo_active = true
+	_hold_undo_active = false
+	_hold_undo_elapsed = 0.0
+	_hold_undo_interval = _UNDO_HOLD_REPEAT_START
+	set_process(true)
+
+
+func _on_editor_redo_button_up() -> void:
+	_hold_redo_active = false
+	if not _hold_undo_active:
+		set_process(false)
+
+
+func _process(delta: float) -> void:
+	if not _hold_undo_active and not _hold_redo_active:
+		set_process(false)
+		return
+	_hold_undo_elapsed += delta
+	if _hold_undo_elapsed < _UNDO_HOLD_INITIAL_DELAY:
+		return
+	var time_since_start := _hold_undo_elapsed - _UNDO_HOLD_INITIAL_DELAY
+	if time_since_start < _hold_undo_interval:
+		return
+	_hold_undo_elapsed = _UNDO_HOLD_INITIAL_DELAY
+	_hold_undo_interval = maxf(_hold_undo_interval * _UNDO_HOLD_REPEAT_ACCEL, _UNDO_HOLD_REPEAT_MIN)
+	if _hold_undo_active:
+		if editor_undo_button and editor_undo_button.disabled:
+			_on_editor_undo_button_up()
+			return
+		editor_undo_requested.emit()
+	elif _hold_redo_active:
+		if editor_redo_button and editor_redo_button.disabled:
+			_on_editor_redo_button_up()
+			return
+		editor_redo_requested.emit()
+
+
 # Syncs the disabled state of the undo/redo buttons to match the editor's
 # undo stack state, and refreshes icon tinting for the disabled appearance.
 func update_editor_undo_redo_buttons(can_undo: bool, can_redo: bool) -> void:
@@ -566,18 +641,33 @@ func update_editor_undo_redo_buttons(can_undo: bool, can_redo: bool) -> void:
 func set_editor_hint_toggle(_is_on: bool) -> void:
 	_disable_editor_hint_button()
 
-# Shows the overwrite confirmation panel when the player tries to save to a
-# slot that already has a level. Brings the panel to the front via z_index so
-# it overlays all other editor UI.
+# Shows the overwrite confirmation dialog (same panel style as reset-profile,
+# but with a dimmed backdrop so the editor stays visible underneath).
 func show_overwrite_warning() -> void:
-	if not overwrite_panel:
+	if not overwrite_blocker or not overwrite_panel:
 		return
-	var warning_label := overwrite_panel.get_node_or_null("WarningLabel") as Label
+	var center := overwrite_blocker.get_node_or_null("CenterContainer") as Control
+	if center:
+		HudLayout.raise_centered_dialog_host(center)
+	overwrite_panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
+	overwrite_panel.custom_minimum_size = Vector2(640, 360)
+	var warning_label := overwrite_panel.get_node_or_null("VBoxContainer/WarningLabel") as Label
 	if warning_label:
-		warning_label.text = "Level already exists.\nOverwrite?"
+		warning_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		warning_label.add_theme_color_override("font_color", Color(1.0, 0.45, 0.45))
+		warning_label.text = HudLayout.english("LEVEL_EXISTS_OVERWRITE")
 		HudLayout.apply_popup_label(warning_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
-	HudLayout.apply_dialog_button(confirm_button)
-	HudLayout.apply_dialog_button(cancel_button)
-	overwrite_panel.z_index = 4096
-	overwrite_panel.move_to_front()
-	overwrite_panel.visible = true
+	if confirm_button:
+		confirm_button.text = "UI_YES"
+		HudLayout.apply_dialog_button(confirm_button)
+	if cancel_button:
+		cancel_button.text = "UI_NO"
+		HudLayout.apply_dialog_button(cancel_button)
+	overwrite_blocker.z_index = 4096
+	overwrite_blocker.move_to_front()
+	overwrite_blocker.visible = true
+
+
+func _hide_overwrite_warning() -> void:
+	if overwrite_blocker:
+		overwrite_blocker.visible = false

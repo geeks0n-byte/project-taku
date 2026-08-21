@@ -7,6 +7,10 @@ extends Node2D
 
 # Emitted when a cell interceptor receives a left-click, forwarding the grid coordinate.
 signal canvas_cell_clicked(coord: Vector2i)
+# Playtest-mode signals from Cell (cycle / hold-clear / shifter), after the cell mutates itself.
+signal canvas_cell_played(coord: Vector2i)
+signal canvas_cell_hold_cleared(coord: Vector2i)
+signal canvas_shifter_toggled(coord: Vector2i)
 
 @export var cell_scene: PackedScene = preload("res://scenes/cell.tscn")
 
@@ -84,9 +88,11 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 				interceptor = cell_data["interceptor"]
 				cell.visible = true
 				interceptor.visible = true
+				_wire_playtest_cell_signals(cell)
 			else:
 				cell = cell_scene.instantiate()
 				add_child(cell)
+				_wire_playtest_cell_signals(cell)
 
 				# Transparent overlay that captures mouse events so the cell node itself
 				# doesn't need to handle input, keeping cell logic and input routing separate.
@@ -108,6 +114,9 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 
 			interceptor.size = Vector2(GameConstants.CELL_SIZE - (2 * margin), GameConstants.CELL_SIZE - (2 * margin))
 			interceptor.position = cell.position + Vector2(margin, margin)
+			interceptor.mouse_filter = (
+				Control.MOUSE_FILTER_IGNORE if is_playtesting else Control.MOUSE_FILTER_STOP
+			)
 
 			# Disconnect any previous lambda that captured a stale coord value before reconnecting.
 			for conn in interceptor.gui_input.get_connections():
@@ -139,6 +148,48 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 
 	cached_lines = BoardRenderer.cache_board_lines(board_cells)
 	trigger_redraw()
+
+
+# Lets Cell handle press/release (hold-to-clear + release-to-cycle) during playtest.
+# In edit mode the interceptor stays on top so brush painting keeps working.
+func set_playtest_input_mode(enabled: bool) -> void:
+	is_playtesting = enabled
+	for entry in cell_pool:
+		var cell: Node = entry["cell"]
+		var interceptor: Control = entry["interceptor"]
+		if cell and "is_editor_mode" in cell:
+			cell.is_editor_mode = not enabled
+		if interceptor:
+			interceptor.mouse_filter = (
+				Control.MOUSE_FILTER_IGNORE if enabled else Control.MOUSE_FILTER_STOP
+			)
+
+
+func _wire_playtest_cell_signals(cell: Node) -> void:
+	if cell == null:
+		return
+	if cell.has_signal("cell_clicked") and not cell.cell_clicked.is_connected(_on_pool_cell_clicked):
+		cell.cell_clicked.connect(_on_pool_cell_clicked)
+	if cell.has_signal("cell_hold_cleared") and not cell.cell_hold_cleared.is_connected(_on_pool_cell_hold_cleared):
+		cell.cell_hold_cleared.connect(_on_pool_cell_hold_cleared)
+	if cell.has_signal("shifter_toggled") and not cell.shifter_toggled.is_connected(_on_pool_shifter_toggled):
+		cell.shifter_toggled.connect(_on_pool_shifter_toggled)
+
+
+func _on_pool_cell_clicked(coord: Vector2i) -> void:
+	if is_playtesting:
+		canvas_cell_played.emit(coord)
+
+
+func _on_pool_cell_hold_cleared(coord: Vector2i) -> void:
+	if is_playtesting:
+		canvas_cell_hold_cleared.emit(coord)
+
+
+func _on_pool_shifter_toggled(coord: Vector2i) -> void:
+	if is_playtesting:
+		canvas_shifter_toggled.emit(coord)
+
 
 # Populates the canvas from a saved level layout. Generates a blank canvas first so
 # the pool is reset, then applies tile states and reconstructs the shifter visual state.

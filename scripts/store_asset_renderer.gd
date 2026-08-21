@@ -17,9 +17,10 @@ const CLUSTER_SIZE := Vector2(1080.0, 420.0)
 const TITLE_CROP := Rect2(0.0, 220.0, 1080.0, 180.0)
 
 
-# Entry point: renders all three store assets and returns true when all succeed.
+# Entry point: renders store assets and returns true when all succeed.
 # Waits a few frames first so the scene tree is fully settled before capturing.
-static func render_all(tree: SceneTree) -> bool:
+# The 512 app icon is owned by tools/gen_launcher_icons.py — skip it by default.
+static func render_all(tree: SceneTree, include_icon: bool = false) -> bool:
 	print("StoreAssetRenderer: starting")
 	var host := Node.new()
 	host.name = "StoreAssetHost"
@@ -29,7 +30,8 @@ static func render_all(tree: SceneTree) -> bool:
 	await tree.process_frame
 
 	var ok := true
-	ok = await _save_png(host, tree, Vector2i(512, 512), _build_app_icon()) and ok
+	if include_icon:
+		ok = await _save_png(host, tree, Vector2i(512, 512), _build_app_icon()) and ok
 	ok = await _save_png(host, tree, Vector2i(1024, 500), _build_feature_landscape()) and ok
 	ok = await _save_png(host, tree, Vector2i(500, 1024), _build_feature_portrait()) and ok
 
@@ -192,37 +194,121 @@ static func _instantiate_title_cluster() -> Control:
 	return cluster
 
 
-# Adds a space background and a fixed set of 3×3 pixel "stars" at hand-placed
-# fractional positions. Stars alternate between dim and bright to give depth.
-# Using fixed positions (rather than random) guarantees reproducible renders.
+# Space backdrop matching tools/gen_launcher_icons.py / in-game layers:
+# void #00123a, dust, white stars, cyan/pink accents, sparklers, corner asteroids.
+# Deterministic RNG so feature graphics stay reproducible.
 static func _add_star_field(parent: Control, size: Vector2) -> void:
 	var bg := ColorRect.new()
 	bg.color = SPACE_BG
 	bg.size = size
 	parent.add_child(bg)
 
-	var dim := Color(0.25, 0.25, 0.25, 1.0)
-	var bright := Color.WHITE
-	var points := [
-		[Vector2(0.05, 0.12), dim],
-		[Vector2(0.18, 0.28), bright],
-		[Vector2(0.32, 0.08), dim],
-		[Vector2(0.46, 0.22), bright],
-		[Vector2(0.58, 0.14), dim],
-		[Vector2(0.72, 0.34), bright],
-		[Vector2(0.86, 0.10), dim],
-		[Vector2(0.92, 0.42), bright],
-		[Vector2(0.12, 0.62), bright],
-		[Vector2(0.28, 0.78), dim],
-		[Vector2(0.44, 0.66), bright],
-		[Vector2(0.64, 0.82), dim],
-		[Vector2(0.80, 0.58), bright],
-		[Vector2(0.90, 0.74), dim],
+	const DUST := Color(0.251, 0.251, 0.251, 1.0) # #404040
+	const STAR := Color.WHITE
+	const CYAN := Color(0.671, 1.0, 0.902, 1.0) # #abffe6
+	const PINK := Color(1.0, 0.467, 0.659, 1.0) # #ff77a8
+	const STAR_PX := 2.0
+	const SPARK_ARM := 2.0
+
+	var area_scale := (size.x * size.y) / (128.0 * 128.0)
+	var dust_n := maxi(28, int(round(10.0 * area_scale * 0.55)))
+	var bright_n := maxi(20, int(round(8.0 * area_scale * 0.55)))
+	var cyan_n := maxi(7, int(round(3.0 * area_scale * 0.55)))
+	var pink_n := maxi(5, int(round(2.0 * area_scale * 0.55)))
+	var spark_n := maxi(2, int(round(2.0 * area_scale * 0.35)))
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7369215
+	var placed: Array[Vector2] = []
+	var min_dist := 14.0
+
+	var add_star := func(color: Color, px: float = STAR_PX) -> void:
+		for _attempt in range(400):
+			var p := Vector2(rng.randf() * size.x, rng.randf() * size.y)
+			var ok := true
+			for q in placed:
+				if p.distance_to(q) < min_dist:
+					ok = false
+					break
+			if not ok:
+				continue
+			placed.append(p)
+			var star := ColorRect.new()
+			star.color = color
+			star.size = Vector2(px, px)
+			star.position = p - star.size * 0.5
+			parent.add_child(star)
+			return
+
+	for _i in range(dust_n):
+		add_star.call(DUST)
+	for _i in range(bright_n):
+		add_star.call(STAR)
+	for _i in range(cyan_n):
+		add_star.call(CYAN)
+	for _i in range(pink_n):
+		add_star.call(PINK)
+
+	for _i in range(spark_n):
+		for _attempt in range(400):
+			var c := Vector2(
+				rng.randf_range(SPARK_ARM + 2.0, size.x - SPARK_ARM - 2.0),
+				rng.randf_range(SPARK_ARM + 2.0, size.y - SPARK_ARM - 2.0)
+			)
+			var ok := true
+			for q in placed:
+				if c.distance_to(q) < min_dist * 1.2:
+					ok = false
+					break
+			if not ok:
+				continue
+			placed.append(c)
+			for offset in [
+				Vector2(0, -SPARK_ARM),
+				Vector2(-SPARK_ARM, 0),
+				Vector2(0, 0),
+				Vector2(SPARK_ARM, 0),
+				Vector2(0, SPARK_ARM),
+			]:
+				var arm := ColorRect.new()
+				arm.color = STAR
+				arm.size = Vector2(STAR_PX, STAR_PX)
+				arm.position = c + offset - arm.size * 0.5
+				parent.add_child(arm)
+			break
+
+	_add_feature_asteroids(parent, size)
+
+
+static func _add_feature_asteroids(parent: Control, size: Vector2) -> void:
+	# Match tools/gen_launcher_icons.py — three corners, no bottom-right rock.
+	var specs := [
+		["res://resources/background/fx_asteroid_1.svg", Vector2(0.04, 0.08), false, false, 1.0],
+		["res://resources/background/fx_asteroid_2.svg", Vector2(0.88, 0.10), false, false, 1.12],
+		["res://resources/background/fx_asteroid_3.svg", Vector2(0.05, 0.78), false, false, 1.0],
 	]
-	for entry in points:
-		var star := ColorRect.new()
-		var pos: Vector2 = entry[0]
-		star.color = entry[1]
-		star.size = Vector2(3, 3)
-		star.position = Vector2(pos.x * size.x, pos.y * size.y)
-		parent.add_child(star)
+	var base := mini(size.x, size.y) * 0.11
+	for entry in specs:
+		var path: String = entry[0]
+		var frac: Vector2 = entry[1]
+		var flip_h: bool = entry[2]
+		var flip_v: bool = entry[3]
+		var scale_mul: float = entry[4]
+		var tex: Texture2D = load(path)
+		if tex == null:
+			continue
+		var stamp := base * scale_mul
+		var node := TextureRect.new()
+		node.texture = tex
+		node.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		node.stretch_mode = TextureRect.STRETCH_SCALE
+		node.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		node.size = Vector2(stamp, stamp)
+		node.position = Vector2(frac.x * size.x, frac.y * size.y)
+		if flip_h:
+			node.scale.x = -1.0
+			node.position.x += stamp
+		if flip_v:
+			node.scale.y = -1.0
+			node.position.y += stamp
+		parent.add_child(node)

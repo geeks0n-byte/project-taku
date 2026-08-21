@@ -460,6 +460,37 @@ def load_asteroid_pixels(filename: str, dst: int = ICON_ASTEROID_DST) -> list[tu
 	return scale_nn(buf, 16, 16, dst, dst)
 
 
+def flip_rgba_h(
+	src: list[tuple[int, int, int, int]], w: int, h: int
+) -> list[tuple[int, int, int, int]]:
+	out: list[tuple[int, int, int, int]] = [(0, 0, 0, 0)] * (w * h)
+	for y in range(h):
+		for x in range(w):
+			out[y * w + (w - 1 - x)] = src[y * w + x]
+	return out
+
+
+def flip_rgba_v(
+	src: list[tuple[int, int, int, int]], w: int, h: int
+) -> list[tuple[int, int, int, int]]:
+	out: list[tuple[int, int, int, int]] = [(0, 0, 0, 0)] * (w * h)
+	for y in range(h):
+		for x in range(w):
+			out[(h - 1 - y) * w + x] = src[y * w + x]
+	return out
+
+
+def load_asteroid_stamp(
+	filename: str, dst: int = ICON_ASTEROID_DST, flip_h: bool = False, flip_v: bool = False
+) -> list[tuple[int, int, int, int]]:
+	stamp = load_asteroid_pixels(filename, dst)
+	if flip_h:
+		stamp = flip_rgba_h(stamp, dst, dst)
+	if flip_v:
+		stamp = flip_rgba_v(stamp, dst, dst)
+	return stamp
+
+
 def sparkler_pixels(cx: int, cy: int) -> list[tuple[int, int]]:
 	"""bg_4 style + cross (3px arms)."""
 	return [
@@ -853,6 +884,183 @@ def make_adaptive_bg() -> list[tuple[int, int, int, int]]:
 	return [(*rgb, 255)] * (432 * 432)
 
 
+# Title cluster colors from the main-menu TitleCluster capture (not space accents).
+_FEATURE_TITLE_COLORS = {
+	(255, 214, 0, 255),  # gold fill
+	(0, 0, 0, 255),  # outline
+	(0, 228, 54, 255),  # green tile
+	(196, 156, 0, 255),  # gold shade
+	(41, 173, 255, 255),  # blue tile
+	(161, 255, 0, 255),  # green highlight
+	(255, 224, 102, 255),  # gold highlight
+	(31, 81, 37, 255),  # green shade
+	(112, 71, 0, 255),  # gold deep shade
+}
+# Same hex as BG_ACCENT_CYAN — only keep when inside the title bounds.
+_FEATURE_TITLE_CYAN = (*hex_rgb(BG_ACCENT_CYAN), 255)
+
+FEATURE_SPECS = [
+	("play_store_feature_graphic_1024x500.png", 1024, 500),
+	("play_store_graphic_500x1024.png", 500, 1024),
+]
+
+
+def render_space_canvas(w: int, h: int, seed: int = STAR_SEED) -> list[tuple[int, int, int, int]]:
+	"""Full-bleed space void matching the app icon language (no tiles / no round mask).
+
+	Builds at a mid pixel-art resolution (short side ~128), then nearest-neighbor
+	scales up. That keeps asteroids chunky while stars stay finer than a 64→full
+	upscale would.
+	"""
+	# Finer than the 64×64 icon so 1px stars don't become huge after upscale.
+	base_short = ICON_SIZE * 2
+	if w >= h:
+		base_h = base_short
+		base_w = max(base_short // 2, int(round(base_short * w / h)))
+	else:
+		base_w = base_short
+		base_h = max(base_short // 2, int(round(base_short * h / w)))
+
+	bg = hex_rgb(BG_VOID)
+	px = [(*bg, 255)] * (base_w * base_h)
+	rng = random.Random(seed ^ (base_w * 7919) ^ (base_h * 104729))
+	area = (base_w * base_h) / float(ICON_SIZE * ICON_SIZE)
+	# Slightly denser than a pure area scale so the finer grid still reads as space.
+	density = 0.55
+	dust_n = max(STAR_DUST_COUNT, int(round(STAR_DUST_COUNT * area * density)))
+	bright_n = max(STAR_BRIGHT_COUNT, int(round(STAR_BRIGHT_COUNT * area * density)))
+	cyan_n = max(STAR_ACCENT_CYAN_COUNT, int(round(STAR_ACCENT_CYAN_COUNT * area * density)))
+	pink_n = max(STAR_ACCENT_PINK_COUNT, int(round(STAR_ACCENT_PINK_COUNT * area * density)))
+	spark_n = max(2, int(round(STAR_SPARKLER_COUNT * area * density * 0.7)))
+	min_dist = max(STAR_MIN_DIST, int(round(STAR_MIN_DIST * base_short / ICON_SIZE)))
+	# Keep asteroid on-screen size similar to the old 64-base renders.
+	ast_dst = ICON_ASTEROID_DST * 2
+
+	def setp(x: int, y: int, rgb: tuple[int, int, int], a: int = 255) -> None:
+		if 0 <= x < base_w and 0 <= y < base_h:
+			px[y * base_w + x] = (rgb[0], rgb[1], rgb[2], a)
+
+	# Three corners only — no bottom-right rock.
+	# (file, frac_x, frac_y, flip_h, flip_v, stamp_dst)
+	placements = [
+		("fx_asteroid_1.svg", 0.04, 0.08, False, False, ast_dst),
+		("fx_asteroid_2.svg", 0.88, 0.10, False, False, ast_dst + 2),
+		("fx_asteroid_3.svg", 0.05, 0.78, False, False, ast_dst),
+	]
+	asteroid_boxes: list[tuple[int, int, int, int]] = []
+	for file_name, fx, fy, flip_h, flip_v, dst in placements:
+		dst = max(8, dst)
+		ox = max(0, min(base_w - dst, int(round(fx * base_w))))
+		oy = max(0, min(base_h - dst, int(round(fy * base_h))))
+		stamp = load_asteroid_stamp(file_name, dst, flip_h, flip_v)
+		asteroid_boxes.append((ox, oy, ox + dst - 1, oy + dst - 1))
+		for y in range(dst):
+			for x in range(dst):
+				r, g, b, a = stamp[y * dst + x]
+				if a > 0:
+					setp(ox + x, oy + y, (r, g, b), a)
+
+	def on_asteroid(x: int, y: int, pad: int = 1) -> bool:
+		for x1, y1, x2, y2 in asteroid_boxes:
+			if x1 - pad <= x <= x2 + pad and y1 - pad <= y <= y2 + pad:
+				return True
+		return False
+
+	placed: list[tuple[int, int]] = []
+
+	def far(x: int, y: int) -> bool:
+		return all(abs(x - sx) + abs(y - sy) >= min_dist for sx, sy in placed)
+
+	def place_dot() -> tuple[int, int]:
+		for _ in range(40000):
+			x = rng.randint(0, base_w - 1)
+			y = rng.randint(0, base_h - 1)
+			if on_asteroid(x, y) or not far(x, y):
+				continue
+			placed.append((x, y))
+			return x, y
+		raise RuntimeError(f"failed to place star on {base_w}x{base_h} canvas")
+
+	for x, y in (place_dot() for _ in range(dust_n)):
+		setp(x, y, hex_rgb(BG_DUST))
+	for x, y in (place_dot() for _ in range(cyan_n)):
+		setp(x, y, hex_rgb(BG_ACCENT_CYAN))
+	for x, y in (place_dot() for _ in range(pink_n)):
+		setp(x, y, hex_rgb(BG_ACCENT_PINK))
+	for x, y in (place_dot() for _ in range(bright_n)):
+		setp(x, y, hex_rgb(BG_STAR))
+
+	for _ in range(spark_n):
+		for _attempt in range(40000):
+			cx = rng.randint(2, base_w - 3)
+			cy = rng.randint(2, base_h - 3)
+			pts = sparkler_pixels(cx, cy)
+			if any(on_asteroid(x, y) or not far(x, y) for x, y in pts):
+				continue
+			for x, y in pts:
+				placed.append((x, y))
+				setp(x, y, hex_rgb(BG_STAR))
+			break
+		else:
+			raise RuntimeError(f"failed to place sparkler on {base_w}x{base_h} canvas")
+
+	return scale_nn(px, base_w, base_h, w, h)
+
+
+def extract_title_overlay(
+	src: list[tuple[int, int, int, int]], w: int, h: int
+) -> list[tuple[int, int, int, int]]:
+	"""Keep SPACEBLOX title pixels; drop void / stars / asteroids."""
+	xs: list[int] = []
+	ys: list[int] = []
+	for y in range(h):
+		for x in range(w):
+			if src[y * w + x] in _FEATURE_TITLE_COLORS:
+				xs.append(x)
+				ys.append(y)
+	if not xs:
+		raise RuntimeError("no title pixels found in store graphic")
+	pad = 6
+	x0, x1 = max(0, min(xs) - pad), min(w - 1, max(xs) + pad)
+	y0, y1 = max(0, min(ys) - pad), min(h - 1, max(ys) + pad)
+
+	out: list[tuple[int, int, int, int]] = [(0, 0, 0, 0)] * (w * h)
+	for y in range(y0, y1 + 1):
+		for x in range(x0, x1 + 1):
+			p = src[y * w + x]
+			if p in _FEATURE_TITLE_COLORS or p == _FEATURE_TITLE_CYAN:
+				out[y * w + x] = p
+	return out
+
+
+def composite_rgba(
+	base: list[tuple[int, int, int, int]],
+	overlay: list[tuple[int, int, int, int]],
+) -> list[tuple[int, int, int, int]]:
+	out: list[tuple[int, int, int, int]] = []
+	for b, o in zip(base, overlay):
+		if o[3] > 0:
+			out.append(o)
+		else:
+			out.append(b)
+	return out
+
+
+def write_store_feature_graphics() -> None:
+	"""Refresh feature graphics with the icon space look; keep SPACEBLOX title."""
+	for name, w, h in FEATURE_SPECS:
+		path = os.path.join(STORE_ROOT, name)
+		if not os.path.isfile(path):
+			raise FileNotFoundError(f"missing store graphic to refresh: {path}")
+		sw, sh, old = read_png_rgba(path)
+		if sw != w or sh != h:
+			raise RuntimeError(f"{path} is {sw}x{sh}, expected {w}x{h}")
+		title = extract_title_overlay(old, w, h)
+		space = render_space_canvas(w, h)
+		write_png(path, w, h, composite_rgba(space, title))
+		print(f"wrote {path}")
+
+
 def main() -> None:
 	os.makedirs(ROOT, exist_ok=True)
 	os.makedirs(STORE_ROOT, exist_ok=True)
@@ -867,7 +1075,8 @@ def main() -> None:
 	write_png(os.path.join(ROOT, "app_icon_cosmos_256.png"), 256, 256, icon_256)
 	icon_512 = scale_nn(base, 64, 64, 512, 512)
 	write_png(os.path.join(STORE_ROOT, "play_store_icon_512.png"), 512, 512, icon_512)
-	print("synced SVG stars + tiles and wrote launcher PNGs")
+	write_store_feature_graphics()
+	print("synced SVG stars + tiles and wrote launcher + store PNGs")
 
 
 if __name__ == "__main__":

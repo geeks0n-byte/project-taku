@@ -13,7 +13,7 @@ const LANGUAGES = ["en", "es", "de", "fr", "pl", "ka", "uk"]
 const LANG_NAMES = ["ENGLISH", "ESPAÑOL", "DEUTSCH", "FRANÇAIS", "POLSKI", "ქართული", "УКРАЇНСЬКА"]
 
 # Tracks which destructive action the confirm dialog was opened for.
-enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM }
+enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM, UNLOCK_ALL }
 
 @onready var title_label: Label = $ScreenHeaderHost/TitleLabel
 @onready var lang_label: Label = $CenterContainer/OptionsPanel/VBoxContainer/LanguageContainer/LanguageLabel
@@ -31,6 +31,9 @@ enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM }
 @onready var del_custom_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DebugButtons/DeleteCustomButton
 @onready var close_btn: Button = $CloseButtonHost/CloseOptionsButton
 @onready var status_label: Label = $CenterContainer/OptionsPanel/VBoxContainer/StatusLabel
+@onready var _options_center: Control = $CenterContainer
+@onready var _screen_header_host: Control = $ScreenHeaderHost
+@onready var _close_button_host: Control = $CloseButtonHost
 @onready var _confirm_blocker: ColorRect = $ConfirmBlocker
 @onready var _confirm_label: Label = $ConfirmBlocker/CenterContainer/Panel/VBoxContainer/PromptLabel
 @onready var _confirm_yes_btn: Button = $ConfirmBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/YesButton
@@ -43,6 +46,8 @@ var _from_main_menu: bool = false
 # Debug buttons (unlock all, delete custom) are only shown when opened from the main menu
 # and GlobalGameManager.debug_tools_enabled is true.
 var _show_debug_options: bool = false
+# English scene authorship: title bottom at 412, options content starts at 500.
+const _OPTIONS_BELOW_TITLE_GAP := 88.0
 
 func _ready() -> void:
 	if prev_btn:
@@ -104,6 +109,11 @@ func show_menu(from_main_menu: bool = false) -> void:
 		status_label.text = ""
 	_hide_confirm()
 	visible = true
+	if _screen_header_host:
+		_screen_header_host.move_to_front()
+	if _close_button_host:
+		_close_button_host.move_to_front()
+	call_deferred("_layout_content_below_title")
 
 func hide_menu() -> void:
 	_hide_confirm()
@@ -142,6 +152,30 @@ func _configure_main_menu_buttons() -> void:
 		if show_debug:
 			del_custom_btn.text = "UI_DELETE_CUSTOM"
 			del_custom_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
+
+# Keeps the options button stack below the screen title with the same gap as the
+# English layout, even when the localized header is taller.
+func _layout_content_below_title() -> void:
+	if title_label == null or _options_center == null:
+		return
+	title_label.offset_top = GameConstants.SCREEN_HEADER_TOP
+	var font := title_label.get_theme_font("font")
+	var font_size := title_label.get_theme_font_size("font_size")
+	var key := String(title_label.text)
+	var display := tr(key) if key.begins_with("UI_") else key
+	var outline := float(GameConstants.SCREEN_HEADER_OUTLINE)
+	var text_h := GameConstants.SCREEN_HEADER_HEIGHT
+	if font != null and not display.is_empty():
+		var measured := font.get_string_size(
+			display, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size
+		)
+		# Include outline so large default-font headers don't paint into the panel.
+		text_h = maxf(
+			GameConstants.SCREEN_HEADER_HEIGHT,
+			measured.y + outline * 2.0 + 16.0
+		)
+	title_label.offset_bottom = title_label.offset_top + text_h
+	_options_center.offset_top = title_label.offset_bottom + _OPTIONS_BELOW_TITLE_GAP
 
 # The "Privacy Options" button is only visible when UMP has a form ready to display
 # (i.e. the user is in a region that requires consent management).
@@ -229,6 +263,8 @@ func _fit_option_buttons() -> void:
 		)
 		HudLayout.apply_safe_outline(next_btn, GameConstants.MENU_TEXT_OUTLINE)
 	_update_lang_label()
+	_layout_content_below_title()
+	call_deferred("_layout_content_below_title")
 	_refresh_confirm_texts()
 
 # Applies the gray-dark tile style to a single option button and sizes it so its
@@ -484,6 +520,8 @@ func _setup_confirm_panel() -> void:
 	if _confirm_blocker:
 		_confirm_blocker.visible = false
 		_confirm_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+		# Match other popups: no dim overlay — chrome is hidden instead.
+		_confirm_blocker.color = Color(0, 0, 0, 0)
 	var center := _confirm_blocker.get_node_or_null("CenterContainer") as Control if _confirm_blocker else null
 	if center:
 		HudLayout.raise_centered_dialog_host(center)
@@ -497,6 +535,14 @@ func _setup_confirm_panel() -> void:
 	_copy_button_styles(_confirm_yes_btn)
 	_copy_button_styles(_confirm_no_btn)
 	_refresh_confirm_texts()
+
+func _set_options_chrome_visible(should_show: bool) -> void:
+	if _options_center:
+		_options_center.visible = should_show
+	if _screen_header_host:
+		_screen_header_host.visible = should_show
+	if _close_button_host:
+		_close_button_host.visible = should_show
 
 # Copies the tile StyleBox from an existing styled button so confirm dialog buttons
 # look consistent without needing their own StyleBoxTexture resources in the scene.
@@ -526,9 +572,17 @@ func _refresh_confirm_texts() -> void:
 				_confirm_label.text = tr("CONFIRM_RESET_PROGRESS")
 			ConfirmAction.DELETE_CUSTOM:
 				_confirm_label.text = tr("CONFIRM_DELETE_CUSTOM")
+			ConfirmAction.UNLOCK_ALL:
+				_confirm_label.text = tr("CONFIRM_UNLOCK_ALL")
 			_:
 				if _confirm_label.text.is_empty():
 					_confirm_label.text = tr("CONFIRM_RESET_PROGRESS")
+		var prompt_color := (
+			Color(0.45, 1.0, 0.45)
+			if _pending_confirm == ConfirmAction.UNLOCK_ALL
+			else Color(1.0, 0.45, 0.45)
+		)
+		_confirm_label.add_theme_color_override("font_color", prompt_color)
 		HudLayout.apply_popup_label(_confirm_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
 
 # Shows the confirmation overlay for a destructive action with the appropriate message.
@@ -537,13 +591,21 @@ func _show_confirm(action: ConfirmAction, message: String) -> void:
 	if _confirm_label:
 		_confirm_label.text = message
 	_refresh_confirm_texts()
+	var panel := _confirm_blocker.get_node_or_null("CenterContainer/Panel") as Panel if _confirm_blocker else null
+	if panel:
+		# Reset profile copy is longer — give it a bit more vertical room.
+		var h := 420.0 if action == ConfirmAction.RESET_PROGRESS else 360.0
+		panel.custom_minimum_size = Vector2(640, h)
+	_set_options_chrome_visible(false)
 	if _confirm_blocker:
+		_confirm_blocker.color = Color(0, 0, 0, 0)
 		_confirm_blocker.visible = true
 
 func _hide_confirm() -> void:
 	_pending_confirm = ConfirmAction.NONE
 	if _confirm_blocker:
 		_confirm_blocker.visible = false
+	_set_options_chrome_visible(true)
 
 # Dispatches the confirmed destructive action and clears the pending state.
 func _on_confirm_yes() -> void:
@@ -554,6 +616,8 @@ func _on_confirm_yes() -> void:
 			_do_delete_save()
 		ConfirmAction.DELETE_CUSTOM:
 			_do_delete_custom()
+		ConfirmAction.UNLOCK_ALL:
+			_do_unlock_all()
 
 func _on_delete_save_pressed() -> void:
 	_show_confirm(ConfirmAction.RESET_PROGRESS, tr("CONFIRM_RESET_PROGRESS"))
@@ -561,20 +625,13 @@ func _on_delete_save_pressed() -> void:
 func _on_delete_custom_pressed() -> void:
 	_show_confirm(ConfirmAction.DELETE_CUSTOM, tr("CONFIRM_DELETE_CUSTOM"))
 
-# Debug tool: unlocks every campaign level and shows a green confirmation message.
+# Debug tool: confirm, then unlock every campaign level and show a green status.
 func _on_unlock_all_pressed() -> void:
+	_show_confirm(ConfirmAction.UNLOCK_ALL, tr("CONFIRM_UNLOCK_ALL"))
+
+func _do_unlock_all() -> void:
 	SaveManager.unlock_all_levels()
-	if status_label:
-		var msg := tr("UNLOCK_ALL_DONE")
-		status_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		status_label.modulate = Color(0.45, 1.0, 0.45)
-		if HudLayout.needs_pixel_text_raster():
-			HudLayout.apply_raster_pixel_label(
-				status_label, msg, GameConstants.UI_BODY_FONT_SIZE, Color(0.45, 1.0, 0.45)
-			)
-		else:
-			status_label.text = msg
-			HudLayout.apply_body_label(status_label, GameConstants.UI_BODY_FONT_SIZE)
+	_show_status_message(tr("UNLOCK_ALL_DONE"), Color(0.45, 1.0, 0.45))
 
 # Wipes the save file and emits save_deleted so callers (main menu) can react.
 func _do_delete_save() -> void:
@@ -584,7 +641,6 @@ func _do_delete_save() -> void:
 	save_deleted.emit()
 
 # Deletes all .tres and .remap files from the user's custom levels directory.
-# Shows a status message in gold to confirm the deletion.
 func _do_delete_custom() -> void:
 	if DirAccess.dir_exists_absolute(GameConstants.DEV_LEVELS_DIR):
 		var dir = DirAccess.open(GameConstants.DEV_LEVELS_DIR)
@@ -596,8 +652,18 @@ func _do_delete_custom() -> void:
 					DirAccess.remove_absolute(GameConstants.DEV_LEVELS_DIR + file_name)
 				file_name = dir.get_next()
 			dir.list_dir_end()
-	if status_label:
-		status_label.text = tr("CUSTOM_DELETED")
-		status_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
-		status_label.modulate = Color(1.0, 0.84, 0.0)
+	_show_status_message(tr("CUSTOM_DELETED"), Color(1.0, 0.35, 0.35))
+
+func _show_status_message(msg: String, color: Color) -> void:
+	if not status_label:
+		return
+	status_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	status_label.modulate = color
+	if HudLayout.needs_pixel_text_raster():
+		HudLayout.apply_raster_pixel_label(
+			status_label, msg, GameConstants.UI_BODY_FONT_SIZE, color
+		)
+	else:
+		status_label.text = msg
 		HudLayout.apply_body_label(status_label, GameConstants.UI_BODY_FONT_SIZE)
+		status_label.add_theme_color_override("font_color", color)

@@ -49,6 +49,16 @@ var _hint_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED  # -1 = unlimited;
 var _hint_forced_disabled: bool = false    # True while the board is solved or overlay is open.
 var _button_style_source: Button           # Reference button whose StyleBoxes are copied to end-screen buttons.
 
+# Hold-to-repeat undo/redo (same timing as main-game HUD).
+const _HOLD_INITIAL_DELAY := 0.4
+const _HOLD_REPEAT_START := 0.3
+const _HOLD_REPEAT_MIN := 0.05
+const _HOLD_REPEAT_ACCEL := 0.82
+var _hold_undo_active: bool = false
+var _hold_redo_active: bool = false
+var _hold_repeat_elapsed: float = 0.0
+var _hold_repeat_interval: float = 0.0
+
 func _ready() -> void:
 	_button_style_source = exit_button if exit_button else reset_button
 	_setup_end_layer()
@@ -131,8 +141,12 @@ func _connect_signals() -> void:
 		hint_button.pressed.connect(func(): playtest_hint_requested.emit())
 	if undo_button:
 		undo_button.pressed.connect(func(): playtest_undo_requested.emit())
+		undo_button.button_down.connect(_on_undo_button_down)
+		undo_button.button_up.connect(_on_undo_button_up)
 	if redo_button:
 		redo_button.pressed.connect(func(): playtest_redo_requested.emit())
+		redo_button.button_down.connect(_on_redo_button_down)
+		redo_button.button_up.connect(_on_redo_button_up)
 	if tutorial_back_button:
 		tutorial_back_button.pressed.connect(func():
 			if how_to_play_container:
@@ -148,6 +162,58 @@ func _connect_signals() -> void:
 		_try_again_button.pressed.connect(_on_try_again_pressed)
 	if _return_button and not _return_button.pressed.is_connected(_on_return_pressed):
 		_return_button.pressed.connect(_on_return_pressed)
+
+func _on_undo_button_down() -> void:
+	_hold_undo_active = true
+	_hold_redo_active = false
+	_hold_repeat_elapsed = 0.0
+	_hold_repeat_interval = _HOLD_REPEAT_START
+	set_process(true)
+
+
+func _on_undo_button_up() -> void:
+	_hold_undo_active = false
+	if not _hold_redo_active:
+		set_process(false)
+
+
+func _on_redo_button_down() -> void:
+	_hold_redo_active = true
+	_hold_undo_active = false
+	_hold_repeat_elapsed = 0.0
+	_hold_repeat_interval = _HOLD_REPEAT_START
+	set_process(true)
+
+
+func _on_redo_button_up() -> void:
+	_hold_redo_active = false
+	if not _hold_undo_active:
+		set_process(false)
+
+
+func _process(delta: float) -> void:
+	if not _hold_undo_active and not _hold_redo_active:
+		set_process(false)
+		return
+	_hold_repeat_elapsed += delta
+	if _hold_repeat_elapsed < _HOLD_INITIAL_DELAY:
+		return
+	var time_since_start := _hold_repeat_elapsed - _HOLD_INITIAL_DELAY
+	if time_since_start < _hold_repeat_interval:
+		return
+	_hold_repeat_elapsed = _HOLD_INITIAL_DELAY
+	_hold_repeat_interval = maxf(_hold_repeat_interval * _HOLD_REPEAT_ACCEL, _HOLD_REPEAT_MIN)
+	if _hold_undo_active:
+		if undo_button and undo_button.disabled:
+			_on_undo_button_up()
+			return
+		playtest_undo_requested.emit()
+	elif _hold_redo_active:
+		if redo_button and redo_button.disabled:
+			_on_redo_button_up()
+			return
+		playtest_redo_requested.emit()
+
 
 func _on_try_again_pressed() -> void:
 	playtest_reset_requested.emit()

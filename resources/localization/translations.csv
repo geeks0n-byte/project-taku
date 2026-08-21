@@ -3,7 +3,21 @@ SPLASH_CREATED_BY,Created by,Creado por,Erstellt von,Créé par,Stworzone przez,
 SPLASH_AUTHOR,"Giga ""gix0n"" Sichinava","Giga ""gix0n"" Sichinava","Giga ""gix0n"" Sichinava","Giga ""gix0n"" Sichinava","Giga ""gix0n"" Sichinava","Giga ""gix0n"" Sichinava","Giga ""gix0n"" Sichinava"
 UI_PLAY,PLAY,JUGAR,SPIELEN,JOUER,GRAJ,თამაში,ГРАТИ
 UI_CONTINUE,CONTINUE,CONTINUAR,WEITER,CONTINUER,KONTYNUUJ,გაგრძელება,ПРОДОВЖИТИ
-SESSION_RESUME_PROMPT,Saved progress found.\nContinue or start a new puzzle?,Progreso guardado.\n¿Continuar o empezar un nuevo puzle?,Gespeicherter Fortschritt gefunden.\nFortsetzen oder neues Rätsel?,Progression sauvegardée.\nContinuer ou nouveau puzzle ?,Znaleziono zapisany postęp.\nKontynuować czy nowa zagadka?,ნაპოვნია შენახული პროგრესი.\nგაგრძელება თუ ახალი თავსატეხი?,Знайдено збережений прогрес.\nПродовжити чи нова головоломка?
+SESSION_RESUME_PROMPT,"SAVE PROGRESS FOUND
+
+Continue or start a new puzzle?","PROGRESO GUARDADO
+
+¿Continuar o empezar un nuevo puzle?","GESPEICHERTER FORTSCHRITT GEFUNDEN
+
+Fortsetzen oder neues Rätsel?","PROGRESSION SAUVEGARDÉE
+
+Continuer ou nouveau puzzle ?","ZNALEZIONO ZAPISANY POSTĘP
+
+Kontynuować czy nowa zagadka?","ნაპოვნია შენახული პროგრესი
+
+გაგრძელება თუ ახალი თავსატეხი?","ЗНАЙДЕНО ЗБЕРЕЖЕНИЙ ПРОГРЕС
+
+Продовжити чи нова головоломка?"
 TUTORIAL_INTRO_PROMPT,Play the tutorial first?,¿Jugar el tutorial primero?,Zuerst das Tutorial spielen?,Jouer le tutoriel d'abord ?,Zagrać najpierw samouczek?,ჯერ სასწავლო გინდათ?,Спочатку пройти навчання?
 UI_BACK,BACK,ATRÁS,ZURÜCK,RETOUR,WSTECZ,უკან,НАЗАД
 UI_LEVELS,LEVELS,NIVELES,LEVEL,NIVEAUX,POZIOMY,დონეები,РІВНІ
@@ -27,9 +41,51 @@ UI_SAVE,SAVE,GUARDAR,SPEICHERN,SAUVEGARDER,ZAPISZ,შენახვა,ЗБЕР
 UI_LOAD,LOAD,CARGAR,LADEN,CHARGER,WCZYTAJ,ჩატვირთვა,ЗАВАНТАЖИТИ
 UI_LOADING,LOADING,CARGANDO,LADEN,CHARGEMENT,ŁADOWANIE,იტვირთება,ЗАВАНТАЖЕННЯ
 UI_RESET_PROGRESS,RESET PROFILE,RESTABLECER PERFIL,PROFIL ZURÜCKSETZEN,RÉINITIALISER LE PROFIL,ZRESETUJ PROFIL,პროფილის განულება,СКИНУТИ ПРОФІЛЬ
-CONFIRM_RESET_PROGRESS,"RESET PROFILE?\nThis clears progress and the privacy policy agreement.","¿RESTABLECER PERFIL?\nSe borrará el progreso y el acuerdo de privacidad.","PROFIL ZURÜCKSETZEN?\nFortschritt und Datenschutzerklärung-Zustimmung werden gelöscht.","RÉINITIALISER LE PROFIL ?\nLa progression et l'accord de confidentialité seront effacés.","ZRESETOWAĆ PROFIL?\nPostęp i zgoda na politykę prywatności zostaną usunięte.","გსურთ პროფილის განულება?\nპროგრესი და კონფიდენციალურობის შეთანხმება წაიშლება.","СКИНУТИ ПРОФІЛЬ?\nБуде скинуто прогрес і згоду з політикою конфіденційності."
-CONFIRM_NEW_PUZZLE,NEW PUZZLE?\nCurrent progress will be lost.,¿NUEVO PUZLE?\nSe perderá el progreso actual.,NEUES RÄTSEL?\nAktueller Fortschritt geht verloren.,NOUVEAU PUZZLE ?\nLa progression actuelle sera perdue.,NOWA ZAGADKA?\nBieżący postęp zostanie utracony.,ახალი თავსატეხი?\nმიმდინარე პროგრესი დაიკარგება.,НОВА ГОЛОВОЛОМКА?\nПоточний прогрес буде втрачено.
-CONFIRM_RESTART_LEVEL,RESTART LEVEL?\nCurrent progress will be lost.,¿REINICIAR NIVEL?\nSe perderá el progreso actual.,LEVEL NEUSTARTEN?\nAktueller Fortschritt geht verloren.,RECOMMENCER LE NIVEAU ?\nLa progression actuelle sera perdue.,ZRESTARTOWAĆ POZIOM?\nBieżący postęp zostanie utracony.,დონის თავიდან დაწყება?\nმიმდინარე პროგრესი დაიკარგება.,ПЕРЕЗАПУСТИТИ РІВЕНЬ?\nПоточний прогрес буде втрачено.
+CONFIRM_RESET_PROGRESS,"RESET PROFILE?
+
+This clears progress and the privacy policy agreement.","¿RESTABLECER PERFIL?
+
+Se borrará el progreso y el acuerdo de privacidad.","PROFIL ZURÜCKSETZEN?
+
+Fortschritt und Datenschutzerklärung-Zustimmung werden gelöscht.","RÉINITIALISER LE PROFIL ?
+
+La progression et l'accord de confidentialité seront effacés.","ZRESETOWAĆ PROFIL?
+
+Postęp i zgoda na politykę prywatności zostaną usunięte.","გსურთ პროფილის განულება?
+
+პროგრესი და კონფიდენციალურობის შეთანხმება წაიშლება.","СКИНУТИ ПРОФІЛЬ?
+
+Буде скинуто прогрес і згоду з політикою конфіденційності."
+CONFIRM_NEW_PUZZLE,"NEW PUZZLE?
+
+Current progress will be lost.","¿NUEVO PUZLE?
+
+Se perderá el progreso actual.","NEUES RÄTSEL?
+
+Aktueller Fortschritt geht verloren.","NOUVEAU PUZZLE ?
+
+La progression actuelle sera perdue.","NOWA ZAGADKA?
+
+Bieżący postęp zostanie utracony.","ახალი თავსატეხი?
+
+მიმდინარე პროგრესი დაიკარგება.","НОВА ГОЛОВОЛОМКА?
+
+Поточний прогрес буде втрачено."
+CONFIRM_RESTART_LEVEL,"RESTART LEVEL?
+
+Current progress will be lost.","¿REINICIAR NIVEL?
+
+Se perderá el progreso actual.","LEVEL NEUSTARTEN?
+
+Aktueller Fortschritt geht verloren.","RECOMMENCER LE NIVEAU ?
+
+La progression actuelle sera perdue.","ZRESTARTOWAĆ POZIOM?
+
+Bieżący postęp zostanie utracony.","დონის თავიდან დაწყება?
+
+მიმდინარე პროგრესი დაიკარგება.","ПЕРЕЗАПУСТИТИ РІВЕНЬ?
+
+Поточний прогрес буде втрачено."
 CONFIRM_DELETE_CUSTOM,DELETE ALL CUSTOM LEVELS FROM THIS DEVICE?,¿BORRAR TODOS LOS NIVELES PERSONALIZADOS DE ESTE DISPOSITIVO?,ALLE BENUTZERDEFINIERTEN LEVEL VON DIESEM GERÄT LÖSCHEN?,SUPPRIMER TOUS LES NIVEAUX PERSONNALISÉS DE CET APPAREIL ?,USUNĄĆ WSZYSTKIE WŁASNE POZIOMY Z TEGO URZĄDZENIA?,გსურთ ყველა საკუთარი დონის წაშლა ამ მოწყობილობიდან?,ВИДАЛИТИ ВСІ КОРИСТУВАЦЬКІ РІВНІ З ЦЬОГО ПРИСТРОЮ?
 UI_DELETE_CUSTOM,DELETE CUSTOM LEVELS,BORRAR NIVELES PERSONALIZADOS,BENUTZERDEFINIERTE LEVEL LÖSCHEN,SUPPRIMER NIVEAUX PERSONNALISÉS,USUŃ WŁASNE POZIOMY,საკუთარი დონეების წაშლა,ВИДАЛИТИ КОРИСТУВАЦЬКІ РІВНІ
 UI_UNLOCK_ALL_LEVELS,UNLOCK ALL LEVELS,DESBLOQUEAR TODOS LOS NIVELES,ALLE LEVEL FREISCHALTEN,DÉBLOQUER TOUS LES NIVEAUX,ODBLOKUJ WSZYSTKIE POZIOMY,ყველა დონის განბლოკვა,ВІДБЛОКУВАТИ ВСІ РІВНІ
@@ -37,12 +93,12 @@ UI_BG_DYNAMIC,BACKGROUND: DYNAMIC,FONDO: DINÁMICO,HINTERGRUND: DYNAMISCH,FOND :
 UI_BG_STATIC,BACKGROUND: STATIC,FONDO: ESTÁTICO,HINTERGRUND: STATISCH,FOND : STATIQUE,TŁO: STATYCZNE,ფონი: სტატიკური,ФОН: СТАТИЧНИЙ
 UI_BGM_ON,MUSIC: ON,MÚSICA: SÍ,MUSIK: AN,MUSIQUE : OUI,MUZYKA: WŁ.,მუსიკა: ჩართ.,МУЗИКА: УВІМК.
 UI_BGM_OFF,MUSIC: OFF,MÚSICA: NO,MUSIK: AUS,MUSIQUE : NON,MUZYKA: WYŁ.,მუსიკა: გამორთ.,МУЗИКА: ВИМК.
-UI_SFX_ON,SFX: ON,SFX: SÍ,SFX: AN,SFX : OUI,SFX: WŁ.,SFX: ჩართ.,SFX: УВІМК.
-UI_SFX_OFF,SFX: OFF,SFX: NO,SFX: AUS,SFX : NON,SFX: WYŁ.,SFX: გამორთ.,SFX: ВИМК.
+UI_SFX_ON,SOUND EFFECTS: ON,EFECTOS DE SONIDO: SÍ,SOUNDEFFEKTE: AN,EFFETS SONORES : OUI,EFEKTY DŹWIĘKOWE: WŁ.,ხმოვანი ეფექტები: ჩართ.,ЗВУКОВІ ЕФЕКТИ: УВІМК.
+UI_SFX_OFF,SOUND EFFECTS: OFF,EFECTOS DE SONIDO: NO,SOUNDEFFEKTE: AUS,EFFETS SONORES : NON,EFEKTY DŹWIĘKOWE: WYŁ.,ხმოვანი ეფექტები: გამორთ.,ЗВУКОВІ ЕФЕКТИ: ВИМК.
 UI_HAPTIC_ON,VIBRATION: ON,VIBRACIÓN: SÍ,VIBRATION: AN,VIBRATION : OUI,WIBRACJE: WŁ.,ვიბრაცია: ჩართ.,ВІБРАЦІЯ: УВІМК.
 UI_HAPTIC_OFF,VIBRATION: OFF,VIBRACIÓN: NO,VIBRATION: AUS,VIBRATION : NON,WIBRACJE: WYŁ.,ვიბრაცია: გამორთ.,ВІБРАЦІЯ: ВИМК.
 UI_CONSENT_TITLE,WELCOME,BIENVENIDO,WILLKOMMEN,BIENVENUE,WITAJ,მოგესალმებით,ЛАСКАВО ПРОСИМО
-UI_CONSENT_BODY,"This game shows ads and may collect data to personalise them. You can review our Privacy Policy before continuing.","Este juego muestra anuncios y puede recopilar datos para personalizarlos. Puedes consultar la Política de Privacidad antes de continuar.","Dieses Spiel zeigt Werbung und kann Daten zur Personalisierung erfassen. Du kannst die Datenschutzerklärung vor dem Fortfahren einsehen.","Ce jeu affiche des publicités et peut collecter des données pour les personnaliser. Vous pouvez consulter la Politique de confidentialité avant de continuer.","Ta gra wyświetla reklamy i może zbierać dane w celu ich personalizacji. Możesz zapoznać się z Polityką Prywatności przed kontynuowaniem.","ეს თამაში აჩვენებს რეკლამებს და შეიძლება შეაგროვოს მონაცემები მათი პერსონალიზაციისთვის. გაგრძელებამდე შეგიძლიათ გაეცნოთ კონფიდენციალურობის პოლიტიკას.","Ця гра показує рекламу і може збирати дані для її персоналізації. Ви можете переглянути Політику конфіденційності перед продовженням."
+UI_CONSENT_BODY,This game shows ads and may collect data to personalise them. You can review our Privacy Policy before continuing.,Este juego muestra anuncios y puede recopilar datos para personalizarlos. Puedes consultar la Política de Privacidad antes de continuar.,Dieses Spiel zeigt Werbung und kann Daten zur Personalisierung erfassen. Du kannst die Datenschutzerklärung vor dem Fortfahren einsehen.,Ce jeu affiche des publicités et peut collecter des données pour les personnaliser. Vous pouvez consulter la Politique de confidentialité avant de continuer.,Ta gra wyświetla reklamy i może zbierać dane w celu ich personalizacji. Możesz zapoznać się z Polityką Prywatności przed kontynuowaniem.,ეს თამაში აჩვენებს რეკლამებს და შეიძლება შეაგროვოს მონაცემები მათი პერსონალიზაციისთვის. გაგრძელებამდე შეგიძლიათ გაეცნოთ კონფიდენციალურობის პოლიტიკას.,Ця гра показує рекламу і може збирати дані для її персоналізації. Ви можете переглянути Політику конфіденційності перед продовженням.
 UI_CONSENT_READ_POLICY,PRIVACY POLICY,PRIVACIDAD,DATENSCHUTZ,CONFIDENTIALITÉ,PRYWATNOŚĆ,პოლიტიკა,КОНФІДЕНЦІЙНІСТЬ
 UI_CONSENT_ACCEPT,ACCEPT,ACEPTAR,AKZEPTIEREN,ACCEPTER,AKCEPTUJ,ACCEPT,ПРИЙНЯТИ
 UI_PRIVACY_POLICY,PRIVACY POLICY,POLÍTICA DE PRIVACIDAD,DATENSCHUTZ,POLITIQUE DE CONFIDENTIALITÉ,POLITYKA PRYWATNOŚCI,კონფიდენციალურობის პოლიტიკა,ПОЛІТИКА КОНᲤІᲓᲔᲜЦІЙНОСТІ
@@ -53,8 +109,9 @@ UI_PRIVACY_OPTIONS_UNAVAILABLE,Privacy options are available on Android builds.,
 UI_PRIVACY_OPTIONS_LOADING,Privacy options are still loading.,Las opciones de privacidad aún se están cargando.,Datenschutz-Optionen werden noch geladen.,Les options de confidentialité sont encore en chargement.,Opcje prywatności są jeszcze ładowane.,კონფიდენციალურობის პარამეტრები ჯერ კიდევ იტვირთება.,Параметри конфіденційності ще завантажуються.
 UI_PRIVACY_OPTIONS_NOT_REQUIRED,Privacy options are not required for your region right now.,Las opciones de privacidad no son necesarias para tu región en este momento.,Datenschutz-Optionen sind für deine Region derzeit nicht erforderlich.,Les options de confidentialité ne sont pas requises pour votre région pour le moment.,Opcje prywatności nie są teraz wymagane w twoim regionie.,კონფიდენციალურობის პარამეტრები ამჟამად თქვენს რეგიონში საჭირო არ არის.,Параметри конфіденційності зараз не потрібні для вашого регіону.
 SAVE_DELETED,SAVE DELETED! PROGRESS RESET.,¡PARTIDA BORRADA! PROGRESO RESTABLECIDO.,SPIELSTAND GELÖSCHT! FORTSCHRITT ZURÜCKGESETZT.,SAUVEGARDE SUPPRIMÉE ! PROGRESSION RÉINITIALISÉE.,ZAPIS USUNIĘTY! POSTĘP ZRESETOWANY.,შენახვა წაიშალა! პროგრესი განულდა.,ЗБЕРЕЖЕННЯ ВИДАЛЕНО! ПРОГРЕС СКИНУТО.
-CUSTOM_DELETED,ALL CUSTOM LEVELS DELETED FROM DEVICE!,¡TODOS LOS NIVELES PERSONALIZADOS BORRADOS DEL DISPOSITIVO!,ALLE BENUTZERDEFINIERTEN LEVEL VOM GERÄT GELÖSCHT!,TOUS LES NIVEAUX PERSONNALISÉS ONT ÉTÉ SUPPRIMÉS DE L'APPAREIL !,WSZYSTKIE WŁASNE POZIOMY USUNIĘTE Z URZĄDZENIA!,ყველა საკუთარი დონე წაიშალა მოწყობილობიდან!,ВСІ КОРИСТУВАЦЬКІ РІВНІ ВИДАЛЕНО З ПРИСТРОЮ!
-UNLOCK_ALL_DONE,ALL LEVELS UNLOCKED!,¡TODOS LOS NIVELES DESBLOQUEADOS!,ALLE LEVEL FREIGESCHALTET!,TOUS LES NIVEAUX DÉBLOQUÉS !,WSZYSTKIE POZIOMY ODBLOKOWANE!,ყველა დონე განბლოკილია!,УСІ РІВНІ ВІДБЛОКОВАНО!
+CUSTOM_DELETED,ALL CUSTOM LEVELS DELETED FROM THIS DEVICE,TODOS LOS NIVELES PERSONALIZADOS BORRADOS DE ESTE DISPOSITIVO,ALLE BENUTZERDEFINIERTEN LEVEL VON DIESEM GERÄT GELÖSCHT,TOUS LES NIVEAUX PERSONNALISÉS ONT ÉTÉ SUPPRIMÉS DE CET APPAREIL,WSZYSTKIE WŁASNE POZIOMY USUNIĘTE Z TEGO URZĄDZENIA,ყველა საკუთარი დონე წაიშალა ამ მოწყობილობიდან,ВСІ КОРИСТУВАЦЬКІ РІВНІ ВИДАЛЕНО З ЦЬОГО ПРИСТРОЮ
+UNLOCK_ALL_DONE,ALL LEVELS UNLOCKED,TODOS LOS NIVELES DESBLOQUEADOS,ALLE LEVEL FREIGESCHALTET,TOUS LES NIVEAUX DÉBLOQUÉS,WSZYSTKIE POZIOMY ODBLOKOWANE,ყველა დონე განბლოკილია,УСІ РІВНІ ВІДБЛОКОВАНО
+CONFIRM_UNLOCK_ALL,UNLOCK ALL LEVELS?,¿DESBLOQUEAR TODOS LOS NIVELES?,ALLE LEVEL FREISCHALTEN?,DÉBLOQUER TOUS LES NIVEAUX ?,ODBLOKOWAĆ WSZYSTKIE POZIOMY?,გსურთ ყველა დონის განბლოკვა?,ВІДБЛОКУВАТИ ВСІ РІВНІ?
 UI_SELECT_LEVEL,SELECT LEVEL,SELECCIONAR NIVEL,LEVEL AUSWÄHLEN,CHOISIR LE NIVEAU,WYBIERZ POZIOM,დონის არჩევა,ВИБІР РІВНЯ
 UI_LEVEL_SELECT,LEVEL SELECT,ELEGIR NIVEL,LEVEL WÄHLEN,CHOISIR NIVEAU,WYBIERZ POZIOM,დონის არჩევა,ВИБРАТИ РІВЕНЬ
 UI_CORE,CORE,PRINCIPAL,HAUPT,PRINCIPAL,GŁÓWNE,მთავარი,ОСНОВНІ
@@ -214,11 +271,11 @@ ED_HINT_SELECT_NOT_EQUALS,SELECT A NEIGHBORING CELL TO PLACE THE NOT-EQUALS (×)
 ED_MSG_SHIFTER_PLACED,[color=#9c27b0]SHIFTER[/color] TILE PAIR PLACED SUCCESSFULLY.,PAR [color=#9c27b0]DESLIZANTE[/color] COLOCADO CON ÉXITO.,[color=#9c27b0]SCHIEBER[/color] PAAR ERFOLGREICH PLATZIERT.,PAIRE [color=#9c27b0]DÉPLAÇABLE[/color] PLACÉE AVEC SUCCÈS.,Para [color=#9c27b0]PRZESUWANYCH[/color] płytek umieszczono pomyślnie.,[color=#9c27b0]გადამტანი[/color] წყვილი წარმატებით განთავსდა.,Пару [color=#9c27b0]ЗСУВНИХ[/color] плиток успішно розміщено.
 ED_MSG_EQUALS_PLACED,EQUALS (=) LINK PLACED SUCCESSFULLY.,ENLACE IGUAL (=) COLOCADO CON ÉXITO.,GLEICH (=) VERBINDUNG ERFOLGREICH PLATZIERT.,LIEN ÉGAL (=) PLACÉ AVEC SUCCÈS.,Połączenie RÓWNOŚCI (=) umieszczono pomyślnie.,ტოლობის (=) კავშირი წარმატებით განთავსდა.,Зв'язок ДОРІВНЮЄ (=) успішно розміщено.
 ED_MSG_NOT_EQUALS_PLACED,NOT-EQUALS (×) LINK PLACED SUCCESSFULLY.,ENLACE DISTINTO (×) COLOCADO CON ÉXITO.,UNGLEICH (×) VERBINDUNG ERFOLGREICH PLATZIERT.,LIEN DIFFÉRENT (×) PLACÉ AVEC SUCCÈS.,Połączenie RÓŻNOŚCI (×) umieszczono pomyślnie.,უტოლობის (×) კავშირი წარმატებით განთავსდა.,Зв'язок НЕ ДОРІВНЮЄ (×) успішно розміщено.
-ED_MSG_LEVEL_SAVED,CUSTOM LEVEL %d SAVED SUCCESSFULLY.,NIVEL PERSONALIZADO %d GUARDADO CON ÉXITO.,BENUTZERDEFINIERTES LEVEL %d GESPEICHERT.,NIVEAU PERSONNALISÉ %d SAUVEGARDÉ.,WŁASNY POZIOM %d ZAPISANY.,საკუთარი დონე %d შენახულია.,КОРИСТУВАЦЬКИЙ РІВЕНЬ %d ЗБЕРЕЖЕНО.
-ED_MSG_LEVEL_SAVE_FAILED,ERROR: CUSTOM LEVEL %d SAVE FAILED (%s).,ERROR: FALLO AL GUARDAR NIVEL %d (%s).,FEHLER: LEVEL %d KONNTE NICHT GESPEICHERT WERDEN (%s).,ERREUR : ÉCHEC DE SAUVEGARDE DU NIVEAU %d (%s).,BŁĄD: NIE UDAŁO SIĘ ZAPISAĆ POZIOMU %d (%s).,შეცდომა: დონე %d ვერ შეინახა (%s).,ПОМИЛКА: НЕ ВДАЛОСЯ ЗБЕРЕГТИ РІВЕНЬ %d (%s).
-ED_MSG_LEVEL_NOT_FOUND,NO SAVED DATA FOUND FOR CUSTOM LEVEL %d.,NO SE ENCONTRARON DATOS PARA EL NIVEL %d.,KEINE DATEN FÜR LEVEL %d GEFUNDEN.,AUCUNE DONNÉE TROUVÉE POUR LE NIVEAU %d.,BRAK DANYCH DLA POZIOMU %d.,დონე %d-ის მონაცემები ვერ მოიძებნა.,ДАНІ ДЛЯ РІВНЯ %d НЕ ЗНАЙДЕНО.
-ED_MSG_LEVEL_READ_FAILED,ERROR: FAILED TO READ CUSTOM LEVEL %d DATA.,ERROR: FALLO AL LEER DATOS DEL NIVEL %d.,FEHLER: LEVEL %d DATEN KONNTEN NICHT GELESEN WERDEN.,ERREUR : ÉCHEC DE LECTURE DU NIVEAU %d.,BŁĄD: NIE UDAŁO SIĘ ODCZYTAĆ POZIOMU %d.,შეცდომა: დონე %d-ის მონაცემები ვერ წაიკითხა.,ПОМИЛКА: НЕ ВДАЛОСЯ ПРОЧИТАТИ РІВЕНЬ %d.
-ED_MSG_LEVEL_LOADED,CUSTOM LEVEL %d LOADED SUCCESSFULLY.,NIVEL PERSONALIZADO %d CARGADO CON ÉXITO.,BENUTZERDEFINIERTES LEVEL %d GELADEN.,NIVEAU PERSONNALISÉ %d CHARGÉ.,WŁASNY POZIOM %d WCZYTANY.,საკუთარი დონე %d ჩაიტვირთა.,КОРИСТУВАЦЬКИЙ РІВЕНЬ %d ЗАВАНТАЖЕНО.
+ED_MSG_LEVEL_SAVED,CUSTOM LEVEL %d SAVED SUCCESSFULLY,NIVEL PERSONALIZADO %d GUARDADO CON ÉXITO,BENUTZERDEFINIERTES LEVEL %d GESPEICHERT,NIVEAU PERSONNALISÉ %d SAUVEGARDÉ,WŁASNY POZIOM %d ZAPISANY,საკუთარი დონე %d შენახულია,КОРИСТУВАЦЬКИЙ РІВЕНЬ %d ЗБЕРЕЖЕНО
+ED_MSG_LEVEL_SAVE_FAILED,ERROR: CUSTOM LEVEL %d SAVE FAILED (%s),ERROR: FALLO AL GUARDAR NIVEL %d (%s),FEHLER: LEVEL %d KONNTE NICHT GESPEICHERT WERDEN (%s),ERREUR : ÉCHEC DE SAUVEGARDE DU NIVEAU %d (%s),BŁĄD: NIE UDAŁO SIĘ ZAPISAĆ POZIOMU %d (%s),შეცდომა: დონე %d ვერ შეინახა (%s),ПОМИЛКА: НЕ ВДАЛОСЯ ЗБЕРЕГТИ РІВЕНЬ %d (%s)
+ED_MSG_LEVEL_NOT_FOUND,NO SAVED DATA FOUND FOR CUSTOM LEVEL %d,NO SE ENCONTRARON DATOS PARA EL NIVEL %d,KEINE DATEN FÜR LEVEL %d GEFUNDEN,AUCUNE DONNÉE TROUVÉE POUR LE NIVEAU %d,BRAK DANYCH DLA POZIOMU %d,დონე %d-ის მონაცემები ვერ მოიძებნა,ДАНІ ДЛЯ РІВНЯ %d НЕ ЗНАЙДЕНО
+ED_MSG_LEVEL_READ_FAILED,ERROR: FAILED TO READ CUSTOM LEVEL %d DATA,ERROR: FALLO AL LEER DATOS DEL NIVEL %d,FEHLER: LEVEL %d DATEN KONNTEN NICHT GELESEN WERDEN,ERREUR : ÉCHEC DE LECTURE DU NIVEAU %d,BŁĄD: NIE UDAŁO SIĘ ODCZYTAĆ POZIOMU %d,შეცდომა: დონე %d-ის მონაცემები ვერ წაიკითხა,ПОМИЛКА: НЕ ВДАЛОСЯ ПРОЧИТАТИ РІВЕНЬ %d
+ED_MSG_LEVEL_LOADED,CUSTOM LEVEL %d LOADED SUCCESSFULLY,NIVEL PERSONALIZADO %d CARGADO CON ÉXITO,BENUTZERDEFINIERTES LEVEL %d GELADEN,NIVEAU PERSONNALISÉ %d CHARGÉ,WŁASNY POZIOM %d WCZYTANY,საკუთარი დონე %d ჩაიტვირთა,КОРИСТУВАЦЬКИЙ РІВЕНЬ %d ЗАВАНТАЖЕНО
 ED_MSG_UNSOLVABLE,CANNOT SAVE: PUZZLE HAS NO SOLUTION.,NO SE PUEDE GUARDAR: EL PUZLE NO TIENE SOLUCIÓN.,SPEICHERN NICHT MÖGLICH: RÄTSEL HAT KEINE LÖSUNG.,IMPOSSIBLE D'ENREGISTRER : LE PUZZLE N'A PAS DE SOLUTION.,NIE MOŻNA ZAPISAĆ: ZAGADKA NIE MA ROZWIĄZANIA.,შენახვა შეუძლებელია: თავსატეხს ამოხსნა არ აქვს.,НЕМОЖЛИВО ЗБЕРЕГТИ: ГОЛОВОЛОМКА НЕ МАЄ РОЗВ'ЯЗКУ.
 ED_MSG_SOLVE_TIMEOUT,CANNOT SAVE: SOLUTION CHECK TIMED OUT (BOARD MAY BE TOO LARGE).,NO SE PUEDE GUARDAR: LA COMPROBACIÓN DE SOLUCIÓN AGOTÓ EL TIEMPO (EL TABLERO PUEDE SER DEMASIADO GRANDE).,SPEICHERN NICHT MÖGLICH: LÖSUNGSPRÜFUNG TIMEOUT (BRETT EVENTUELL ZU GROSS).,IMPOSSIBLE D'ENREGISTRER : VÉRIFICATION DES SOLUTIONS EXPIRÉE (PLATEAU PEUT-ÊTRE TROP GRAND).,NIE MOŻNA ZAPISAĆ: SPRAWDZANIE ROZWIĄZAŃ PRZEKROCZYŁO LIMIT (PLANSZA MOŻE BYĆ ZA DUŻA).,შენახვა შეუძლებელია: ამოხსნის შემოწმება ვადას გასცდა (დაფა შეიძლება ზედმეტად დიდი იყოს).,НЕМОЖЛИВО ЗБЕРЕГТИ: ПЕРЕВІРКА РОЗВ'ЯЗКІВ ВИЧЕРПАЛА ЛІМІТ (ДОШКА МОЖЕ БУТИ ЗАВЕЛИКА).
 ED_MSG_NOT_UNIQUE,CANNOT SAVE: UNIQUE SOLUTION IS ON BUT THIS PUZZLE HAS MULTIPLE SOLUTIONS.,NO SE PUEDE GUARDAR: SOLUCIÓN ÚNICA ESTÁ ACTIVA PERO ESTE PUZLE TIENE VARIAS SOLUCIONES.,SPEICHERN NICHT MÖGLICH: EINDEUTIGE LÖSUNG IST AN ABER DIESES RÄTSEL HAT MEHRERE LÖSUNGEN.,IMPOSSIBLE D'ENREGISTRER : SOLUTION UNIQUE EST ACTIVÉE MAIS CE PUZZLE A PLUSIEURS SOLUTIONS.,NIE MOŻNA ZAPISAĆ: UNIKALNE ROZWIĄZANIE JEST WŁĄCZONE ALE TA ZAGADKA MA WIELE ROZWIĄZAŃ.,შენახვა შეუძლებელია: უნიკალური ამოხსნა ჩართულია მაგრამ თავსატეხს რამდენიმე ამოხსნა აქვს.,НЕМОЖЛИВО ЗБЕРЕГТИ: УНІКАЛЬНИЙ РОЗВ'ЯЗОК УВІМКНЕНО АЛЕ ЦЯ ГОЛОВОЛОМКА МАЄ КІЛЬКА РОЗВ'ЯЗКІВ.
@@ -236,7 +293,21 @@ TEST_MODE,TEST MODE,MODO PRUEBA,TESTMODUS,MODE TEST,TRYB TESTOWANIA,ტესტ
 LOCK_WALLS,LOCK WALLS,BLOQUEAR MUROS,WÄNDE SPERREN,VERR. MURS,ZABLOKUJ ŚCIANY,კედლების ჩაკეტვა,ЗАФІКСУВАТИ СТІНИ
 UNIQUE_SOLVE,UNIQUE SOLVE,SOLUCIÓN ÚNICA,EINDEUTIGE LÖSUNG,SOLUTION UNIQUE,UNIKALNE ROZWIĄZANIE,უნიკალური ამოხსნა,УНІКАЛЬНЕ РІШЕННЯ
 ALLOW,ALLOW:,PERMITIR:,ERLAUBT:,AUTORISER :,DOZWOLONE:,დაშვებულია:,ДОСТУПНО:
-LEVEL_EXISTS_OVERWRITE,LEVEL ALREADY EXISTS. OVERWRITE?,EL NIVEL YA EXISTE. ¿SOBRESCRIBIR?,LEVEL EXISTIERT BEREITS. ÜBERSCHREIBEN?,LE NIVEAU EXISTE DÉJÀ. ÉCRASER ?,POZIOM JUŻ ISTNIEJE. NADPISAĆ?,დონე უკვე არსებობს. გსურთ გადაწერა?,РІВЕНЬ ВЖЕ ІСНУЄ. ПЕРЕЗАПИСАТИ?
+LEVEL_EXISTS_OVERWRITE,"LEVEL ALREADY EXISTS?
+
+OVERWRITE?","¿EL NIVEL YA EXISTE?
+
+¿SOBRESCRIBIR?","LEVEL EXISTIERT BEREITS?
+
+ÜBERSCHREIBEN?","LE NIVEAU EXISTE DÉJÀ ?
+
+ÉCRASER ?","POZIOM JUŻ ISTNIEJE?
+
+NADPISAĆ?","დონე უკვე არსებობს?
+
+გსურთ გადაწერა?","РІВЕНЬ ВЖЕ ІСНУЄ?
+
+ПЕРЕЗАПИСАТИ?"
 LEVEL_SOLVABLE,LEVEL IS SOLVABLE!,¡EL NIVEL TIENE SOLUCIÓN!,LEVEL IST LÖSBAR!,LE NIVEAU EST RÉSOLUBLE !,POZIOM JEST MOŻLIWY DO ROZWIĄZANIA!,დონე ამოხსნადია!,РІВЕНЬ МОЖНА ПРОЙТИ!
 RETURN,RETURN,VOLVER,ZURÜCK,RETOUR,POWRÓT,დაბრუნება,ПОВЕРНУТИСЯ
 Wall,Wall,Muro,Wand,Mur,Ściana,კედელი,Стіна
@@ -248,82 +319,33 @@ Shifter Tile Link Tool,Shifter Tile Link Tool,Herramienta de Enlace de Ficha Des
 Equals (=) Link Tool,Equals (=) Link Tool,Herramienta de Enlace Igual (=),Gleich (=) Verbindungswerkzeug,Outil de Lien Égal (=),Narzędzie Łączenia Znak Równości (=),ტოლობის (=) დასაკავშირებელი,Інструмент зв'язку Дорівнює (=)
 Not Equals (×) Link Tool,Not Equals (×) Link Tool,Herramienta de Enlace Distinto (×),Ungleich (×) Verbindungswerkzeug,Outil de Lien Différent (×),Narzędzie Łączenia Znak Różności (×),უტოლობის (×) დასაკავშირებელი,Інструмент зв'язку Не дорівнює (×)
 CREDITS_TEXT,"[center]
-[font_size=34][color=#ffd700][b]GAME DESIGN & CODE[/b][/color][/font_size]
+[font_size=42][color=#ffd700][b]CREATED BY[/b][/color][/font_size]
 
-[font_size=26]Giga ""gix0n"" Sichinava[/font_size]
-
-
-[font_size=34][color=#ffd700][b]ART & ASSETS[/b][/color][/font_size]
-
-[font_size=26]Giga ""gix0n"" Sichinava[/font_size]
-
-[font_size=22][color=#aaaaaa]Created with Godot Engine[/color][/font_size]
+[font_size=34]Giga ""gix0n"" Sichinava[/font_size]
 [/center]","[center]
-[font_size=34][color=#ffd700][b]DISEÑO Y PROGRAMACIÓN[/b][/color][/font_size]
+[font_size=42][color=#ffd700][b]CREADO POR[/b][/color][/font_size]
 
-[font_size=26]Giga ""gix0n"" Sichinava[/font_size]
-
-
-[font_size=34][color=#ffd700][b]ARTE Y RECURSOS[/b][/color][/font_size]
-
-[font_size=26]Giga ""gix0n"" Sichinava[/font_size]
-
-[font_size=22][color=#aaaaaa]Creado con Godot Engine[/color][/font_size]
+[font_size=34]Giga ""gix0n"" Sichinava[/font_size]
 [/center]","[center]
-[font_size=34][color=#ffd700][b]DESIGN & PROGRAMMIERUNG[/b][/color][/font_size]
+[font_size=42][color=#ffd700][b]ERSTELLT VON[/b][/color][/font_size]
 
-[font_size=26]Giga ""gix0n"" Sichinava[/font_size]
-
-
-[font_size=34][color=#ffd700][b]GRAFIK & ASSETS[/b][/color][/font_size]
-
-[font_size=26]Giga ""gix0n"" Sichinava[/font_size]
-
-[font_size=22][color=#aaaaaa]Erstellt mit Godot Engine[/color][/font_size]
+[font_size=34]Giga ""gix0n"" Sichinava[/font_size]
 [/center]","[center]
-[font_size=34][color=#ffd700][b]CONCEPTION & CODE[/b][/color][/font_size]
+[font_size=42][color=#ffd700][b]CRÉÉ PAR[/b][/color][/font_size]
 
-[font_size=26]Giga ""gix0n"" Sichinava[/font_size]
-
-
-[font_size=34][color=#ffd700][b]GRAPHISMES[/b][/color][/font_size]
-
-[font_size=26]Giga ""gix0n"" Sichinava[/font_size]
-
-[font_size=22][color=#aaaaaa]Créé avec Godot Engine[/color][/font_size]
+[font_size=34]Giga ""gix0n"" Sichinava[/font_size]
 [/center]","[center]
-[font_size=34][color=#ffd700][b]PROJEKT I PROGRAMOWANIE[/b][/color][/font_size]
+[font_size=42][color=#ffd700][b]STWORZONE PRZEZ[/b][/color][/font_size]
 
-[font_size=26]Giga ""gix0n"" Sichinava[/font_size]
-
-
-[font_size=34][color=#ffd700][b]GRAFIKA I ZASOBY[/b][/color][/font_size]
-
-[font_size=26]Giga ""gix0n"" Sichinava[/font_size]
-
-[font_size=22][color=#aaaaaa]Stworzono w Godot Engine[/color][/font_size]
+[font_size=34]Giga ""gix0n"" Sichinava[/font_size]
 [/center]","[center]
-[font_size=34][color=#ffd700][b]დიზაინი და პროგრამირება[/b][/color][/font_size]
+[font_size=42][color=#ffd700][b]შემქმნელი[/b][/color][/font_size]
 
-[font_size=26]Giga ""gix0n"" Sichinava[/font_size]
-
-
-[font_size=34][color=#ffd700][b]არტი და ვიზუალი[/b][/color][/font_size]
-
-[font_size=26]Giga ""gix0n"" Sichinava[/font_size]
-
-[font_size=22][color=#aaaaaa]შექმნილია Godot Engine-ით[/color][/font_size]
+[font_size=34]Giga ""gix0n"" Sichinava[/font_size]
 [/center]","[center]
-[font_size=34][color=#ffd700][b]ДИЗАЙН І КОД[/b][/color][/font_size]
+[font_size=42][color=#ffd700][b]СТВОРЕНО[/b][/color][/font_size]
 
-[font_size=26]Giga ""gix0n"" Sichinava[/font_size]
-
-
-[font_size=34][color=#ffd700][b]АРТ І РЕСУРСИ[/b][/color][/font_size]
-
-[font_size=26]Giga ""gix0n"" Sichinava[/font_size]
-
-[font_size=22][color=#aaaaaa]Створено на Godot Engine[/color][/font_size]
+[font_size=34]Giga ""gix0n"" Sichinava[/font_size]
 [/center]"
 HTP_TITLE,HOW TO PLAY,CÓMO JUGAR,SPIELANLEITUNG,COMMENT JOUER,JAK GRAĆ,როგორ ვითამაშოთ,ЯК ГРАТИ
 HTP_GOAL_TAP,"Tap %s empty cells to place %s [color=#ffeb3b]Yellow[/color], %s [color=#2196f3]Blue[/color], and %s [color=#4caf50]Green[/color].","Toca %s celdas vacías para colocar %s [color=#ffeb3b]Amarillo[/color], %s [color=#2196f3]Azul[/color] y %s [color=#4caf50]Verde[/color].","Tippe %s leere Felder an, um %s [color=#ffeb3b]Gelb[/color], %s [color=#2196f3]Blau[/color] und %s [color=#4caf50]Grün[/color] zu setzen.","Touchez %s cases vides pour placer %s [color=#ffeb3b]Jaune[/color], %s [color=#2196f3]Bleu[/color] et %s [color=#4caf50]Vert[/color].","Dotykaj %s pustych pól, aby stawiać %s [color=#ffeb3b]żółte[/color], %s [color=#2196f3]niebieskie[/color] i %s [color=#4caf50]zielone[/color].","შეეხეთ %s ცარიელ უჯრებს, რათა დააყენოთ %s [color=#ffeb3b]ყვითელი[/color], %s [color=#2196f3]ლურჯი[/color] და %s [color=#4caf50]მწვანე[/color].","Натискайте %s порожні клітинки, щоб ставити %s [color=#ffeb3b]жовтий[/color], %s [color=#2196f3]синій[/color] і %s [color=#4caf50]зелений[/color]."

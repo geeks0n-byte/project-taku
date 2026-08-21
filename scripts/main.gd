@@ -51,6 +51,8 @@ var _run_shifter_pairs: Array = []
 var _run_available_tiles: Array = []
 # When true, cancelling a reset from inside the pause menu returns to the pause menu.
 var _reset_confirm_return_to_pause: bool = false
+# True when NEW PUZZLE confirm was opened from the session-resume prompt.
+var _reset_confirm_from_session_resume: bool = false
 
 # Returns true when a level lives in the campaign tutorials directory.
 # Tutorial levels disable the timer, move counter, and hint quota.
@@ -913,12 +915,17 @@ func _on_reset():
 		timer_node.stop()
 	board_manager.process_mode = Node.PROCESS_MODE_DISABLED
 	_reset_confirm_return_to_pause = false
+	_reset_confirm_from_session_resume = false
 	_set_board_and_hud_visible(false)
 	ui_manager.set_hud_buttons_disabled(true)
 	ui_manager.show_reset_confirm()
 
 # Handles confirmed reset, optionally showing an interstitial before regen.
 func _on_reset_confirmed() -> void:
+	if _reset_confirm_from_session_resume:
+		_reset_confirm_from_session_resume = false
+		_execute_session_restart()
+		return
 	_reset_confirm_return_to_pause = false
 	is_paused = false
 	if pause_menu:
@@ -944,8 +951,12 @@ func _finish_reset_confirmed() -> void:
 	_set_board_and_hud_visible(true)
 	generate_board()
 
-# Cancel from reset confirm returns either to pause menu or resumed gameplay.
+# Cancel from reset confirm returns to pause, session resume, or gameplay.
 func _on_reset_cancelled() -> void:
+	if _reset_confirm_from_session_resume:
+		_reset_confirm_from_session_resume = false
+		ui_manager.show_session_resume_prompt()
+		return
 	if _reset_confirm_return_to_pause:
 		_reset_confirm_return_to_pause = false
 		_set_board_and_hud_visible(false)
@@ -960,6 +971,7 @@ func _on_restart_level():
 	if pause_menu:
 		pause_menu.hide()
 	_reset_confirm_return_to_pause = true
+	_reset_confirm_from_session_resume = false
 	_set_board_and_hud_visible(false)
 	ui_manager.set_hud_buttons_disabled(true)
 	ui_manager.show_reset_confirm()
@@ -1074,7 +1086,13 @@ func _begin_level_entry() -> void:
 func _on_session_continue() -> void:
 	restore_session()
 
+# NEW PUZZLE from resume → confirm first; Yes runs _execute_session_restart.
 func _on_session_restart() -> void:
+	_reset_confirm_from_session_resume = true
+	_reset_confirm_return_to_pause = false
+	ui_manager.show_reset_confirm()
+
+func _execute_session_restart() -> void:
 	SaveManager.clear_session()
 	var is_tutorial := (
 		not levels.is_empty()

@@ -145,6 +145,9 @@ func _bind_signals():
 	pt_ui.resume_from_tutorial_requested.connect(_on_resume_from_playtest_tutorial)
 
 	canvas_manager.canvas_cell_clicked.connect(_on_canvas_cell_clicked)
+	canvas_manager.canvas_cell_played.connect(func(c): playtest_controller.handle_cell_played(c))
+	canvas_manager.canvas_cell_hold_cleared.connect(func(c): playtest_controller.handle_cell_hold_cleared(c))
+	canvas_manager.canvas_shifter_toggled.connect(func(c): playtest_controller.handle_shifter_toggled(c))
 
 func _on_editor_hint_toggled(_is_on: bool):
 	canvas_manager.show_editor_hints = false
@@ -287,7 +290,7 @@ func _on_brush_changed(state_id: int, _brush_name: String):
 
 func _on_canvas_cell_clicked(coord: Vector2i):
 	if playtest_controller.is_active:
-		playtest_controller.handle_cell_click(coord)
+		# Playtest uses Cell press/release + hold-clear; interceptor is ignored.
 		return
 
 	if _is_link_brush():
@@ -329,6 +332,8 @@ func _handle_link_brush_click(coord: Vector2i) -> void:
 				_execute_constraint_creation(first_coord, coord, "not_equals")
 				editor_ui.update_status("ED_MSG_NOT_EQUALS_PLACED", Color(0.4, 1.0, 0.4))
 			_record_editor_change()
+			if UiSfx:
+				UiSfx.play_click()
 		else:
 			canvas_manager.board_cells[first_coord].update_visuals()
 			editor_ui.update_status("ERR_CELLS_NOT_ADJACENT", Color(1.0, 0.4, 0.4))
@@ -368,6 +373,8 @@ func _apply_paint_brush(coord: Vector2i, record_undo: bool) -> bool:
 	)
 	if changed and record_undo:
 		_record_editor_change()
+	if changed and UiSfx:
+		UiSfx.play_click()
 	return changed
 
 # Refreshes the joker counter shown in the playtest panel.

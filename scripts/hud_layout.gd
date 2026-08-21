@@ -1186,18 +1186,40 @@ static func apply_popup_label(label: Label, base_size: int = GameConstants.UI_BO
 		if _is_message_key(display):
 			label.set_meta("_tr_key", display)
 			display = String(TranslationServer.translate(display))
+		display = _popup_prompt_with_title_gap(display)
 		var color := Color.WHITE
 		if label.has_theme_color_override("font_color"):
 			color = label.get_theme_color("font_color")
 		apply_live_pixel_label_settings(label, display, base_size, color)
+		label.add_theme_constant_override("line_spacing", 8)
 		return
 	clear_label_settings(label)
 	var use_default := prefer_default_font()
 	label.set_meta("_use_default_font", use_default)
+	label.text = _popup_prompt_with_title_gap(label.text)
 	apply_locale_font_to_control(label)
 	var size := body_font_size(base_size) if use_default else base_size
 	label.add_theme_font_size_override("font_size", size)
+	# Default fonts already read taller than Press Start — keep gaps tight.
+	label.add_theme_constant_override("line_spacing", 4 if use_default else 8)
 	apply_safe_outline(label, 8)
+
+## Ensures a blank line after the first line of a multi-line confirm prompt.
+## Pixel English keeps a full blank line; other locales use a single break so
+## default-font line height does not look like a double gap.
+static func _popup_prompt_with_title_gap(text: String) -> String:
+	if text.is_empty():
+		return text
+	var normalized := text.replace("\\n", "\n")
+	while normalized.contains("\n\n\n"):
+		normalized = normalized.replace("\n\n\n", "\n\n")
+	if not normalized.contains("\n"):
+		return normalized
+	var parts := normalized.split("\n", true, 1)
+	if parts.size() < 2:
+		return normalized
+	var gap := "\n\n" if uses_pixel_font() else "\n"
+	return parts[0] + gap + parts[1].lstrip("\n")
 
 # Creates the near-opaque dark panel StyleBox used by all confirmation dialogs
 # (reset progress, session resume, etc.). Gold border gives it a premium feel.

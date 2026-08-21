@@ -114,7 +114,7 @@ const UI_BTN_TAB_FONT_MIN := 26
 const MENU_TEXT_OUTLINE := 10
 
 const UI_BODY_FONT_SIZE := 26
-const UI_BODY_FONT_SIZE_LARGE := 28
+const UI_BODY_FONT_SIZE_LARGE := 32
 const UI_BODY_TITLE_FONT_SIZE := 46
 
 const ICON_INFINITY := "res://resources/icons/icon_infinity.svg"
@@ -130,7 +130,7 @@ const TILE_SHIFTER_DOWN := "res://resources/tiles/tile_shifter_down.svg"
 const TILE_SHIFTER_LEFT := "res://resources/tiles/tile_shifter_left.svg"
 const TILE_SHIFTER_RIGHT := "res://resources/tiles/tile_shifter_right.svg"
 const TILE_LOCK := "res://resources/tiles/tile_lock.svg"
-const DEFAULT_FONT_SCALE := 1.45
+const DEFAULT_FONT_SCALE := 1.1
 ## Georgian glyphs read large — keep slightly under other non-English locales.
 const GEORGIAN_FONT_SCALE := 0.9
 const DISABLED_ICON_MODULATE := Color(0.55, 0.55, 0.55, 1.0)

@@ -724,10 +724,13 @@ func show_session_resume_prompt() -> void:
 			prompt_w = maxi(200, int(resume_panel.custom_minimum_size.x) - 96)
 		HudLayout.apply_raster_pixel_label(
 			resume_prompt_label,
-			tr("SESSION_RESUME_PROMPT"),
-			GameConstants.UI_BODY_FONT_SIZE,
+			HudLayout._popup_prompt_with_title_gap(tr("SESSION_RESUME_PROMPT")),
+			GameConstants.UI_BODY_FONT_SIZE_LARGE,
 			Color(1, 0.84, 0, 1),
 			prompt_w
+		)
+		resume_prompt_label.add_theme_constant_override(
+			"line_spacing", 4 if HudLayout.prefer_default_font() else 8
 		)
 	if resume_panel:
 		var continue_btn := resume_panel.get_node_or_null("Buttons/ContinueButton") as Button

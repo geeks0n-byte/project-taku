@@ -41,7 +41,7 @@ func setup(canvas: EditorCanvasManager, playtest_ui: PlaytestUIManager, editor: 
 # computes hint reference/hidden pool, and starts timer+validation.
 func enter(current_level_required_jokers: int) -> void:
 	is_active = true
-	canvas_manager.is_playtesting = true
+	canvas_manager.set_playtest_input_mode(true)
 	playtest_snapshot.clear()
 
 	for coord in canvas_manager.board_cells:
@@ -138,7 +138,7 @@ func enter(current_level_required_jokers: int) -> void:
 # Leaves playtest mode and restores original editor board state and constraints.
 func exit() -> void:
 	is_active = false
-	canvas_manager.is_playtesting = false
+	canvas_manager.set_playtest_input_mode(false)
 	_timer.stop()
 	if canvas_manager:
 		canvas_manager.visible = true
@@ -186,53 +186,72 @@ func reset() -> void:
 	canvas_manager.trigger_redraw()
 	_run_validation()
 
-# Applies playtest click behavior: cycle normal tiles or move shifter pairs.
-func handle_cell_click(coord: Vector2i) -> void:
+# Cell already cycled itself on release — refresh HUD / validation / undo.
+func handle_cell_played(coord: Vector2i) -> void:
 	if not is_active:
 		return
-
 	canvas_manager.clear_highlights()
-	var cell = canvas_manager.board_cells[coord]
-	if cell.is_locked:
+	var cell = canvas_manager.board_cells.get(coord)
+	if cell == null or cell.is_locked:
 		return
-
-	var allowed: Array[int] = LevelUtils.normalize_available_tiles(editor_ui.get_allowed_tiles())
-	if cell.state == GameConstants.TileState.SHIFTER:
-		var partner_coord = coord + cell.shifter_direction
-		if canvas_manager.board_cells.has(partner_coord):
-			var partner = canvas_manager.board_cells[partner_coord]
-			if partner.state == GameConstants.TileState.SHIFTER:
-				partner.set_error_highlight()
-				cell.play_blocked_shake()
-				pt_ui.update_playtest_status("ERR_SHIFTER_BLOCKED", Color.WHITE)
-				return
-			cell.state = GameConstants.TileState.EMPTY
-			cell.shifter_direction = Vector2i.ZERO
-			partner.state = GameConstants.TileState.SHIFTER
-			partner.shifter_direction = coord - partner_coord
-			partner.update_visuals()
-			playtest_shifter_moves += 1
-			_update_hud()
-			canvas_manager.trigger_redraw()
-	else:
-		if cell.state == GameConstants.TileState.EMPTY:
-			cell.state = allowed[0]
-		else:
-			var current_idx := -1
-			for i in range(allowed.size()):
-				if int(allowed[i]) == int(cell.state):
-					current_idx = i
-					break
-			if current_idx == -1 or current_idx == allowed.size() - 1:
-				cell.state = GameConstants.TileState.EMPTY
-			else:
-				cell.state = int(allowed[current_idx + 1])
-
 	cell.update_visuals()
+	_after_player_board_change()
+
+
+# Hold-to-clear finished on a player-placed tile.
+func handle_cell_hold_cleared(coord: Vector2i) -> void:
+	if not is_active:
+		return
+	canvas_manager.clear_highlights()
+	var cell = canvas_manager.board_cells.get(coord)
+	if cell == null:
+		return
+	cell.update_visuals()
+	_after_player_board_change()
+
+
+# Shifter tap — swap active/inactive partner like the main game.
+func handle_shifter_toggled(coord: Vector2i) -> void:
+	if not is_active:
+		return
+	canvas_manager.clear_highlights()
+	var cell = canvas_manager.board_cells.get(coord)
+	if cell == null or cell.is_locked:
+		return
+	if cell.state != GameConstants.TileState.SHIFTER:
+		return
+	var partner_coord = coord + cell.shifter_direction
+	if canvas_manager.board_cells.has(partner_coord):
+		var partner = canvas_manager.board_cells[partner_coord]
+		if partner.state == GameConstants.TileState.SHIFTER:
+			partner.set_error_highlight()
+			cell.play_blocked_shake()
+			pt_ui.update_playtest_status("ERR_SHIFTER_BLOCKED", Color.WHITE)
+			return
+		cell.state = GameConstants.TileState.EMPTY
+		cell.shifter_direction = Vector2i.ZERO
+		partner.state = GameConstants.TileState.SHIFTER
+		partner.shifter_direction = coord - partner_coord
+		partner.update_visuals()
+		cell.update_visuals()
+		playtest_shifter_moves += 1
+		if UiSfx:
+			UiSfx.play_click()
+	_after_player_board_change()
+
+
+func _after_player_board_change() -> void:
+	_update_hud()
 	_update_joker_count()
 	_run_validation()
 	_undo_stack.record(_create_snapshot())
 	pt_ui.update_playtest_undo_redo_buttons(_undo_stack.can_undo(), _undo_stack.can_redo())
+	canvas_manager.trigger_redraw()
+
+
+# Legacy press-on-interceptor path (unused while playtest input mode is on).
+func handle_cell_click(coord: Vector2i) -> void:
+	handle_cell_played(coord)
 
 # Undo/redo actions inside playtest mode.
 func undo() -> void:

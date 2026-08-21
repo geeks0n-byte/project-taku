@@ -184,6 +184,8 @@ func _perform_action():
 				state = int(cycle[current_idx + 1])
 
 		update_visuals()
+		if UiSfx:
+			UiSfx.play_click()
 		cell_clicked.emit(coord)
 
 # Returns true if the current tile state and flags allow a hold-clear.

@@ -75,6 +75,10 @@ func _hook_existing(node: Node) -> void:
 func _hook_button(button: BaseButton) -> void:
 	if button == null or button.has_meta("_ui_sfx_hooked"):
 		return
+	# Game/editor cells drive their own tile haptics (press/hold paths differ).
+	var script: Script = button.get_script() as Script
+	if script != null and String(script.resource_path).ends_with("cell.gd"):
+		return
 	button.set_meta("_ui_sfx_hooked", true)
 	button.pressed.connect(play_click)
 

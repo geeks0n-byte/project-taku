@@ -182,6 +182,8 @@ func _on_shifter_tile_toggled(clicked_coord: Vector2i):
 	clicked_cell.update_visuals()
 	partner_cell.update_visuals()
 
+	if UiSfx:
+		UiSfx.play_click()
 	shifter_move_made.emit()
 	cell_changed.emit(clicked_coord)
 	trigger_redraw()
