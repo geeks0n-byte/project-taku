@@ -1,0 +1,74 @@
+static func apply_locale_font_to_control(node: Node) -> void:
+	if node == null or not is_instance_valid(node):
+		return
+	if not (node is Button or node is Label or node is LineEdit or node is OptionButton or node is RichTextLabel):
+		return
+	if bool(node.get_meta("_pixel_outline_part", false)):
+		return
+	if bool(node.get_meta("_safe_pixel_label", false)):
+		# Already styled by apply_live_pixel_label_settings / mono caption — don't re-theme.
+		return
+	# Captions inside PixelSafeCaption enter the tree before _safe_pixel_label is set;
+	# never re-theme them or language switches recurse / freeze.
+	if node is Label:
+		var parent := (node as Label).get_parent()
+		if parent != null and String(parent.name) == "PixelSafeCaption":
+			return
+	if node is Control and (node as Control).get_node_or_null("PixelMonoCaption") != null:
+		return
+	# PixelSafeCaption already draws Press Start — don't re-theme the host Button
+	# (main menu tree walks would otherwise replace it with Noto / scrambled Button font).
+	if node is Control and (node as Control).get_node_or_null("PixelSafeCaption") != null:
+		return
+	# Status before forced-pixel meta — playtest errors follow locale font rules.
+	if is_status_label(node) and node is RichTextLabel:
+		apply_status_font(node as RichTextLabel)
+		return
+	# ka/uk: Noto only for native letters; digits/symbols/Latin → Press Start.
+	# Resolve i18n keys before sniffing — scene .text is often "UI_PLAY" while
+	# the drawn string is Georgian/Ukrainian. Never sticky-force Press Start from
+	# a Latin key or that lock survives and draws missing glyphs (□).
+	# Runs before _force_pixel_font so a bad sticky lock can be cleared.
+	if HudFonts.is_scalable_script_locale() and not bool(node.get_meta("_brand_title", false)):
+		var display_text := _resolved_control_text(node)
+		if node is RichTextLabel:
+			display_text = HudFonts.strip_font_bbcode(display_text)
+		if HudFonts.text_needs_scalable_font(display_text):
+			node.set_meta("_force_pixel_font", false)
+			node.set_meta("_use_default_font", true)
+			if node is RichTextLabel and not display_text.is_empty():
+				var rtl := node as RichTextLabel
+				var sz := rtl.get_theme_font_size("normal_font_size")
+				if sz <= 0:
+					sz = GameConstants.UI_BODY_FONT_SIZE
+				# Keep Noto as default; wrap Latin/digit runs in Press Start.
+				var wrapped := HudFonts.wrap_press_start_runs_bbcode(rtl.text, sz)
+				if wrapped != rtl.text:
+					rtl.text = wrapped
+		elif not display_text.is_empty() and HudFonts.text_uses_press_start_font(display_text):
+			node.set_meta("_use_default_font", false)
+			# Buttons: Press Start via caption (theme font scrambles under GL Compatibility).
+			if node is Button:
+				var btn := node as Button
+				var sz := btn.get_theme_font_size("font_size")
+				if sz <= 0:
+					sz = GameConstants.UI_BTN_PANEL_FONT
+				apply_raster_pixel_button(btn, display_text, sz)
+				return
+			if node is Label:
+				var label := node as Label
+				var sz := label.get_theme_font_size("font_size")
+				if sz <= 0:
+					sz = GameConstants.UI_BODY_FONT_SIZE
+				apply_live_pixel_label_settings(label, display_text, sz, Color.WHITE)
+				return
+			_apply_forced_pixel_font(node)
+			_strip_live_pixel_outline(node as Control)
+			return
+	if node.get_meta("_force_pixel_font", false):
+		_apply_forced_pixel_font(node)
+		_strip_live_pixel_outline(node as Control)
+		return
+	# Screen headers are styled only via apply_screen_header_style. Calling it
+	# from here re-enters through apply_raster_pixel_label and overflows.
+	if n

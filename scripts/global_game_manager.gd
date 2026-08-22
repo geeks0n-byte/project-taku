@@ -5,8 +5,9 @@ extends Node
 var selected_level_resource: LevelData = null
 # Toggled from a debug menu; enables extra tools (auto-win, unlock-all, etc.).
 var debug_tools_enabled: bool = false
-# Tells the main menu to play its fade-in animation on first load.
-var main_menu_should_fade_in: bool = false
+# Tells the main menu to play its fade-in on cold launch (cleared after first use).
+# Returning from gameplay/levels leaves this false so the menu appears immediately.
+var main_menu_should_fade_in: bool = true
 
 # Prevents rapid repeated system-back presses from navigating multiple screens at once.
 var _back_guard_until_msec: int = 0

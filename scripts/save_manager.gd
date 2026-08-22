@@ -228,13 +228,26 @@ func consume_interstitial_wins() -> void:
 	ads_wins_since_interstitial = 0
 	save_progress()
 
+var _locale_fonts_deferred: bool = false
+
 func set_language(lang_code: String) -> void:
 	current_language = lang_code
 	TranslationServer.set_locale(lang_code)
 	HudFonts.clear_pixel_text_cache()
 	save_progress()
-	apply_locale_fonts()
+	# Listeners refresh translated copy first; fonts run once after (deferred).
 	language_changed.emit()
+	request_locale_fonts()
+
+func request_locale_fonts() -> void:
+	if _locale_fonts_deferred:
+		return
+	_locale_fonts_deferred = true
+	call_deferred("_apply_locale_fonts_deferred")
+
+func _apply_locale_fonts_deferred() -> void:
+	_locale_fonts_deferred = false
+	apply_locale_fonts()
 
 func apply_locale_fonts() -> void:
 	var tree := get_tree()
@@ -243,6 +256,9 @@ func apply_locale_fonts() -> void:
 
 func _on_tree_node_added(node: Node) -> void:
 	if node == null or not is_instance_valid(node):
+		return
+	# PixelSafeCaption rebuilds during a tree walk must not re-enter font apply.
+	if HudLayout.is_applying_locale_fonts():
 		return
 	if not (
 		node is Button

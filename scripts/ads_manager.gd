@@ -34,6 +34,9 @@ var _banner: AdView = null
 # Tracks whether the banner should be visible; used to restore it after fullscreen ads.
 var _banner_wanted_visible: bool = false
 var _banner_loaded: bool = false
+var _banner_loading: bool = false
+var _banner_retry_timer: Timer = null
+const BANNER_RETRY_SEC := 12.0
 
 var _interstitial: InterstitialAd = null
 var _loading_interstitial: bool = false
@@ -68,6 +71,7 @@ const FOCUS_BANNER_SETTLE_SEC := 0.2
 func _ready() -> void:
 	_ads_supported = _detect_ads_support()
 	_focus_banner_settle_timer = _make_timer(_on_banner_focus_settle)
+	_banner_retry_timer = _make_timer(_on_banner_retry_timeout)
 	_rewarded_retry_timer = _make_timer(_on_rewarded_retry_timeout)
 	_rewarded_load_watchdog = _make_timer(_on_rewarded_load_timeout)
 	# Defer so the scene tree is fully ready before consent flow starts.
@@ -196,6 +200,10 @@ func _on_app_focus_in() -> void:
 		_pin_banner_bottom()
 		call_deferred("_pin_banner_bottom")
 		_schedule_banner_focus_settle()
+		if not _banner_loaded:
+			if _banner != null and not _banner_loading:
+				_destroy_banner()
+			_ensure_banner_loaded()
 	warm_rewarded_hint()
 
 func _dismiss_soft_keyboard() -> void:
@@ -243,6 +251,8 @@ func show_menu_banner() -> void:
 	ensure_started()
 	if not _initialized:
 		return
+	if _banner != null and not _banner_loaded and not _banner_loading:
+		_destroy_banner()
 	_ensure_banner_loaded()
 	if _banner and _banner_loaded:
 		_show_banner_pinned()
@@ -279,31 +289,57 @@ func _show_banner_pinned() -> void:
 	call_deferred("_pin_banner_bottom")
 
 func _ensure_banner_loaded() -> void:
-	if not _initialized or _banner != null:
-		if _banner and _banner_loaded and _banner_wanted_visible:
+	if not _initialized:
+		return
+	if _banner != null:
+		if _banner_loaded and _banner_wanted_visible:
 			_show_banner_pinned()
 		return
+	if _banner_loading:
+		return
+	_banner_loading = true
 	var ad_size := AdSize.get_current_orientation_anchored_adaptive_banner_ad_size(AdSize.FULL_WIDTH)
 	_banner = AdView.new(_banner_unit_id(), ad_size, AdPosition.BOTTOM)
 	var listener := AdListener.new()
 	listener.on_ad_loaded = func() -> void:
+		_banner_loading = false
 		_banner_loaded = true
+		if _banner_retry_timer:
+			_banner_retry_timer.stop()
 		if _banner_wanted_visible and _banner:
 			_show_banner_pinned()
 		else:
 			if _banner:
 				_banner.hide()
 	listener.on_ad_failed_to_load = func(_error: LoadAdError) -> void:
+		_banner_loading = false
 		_banner_loaded = false
+		_destroy_banner()
+		_schedule_banner_retry()
 	_banner.ad_listener = listener
 	_banner.load_ad(AdRequest.new())
 	_banner.hide()
+
+func _schedule_banner_retry() -> void:
+	if not _banner_wanted_visible or _banner_retry_timer == null:
+		return
+	if _banner_retry_timer.time_left > 0.0:
+		return
+	_banner_retry_timer.start(BANNER_RETRY_SEC)
+
+func _on_banner_retry_timeout() -> void:
+	if not _banner_wanted_visible or _banner_loaded:
+		return
+	_ensure_banner_loaded()
 
 func _destroy_banner() -> void:
 	if _banner:
 		_banner.destroy()
 		_banner = null
 	_banner_loaded = false
+	_banner_loading = false
+	if _banner_retry_timer:
+		_banner_retry_timer.stop()
 
 func _reanchor_banner_after_fullscreen() -> void:
 	if not _banner_wanted_visible:

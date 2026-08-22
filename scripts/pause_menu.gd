@@ -126,7 +126,7 @@ func _apply_pause_button(button: Button, row_h: float = MENU_BTN_ROW_H) -> void:
 	var empty := StyleBoxEmpty.new()
 	for style_name in ["normal", "pressed", "hover", "disabled", "focus"]:
 		button.add_theme_stylebox_override(style_name, empty)
-	button.set_meta("_use_default_font", not HudFonts.uses_pixel_font())
+	# Font path decided below from translated display (Latin → Press Start even in ka/uk).
 	button.custom_minimum_size = Vector2(MENU_BTN_WIDTH, row_h)
 	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	button.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -138,13 +138,15 @@ func _apply_pause_button(button: Button, row_h: float = MENU_BTN_ROW_H) -> void:
 	var display := String(TranslationServer.translate(key)) if not key.is_empty() else button.text
 	if display.is_empty():
 		display = key
-	if HudFonts.uses_pixel_font():
+	if HudFonts.should_use_press_start_font(display):
 		HudLayout.apply_pixel_mono_button(button, display, MENU_BTN_FONT, Color.WHITE)
 	else:
 		HudLayout._clear_pixel_raster(button)
 		button.remove_meta("_safe_pixel_label")
 		button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
 		button.text = key if not key.is_empty() else button.text
+		button.set_meta("_use_default_font", true)
+		button.set_meta("_force_pixel_font", false)
 		HudLayout.apply_locale_font_to_control(button)
 		button.add_theme_font_size_override("font_size", HudLayout.body_font_size(MENU_BTN_FONT))
 		HudLayout.apply_safe_outline(button, GameConstants.MENU_TEXT_OUTLINE)

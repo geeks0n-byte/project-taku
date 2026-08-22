@@ -86,6 +86,9 @@ func _on_language_changed() -> void:
 	var end_root := get_node_or_null("../PlaytestEndLayer")
 	if end_root:
 		HudLayout.apply_locale_fonts_to_tree(end_root)
+	# Re-apply victory button fonts after the tree walk (Latin → Press Start caption).
+	if _victory_panel and _victory_panel.visible:
+		_style_end_buttons()
 
 func _layout_how_to_play() -> void:
 	for btn in [htp_prev_button, htp_next_button]:
@@ -251,16 +254,28 @@ func _setup_end_layer() -> void:
 	hide_end_overlays()
 
 func _style_end_buttons() -> void:
-	for btn in [_try_again_button, _return_button]:
-		if btn == null:
-			continue
-		if _button_style_source:
-			for style_name in ["normal", "pressed", "hover", "disabled"]:
-				var style := _button_style_source.get_theme_stylebox(style_name)
-				if style:
-					btn.add_theme_stylebox_override(style_name, style)
-		HudLayout.apply_safe_outline(btn, 8)
-		HudLayout.apply_panel_button(btn)
+	_style_end_button(_try_again_button, HudLayout.english("UI_TRY_AGAIN"))
+	_style_end_button(_return_button, HudLayout.english("RETURN"))
+
+## Panel chrome + Press Start caption for Latin/digits/symbols (incl. ka/uk English chrome).
+func _style_end_button(btn: Button, display: String) -> void:
+	if btn == null:
+		return
+	if _button_style_source:
+		for style_name in ["normal", "pressed", "hover", "disabled"]:
+			var style := _button_style_source.get_theme_stylebox(style_name)
+			if style:
+				btn.add_theme_stylebox_override(style_name, style)
+	btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.autowrap_mode = TextServer.AUTOWRAP_OFF
+	btn.clip_text = false
+	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	btn.custom_minimum_size = GameConstants.UI_BTN_PANEL_SIZE
+	HudLayout.apply_raster_pixel_button(
+		btn, display, GameConstants.UI_BTN_PANEL_FONT
+	)
+	HudLayout.grow_panel_button_to_text(btn)
 
 ## Calculates and applies offsets for all children of the victory panel based on how
 ## many star-goal rows the result contains and whether a board preview is shown.
@@ -315,10 +330,17 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 	var buttons_top := cursor + 28.0
 	var buttons_h := 260.0
 	if _victory_buttons:
+		var buttons_w := GameConstants.UI_BTN_PANEL_SIZE.x
+		for child in _victory_buttons.get_children():
+			if child is Control and (child as Control).visible:
+				buttons_w = maxf(buttons_w, (child as Control).custom_minimum_size.x)
 		buttons_h = maxf(
 			260.0,
-			HudDialogs.measure_control_height(_victory_buttons, 480.0)
+			HudDialogs.measure_control_height(_victory_buttons, buttons_w)
 		)
+		var half_w := buttons_w * 0.5
+		_victory_buttons.offset_left = -half_w
+		_victory_buttons.offset_right = half_w
 		_victory_buttons.offset_top = buttons_top
 		_victory_buttons.offset_bottom = buttons_top + buttons_h
 	var height := buttons_top + buttons_h + 40.0 + HudDialogs.DIALOG_EXTRA_PAD_V
@@ -426,14 +448,7 @@ func show_victory_overlay(stats: Dictionary) -> void:
 	_layout_victory_panel(star_result)
 	if _victory_panel:
 		_victory_panel.visible = true
-	if _try_again_button:
-		_try_again_button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		_try_again_button.text = HudLayout.english("UI_TRY_AGAIN")
-		HudLayout.apply_panel_button(_try_again_button)
-	if _return_button:
-		_return_button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		_return_button.text = HudLayout.english("RETURN")
-		HudLayout.apply_panel_button(_return_button)
+	_style_end_buttons()
 
 func _ensure_victory_preview() -> void:
 	if _victory_preview and is_instance_valid(_victory_preview):
@@ -471,8 +486,8 @@ func _refresh_how_to_play_text() -> void:
 		)
 		HudLayout.apply_screen_header_style(_htp_header)
 	if rules_label:
-		_setup_how_to_play_font()
 		rules_label.text = HowToPlayContent.get_page_text(_htp_page)
+		_setup_how_to_play_font()
 	if htp_prev_button:
 		htp_prev_button.visible = _htp_page > 0
 		htp_prev_button.disabled = false

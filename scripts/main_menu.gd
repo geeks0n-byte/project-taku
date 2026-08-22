@@ -276,7 +276,8 @@ func _apply_main_menu_button(button: Button) -> void:
 	for style_name in ["normal", "pressed", "hover", "disabled", "focus"]:
 		button.add_theme_stylebox_override(style_name, empty)
 	button.flat = true
-	button.set_meta("_use_default_font", not HudFonts.uses_pixel_font())
+	# Font path decided below from translated display (Latin → Press Start even in ka/uk).
+	button.set_meta("_force_pixel_font", false)
 	var is_play: bool = button == start_btn
 	var row_h := 148.0 if is_play else 118.0
 	var row_w := 780.0 if is_play else 720.0
@@ -292,14 +293,17 @@ func _apply_main_menu_button(button: Button) -> void:
 	var display := String(TranslationServer.translate(key)) if not key.is_empty() else ""
 	if display.is_empty():
 		display = key
-	if HudFonts.uses_pixel_font():
+	if HudFonts.should_use_press_start_font(display):
 		# Natural advances + geometric centering (Label captions can shift long titles).
+		# Also covers Latin-only chrome while the game language is ka/uk.
 		HudLayout.apply_pixel_mono_button(button, display, font_size, Color.WHITE)
 	else:
 		HudLayout._clear_pixel_raster(button)
 		button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
 		button.text = key if not key.is_empty() else button.text
 		button.remove_meta("_safe_pixel_label")
+		button.set_meta("_use_default_font", true)
+		button.set_meta("_force_pixel_font", false)
 		HudLayout.apply_locale_font_to_control(button)
 		button.add_theme_font_size_override("font_size", HudLayout.body_font_size(font_size))
 		HudLayout.apply_safe_outline(button, MENU_BTN_OUTLINE)
@@ -629,8 +633,8 @@ func _refresh_how_to_play_text() -> void:
 		)
 		HudLayout.apply_screen_header_style(_htp_header)
 	if _htp_rules:
-		HudLayout.apply_locale_font_to_control(_htp_rules)
 		_htp_rules.text = HowToPlayContent.get_page_text(_htp_page)
+		HudLayout.apply_locale_font_to_control(_htp_rules)
 	if _htp_prev:
 		_htp_prev.visible = _htp_page > 0
 		HudLayout.apply_nav_button(_htp_prev)

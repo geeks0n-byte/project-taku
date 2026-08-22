@@ -104,10 +104,10 @@ static func _page_examples(force_english: bool) -> String:
 	]
 	return "\n".join(lines)
 
-## VALID / INVALID: Press Start except ka/uk. Outline is forced off — theme outline
-## on Press Start scrambles glyphs under GL Compatibility.
+## VALID / INVALID: Press Start for Latin (incl. ka/uk); Noto only for native letters.
+## Outline forced off — theme outline on Press Start scrambles glyphs under GL Compatibility.
 static func _example_column_label(text: String, force_english: bool) -> String:
-	if force_english or HudFonts.uses_pixel_font():
+	if force_english or HudFonts.should_use_press_start_font(text):
 		return "[outline_size=0][font=%s]%s[/font][/outline_size]" % [
 			HudFonts.PIXEL_FONT_PATH, text
 		]

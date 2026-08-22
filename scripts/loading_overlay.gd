@@ -129,16 +129,9 @@ func _refresh_loading_label() -> void:
 		dots += "."
 	var display := _base_text + dots
 	var font_size := 36
-	if HudLayout.needs_pixel_text_raster():
-		_lock_loading_label_width()
-		HudLayout.apply_raster_pixel_label(_label, display, font_size, Color.WHITE)
-	else:
-		_label.set_meta("_use_default_font", true)
-		HudLayout.apply_locale_font_to_control(_label)
-		_label.add_theme_font_size_override("font_size", HudLayout.scaled_font_size(font_size))
-		HudLayout.apply_safe_outline(_label, 8)
-		_label.text = display
-		_lock_loading_label_width()
+	# Latin "LOADING..." (and digits/symbols) stay Press Start even in ka/uk.
+	_lock_loading_label_width()
+	HudLayout.apply_raster_pixel_label(_label, display, font_size, Color.WHITE)
 
 ## Pins the label's minimum width to the widest possible state ("LOADING...") so the
 ## label never changes width as dots are added, preventing the centering from jittering.
@@ -149,11 +142,11 @@ func _lock_loading_label_width() -> void:
 	var full := _base_text + "..."
 	var font: Font = null
 	var pad := 8
-	if HudLayout.needs_pixel_text_raster():
+	if HudFonts.should_use_press_start_font(full):
 		font = HudFonts.pixel_font()
 		pad = 10
 	else:
-		font = _label.get_theme_font("font")
+		font = HudFonts.default_font()
 		font_size = HudLayout.scaled_font_size(font_size)
 	if font == null:
 		font = HudFonts.default_font()

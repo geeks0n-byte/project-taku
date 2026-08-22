@@ -828,8 +828,8 @@ func _refresh_how_to_play_text() -> void:
 		)
 		HudLayout.apply_screen_header_style(_htp_header)
 	if rules_label:
-		_setup_how_to_play_font()
 		rules_label.text = HowToPlayContent.get_page_text(_htp_page)
+		_setup_how_to_play_font()
 	if htp_prev_button:
 		htp_prev_button.visible = _htp_page > 0
 		htp_prev_button.disabled = false
@@ -920,6 +920,7 @@ func _refresh_victory_locale() -> void:
 			HudLayout.apply_raster_pixel_button(
 				restart_button, tr("NEXT_LEVEL"), GameConstants.UI_BTN_PANEL_FONT
 			)
+			HudLayout.grow_panel_button_to_text(restart_button)
 		else:
 			HudLayout.apply_panel_button(restart_button)
 	if play_again_label:
@@ -1088,8 +1089,11 @@ func _place_victory_button(button: Button, buttons_top: float, row: int) -> void
 	if not button:
 		return
 	var top := buttons_top + float(row) * 130.0
+	var min_size := GameConstants.UI_BTN_PANEL_SIZE
+	var w := maxf(button.custom_minimum_size.x, min_size.x)
+	var h := maxf(button.custom_minimum_size.y, min_size.y)
 	button.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	button.offset_left = -260.0
-	button.offset_right = 260.0
+	button.offset_left = -w * 0.5
+	button.offset_right = w * 0.5
 	button.offset_top = top
-	button.offset_bottom = top + 110.0
+	button.offset_bottom = top + h

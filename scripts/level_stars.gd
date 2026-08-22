@@ -121,13 +121,12 @@ static func evaluate(
 	var time_earned := time_limit <= 0 or elapsed_sec <= time_limit
 	if time_earned:
 		bits |= BIT_TIME
-	var use_pixel_detail := force_english or HudFonts.uses_pixel_font()
 	goals.append({
 		"id": "time",
 		"earned": time_earned,
 		"title": _goal_title("STAR_TIME", force_english),
 		"detail": format_time_goal_detail(elapsed_sec, time_limit),
-		"detail_bbcode": time_limit <= 0 and use_pixel_detail,
+		"detail_bbcode": time_limit <= 0 and HudFonts.uses_pixel_font(),
 	})
 
 	var earned_count := 0
@@ -213,9 +212,9 @@ static func _measure_star_row_min_width(goal: Dictionary, font: Font, font_size:
 	var title_w := HudDialogs.measure_text_max_line_width(font, title, font_size)
 	var detail_w := _measure_goal_detail_width(detail, font, font_size)
 	var icon_w := STAR_ICON_SIZE + 8.0
-	var row_sep := 16.0
-	var detail_gap := 16.0 if detail_w > 0.0 else 0.0
-	return icon_w + row_sep + title_w + detail_gap + detail_w + 16.0
+	var row_sep := 12.0
+	var detail_gap := TIME_DETAIL_GAP if detail_w > 0.0 else 0.0
+	return icon_w + row_sep + title_w + detail_gap + detail_w + 12.0
 
 static func _measure_goal_detail_width(
 	detail_text: String, font: Font, font_size: int
@@ -268,18 +267,24 @@ static func populate_requirements(
 	while host.get_child_count() > 0:
 		host.get_child(0).free()
 	var preview := build_requirements(level, earned_bits)
+	var min_w := measure_requirements_min_width(level, earned_bits)
+	# Shrink-wrap to the widest goal row; only use content_width as a max cap (not a stretch floor).
+	var width_cap := content_width if content_width > 0.0 else RESULTS_CONTENT_WIDTH
+	var block_w := minf(maxf(min_w, 200.0), width_cap)
 	var root := VBoxContainer.new()
-	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	root.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	root.add_theme_constant_override("separation", 16)
 	root.alignment = BoxContainer.ALIGNMENT_CENTER
 	host.add_child(root)
 	var stars_box := VBoxContainer.new()
-	stars_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Same row layout as victory; width hugs content so TIME: sits near the clock.
+	stars_box.custom_minimum_size.x = block_w
+	stars_box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	stars_box.add_theme_constant_override("separation", 12)
 	root.add_child(stars_box)
 	for g in preview.get("goals", []):
-		stars_box.add_child(_make_star_row(g, content_width, white_text))
+		stars_box.add_child(_make_star_row(g, block_w, white_text, false))
 
 ## Helper to create a centered pixel-font label used for section headings in result rows.
 static func _make_text_row(text: String, color: Color, font_size: int) -> Label:
@@ -289,22 +294,45 @@ static func _make_text_row(text: String, color: Color, font_size: int) -> Label:
 	HudLayout.apply_raster_pixel_label(label, text, font_size, color)
 	return label
 
-## Builds one full-width HBox row for a single star goal: star icon | title | optional detail.
+
+## Fixed gap between TIME: and the clock on level-select (tighter than victory stretch, not flush).
+const TIME_DETAIL_GAP := 36.0
+
+static func _add_time_detail_with_gap(
+	row: HBoxContainer, title_slot: Control, title: Label, detail: Control
+) -> void:
+	title.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	title_slot.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(TIME_DETAIL_GAP, 0)
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	spacer.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	row.add_child(spacer)
+	row.add_child(detail)
+
+## Builds one HBox row for a single star goal: star icon | title | optional detail.
 ## Earned goals use green text; missed goals use red (and hints swap to HINTS USED).
+## compact=true packs title+detail tightly (level-select popup); false spreads detail right (results).
 static func _make_star_row(
 	goal: Dictionary,
 	_content_width: float = RESULTS_CONTENT_WIDTH,
-	white_text: bool = false
+	white_text: bool = false,
+	compact: bool = false
 ) -> HBoxContainer:
 	var earned := bool(goal.get("earned", false))
 	var row := HBoxContainer.new()
 	row.custom_minimum_size.y = ROW_HEIGHT
-	row.add_theme_constant_override("separation", 16)
+	# Keep icon↔title roomy; TIME↔clock uses a smaller gap via detail placement below.
+	row.add_theme_constant_override("separation", 12)
 	row.alignment = BoxContainer.ALIGNMENT_BEGIN
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.size_flags_horizontal = (
+		Control.SIZE_SHRINK_BEGIN if compact else Control.SIZE_EXPAND_FILL
+	)
+	var text_flags := Control.SIZE_SHRINK_BEGIN if compact else Control.SIZE_EXPAND_FILL
 
 	var icon_slot := CenterContainer.new()
 	icon_slot.custom_minimum_size = Vector2(STAR_ICON_SIZE + 8.0, STAR_ICON_SIZE + 8.0)
+	icon_slot.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	row.add_child(icon_slot)
 
 	# Slight vertical lift so the star icon reads as top-aligned with the text lines beside it.
@@ -323,7 +351,7 @@ static func _make_star_row(
 	icon_lift.add_child(icon)
 
 	var title_slot := HBoxContainer.new()
-	title_slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_slot.size_flags_horizontal = text_flags
 	title_slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	title_slot.add_theme_constant_override("separation", 10)
 	title_slot.alignment = BoxContainer.ALIGNMENT_BEGIN
@@ -341,7 +369,7 @@ static func _make_star_row(
 		title_slot.add_child(tile_icon)
 
 	var title := Label.new()
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.size_flags_horizontal = text_flags
 	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -381,7 +409,7 @@ static func _make_star_row(
 			or (bool(goal.get("detail_bbcode", false)) and HudFonts.uses_pixel_font())
 		if use_bbcode:
 			var detail := RichTextLabel.new()
-			detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			detail.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 			detail.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			detail.fit_content = true
 			detail.scroll_active = false
@@ -390,13 +418,18 @@ static func _make_star_row(
 			detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			HudLayout.apply_live_pixel_richtext(detail, RESULTS_ROW_FONT)
 			detail.add_theme_color_override("default_color", detail_color)
-			detail.text = "[right]%s[/right]" % detail_text
-			row.add_child(detail)
+			detail.text = detail_text if compact else "[right]%s[/right]" % detail_text
+			if white_text and str(goal.get("id", "")) == "time":
+				_add_time_detail_with_gap(row, title_slot, title, detail)
+			else:
+				row.add_child(detail)
 		else:
 			var detail := Label.new()
-			detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			detail.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 			detail.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-			detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			detail.horizontal_alignment = (
+				HORIZONTAL_ALIGNMENT_LEFT if compact else HORIZONTAL_ALIGNMENT_RIGHT
+			)
 			detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			HudLayout.apply_raster_pixel_label(
 				detail,
@@ -406,7 +439,11 @@ static func _make_star_row(
 				0,
 				HudLayout.text_is_digit_display(detail_text)
 			)
-			row.add_child(detail)
+			if white_text and str(goal.get("id", "")) == "time":
+				detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+				_add_time_detail_with_gap(row, title_slot, title, detail)
+			else:
+				row.add_child(detail)
 
 	var row_h := ROW_HEIGHT
 	var title_h := title.get_minimum_size().y

@@ -777,8 +777,11 @@ static func apply_raster_pixel_label(
 ) -> void:
 	if not label:
 		return
-	# Digits / forced badges stay Press Start in every language.
-	if force_pixel or control_uses_pixel_font(label):
+	# Digits / symbols / Latin-only copy stay Press Start in ka/uk.
+	var use_pixel := force_pixel or control_uses_pixel_font(label)
+	if not use_pixel and HudFonts.is_scalable_script_locale() and HudFonts.text_uses_press_start_font(text):
+		use_pixel = true
+	if use_pixel:
 		if force_pixel or _in_force_pixel_subtree(label):
 			label.set_meta("_force_pixel_font", true)
 		apply_live_pixel_label_settings(label, text, font_size, color)
@@ -804,17 +807,21 @@ static func apply_raster_pixel_label(
 # Styles a Button for pixel or scalable text rendering.
 # In English, creates a PixelSafeCaption child Label with Press Start so the
 # button's own font/outline path (which scrambles under GL Compatibility) is bypassed.
+# force_pixel keeps Press Start even in ka/uk (digits/symbols-only labels).
 static func apply_raster_pixel_button(
-	button: Button, text: String, font_size: int, _max_width: int = 0
+	button: Button, text: String, font_size: int, _max_width: int = 0, force_pixel: bool = false
 ) -> void:
 	if not button:
 		return
 	_clear_pixel_raster(button)
 	button.clip_text = false
-	if control_uses_pixel_font(button):
+	var use_pixel := force_pixel or control_uses_pixel_font(button) or bool(button.get_meta("_force_pixel_font", false))
+	if not use_pixel and HudFonts.is_scalable_script_locale() and HudFonts.text_uses_press_start_font(text):
+		use_pixel = true
+	if use_pixel:
 		# Draw Press Start on a caption label — never via Button theme font/outline.
 		button.set_meta("_use_default_font", false)
-		if _in_force_pixel_subtree(button):
+		if force_pixel or _in_force_pixel_subtree(button):
 			button.set_meta("_force_pixel_font", true)
 		button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		button.text = ""
@@ -833,6 +840,7 @@ static func apply_raster_pixel_button(
 		host.offset_bottom = -4.0
 		var caption := Label.new()
 		caption.name = "Caption"
+		caption.set_meta("_safe_pixel_label", true)
 		caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -842,6 +850,7 @@ static func apply_raster_pixel_button(
 		apply_live_pixel_label_settings(caption, text, font_size, Color.WHITE)
 		return
 	button.set_meta("_use_default_font", true)
+	button.set_meta("_force_pixel_font", false)
 	button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	button.text = text
 	button.add_theme_font_override("font", HudFonts.default_font())
@@ -851,6 +860,26 @@ static func apply_raster_pixel_button(
 # Returns the appropriate UI font for the active locale.
 static func ui_font() -> Font:
 	return pixel_font() if uses_pixel_font() else HudFonts.default_font()
+
+## Visible/copy string for font routing (translates i18n keys when needed).
+static func _resolved_control_text(node: Node) -> String:
+	var raw := ""
+	if node is Label:
+		raw = String((node as Label).text)
+	elif node is Button:
+		raw = String((node as Button).text)
+		if raw.is_empty():
+			raw = String(node.get_meta("_tr_key", ""))
+	elif node is RichTextLabel:
+		raw = String((node as RichTextLabel).text)
+	raw = raw.strip_edges()
+	if raw.is_empty():
+		return ""
+	# Include keys without "_" (TUTORIAL, PAUSED, COMPLETED). Underscore-only
+	# matching is for dialog-key recovery where TAK/JA must not look like keys.
+	if _is_message_key(raw):
+		return String(TranslationServer.translate(raw))
+	return raw
 
 # Returns true for any node whose name marks it as a status/feedback label.
 # Used by apply_locale_font_to_control to route these to apply_status_font instead.
@@ -891,7 +920,7 @@ static func apply_status_font(label: RichTextLabel, base_size: int = GameConstan
 
 # Applies the correct locale font to a single UI control, respecting all the
 # special-case guards: pixel outline parts, pre-styled pixel labels, icon-only buttons,
-# LabelSettings, screen headers, and the "=" / "×" math symbols that must stay default.
+# LabelSettings, and screen headers.
 static func apply_locale_font_to_control(node: Node) -> void:
 	if node == null or not is_instance_valid(node):
 		return
@@ -902,12 +931,80 @@ static func apply_locale_font_to_control(node: Node) -> void:
 	if bool(node.get_meta("_safe_pixel_label", false)):
 		# Already styled by apply_live_pixel_label_settings / mono caption — don't re-theme.
 		return
+	# Captions inside PixelSafeCaption enter the tree before _safe_pixel_label is set;
+	# never re-theme them or language switches recurse / freeze.
+	if node is Label:
+		var parent := (node as Label).get_parent()
+		if parent != null and String(parent.name) == "PixelSafeCaption":
+			return
 	if node is Control and (node as Control).get_node_or_null("PixelMonoCaption") != null:
 		return
+	# PixelSafeCaption already draws Press Start — keep it for Latin-only labels.
+	# If the resolved string now needs Noto (ka/uk native letters), drop the caption
+	# and fall through so language switches cannot leave a stale Press Start overlay.
+	if node is Control and (node as Control).get_node_or_null("PixelSafeCaption") != null:
+		if HudFonts.is_scalable_script_locale():
+			var caption_display := _resolved_control_text(node)
+			if caption_display.is_empty() and node is Button:
+				caption_display = String(TranslationServer.translate(String(node.get_meta("_tr_key", ""))))
+			if HudFonts.text_needs_scalable_font(caption_display):
+				_clear_pixel_raster(node as Control)
+				node.set_meta("_safe_pixel_label", false)
+			else:
+				return
+		else:
+			return
 	# Status before forced-pixel meta — playtest errors follow locale font rules.
 	if is_status_label(node) and node is RichTextLabel:
 		apply_status_font(node as RichTextLabel)
 		return
+	# ka/uk: Noto only for native letters; digits/symbols/Latin → Press Start.
+	# Resolve i18n keys before sniffing — scene .text is often "UI_PLAY" while
+	# the drawn string is Georgian/Ukrainian. Never sticky-force Press Start from
+	# a Latin key or that lock survives and draws missing glyphs (□).
+	# Runs before _force_pixel_font so a bad sticky lock can be cleared.
+	if HudFonts.is_scalable_script_locale() and not bool(node.get_meta("_brand_title", false)):
+		var display_text := _resolved_control_text(node)
+		if node is RichTextLabel:
+			display_text = HudFonts.strip_font_bbcode(display_text)
+		if HudFonts.text_needs_scalable_font(display_text):
+			node.set_meta("_force_pixel_font", false)
+			node.set_meta("_use_default_font", true)
+			if node is RichTextLabel and not display_text.is_empty():
+				var rtl := node as RichTextLabel
+				# How-To-Play / icon pages: authored [img] + page [font_size]. Injecting
+				# Press Start runs used to nest font_size tags and freeze on ka↔uk.
+				if display_text.find("[img") >= 0:
+					if rtl.text != display_text:
+						rtl.text = display_text
+				else:
+					var sz := rtl.get_theme_font_size("normal_font_size")
+					if sz <= 0:
+						sz = GameConstants.UI_BODY_FONT_SIZE
+					# Wrap from already-stripped copy — never re-wrap raw rtl.text.
+					var wrapped := HudFonts.wrap_press_start_runs_bbcode(display_text, sz)
+					if wrapped != rtl.text:
+						rtl.text = wrapped
+		elif not display_text.is_empty() and HudFonts.text_uses_press_start_font(display_text):
+			node.set_meta("_use_default_font", false)
+			# Buttons: Press Start via caption (theme font scrambles under GL Compatibility).
+			if node is Button:
+				var btn := node as Button
+				var sz := btn.get_theme_font_size("font_size")
+				if sz <= 0:
+					sz = GameConstants.UI_BTN_PANEL_FONT
+				apply_raster_pixel_button(btn, display_text, sz)
+				return
+			if node is Label:
+				var label := node as Label
+				var sz := label.get_theme_font_size("font_size")
+				if sz <= 0:
+					sz = GameConstants.UI_BODY_FONT_SIZE
+				apply_live_pixel_label_settings(label, display_text, sz, Color.WHITE)
+				return
+			_apply_forced_pixel_font(node)
+			_strip_live_pixel_outline(node as Control)
+			return
 	if node.get_meta("_force_pixel_font", false):
 		_apply_forced_pixel_font(node)
 		_strip_live_pixel_outline(node as Control)
@@ -927,11 +1024,6 @@ static func apply_locale_font_to_control(node: Node) -> void:
 			_strip_live_pixel_outline(node as Control)
 		return
 	var use_default := bool(node.get_meta("_use_default_font", false))
-	if not use_default and node is Label:
-		var label_text := (node as Label).text
-		if label_text == "=" or label_text == "×":
-			use_default = true
-			node.set_meta("_use_default_font", true)
 	# English-only editor chrome: Press Start even when the game language is not EN.
 	if not use_default and _in_force_pixel_subtree(node):
 		node.set_meta("_force_pixel_font", true)
@@ -987,8 +1079,24 @@ static func _apply_forced_pixel_font(node: Node) -> void:
 
 # Recursively walks a subtree and applies the correct locale font to every
 # eligible control. Skips pixel-outline overlay parts to avoid infinite recursion.
+static var _locale_font_tree_depth: int = 0
+
+static func is_applying_locale_fonts() -> bool:
+	return _locale_font_tree_depth > 0
+
 static func apply_locale_fonts_to_tree(root: Node) -> void:
-	if root == null:
+	if root == null or not is_instance_valid(root):
+		return
+	# Re-entrancy / depth guard — node_added during raster rebuilds must not
+	# stack another full tree walk (ka↔uk used to hang here).
+	if _locale_font_tree_depth > 48:
+		return
+	_locale_font_tree_depth += 1
+	_apply_locale_fonts_to_tree_inner(root)
+	_locale_font_tree_depth -= 1
+
+static func _apply_locale_fonts_to_tree_inner(root: Node) -> void:
+	if root == null or not is_instance_valid(root):
 		return
 	if bool(root.get_meta("_pixel_outline_part", false)):
 		return
@@ -1004,7 +1112,8 @@ static func apply_locale_fonts_to_tree(root: Node) -> void:
 		):
 			_strip_live_pixel_outline(root as Control)
 	for child in root.get_children():
-		apply_locale_fonts_to_tree(child)
+		if is_instance_valid(child):
+			_apply_locale_fonts_to_tree_inner(child)
 
 # Shrinks a button's font until the wrapped text fits within the button's minimum
 # size minus padding. Useful for long translated strings that otherwise overflow.
@@ -1252,6 +1361,16 @@ static func _button_label_display(button: Button) -> Dictionary:
 	var font: Font = button.get_theme_font("font")
 	var font_size := button.get_theme_font_size("font_size")
 	var caption := button.get_node_or_null("PixelSafeCaption/Caption") as Label
+	if caption == null:
+		# Victory / panel buttons often draw via a nested Label (e.g. HBox/Label).
+		for node in button.find_children("*", "Label", true, false):
+			var label := node as Label
+			if label == null or label.text.strip_edges().is_empty():
+				continue
+			if bool(label.get_meta("_pixel_outline_part", false)):
+				continue
+			caption = label
+			break
 	if caption:
 		display = caption.text
 		if caption.label_settings != null:
@@ -1458,6 +1577,11 @@ static func grow_dialog_button_to_text(button: Button, horizontal_padding: float
 	var base := GameConstants.UI_BTN_DIALOG_SIZE
 	grow_button_to_text(button, base.y, horizontal_padding, base.x)
 
+## Grows a panel button's width to fit its label; never thinner than UI_BTN_PANEL_SIZE.x.
+static func grow_panel_button_to_text(button: Button, horizontal_padding: float = 48.0) -> void:
+	var base := GameConstants.UI_BTN_PANEL_SIZE
+	grow_button_to_text(button, base.y, horizontal_padding, base.x)
+
 # Styles a PREV/NEXT navigation button: tile background, directional icon chosen
 # by whether the button name contains "next", and an extra +1 px icon lift.
 static func apply_nav_button(button: Button) -> void:
@@ -1491,12 +1615,40 @@ static func apply_nav_button(button: Button) -> void:
 		button.draw.connect(func(): refresh_button_icon_modulate(button))
 
 # Styles a "panel" button (victory screen: Next Level, Play Again, Main Menu).
-# Sizes to UI_BTN_PANEL_SIZE and fits any caption Labels inside the button.
+# Height is UI_BTN_PANEL_SIZE.y; width grows to the label with that size as a minimum.
+# Latin/digits/symbols use Press Start even in ka/uk; native-script copy uses Noto.
 static func apply_panel_button(button: Button) -> void:
 	if not button:
 		return
 	button.focus_mode = Control.FOCUS_NONE
+	button.autowrap_mode = TextServer.AUTOWRAP_OFF
+	button.clip_text = false
+	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	button.custom_minimum_size = GameConstants.UI_BTN_PANEL_SIZE
+	var display := _resolved_control_text(button)
+	if display.is_empty():
+		display = button.text.strip_edges()
+	if display.is_empty():
+		var info := _button_label_display(button)
+		display = String(info.get("text", ""))
+	if HudFonts.should_use_press_start_font(display) and not display.is_empty():
+		button.set_meta("_use_default_font", false)
+		if _in_force_pixel_subtree(button):
+			button.set_meta("_force_pixel_font", true)
+		# Prefer caption on the button itself when there is no nested Label chrome.
+		var nested := button.get_node_or_null("HBoxContainer/Label") as Label
+		if nested == null:
+			nested = button.get_node_or_null("Label") as Label
+		if nested:
+			apply_raster_pixel_label(
+				nested, display, GameConstants.UI_BTN_PANEL_FONT, Color.WHITE
+			)
+		else:
+			apply_raster_pixel_button(
+				button, display, GameConstants.UI_BTN_PANEL_FONT
+			)
+		grow_panel_button_to_text(button)
+		return
 	var use_pixel := control_uses_pixel_font(button)
 	button.set_meta("_use_default_font", not use_pixel)
 	if use_pixel:
@@ -1505,8 +1657,16 @@ static func apply_panel_button(button: Button) -> void:
 		_strip_live_pixel_outline(button)
 	else:
 		apply_safe_outline(button, 8)
-	fit_text_button(button, GameConstants.UI_BTN_PANEL_FONT, GameConstants.UI_BTN_PANEL_FONT_MIN)
-	_fit_panel_button_captions(button)
+	if not display.is_empty() and button.text.strip_edges().is_empty():
+		# Keep i18n key on the button when a nested Label owns the visible copy.
+		pass
+	elif not display.is_empty():
+		button.text = display
+	button.add_theme_font_size_override(
+		"font_size", body_font_size(GameConstants.UI_BTN_PANEL_FONT)
+	)
+	apply_locale_font_to_control(button)
+	grow_panel_button_to_text(button)
 
 ## Applies the gray-dark tile texture style to a button.
 ## Height is fixed to [param height]; width auto-fits the text label.
@@ -1689,7 +1849,7 @@ static func apply_popup_label(label: Label, base_size: int = GameConstants.UI_BO
 	label.clip_contents = true
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
-# True when copy is numeric display (level numbers, MM:SS clocks, etc.).
+# True when copy is numeric/symbol display (level numbers, MM:SS clocks, etc.) — Press Start in ka/uk.
 static func text_is_digit_display(text: String) -> bool:
 	if text.is_empty() or text == "∞":
 		return false

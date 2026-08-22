@@ -209,17 +209,32 @@ func _update_lang_label() -> void:
 	if lang_label.has_theme_font_override("font"):
 		lang_label.remove_theme_font_override("font")
 	var font_size := HudLayout.scaled_font_size(GameConstants.UI_BODY_FONT_SIZE_LARGE)
-	if HudFonts.uses_pixel_font():
-		HudLayout.apply_live_pixel_label_settings(lang_label, name_text, font_size, Color.WHITE)
-		# Re-assert after settings — guards against theme/locale pass races.
-		lang_label.text = name_text
+	# Latin names (ENGLISH, …) stay Press Start even in ka/uk; native names use Noto.
+	if HudFonts.should_use_press_start_font(name_text):
+		HudLayout.apply_raster_pixel_label(lang_label, name_text, font_size, Color.WHITE)
 	else:
 		HudLayout.clear_label_settings(lang_label)
 		lang_label.set_meta("_use_default_font", true)
+		lang_label.set_meta("_force_pixel_font", false)
 		lang_label.text = name_text
 		lang_label.add_theme_font_override("font", HudFonts.default_font())
 		lang_label.add_theme_font_size_override("font_size", font_size)
 		HudLayout.apply_safe_outline(lang_label, GameConstants.MENU_TEXT_OUTLINE)
+
+# Prev/next language arrows always use Press Start (including ka/uk locales).
+func _style_lang_nav_button(button: Button, symbol: String) -> void:
+	if button == null:
+		return
+	button.custom_minimum_size = Vector2(100, 100)
+	button.flat = false
+	button.focus_mode = Control.FOCUS_NONE
+	_apply_button_tile_styles(button)
+	button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	var font_size := HudLayout.scaled_font_size(GameConstants.UI_BTN_PRIMARY_FONT)
+	HudLayout.apply_raster_pixel_button(button, symbol, font_size)
+	HudLayout.fit_text_button(
+		button, GameConstants.UI_BTN_PRIMARY_FONT, GameConstants.UI_BTN_PRIMARY_FONT_MIN
+	)
 
 # Re-measures and resizes all option buttons to fit their translated text,
 # and re-styles the language prev/next arrows and confirm dialog texts.
@@ -233,29 +248,9 @@ func _fit_option_buttons() -> void:
 		_apply_option_button(btn)
 	_style_close_button()
 	if prev_btn:
-		prev_btn.custom_minimum_size = Vector2(100, 100)
-		prev_btn.flat = false
-		_apply_button_tile_styles(prev_btn)
-		prev_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		prev_btn.text = "<"
-		HudLayout._clear_pixel_raster(prev_btn)
-		HudLayout.apply_locale_font_to_control(prev_btn)
-		HudLayout.fit_text_button(
-			prev_btn, GameConstants.UI_BTN_PRIMARY_FONT, GameConstants.UI_BTN_PRIMARY_FONT_MIN
-		)
-		HudLayout.apply_safe_outline(prev_btn, GameConstants.MENU_TEXT_OUTLINE)
+		_style_lang_nav_button(prev_btn, "<")
 	if next_btn:
-		next_btn.custom_minimum_size = Vector2(100, 100)
-		next_btn.flat = false
-		_apply_button_tile_styles(next_btn)
-		next_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		next_btn.text = ">"
-		HudLayout._clear_pixel_raster(next_btn)
-		HudLayout.apply_locale_font_to_control(next_btn)
-		HudLayout.fit_text_button(
-			next_btn, GameConstants.UI_BTN_PRIMARY_FONT, GameConstants.UI_BTN_PRIMARY_FONT_MIN
-		)
-		HudLayout.apply_safe_outline(next_btn, GameConstants.MENU_TEXT_OUTLINE)
+		_style_lang_nav_button(next_btn, ">")
 	_update_lang_label()
 	_layout_content_below_title()
 	call_deferred("_layout_content_below_title")
@@ -265,17 +260,22 @@ func _fit_option_buttons() -> void:
 func _bind_option_button_keys() -> void:
 	if privacy_btn:
 		privacy_btn.text = "UI_PRIVACY_POLICY"
+		privacy_btn.set_meta("_tr_key", "UI_PRIVACY_POLICY")
 		privacy_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
 	if privacy_options_btn:
 		privacy_options_btn.text = "UI_PRIVACY_OPTIONS"
+		privacy_options_btn.set_meta("_tr_key", "UI_PRIVACY_OPTIONS")
 		privacy_options_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
 	if del_save_btn and del_save_btn.visible:
 		del_save_btn.text = "UI_RESET_PROGRESS"
+		del_save_btn.set_meta("_tr_key", "UI_RESET_PROGRESS")
 		del_save_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
 
 # Applies the gray-dark tile style to a single option button and sizes it so its
 # translated text fits on one line with standard padding. Toggle rows skip text override since
 # their label lives in a ToggleCaptionHost RichTextLabel child.
+# Latin locales (not ka/uk): Press Start via PixelSafeCaption — Button theme font scrambles
+# under GL Compatibility. ka/uk: Noto on the button for native-script labels.
 func _apply_option_button(button: Button) -> void:
 	if not button or not button.visible:
 		return
@@ -287,9 +287,11 @@ func _apply_option_button(button: Button) -> void:
 	HudLayout._clear_pixel_raster(button)
 	var font_size := HudLayout.scaled_font_size(GameConstants.UI_BTN_PRIMARY_FONT)
 	var display := _option_button_display_text(button)
-	var font: Font = (
-		HudFonts.default_font() if button.get_meta("_use_default_font", false) else HudLayout.ui_font()
-	)
+	# Press Start for Latin/digits/symbols even in ka/uk; Noto only for native letters.
+	var use_pixel := HudFonts.should_use_press_start_font(display)
+	button.set_meta("_use_default_font", not use_pixel)
+	button.set_meta("_force_pixel_font", use_pixel and _is_plain_text_option_button(button))
+	var font: Font = HudLayout.pixel_font() if use_pixel else HudFonts.default_font()
 	if font == null:
 		font = HudFonts.default_font()
 	var pad_x := 56.0 + float(GameConstants.MENU_TEXT_OUTLINE) + 16.0
@@ -298,6 +300,7 @@ func _apply_option_button(button: Button) -> void:
 	# Toggle rows keep empty button text; caption RichTextLabel draws the label.
 	if button.get_node_or_null("ToggleCaptionHost") != null:
 		button.text = ""
+		button.set_meta("_force_pixel_font", false)
 		HudLayout.apply_locale_font_to_control(button)
 		var caption_display := _option_button_display_text(button)
 		if not caption_display.is_empty():
@@ -309,18 +312,42 @@ func _apply_option_button(button: Button) -> void:
 			button.custom_minimum_size = Vector2(220.0, min_h)
 		HudLayout.apply_safe_outline(button, GameConstants.MENU_TEXT_OUTLINE)
 		return
-	if not display.is_empty() and button.text.is_empty():
-		button.text = display
-	HudLayout.apply_locale_font_to_control(button)
-	button.add_theme_font_size_override("font_size", font_size)
+	var measure_text := display if not display.is_empty() else "M"
 	var measured := font.get_string_size(
-		display if not display.is_empty() else "M", HORIZONTAL_ALIGNMENT_CENTER, -1, font_size
+		measure_text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size
 	)
-	button.custom_minimum_size = Vector2(
-		maxf(220.0, measured.x + pad_x),
-		min_h
-	)
+	button.custom_minimum_size = Vector2(maxf(220.0, measured.x + pad_x), min_h)
+	if use_pixel:
+		# Privacy / reset / debug: Press Start caption (never Button theme font).
+		var key := String(button.get_meta("_tr_key", button.text)).strip_edges()
+		if key.is_empty() and not display.is_empty():
+			key = display
+		if not key.is_empty():
+			button.set_meta("_tr_key", key)
+		if display.is_empty() and not key.is_empty():
+			display = String(TranslationServer.translate(key))
+		HudLayout.apply_raster_pixel_button(button, display, font_size, 0, true)
+		return
+	if not display.is_empty():
+		var key := String(button.get_meta("_tr_key", "")).strip_edges()
+		if key.is_empty():
+			key = button.text.strip_edges()
+		button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
+		button.text = key if not key.is_empty() else display
+	button.set_meta("_force_pixel_font", false)
+	HudLayout.apply_locale_font_to_control(button)
+	button.add_theme_font_size_override("font_size", HudLayout.body_font_size(font_size))
 	HudLayout.apply_safe_outline(button, GameConstants.MENU_TEXT_OUTLINE)
+
+# Privacy / reset / debug rows draw label text on the Button itself (not a toggle caption).
+func _is_plain_text_option_button(button: Button) -> bool:
+	return (
+		button == privacy_btn
+		or button == privacy_options_btn
+		or button == del_save_btn
+		or button == del_custom_btn
+		or button == unlock_all_btn
+	)
 
 # Returns the display text for an option button, preferring the ToggleCaptionHost
 # RichTextLabel if present (so toggle buttons don't measure stale .text).
@@ -332,12 +359,20 @@ func _option_button_display_text(button: Button) -> String:
 		var caption := host.get_node_or_null("ToggleCaption") as RichTextLabel
 		if caption and not caption.get_parsed_text().is_empty():
 			return caption.get_parsed_text().strip_edges()
-	var raw := button.text
+	var key := String(button.get_meta("_tr_key", "")).strip_edges()
+	var raw := button.text.strip_edges()
+	if raw.is_empty():
+		raw = key
 	if raw.is_empty():
 		return ""
-	if button.auto_translate_mode != Node.AUTO_TRANSLATE_MODE_DISABLED:
+	if _is_message_key(raw) or button.auto_translate_mode != Node.AUTO_TRANSLATE_MODE_DISABLED:
 		return String(TranslationServer.translate(raw))
 	return raw
+
+func _is_message_key(text: String) -> bool:
+	return HudLayout._is_i18n_key(text) or (
+		not text.is_empty() and text == text.to_upper() and text[0] >= "A" and text[0] <= "Z"
+	)
 
 # Applies the 9-slice gray-dark tile texture to all visual states of an option button.
 # Local copy of HudLayout.apply_top_bar_tile_styles so options_menu can be standalone.
@@ -408,11 +443,11 @@ func _set_toggle_button_caption(button: Button, full_text: String) -> void:
 		caption.add_theme_color_override("default_color", Color.WHITE)
 		host.add_child(caption)
 	button.move_child(host, -1)
-	var use_pixel := HudFonts.uses_pixel_font()
+	var use_pixel := HudFonts.should_use_press_start_font(full_text)
 	caption.set_meta("_use_default_font", not use_pixel)
 	button.set_meta("_use_default_font", not use_pixel)
 	if use_pixel:
-		# English: Press Start, no theme outline (outline scrambles glyphs).
+		# Latin-only: Press Start, no theme outline (outline scrambles glyphs).
 		HudLayout.apply_live_pixel_richtext(caption, font_size)
 	else:
 		caption.add_theme_font_override("normal_font", HudFonts.default_font())
@@ -426,15 +461,27 @@ func _set_toggle_button_caption(button: Button, full_text: String) -> void:
 	var accent := _TOGGLE_ACCENT.to_html(false)
 	# Color only the value after the last colon (ON/OFF, AN/AUS, DYNAMIC…).
 	# Substring replace of "ON" would paint the "ON" inside "VIBRATION".
-	var colored := full_text
+	var left := full_text
+	var right := ""
 	var colon := full_text.rfind(":")
 	if colon >= 0 and colon < full_text.length() - 1:
-		var left := full_text.substr(0, colon + 1)
-		var right := full_text.substr(colon + 1)
-		var space_end := 0
-		while space_end < right.length() and right[space_end] == " ":
-			space_end += 1
-		colored = "%s%s[color=#%s]%s[/color]" % [left, right.substr(0, space_end), accent, right.substr(space_end)]
+		left = full_text.substr(0, colon + 1)
+		right = full_text.substr(colon + 1)
+	var space_end := 0
+	while space_end < right.length() and right[space_end] == " ":
+		space_end += 1
+	var spaces := right.substr(0, space_end)
+	var value := right.substr(space_end)
+	if not use_pixel:
+		left = HudFonts.wrap_press_start_runs_bbcode(left, font_size)
+		value = HudFonts.wrap_press_start_runs_bbcode(value, font_size)
+	var colored: String
+	if right.is_empty():
+		colored = (
+			full_text if use_pixel else HudFonts.wrap_press_start_runs_bbcode(full_text, font_size)
+		)
+	else:
+		colored = "%s%s[color=#%s]%s[/color]" % [left, spaces, accent, value]
 	caption.text = "[center]%s[/center]" % colored
 	_apply_option_button(button)
 
@@ -692,11 +739,7 @@ func _show_status_message(msg: String, color: Color) -> void:
 		return
 	status_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	status_label.modulate = color
-	if HudLayout.needs_pixel_text_raster():
-		HudLayout.apply_raster_pixel_label(
-			status_label, msg, GameConstants.UI_BODY_FONT_SIZE, color
-		)
-	else:
-		status_label.text = msg
-		HudLayout.apply_body_label(status_label, GameConstants.UI_BODY_FONT_SIZE)
-		status_label.add_theme_color_override("font_color", color)
+	# Routes Latin/digits to Press Start even in ka/uk; native letters use Noto.
+	HudLayout.apply_raster_pixel_label(
+		status_label, msg, GameConstants.UI_BODY_FONT_SIZE, color
+	)

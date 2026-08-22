@@ -2,8 +2,21 @@ class_name HudFonts
 extends RefCounted
 ## Font policy for Spaceblox UI.
 ##
-## Press Start (pixel) is used for every locale except Georgian and Ukrainian,
-## which need a scalable font with mkhedruli / Cyrillic coverage.
+## **Default rule (en, de, es, fr, pl, …):** Press Start 2P for all UI text.
+##
+## **Georgian (ka) and Ukrainian (uk):** mixed fonts on the same control when needed.
+##   - [method default_font] (Noto) — **only** native script *letters*:
+##     mkhedruli / Georgian supplement (U+10A0–U+10FF, U+2D00–U+2D2F) and Cyrillic
+##     letters (U+0400–U+04FF letter ranges, incl. Ukrainian ґ/є/і/ї).
+##   - [method pixel_font] (Press Start) — **everything else:** Latin, digits 0–9,
+##     math symbols (not sentence punctuation in native copy), arrows, brand tokens ("gix0n"), clocks (MM:SS),
+##     level numbers, and any glyph Press Start can render.
+##
+##   - Sentence punctuation in ka/uk native copy (.,:;!? etc.) stays Noto;
+##     clock ":" between digits stays Press Start.
+## Routing helpers: [method char_needs_scalable_font], [method text_uses_press_start_font].
+## Mixed strings in ka/uk use RichTextLabel [font=] tags or [code]_force_pixel_font[/code]
+## / [method HudLayout.apply_raster_pixel_label] with [code]force_pixel=true[/code].
 ##
 ## Editor chrome is English-only and may force Press Start via
 ## [method mark_force_pixel_subtree] even when the game language is ka/uk.
@@ -119,3 +132,243 @@ static func non_pixel_locale_scale() -> float:
 		if is_scalable_script_locale()
 		else 1.0
 	)
+
+## True when [param c] is a Georgian or Cyrillic letter that needs Noto in ka/uk.
+static func char_needs_scalable_font(c: String) -> bool:
+	if c.length() != 1:
+		return false
+	var code := c.unicode_at(0)
+	if code >= 0x10A0 and code <= 0x10FF:
+		return true
+	if code >= 0x2D00 and code <= 0x2D2F:
+		return true
+	if code >= 0x0400 and code <= 0x04FF:
+		return _is_cyrillic_letter_code(code)
+	return false
+
+static func _is_cyrillic_letter_code(code: int) -> bool:
+	if code >= 0x0410 and code <= 0x044F:
+		return true
+	if code >= 0x0400 and code <= 0x040F:
+		return true
+	if code >= 0x0450 and code <= 0x045F:
+		return true
+	if code >= 0x0460 and code <= 0x04F9:
+		return true
+	return false
+
+## Sentence / UI punctuation that should stay Noto inside ka/uk native copy.
+## Clock ":" between digits is handled separately (stays Press Start).
+static func char_is_native_text_punctuation(c: String) -> bool:
+	if c.length() != 1:
+		return false
+	var code := c.unicode_at(0)
+	# ASCII punctuation + common Unicode punctuation / quotes / dashes.
+	if code >= 0x21 and code <= 0x2F:
+		return true
+	if code >= 0x3A and code <= 0x40:
+		return true
+	if code >= 0x5B and code <= 0x60:
+		return true
+	if code >= 0x7B and code <= 0x7E:
+		return true
+	if code >= 0x2010 and code <= 0x2027:
+		return true
+	if code >= 0x2030 and code <= 0x205E:
+		return true
+	if code >= 0x00A0 and code <= 0x00BF:
+		return true
+	return false
+
+## ":" between two digits (MM:SS clocks) — Press Start even inside ka/uk mixed copy.
+static func char_is_clock_colon(text: String, index: int) -> bool:
+	if index < 1 or index >= text.length() - 1:
+		return false
+	if text[index] != ":":
+		return false
+	var prev := text[index - 1]
+	var next := text[index + 1]
+	return prev.is_valid_int() and next.is_valid_int()
+
+## In mixed ka/uk strings: Latin/digits → Press Start; native letters + punctuation → Noto.
+## Exception: digit-bounded ":" (time clocks) stays Press Start.
+static func char_uses_press_start_in_mixed(text: String, index: int) -> bool:
+	if index < 0 or index >= text.length():
+		return false
+	var c := text[index]
+	if char_needs_scalable_font(c):
+		return false
+	if char_is_clock_colon(text, index):
+		return true
+	if c.strip_edges().is_empty():
+		return false
+	if char_is_native_text_punctuation(c):
+		return false
+	return true
+
+## True when every character can render in Press Start (digits, symbols, Latin, etc.).
+## Latin-only UI (incl. punctuation) stays Press Start; native letters force Noto path.
+static func text_uses_press_start_font(text: String) -> bool:
+	if text.is_empty():
+		return false
+	for i in text.length():
+		if char_needs_scalable_font(text[i]):
+			return false
+	return true
+
+## True when copy contains at least one native-script letter (ka/uk Noto path).
+static func text_needs_scalable_font(text: String) -> bool:
+	for i in text.length():
+		if char_needs_scalable_font(text[i]):
+			return true
+	return false
+
+## Latin locales always; in ka/uk only when the string has no native letters.
+static func should_use_press_start_font(text: String) -> bool:
+	if uses_pixel_font():
+		return true
+	return text_uses_press_start_font(text)
+
+## Removes Press Start [font=…] / [font name=…] wrappers (and their paired inner
+## [font_size=…] from [method wrap_press_start_runs_bbcode]) so locale re-applies
+## can re-wrap cleanly.
+##
+## Does NOT strip page-level [font_size=…] (How-To-Play wraps whole pages in one).
+## A naive strip of every font_size matched the *inner* closer first and shredded
+## nested BBCode — ka↔uk then re-wrapped the mess until RichTextLabel froze.
+static func strip_font_bbcode(text: String) -> String:
+	if text.is_empty() or text.find("[font") < 0:
+		return text
+	var out := text
+	var guard := 0
+	while guard < 256:
+		guard += 1
+		var start := _find_press_start_font_open(out, 0)
+		if start < 0:
+			break
+		var tag_end := out.find("]", start)
+		if tag_end < 0:
+			break
+		var close := _find_matching_close_tag(out, tag_end + 1, "[font", "[/font]")
+		if close < 0:
+			# Orphan open — drop it only.
+			out = out.substr(0, start) + out.substr(tag_end + 1)
+			continue
+		var inner := out.substr(tag_end + 1, close - tag_end - 1)
+		inner = _unwrap_direct_font_size(inner)
+		out = out.substr(0, start) + inner + out.substr(close + "[/font]".length())
+	return out
+
+## Index of next [font=…] / [font …] / [font], skipping [font_size…].
+static func _find_press_start_font_open(text: String, from: int) -> int:
+	var i := from
+	while true:
+		var start := text.find("[font", i)
+		if start < 0:
+			return -1
+		if text.substr(start).begins_with("[font_size"):
+			i = start + 5
+			continue
+		var after := start + 5
+		if after >= text.length():
+			return -1
+		var c := text[after]
+		if c == "=" or c == " " or c == "]":
+			return start
+		i = start + 5
+	return -1
+
+## Nesting-aware search for close_tag matching open_prefix opens inside [start, …).
+static func _find_matching_close_tag(
+	text: String, from: int, open_prefix: String, close_tag: String
+) -> int:
+	var depth := 1
+	var i := from
+	var open_len := open_prefix.length()
+	var close_len := close_tag.length()
+	while i < text.length():
+		var next_open := text.find(open_prefix, i)
+		var next_close := text.find(close_tag, i)
+		if next_close < 0:
+			return -1
+		# [font_size] also begins with "[font" — only count real [font opens.
+		if next_open >= 0 and next_open < next_close:
+			var is_font_size := text.substr(next_open).begins_with("[font_size")
+			var is_font_open := false
+			if not is_font_size:
+				var after := next_open + open_len
+				if after < text.length():
+					var c := text[after]
+					is_font_open = c == "=" or c == " " or c == "]"
+			if is_font_open:
+				depth += 1
+			i = next_open + open_len
+			continue
+		depth -= 1
+		if depth == 0:
+			return next_close
+		i = next_close + close_len
+	return -1
+
+## If wrap left [font_size=N]…[/font_size] as the sole/direct wrapper, unwrap it.
+static func _unwrap_direct_font_size(inner: String) -> String:
+	var trimmed := inner.strip_edges()
+	if not trimmed.begins_with("[font_size"):
+		return inner
+	if not trimmed.ends_with("[/font_size]"):
+		return inner
+	var tag_end := trimmed.find("]")
+	if tag_end < 0:
+		return inner
+	# wrap_press_start_runs_bbcode never nests font_size inside font_size.
+	if trimmed.find("[font_size", 1) >= 0:
+		return inner
+	var close := trimmed.rfind("[/font_size]")
+	if close <= tag_end:
+		return inner
+	return trimmed.substr(tag_end + 1, close - tag_end - 1)
+
+## In ka/uk, wrap Latin/digit runs (and MM:SS colons) in Press Start BBCode.
+## Native letters and sentence punctuation stay on the default Noto face.
+## Skips existing BBCode tags so re-apply on language change cannot nest forever.
+## No-op outside ka/uk. Pass plain text, or lightly tagged text ([center]/[color]).
+static func wrap_press_start_runs_bbcode(text: String, font_size: int = 0) -> String:
+	if text.is_empty() or not is_scalable_script_locale():
+		return text
+	text = strip_font_bbcode(text)
+	if not text_needs_scalable_font(text):
+		return text
+	var out := ""
+	var i := 0
+	var n := text.length()
+	while i < n:
+		# Keep BBCode tags intact (never wrap "center", "color", hex, paths, …).
+		if text[i] == "[":
+			var close := text.find("]", i)
+			if close < 0:
+				out += text.substr(i)
+				break
+			out += text.substr(i, close - i + 1)
+			i = close + 1
+			continue
+		if not char_uses_press_start_in_mixed(text, i):
+			out += text[i]
+			i += 1
+			continue
+		var start := i
+		while (
+			i < n
+			and text[i] != "["
+			and char_uses_press_start_in_mixed(text, i)
+		):
+			i += 1
+		var run := text.substr(start, i - start)
+		if run.strip_edges().is_empty():
+			out += run
+		elif font_size > 0:
+			out += "[font=%s][font_size=%d]%s[/font_size][/font]" % [
+				PIXEL_FONT_PATH, font_size, run
+			]
+		else:
+			out += "[font=%s]%s[/font]" % [PIXEL_FONT_PATH, run]
+	return out

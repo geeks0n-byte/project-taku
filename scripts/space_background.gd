@@ -47,7 +47,7 @@ var _fx_foreground: CanvasLayer
 var _fg_stars: Node2D
 var _fg_comets: Node2D
 var _fg_asteroids: Node2D
-# Set to false during scenes where foreground FX would be distracting (e.g. splash screen).
+# Set to false during scenes where foreground FX would be distracting.
 var _foreground_events_enabled: bool = false
 
 # Keyed by timer name ("event"); each entry holds {"timer": Timer, "interval": Vector2}.
@@ -68,7 +68,9 @@ var _asteroid_pool_root: Node2D
 var _active_asteroid_count: int = 0
 # Shared physics material instance reused by all pooled asteroids (bouncy, no friction-damp).
 var _asteroid_phys_mat: PhysicsMaterial
-# Per-launch seed so static composites and parallax start offsets differ each run.
+# Cached bake for static background mode.
+var _cached_bake_texture: Texture2D = null
+
 var _bg_seed: int = 0
 var _bg_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
@@ -85,9 +87,9 @@ func _ready() -> void:
 	_setup_timer("event", event_spawn_interval, _on_event_timeout)
 	# Deferred so the viewport size is valid when the first layout pass runs.
 	call_deferred("_on_viewport_size_changed")
-	if SaveManager:
-		# Apply the saved preference after SaveManager is fully initialized.
-		call_deferred("set_static_mode", SaveManager.background_static)
+	# SaveManager may have run first (autoload order); apply preference now that we exist.
+	var want_static := SaveManager.background_static if SaveManager else false
+	set_static_mode(want_static)
 
 # Controls whether FX events can spawn on the foreground CanvasLayer.
 # Disabling also immediately removes any foreground FX that is already visible.
@@ -95,6 +97,11 @@ func set_foreground_events_enabled(enabled: bool) -> void:
 	_foreground_events_enabled = enabled
 	if not enabled:
 		_clear_foreground_fx()
+
+func _get_baked_texture() -> Texture2D:
+	if _cached_bake_texture == null:
+		_cached_bake_texture = _bake_static_texture()
+	return _cached_bake_texture
 
 # Creates the CanvasLayer that renders FX in front of game UI.
 # follow_viewport_enabled=false keeps the layer anchored to screen space, not world space.
@@ -336,7 +343,7 @@ func _stop_events_and_fx() -> void:
 # Hides all animated layers and replaces them with a single baked composite TextureRect.
 # The twinkle tween is killed to stop alpha animation while static.
 # _static_rect is created lazily and reused on subsequent calls.
-func _show_static_composite() -> void:
+func _present_baked_composite() -> void:
 	for p_layer in _parallax_layer_nodes:
 		if is_instance_valid(p_layer):
 			p_layer.visible = false
@@ -356,9 +363,12 @@ func _show_static_composite() -> void:
 		_static_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(_static_rect)
 		move_child(_static_rect, 0)
-	_static_rect.texture = _bake_static_texture()
+	_static_rect.texture = _get_baked_texture()
 	_static_rect.visible = true
 	_apply_cover_rect(_static_rect, _cover_size())
+
+func _show_static_composite() -> void:
+	_present_baked_composite()
 
 func _hide_static_composite() -> void:
 	if _static_rect:
