@@ -1,0 +1,1099 @@
+# English game text — edit the lines below each [KEY].
+# Do NOT change or remove [KEY] headers. Edit only the text under them.
+# Keep placeholders as-is: %s, %d, %d/%d, etc.
+# Blank line ends a string block. Use a single blank line inside text if needed.
+# Files in this folder are for editing only; the game reads translations.csv.
+
+[SPLASH_CREATED_BY]
+Created by
+
+[SPLASH_AUTHOR]
+Giga "gix0n" Sichinava
+
+[UI_PLAY]
+PLAY
+
+[UI_CONTINUE]
+CONTINUE
+
+[SESSION_RESUME_PROMPT]
+SAVE PROGRESS FOUND
+
+Continue or start a new puzzle?
+
+[TUTORIAL_INTRO_PROMPT]
+Play the tutorial first?
+
+[UI_BACK]
+BACK
+
+[UI_LEVELS]
+LEVELS
+
+[UI_HOW_TO_PLAY]
+HOW TO PLAY
+
+[UI_OPTIONS]
+OPTIONS
+
+[UI_CREDITS]
+CREDITS
+
+[UI_EDITOR]
+EDITOR
+
+[UI_CLOSE]
+CLOSE
+
+[UI_PREVIOUS]
+PREVIOUS
+
+[UI_NEXT]
+NEXT
+
+[UI_BACK_TO_MENU]
+BACK TO MENU
+
+[UI_MAIN_MENU]
+MAIN MENU
+
+[UI_RESUME]
+RESUME
+
+[UI_RESTART]
+RESTART
+
+[UI_NEW_LAYOUT]
+NEW PUZZLE
+
+[UI_TRY_AGAIN]
+TRY AGAIN
+
+[UI_YES]
+YES
+
+[UI_AD]
+Ad
+
+[UI_NO]
+NO
+
+[UI_SAVE]
+SAVE
+
+[UI_LOAD]
+LOAD
+
+[UI_LOADING]
+LOADING
+
+[UI_RESET_PROGRESS]
+RESET PROFILE
+
+[CONFIRM_RESET_PROGRESS]
+RESET PROFILE?
+
+This clears progress and the privacy policy agreement.
+
+[CONFIRM_NEW_PUZZLE]
+NEW PUZZLE?
+
+Current progress will be lost.
+
+[CONFIRM_RESTART_LEVEL]
+RESTART LEVEL?
+
+Current progress will be lost.
+
+[CONFIRM_DELETE_CUSTOM]
+DELETE ALL CUSTOM LEVELS FROM THIS DEVICE?
+
+[UI_DELETE_CUSTOM]
+DELETE CUSTOM LEVELS
+
+[UI_UNLOCK_ALL_LEVELS]
+UNLOCK ALL LEVELS
+
+[UI_BG_DYNAMIC]
+BACKGROUND: DYNAMIC
+
+[UI_BG_STATIC]
+BACKGROUND: STATIC
+
+[UI_BGM_ON]
+MUSIC: ON
+
+[UI_BGM_OFF]
+MUSIC: OFF
+
+[UI_SFX_ON]
+SOUND EFFECTS: ON
+
+[UI_SFX_OFF]
+SOUND EFFECTS: OFF
+
+[UI_HAPTIC_ON]
+VIBRATION: ON
+
+[UI_HAPTIC_OFF]
+VIBRATION: OFF
+
+[UI_CONSENT_TITLE]
+WELCOME
+
+[UI_CONSENT_BODY]
+This game shows ads and may collect data to personalise them. You can review our Privacy Policy before continuing.
+
+[UI_CONSENT_READ_POLICY]
+PRIVACY POLICY
+
+[UI_CONSENT_ACCEPT]
+ACCEPT
+
+[UI_PRIVACY_POLICY]
+PRIVACY POLICY
+
+[UI_PRIVACY_OPTIONS]
+PRIVACY OPTIONS
+
+[UI_PRIVACY_OPTIONS_OPENING]
+Opening privacy options...
+
+[UI_PRIVACY_OPTIONS_DONE]
+Privacy options closed.
+
+[UI_PRIVACY_OPTIONS_UNAVAILABLE]
+Privacy options are available on Android builds.
+
+[UI_PRIVACY_OPTIONS_LOADING]
+Privacy options are still loading.
+
+[UI_PRIVACY_OPTIONS_NOT_REQUIRED]
+Privacy options are not required for your region right now.
+
+[SAVE_DELETED]
+SAVE DELETED! PROGRESS RESET.
+
+[CUSTOM_DELETED]
+ALL CUSTOM LEVELS DELETED FROM THIS DEVICE
+
+[UNLOCK_ALL_DONE]
+ALL LEVELS UNLOCKED
+
+[CONFIRM_UNLOCK_ALL]
+UNLOCK ALL LEVELS?
+
+[UI_SELECT_LEVEL]
+SELECT LEVEL
+
+[UI_LEVEL_SELECT]
+LEVEL SELECT
+
+[UI_CORE]
+CORE
+
+[UI_CUSTOM]
+CUSTOM
+
+[DIFF_TUTORIALS]
+TUTORIAL
+
+[DIFF_EASY]
+EASY
+
+[DIFF_MEDIUM]
+MEDIUM
+
+[DIFF_HARD]
+HARD
+
+[CUSTOM_LVL]
+CUSTOM LVL
+
+[LEVEL]
+LEVEL
+
+[LOCKED]
+LOCKED
+
+[NO_PLAYABLE_LEVELS]
+NO PLAYABLE LEVELS FOUND!
+
+[NO_CUSTOM_LEVELS]
+NO CUSTOM LEVELS FOUND
+
+[TIME]
+TIME
+
+[MOVES]
+MOVES
+
+[COUNTER_GREEN]
+GREEN
+
+[STAR_TIME]
+TIME:
+
+[STAR_HINTS]
+NO HINTS USED
+
+[STAR_HINTS_USED]
+HINTS USED
+
+[STAR_GREEN]
+NO HINTS USED
+
+[STAR_COMPLETE]
+SOLVED
+
+[STAR_MOVES]
+MOVES
+
+[STAR_NONE]
+No bonus goals for this level.
+
+[STAT_TIME_LEFT]
+TIME LEFT: %s
+
+[STAT_GREEN_TILES]
+GREEN TILES: %d/%d
+
+[STAT_SHIFTER_MOVES]
+SHIFTER MOVES: %d/%d
+
+[TIMES_UP]
+TIME'S UP!
+
+[TUT1_WELCOME]
+Fill empty cells with %s [color=#FFD700]Yellow[/color] or %s [color=#4DA6FF]Blue[/color] to solve the puzzle.
+
+[TUT1_LOCKS]
+Tiles with the %s lock icon are fixed - you cannot change them.
+
+[TUT1_CYCLE]
+Tap the white-highlighted empty cell to cycle: empty → %s [color=#FFD700]Yellow[/color] → %s [color=#4DA6FF]Blue[/color]. Stop on Blue.
+
+[TUT1_RULE_OF_TWO]
+[color=#E53935]Rule of Two[/color]: never place three matching colors in a row or column — no three %s [color=#FFD700]Yellow[/color] or three %s [color=#4DA6FF]Blue[/color] in a line. Red highlights show the break.
+
+[TUT1_BALANCE]
+[color=#E53935]Equal Balance[/color]: number of %s [color=#FFD700]Yellow[/color] and %s [color=#4DA6FF]Blue[/color] tiles in rows and collumns should be the same. Red highlights mark unbalanced lines.
+
+[TUT1_PLACE_NEXT]
+Place %s in the white-highlighted empty cell.
+
+[TUT1_WRONG_PLACE]
+Not that color — keep tapping to cycle until the white-highlighted cell matches.
+
+[TUT1_GOOD_BOARD]
+Nice! Locked tiles stayed fixed and every empty cell is filled correctly.
+
+[TUT2_RULE_INTRO]
+[color=#E53935]Rule of Two[/color]: these two %s [color=#FFD700]Yellow[/color] tiles already sit in a row. A third Yellow here would break the rule.
+
+[TUT2_RULE_PRACTICE]
+Place %s [color=#4DA6FF]Blue[/color] in the glowing cell to break the three-in-a-row.
+
+[TUT2_WRONG_THREE]
+Not quite - that makes three %s [color=#FFD700]Yellow[/color] in a row. Place %s [color=#4DA6FF]Blue[/color] instead.
+
+[TUT2_GOOD_RULE]
+Correct! That color breaks the three-in-a-row.
+
+[TUT2_BALANCE_INTRO]
+[color=#E53935]Equal Balance[/color]: this row must end with equal %s [color=#FFD700]Yellow[/color] and %s [color=#4DA6FF]Blue[/color].
+
+[TUT2_BALANCE_PRACTICE]
+Place %s [color=#FFD700]Yellow[/color] in the glowing cell to balance the row.
+
+[TUT2_WRONG_BALANCE]
+That breaks [color=#E53935]Equal Balance[/color]. Place %s [color=#FFD700]Yellow[/color] instead.
+
+[TUT2_GOOD_BALANCE]
+Perfect - %s [color=#FFD700]Yellow[/color] and %s [color=#4DA6FF]Blue[/color] are balanced.
+
+[TUT4_INTRO]
+%s [color=#4DFF4D]Green[/color] is special: it counts as %s [color=#FFD700]Yellow[/color] and %s [color=#4DA6FF]Blue[/color] at the same time.
+
+[TUT5_FINISH]
+One empty left - place %s [color=#4DA6FF]Blue[/color] to finish the board.
+
+[TUT5_WRONG_FINISH]
+Place %s [color=#4DA6FF]Blue[/color] to keep [color=#E53935]Equal Balance[/color].
+
+[TUT5_GOOD_FINISH]
+Constraints solved!
+
+[TUT_TAP_NEXT]
+Tap Next.
+
+[TUT_GOOD]
+Correct!
+
+[TUT_COMPLETE]
+Tutorial complete!
+
+[TUT_PLAY_FREE]
+Finish the board on your own. No three matching colors in a line, and keep [color=#FFD700]Yellow[/color] and [color=#4DA6FF]Blue[/color] balanced.
+
+[TUT_INTRO_TAP]
+Tap empty cells to cycle [color=#FFD700]Yellow[/color] -> [color=#4DA6FF]Blue[/color] -> [color=#4DFF4D]Green[/color]. Try as many as you like.
+
+[TUT_RULE_TWO]
+[color=#E53935]Rule of Two:[/color] no three matching colors in a line. This row already has two [color=#FFD700]Yellow[/color], so the empty cell must be [color=#4DA6FF]Blue[/color].
+
+[TUT_PLACE_BLUE]
+Place [color=#4DA6FF]Blue[/color] here.
+
+[TUT_WRONG_BLUE]
+That would be three [color=#FFD700]Yellow[/color] in a row - use [color=#4DA6FF]Blue[/color].
+
+[TUT_BALANCE]
+[color=#E53935]Equal Balance:[/color] every row and column needs the same number of [color=#FFD700]Yellow[/color] and [color=#4DA6FF]Blue[/color]. This row has two [color=#4DA6FF]Blue[/color], so add [color=#FFD700]Yellow[/color].
+
+[TUT_PLACE_YELLOW]
+Place [color=#FFD700]Yellow[/color] here.
+
+[TUT_WRONG_YELLOW]
+Use [color=#FFD700]Yellow[/color] to balance this row.
+
+[TUT_FREE_PLAY]
+Now finish the board on your own. Remember: no three matching colors in a row, and keep [color=#FFD700]Yellow[/color] / [color=#4DA6FF]Blue[/color] balanced in each line.
+
+[TUT_PART2_INTRO]
+Nice work. Next you will learn [color=#4DFF4D]Green[/color], [color=#C77DFF]Purple[/color], and cell links.
+
+[TUT_NEXT_GREEN]
+Next: a board with [color=#4DFF4D]Green[/color] tiles.
+
+[TUT_GREEN_INTRO]
+[color=#4DFF4D]Green[/color] counts as both [color=#FFD700]Yellow[/color] and [color=#4DA6FF]Blue[/color].
+
+[TUT_GREEN_RULE_TWO]
+This [color=#4DFF4D]Green[/color] already counts as [color=#FFD700]Yellow[/color], so place [color=#4DA6FF]Blue[/color].
+
+[TUT_GREEN_PLACE_BLUE]
+Place [color=#4DA6FF]Blue[/color] here.
+
+[TUT_GREEN_WRONG_BLUE]
+That breaks [color=#E53935]Rule of Two[/color] - use [color=#4DA6FF]Blue[/color].
+
+[TUT_GREEN_ODD_BALANCE]
+[color=#E53935]Equal Balance[/color] on odd-length lines needs [color=#4DFF4D]Green[/color]: it fills a cell but does not count as Yellow or Blue, so the rest can balance.
+
+[TUT_GREEN_LIMIT]
+Also remember: only one [color=#4DFF4D]Green[/color] per row and per column.
+
+[TUT_GREEN_PLACE_GREEN]
+Place [color=#4DFF4D]Green[/color] here to balance this odd-length row.
+
+[TUT_GREEN_WRONG_GREEN]
+Use [color=#4DFF4D]Green[/color] here.
+
+[TUT_NEXT_PURPLE]
+Next: a board with [color=#C77DFF]Purple[/color] tiles.
+
+[TUT_SHIFTER_INTRO]
+Tap a [color=#C77DFF]Purple[/color] tile to slide it along its arrow.
+
+[TUT_SHIFTER_BLOCK]
+[color=#C77DFF]Purple[/color] tiles can block each other. These two share a cell — the Purple already there blocks the other path.
+
+[TUT_SHIFTER_TRY_BLOCK]
+Tap the highlighted [color=#C77DFF]Purple[/color] — its path is blocked.
+
+[TUT_SHIFTER_BLOCKED_OK]
+Blocked! Now clear the path.
+
+[TUT_SHIFTER_MOVE_BLOCKER]
+Slide the blocking [color=#C77DFF]Purple[/color] off the shared cell.
+
+[TUT_SHIFTER_MOVE_UNBLOCKED]
+Now the path is clear — slide the [color=#C77DFF]Purple[/color] that was blocked.
+
+[TUT_SHIFTER_MOVE_1]
+Tap the highlighted [color=#C77DFF]Purple[/color] to slide it.
+
+[TUT_SHIFTER_FILL_1]
+Fill the empty cell with [color=#4DA6FF]Blue[/color].
+
+[TUT_SHIFTER_MOVE_2]
+Now slide the other highlighted [color=#C77DFF]Purple[/color].
+
+[TUT_SHIFTER_FILL_2]
+Fill the empty cell with [color=#4DA6FF]Blue[/color].
+
+[TUT_SHIFTER_FILL_WRONG]
+Use [color=#4DA6FF]Blue[/color] in the highlighted cell.
+
+[TUT_NEXT_CONSTRAINTS]
+Next: a board with = and × links.
+
+[TUT_CONSTRAINTS_INTRO]
+Some cells are linked: = means same color, × means different.
+
+[TUT_EQUALS_RULE]
+These cells are linked by = - they must match.
+
+[TUT_EQUALS_PLACE]
+Place [color=#FFD700]Yellow[/color] to match =.
+
+[TUT_EQUALS_WRONG]
+Linked by = - use [color=#FFD700]Yellow[/color].
+
+[TUT_NOTEQUALS_RULE]
+These cells are linked by × - they must differ.
+
+[TUT_NOTEQUALS_PLACE]
+Place [color=#4DA6FF]Blue[/color] to satisfy ×.
+
+[TUT_NOTEQUALS_WRONG]
+Linked by × - use [color=#4DA6FF]Blue[/color].
+
+[TUT_PART3_INTRO]
+Last part: the tools in the top bar.
+
+[TUT_UI_RESET]
+[color=#E53935]Reset[/color] restarts the level.
+
+[TUT_UI_RULES]
+[color=#E53935]Rules[/color] opens the rule guide.
+
+[TUT_UI_HINT]
+[color=#E53935]Hint[/color] gives one useful clue.
+
+[TUT_UI_UNDO]
+[color=#E53935]Undo[/color] takes back your last move.
+
+[TUT_UI_REDO]
+[color=#E53935]Redo[/color] restores an undone move.
+
+[TUT_FINAL_FREE_PLAY]
+Your turn — finish the puzzle. Remember: hold a tile to remove it.
+
+[TUT_UI_OVERVIEW]
+Top bar tools: %s Reset %s Rules %s Hint %s Undo %s Redo — tap each when you need it.
+
+[TUT2_WELCOME]
+Welcome back. You know the core rules — this lesson covers hold-to-remove, star goals, and a links puzzle.
+
+[TUT2_HOLD_INTRO]
+New: press and hold a filled cell for a moment to clear it — useful for fixing mistakes.
+
+[TUT2_HOLD_CLEAR]
+Hold on the highlighted cell until it clears.
+
+[TUT2_HOLD_CLEAR_OK]
+Tile removed. You can tap to place a new one.
+
+[TUT2_STARS]
+%s %s %s Each campaign level has three star goals: solve it, finish without hints, and beat the time limit. Tap stars on level select for details.
+
+[TUT2_LINKS_REMINDER]
+Use = and × links from lesson 1 — fill the remaining empties without breaking any rules.
+
+[TUT2_FINAL_FREE_PLAY]
+Finish this links puzzle on your own.
+
+[UI_LEVEL_STAR_GOALS]
+STAR GOALS
+
+[UI_TAP_STARS_FOR_GOALS]
+Tap stars for goals
+
+[TUT6_RESET]
+%s Reset restarts the level from the beginning.
+
+[TUT6_RULES]
+%s How to Play opens the full rule guide anytime.
+
+[TUT6_HINT]
+%s Hint reveals a helpful = or × clue when you are stuck.
+
+[TUT6_UNDO]
+%s Undo takes back your last move.
+
+[TUT6_REDO]
+%s Redo restores a move you undid.
+
+[TUT6_COMPLETE]
+Tools unlocked! Fix any mistakes and fill the remaining empties — Reset, Rules, Hint, Undo, and Redo are ready.
+
+[USED]
+USED
+
+[LVL]
+LEVEL
+
+[TUTORIAL]
+TUTORIAL
+
+[DEV]
+CUSTOM
+
+[UNLIMITED]
+Unlimited
+
+[PAUSED]
+PAUSED
+
+[PUZZLE_SOLVED]
+PUZZLE SOLVED!
+
+[ALL_COMPLETED]
+ALL LEVELS COMPLETED
+
+[YOU_WIN]
+YOU WIN!
+
+[CUSTOM_COMPLETED]
+CUSTOM %d
+
+[LEVEL_COMPLETED]
+LEVEL %d
+
+[TUTORIAL_COMPLETED]
+TUTORIAL %d
+
+[COMPLETED]
+COMPLETED
+
+[PLAY_AGAIN]
+PLAY AGAIN
+
+[NEXT_LEVEL]
+NEXT LEVEL
+
+[COMPLETION_TIME]
+COMPLETION TIME: %s
+
+[TIMES_UP_UNSOLVED]
+TIME'S UP! The puzzle remains unsolved.
+
+[MSG_FILL_EMPTY]
+Fill empty spaces.
+
+[ERR_CONSTRAINT_EQUALS]
+Tiles linked by [outline_size=6][outline_color=black] = [/outline_color][/outline_size] must be the same color.
+
+[ERR_CONSTRAINT_NOT_EQUALS]
+Tiles linked by [outline_size=6][outline_color=black] × [/outline_color][/outline_size] must be different colors.
+
+[ERR_MAX_GREEN_PER_LINE]
+Max 1 [color=#4DFF4D]Green[/color] tile per line.
+
+[ERR_MAX_GREEN_PER_ROW]
+Max 1 [color=#4DFF4D]Green[/color] tile per row.
+
+[ERR_MAX_GREEN_PER_COLUMN]
+Max 1 [color=#4DFF4D]Green[/color] tile per column.
+
+[ERR_GREEN_THREE_YELLOW]
+[color=#4DFF4D]Green[/color] tile makes 3 [color=#FFD700]Yellow[/color] in a row.
+
+[ERR_GREEN_THREE_YELLOW_ROW]
+[color=#4DFF4D]Green[/color] tile makes 3 [color=#FFD700]Yellow[/color] in a row.
+
+[ERR_GREEN_THREE_YELLOW_COLUMN]
+[color=#4DFF4D]Green[/color] tile makes 3 [color=#FFD700]Yellow[/color] in a column.
+
+[ERR_THREE_YELLOW]
+3 [color=#FFD700]Yellow[/color] tiles in a row.
+
+[ERR_THREE_YELLOW_ROW]
+3 [color=#FFD700]Yellow[/color] tiles in a row.
+
+[ERR_THREE_YELLOW_COLUMN]
+3 [color=#FFD700]Yellow[/color] tiles in a column.
+
+[ERR_GREEN_THREE_BLUE]
+[color=#4DFF4D]Green[/color] tile makes 3 [color=#4DA6FF]Blue[/color] in a row.
+
+[ERR_GREEN_THREE_BLUE_ROW]
+[color=#4DFF4D]Green[/color] tile makes 3 [color=#4DA6FF]Blue[/color] in a row.
+
+[ERR_GREEN_THREE_BLUE_COLUMN]
+[color=#4DFF4D]Green[/color] tile makes 3 [color=#4DA6FF]Blue[/color] in a column.
+
+[ERR_THREE_BLUE]
+3 [color=#4DA6FF]Blue[/color] tiles in a row.
+
+[ERR_THREE_BLUE_ROW]
+3 [color=#4DA6FF]Blue[/color] tiles in a row.
+
+[ERR_THREE_BLUE_COLUMN]
+3 [color=#4DA6FF]Blue[/color] tiles in a column.
+
+[ERR_UNEQUAL_LINE]
+Unequal [color=#FFD700]Yellow[/color] and [color=#4DA6FF]Blue[/color] in a line.
+
+[ERR_UNEQUAL_MORE_YELLOW_ROW]
+%d [color=#FFD700]Yellow[/color] but only %d [color=#4DA6FF]Blue[/color] in row.
+
+[ERR_UNEQUAL_MORE_YELLOW_COLUMN]
+%d [color=#FFD700]Yellow[/color] but only %d [color=#4DA6FF]Blue[/color] in column.
+
+[ERR_UNEQUAL_MORE_BLUE_ROW]
+%d [color=#4DA6FF]Blue[/color] but only %d [color=#FFD700]Yellow[/color] in row.
+
+[ERR_UNEQUAL_MORE_BLUE_COLUMN]
+%d [color=#4DA6FF]Blue[/color] but only %d [color=#FFD700]Yellow[/color] in column.
+
+[ERR_UNEQUAL_MORE_YELLOW_ROW_NO_BLUE]
+%d [color=#FFD700]Yellow[/color] but no [color=#4DA6FF]Blue[/color] in row.
+
+[ERR_UNEQUAL_MORE_YELLOW_COLUMN_NO_BLUE]
+%d [color=#FFD700]Yellow[/color] but no [color=#4DA6FF]Blue[/color] in column.
+
+[ERR_UNEQUAL_MORE_BLUE_ROW_NO_YELLOW]
+%d [color=#4DA6FF]Blue[/color] but no [color=#FFD700]Yellow[/color] in row.
+
+[ERR_UNEQUAL_MORE_BLUE_COLUMN_NO_YELLOW]
+%d [color=#4DA6FF]Blue[/color] but no [color=#FFD700]Yellow[/color] in column.
+
+[ERR_TOO_MANY_GREEN]
+Too many [color=#4DFF4D]Green[/color] tiles.
+
+[ERR_TOO_FEW_GREEN]
+Not enough [color=#4DFF4D]Green[/color] tiles.
+
+[ERR_SHIFTER_BLOCKED]
+No space! Blocked by another [color=#9c27b0]Purple[/color] tile.
+
+[ERR_GEN_WALLS]
+GENERATION FAILED: THE LOCKED WALLS MAKE A VALID SOLUTION IMPOSSIBLE.
+
+[ERR_GEN_CONSTRAINTS]
+GENERATION FAILED: THE CONSTRAINTS ARE TOO RESTRICTIVE FOR THIS GRID SIZE.
+
+[ERR_PLACEMENT_ABORTED]
+PLACEMENT ABORTED
+
+[ERR_CELLS_NOT_ADJACENT]
+CELLS MUST BE ADJACENT
+
+[ED_HINT_SELECT_SHIFTER]
+SELECT SECOND CELL
+
+[ED_HINT_SELECT_EQUALS]
+SELECT SECOND CELL
+
+[ED_HINT_SELECT_NOT_EQUALS]
+SELECT SECOND CELL
+
+[ED_MSG_SHIFTER_PLACED]
+PURPLE TILE PLACED
+
+[ED_MSG_EQUALS_PLACED]
+= LINK PLACED
+
+[ED_MSG_NOT_EQUALS_PLACED]
+× LINK PLACED
+
+[ED_MSG_LEVEL_SAVED]
+CUSTOM LEVEL %d SAVED SUCCESSFULLY
+
+[ED_MSG_LEVEL_SAVE_FAILED]
+ERROR: CUSTOM LEVEL %d SAVE FAILED (%s)
+
+[ED_MSG_LEVEL_NOT_FOUND]
+NO SAVED DATA FOUND FOR CUSTOM LEVEL %d
+
+[ED_MSG_LEVEL_READ_FAILED]
+ERROR: FAILED TO READ CUSTOM LEVEL %d DATA
+
+[ED_MSG_LEVEL_LOADED]
+CUSTOM LEVEL %d LOADED SUCCESSFULLY
+
+[ED_MSG_UNSOLVABLE]
+CANNOT SAVE: PUZZLE HAS NO SOLUTION.
+
+[ED_MSG_SOLVE_TIMEOUT]
+CANNOT SAVE: SOLUTION CHECK TIMED OUT (BOARD MAY BE TOO LARGE).
+
+[ED_MSG_NOT_UNIQUE]
+CANNOT SAVE: UNIQUE SOLUTION IS ON BUT THIS PUZZLE HAS MULTIPLE SOLUTIONS.
+
+[ED_VICTORY_SOLVABLE]
+LEVEL SOLVED
+
+[ED_DEFEAT_TIME]
+DEFEAT!\nTIME RAN OUT
+
+[MSG_PUZZLE_SOLVED_SHORT]
+Puzzle solved!
+
+[ERROR_INVALID_SHAPE]
+ERROR: This level's shape cannot mathematically generate a valid puzzle.
+
+[ERROR_NO_HINTS]
+No hints available. Check the board!
+
+[ERROR_AD_HINT_UNAVAILABLE]
+Ad not available right now. Try again in a moment.
+
+[ERROR_AD_HINT_LOADING]
+Loading ad… it will play when ready.
+
+[WARN_HINT_WATCH_AD]
+Out of hints. Watch an ad for 3 more hints.
+
+[MSG_HINTS_REWARDED]
+You earned 3 hints!
+
+[EDIT_MODE]
+EDIT MODE
+
+[TEST_MODE]
+TEST MODE
+
+[LOCK_WALLS]
+LOCK WALLS
+
+[UNIQUE_SOLVE]
+UNIQUE SOLVE
+
+[ALLOW]
+ALLOW:
+
+[LEVEL_EXISTS_OVERWRITE]
+LEVEL ALREADY EXISTS?
+
+OVERWRITE?
+
+[LEVEL_SOLVABLE]
+LEVEL IS SOLVABLE!
+
+[RETURN]
+RETURN
+
+[Wall]
+Wall
+
+[Empty (Clear)]
+Empty (Clear)
+
+[Yellow Tile]
+Yellow Tile
+
+[Blue Tile]
+Blue Tile
+
+[Joker Tile]
+Joker Tile
+
+[Shifter Tile Link Tool]
+Shifter Tile Link Tool
+
+[Equals (=) Link Tool]
+Equals (=) Link Tool
+
+[Not Equals (×) Link Tool]
+Not Equals (×) Link Tool
+
+[CREDITS_TEXT]
+[center]
+[font_size=42][color=#ffd700][b]CREATED BY[/b][/color][/font_size]
+
+[font_size=34]Giga "gix0n" Sichinava[/font_size]
+[/center]
+
+[HTP_TITLE]
+HOW TO PLAY
+
+[HTP_GOAL_TAP]
+Tap %s empty cells to place %s [color=#ffeb3b]Yellow[/color], %s [color=#2196f3]Blue[/color], and %s [color=#4caf50]Green[/color].
+
+[HTP_GOAL_WIN]
+Fill every %s empty cell without breaking any rules.
+
+[HTP_CORE_TITLE]
+CORE RULES
+
+[HTP_EXAMPLES_TITLE]
+EXAMPLES
+
+[HTP_EXAMPLE_INVALID]
+INVALID
+
+[HTP_EXAMPLE_VALID]
+VALID
+
+[HTP_EQUAL_BALANCE]
+Equal Balance: the same number of %s [color=#ffeb3b]Yellow[/color] and %s [color=#2196f3]Blue[/color] in each completed row or column.
+
+[HTP_RULE_OF_TWO]
+Rule of Two: never place three %s [color=#ffeb3b]Yellow[/color] or %s [color=#2196f3]Blue[/color] tiles in a row.
+
+[HTP_EXAMPLE_THREE_YELLOWS]
+(Three [color=#ffeb3b]Yellows[/color])
+
+[HTP_EXAMPLE_THREE_BLUES]
+(Three [color=#2196f3]Blues[/color])
+
+[HTP_EXAMPLE_VALID_MIX]
+(Valid)
+
+[HTP_GREEN_TITLE]
+GREEN TILES
+
+[HTP_PURPLE_TITLE]
+PURPLE TILES
+
+[HTP_GREEN_TILES_DESC]
+%s [color=#4caf50]Green[/color] counts as both %s [color=#ffeb3b]Yellow[/color] and %s [color=#2196f3]Blue[/color].
+
+[HTP_RULE_OF_ONE]
+Rule of One: at most one %s [color=#4caf50]Green[/color] per row or column. Equal Balance ignores Green.
+
+[HTP_GREEN_BALANCE_NOTE]
+Equal Balance ignores %s [color=#4caf50]Green[/color] — only %s [color=#ffeb3b]Yellow[/color] and %s [color=#2196f3]Blue[/color] count.
+
+[HTP_GREEN_EXAMPLE_INVALID_1]
+(Two [color=#2196f3]Blues[/color] + [color=#4caf50]Green[/color])
+
+[HTP_GREEN_EXAMPLE_INVALID_2]
+([color=#ffeb3b]Yellow[/color] + [color=#4caf50]Green[/color] + [color=#ffeb3b]Yellow[/color])
+
+[HTP_EXAMPLE_TWO_GREENS]
+(Two [color=#4caf50]Greens[/color])
+
+[HTP_GREEN_EXAMPLE_VALID]
+(Valid mix)
+
+[HTP_SPECIALS_TITLE]
+SPECIAL RULES
+
+[HTP_LINKS_TITLE]
+LOCKS & LINKS
+
+[HTP_SHIFTER_TILES_DESC]
+%s [color=#9c27b0]Purple[/color] tiles hop between two linked cells. Tap one to slide it along the arrow.
+
+[HTP_SHIFTER_BLOCK_NOTE]
+Another %s [color=#9c27b0]Purple[/color] on the destination blocks the hop — clear that path first.
+
+[HTP_SHIFTER_BALANCE_NOTE]
+Like %s [color=#4caf50]Green[/color], %s [color=#9c27b0]Purple[/color] fills a cell without counting toward Equal Balance.
+
+[HTP_LOCKS_LABEL]
+Locks:
+
+[HTP_LOCKS_DESC]
+Tiles with a lock icon are fixed and cannot be changed.
+
+[HTP_EQUALS_RULE]
+[b]=[/b] between two cells means they must be the [i]same[/i] color.
+
+[HTP_NOT_EQUALS_RULE]
+[b]×[/b] between two cells means they must be [i]different[/i] colors.
+
+[HTP_STARS_TITLE]
+STARS
+
+[HTP_STARS_INTRO]
+Earn up to three stars: solve the level, finish with no hints used, and beat the time limit.
+
+[HTP_STARS_COMPLETE_LABEL]
+Solved:
+
+[HTP_STARS_COMPLETE_DESC]
+Finish a valid board to earn the first star.
+
+[HTP_STARS_TIME_LABEL]
+Time:
+
+[HTP_STARS_TIME_DESC]
+Finish within that star's time limit.
+
+[HTP_STARS_HINTS_LABEL]
+No hints used:
+
+[HTP_STARS_HINTS_DESC]
+Finish without using any hints.
+
+[HTP_STARS_GREEN_LABEL]
+No hints used:
+
+[HTP_STARS_GREEN_DESC]
+Finish without using any hints.
+
+[HTP_STARS_MOVES_LABEL]
+Moves:
+
+[HTP_STARS_MOVES_DESC]
+Make no more %s [color=#9c27b0]Purple[/color] hops than that star allows.
+
+[TUT4_GREEN_DUAL]
+Look at this row: %s [color=#4DFF4D]Green[/color] already counts as %s [color=#FFD700]Yellow[/color]. Another Yellow here would break the [color=#E53935]Rule of Two[/color].
+
+[TUT4_DUAL_PRACTICE]
+Place %s [color=#4DA6FF]Blue[/color] in the white-highlighted cell. %s [color=#FFD700]Yellow[/color] would make three Yellows in a row with the %s [color=#4DFF4D]Green[/color] — that breaks the [color=#E53935]Rule of Two[/color].
+
+[TUT4_DUAL_WRONG]
+Not that — %s [color=#4DFF4D]Green[/color] already counts as %s [color=#FFD700]Yellow[/color]. Place %s [color=#4DA6FF]Blue[/color] instead.
+
+[TUT4_DUAL_GOOD]
+Correct — %s [color=#4DA6FF]Blue[/color] avoids three Yellows in a row.
+
+[TUT4_GREEN_MAX]
+[color=#E53935]One Green per line[/color]: each row and column may have at most one %s [color=#4DFF4D]Green[/color]. The Greens already on the board claim their lines.
+
+[TUT4_MAX_PRACTICE]
+This white-highlighted empty cell needs %s [color=#4DFF4D]Green[/color] for [color=#E53935]Equal Balance[/color] — and it is still alone in its row and column.
+
+[TUT4_WRONG_COLOR]
+Use %s [color=#4DFF4D]Green[/color] here — %s [color=#FFD700]Yellow[/color] or %s [color=#4DA6FF]Blue[/color] will not balance this line.
+
+[TUT4_GOOD_GREEN]
+Nice! [color=#E53935]One Green per line[/color] — and it still counts as both colors.
+
+[TUT5_MOVE_SHIFTER]
+Tap the white-highlighted %s [color=#C77DFF]Purple[/color] tile to slide it along the arrow.
+
+[TUT5_MOVE_SHIFTER_2]
+Now tap the other white-highlighted %s [color=#C77DFF]Purple[/color] tile.
+
+[TUT5_GOOD_SHIFTER]
+Great move! %s [color=#C77DFF]Purple[/color] hopped along the arrow.
+
+[TUT5_PLACE_FILL]
+Fill the white-highlighted empty cell with %s [color=#4DA6FF]Blue[/color].
+
+[TUT5_PLACE_FILL_2]
+Fill this white-highlighted empty cell with %s [color=#4DA6FF]Blue[/color] too.
+
+[TUT5_WRONG_FILL]
+Place %s [color=#4DA6FF]Blue[/color] here to keep the line balanced.
+
+[TUT5_GOOD_FILL]
+Cell filled!
+
+[TUT5_INTRO]
+%s [color=#C77DFF]Purple[/color] tiles hop between two linked cells. This board has two of them — arrows show each move.
+
+[TUT6_EQUALS_INTRO]
+An [b]=[/b] between two cells means they must be the [i]same[/i] color. Look at the marked pair.
+
+[TUT6_EQUALS_PRACTICE]
+The locked tile is %s [color=#FFD700]Yellow[/color] — place the same color in the glowing cell.
+
+[TUT6_WRONG_EQUALS]
+They must match. Place %s [color=#FFD700]Yellow[/color] to satisfy =.
+
+[TUT6_GOOD_EQUALS]
+Correct - same color for =.
+
+[TUT6_NOTEQUALS_INTRO]
+A [b]×[/b] between two cells means they must be [i]different[/i] colors.
+
+[TUT6_NOTEQUALS_PRACTICE]
+The locked tile is %s [color=#FFD700]Yellow[/color] - place a [i]different[/i] color (%s [color=#4DA6FF]Blue[/color]).
+
+[TUT6_WRONG_NOTEQUALS]
+They must differ. Place %s [color=#4DA6FF]Blue[/color] to satisfy ×.
+
+[TUT6_GOOD_NOTEQUALS]
+Correct - different colors for ×.
+
+[TUT6_TOOLS_INTRO]
+These top-bar buttons help while you play. We will highlight each one — tap it or press Next.
+
+[TUT2_RULE_INTRO_2]
+[color=#E53935]Rule of Two[/color] also blocks three %s [color=#4DA6FF]Blue[/color] in a row. Two Blues already sit here.
+
+[TUT2_RULE_PRACTICE_2]
+Place %s [color=#FFD700]Yellow[/color] in the glowing cell to break the three-in-a-row.
+
+[TUT2_WRONG_THREE_BLUE]
+Not quite — that makes three %s [color=#4DA6FF]Blue[/color] in a row. Place %s [color=#FFD700]Yellow[/color] instead.
+
+[TUT3_BALANCE_INTRO]
+[color=#E53935]Equal Balance[/color]: every completed row and column needs equal %s [color=#FFD700]Yellow[/color] and %s [color=#4DA6FF]Blue[/color].
+
+[TUT3_BALANCE_PRACTICE_B]
+Place %s [color=#4DA6FF]Blue[/color] in the glowing cell to balance this row.
+
+[TUT3_WRONG_BALANCE_B]
+That breaks [color=#E53935]Equal Balance[/color]. Place %s [color=#4DA6FF]Blue[/color] instead.
+
+[TUT3_GOOD_BALANCE]
+Perfect — %s [color=#FFD700]Yellow[/color] and %s [color=#4DA6FF]Blue[/color] are balanced.
+
+[TUT3_BALANCE_INTRO_2]
+Same rule for this row — count %s [color=#FFD700]Yellow[/color] and %s [color=#4DA6FF]Blue[/color].
+
+[TUT3_BALANCE_PRACTICE_Y]
+Place %s [color=#FFD700]Yellow[/color] in the glowing cell to balance this row.
+
+[TUT3_WRONG_BALANCE_Y]
+That breaks [color=#E53935]Equal Balance[/color]. Place %s [color=#FFD700]Yellow[/color] instead.
+
+[TUT4_ODD_BALANCE]
+Odd-length lines need %s [color=#4DFF4D]Green[/color]: [color=#E53935]Equal Balance[/color] ignores Green counts, but Green still fills a cell so Yellow and Blue can balance a 3- or 5-cell line.
+
+[TUT5_ODD_BALANCE]
+Like %s [color=#4DFF4D]Green[/color], %s [color=#C77DFF]Purple[/color] fills a cell without counting toward [color=#E53935]Equal Balance[/color] — so odd-length lines can still balance.
+
+[TUT4_GREEN_MAX_2]
+One more %s [color=#4DFF4D]Green[/color] still fits — this corner cell has none in its row or column yet.
+
+[TUT4_MAX_PRACTICE_2]
+Place %s [color=#4DFF4D]Green[/color] in the white-highlighted corner to finish the odd-line [color=#E53935]Equal Balance[/color].
+
+[TUT1_FILL_TRY]
+Your turn — fill the remaining empty cells. If something breaks a rule, those cells get a red highlight.
+
+[TUTF_BOARD_AREA]
+This highlighted board is the playable area. You will solve puzzles inside this grid.
+
+[TUTF_EMPTY_CELL]
+This white-highlighted tile is an empty cell. Empty cells are where you place colors.
+
+[TUTF_TILE_CONTROLS]
+Goal: fill every empty cell with tiles. Tap a cell to cycle through %s Yellow, %s Blue, and %s Green.
+
+[TUTF_FREE_TAP]
+Try tapping cells anywhere on the board to practice controls. Then press Next.
+
+[TUTF_BALANCE_INTRO]
+[color=#E53935]Equal Balance[/color]: this highlighted column must balance Yellow and Blue. Green helps odd lines by filling a cell without adding Yellow/Blue count.
+
+[TUTF_PLACE_GREEN]
+Place %s Green in the highlighted empty cell.
+
+[TUTF_PLACE_GREEN_WRONG]
+Use %s Green here to satisfy this setup.
+
+[TUTF_PLACE_GREEN_OK]
+Great. Green is in place for this line.
+
+[TUTF_RULE_TWO_INTRO]
+[color=#E53935]Rule of Two[/color]: never place three matching colors in a row or column. Green counts as both Yellow and Blue.
+
+[TUTF_RULE_TWO_PLACE_BLUE]
+Place %s Blue in the first highlighted empty cell.
+
+[TUTF_RULE_TWO_WRONG_YELLOW]
+That makes three Yellow matches (Green counts as Yellow too). Change it to %s Blue.
+
+[TUTF_RULE_TWO_OK_BLUE]
+Great. That placement keeps [color=#E53935]Rule of Two[/color] safe.
+
+[TUTF_RULE_TWO_PLACE_YELLOW]
+Now place %s Yellow in the next highlighted cell.
+
+[TUTF_RULE_TWO_PLACE_YELLOW_WRONG]
+Use %s Yellow for this second cell.
+
+[TUTF_RULE_TWO_OK_ROW]
+Great. This row now respects both [color=#E53935]Equal Balance[/color] and [color=#E53935]Rule of Two[/color].
+
+[TUTF_LEVEL1_WRAP]
+Foundations complete. Next you will learn Green isolation rules on a new board.
+
+[TUTF_CONTINUE_TO_NEXT]
+All lessons done — finish the board. Hold a filled cell to remove a tile if you need to fix a mistake.
+
+[TUTF_SHIFTER_BLOCK]
+%s [color=#C77DFF]Purple[/color] tiles cannot hop onto each other — another Purple on the destination blocks the move.

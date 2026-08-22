@@ -195,6 +195,37 @@ static func build_requirements(level: LevelData, earned_bits: int = 0) -> Dictio
 		"untimed": false,
 	}
 
+## Minimum inner width for star-goal rows from unwrapped localized strings.
+static func measure_requirements_min_width(level: LevelData, earned_bits: int = 0) -> float:
+	var preview := build_requirements(level, earned_bits)
+	var font := HudFonts.ui_font()
+	var font_size := RESULTS_ROW_FONT
+	if HudFonts.prefer_default_font():
+		font_size = HudLayout.body_font_size(RESULTS_ROW_FONT)
+	var max_w := 0.0
+	for g in preview.get("goals", []):
+		max_w = maxf(max_w, _measure_star_row_min_width(g, font, font_size))
+	return max_w
+
+static func _measure_star_row_min_width(goal: Dictionary, font: Font, font_size: int) -> float:
+	var title := str(goal.get("title", ""))
+	var detail := str(goal.get("detail", "")).strip_edges()
+	var title_w := HudDialogs.measure_text_max_line_width(font, title, font_size)
+	var detail_w := _measure_goal_detail_width(detail, font, font_size)
+	var icon_w := STAR_ICON_SIZE + 8.0
+	var row_sep := 16.0
+	var detail_gap := 16.0 if detail_w > 0.0 else 0.0
+	return icon_w + row_sep + title_w + detail_gap + detail_w + 16.0
+
+static func _measure_goal_detail_width(
+	detail_text: String, font: Font, font_size: int
+) -> float:
+	if detail_text.is_empty():
+		return 0.0
+	if _time_detail_uses_infinity_icon(detail_text) or detail_text.contains("[img"):
+		return float(RESULTS_INFINITY_ICON_SIZE)
+	return HudDialogs.measure_text_max_line_width(font, detail_text, font_size)
+
 ## Clears `host` and fills it with the post-game star rows from a completed star_result dict.
 ## If the result is marked untimed (no goal rows), the host is left empty after clearing.
 static func populate_results(host: Control, star_result: Dictionary) -> void:
@@ -225,24 +256,30 @@ static func populate_results(host: Control, star_result: Dictionary) -> void:
 
 ## Clears `host` and fills it with star-goal rows built from the level's requirements.
 ## Used on the pre-play info panel rather than the post-game results screen.
-static func populate_requirements(host: Control, level: LevelData, earned_bits: int = 0) -> void:
+static func populate_requirements(
+	host: Control,
+	level: LevelData,
+	earned_bits: int = 0,
+	content_width: float = RESULTS_CONTENT_WIDTH,
+	white_text: bool = false
+) -> void:
 	if host == null:
 		return
 	while host.get_child_count() > 0:
 		host.get_child(0).free()
 	var preview := build_requirements(level, earned_bits)
 	var root := VBoxContainer.new()
-	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	root.add_theme_constant_override("separation", 16)
 	root.alignment = BoxContainer.ALIGNMENT_CENTER
 	host.add_child(root)
 	var stars_box := VBoxContainer.new()
-	stars_box.custom_minimum_size = Vector2(RESULTS_CONTENT_WIDTH, 0)
+	stars_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	stars_box.add_theme_constant_override("separation", 12)
-	stars_box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	root.add_child(stars_box)
 	for g in preview.get("goals", []):
-		stars_box.add_child(_make_star_row(g))
+		stars_box.add_child(_make_star_row(g, content_width, white_text))
 
 ## Helper to create a centered pixel-font label used for section headings in result rows.
 static func _make_text_row(text: String, color: Color, font_size: int) -> Label:
@@ -254,10 +291,14 @@ static func _make_text_row(text: String, color: Color, font_size: int) -> Label:
 
 ## Builds one full-width HBox row for a single star goal: star icon | title | optional detail.
 ## Earned goals use green text; missed goals use red (and hints swap to HINTS USED).
-static func _make_star_row(goal: Dictionary) -> HBoxContainer:
+static func _make_star_row(
+	goal: Dictionary,
+	_content_width: float = RESULTS_CONTENT_WIDTH,
+	white_text: bool = false
+) -> HBoxContainer:
 	var earned := bool(goal.get("earned", false))
 	var row := HBoxContainer.new()
-	row.custom_minimum_size = Vector2(RESULTS_CONTENT_WIDTH, ROW_HEIGHT)
+	row.custom_minimum_size.y = ROW_HEIGHT
 	row.add_theme_constant_override("separation", 16)
 	row.alignment = BoxContainer.ALIGNMENT_BEGIN
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -304,15 +345,16 @@ static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	var title_color := COLOR_STAR_EARNED if earned else COLOR_STAR_FAILED
+	var title_text := str(goal.get("title", ""))
+	var detail_text := str(goal.get("detail", "")).strip_edges()
+	var title_color := Color.WHITE if white_text else (COLOR_STAR_EARNED if earned else COLOR_STAR_FAILED)
 	HudLayout.apply_raster_pixel_label(
-		title, str(goal.get("title", "")), RESULTS_ROW_FONT, title_color
+		title, title_text, RESULTS_ROW_FONT, title_color, 0
 	)
 	title_slot.add_child(title)
 
-	var detail_text := str(goal.get("detail", "")).strip_edges()
 	if not detail_text.is_empty():
-		var detail_color := COLOR_STAR_EARNED if earned else COLOR_STAR_FAILED
+		var detail_color := Color.WHITE if white_text else (COLOR_STAR_EARNED if earned else COLOR_STAR_FAILED)
 		# Non-pixel locales (ka/uk): never render the custom infinity icon.
 		if not HudFonts.uses_pixel_font() and detail_text.contains("[img"):
 			detail_text = detail_text.replace(
@@ -357,8 +399,18 @@ static func _make_star_row(goal: Dictionary) -> HBoxContainer:
 			detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 			detail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			HudLayout.apply_raster_pixel_label(
-				detail, detail_text, RESULTS_ROW_FONT, detail_color
+				detail,
+				detail_text,
+				RESULTS_ROW_FONT,
+				detail_color,
+				0,
+				HudLayout.text_is_digit_display(detail_text)
 			)
 			row.add_child(detail)
 
+	var row_h := ROW_HEIGHT
+	var title_h := title.get_minimum_size().y
+	if title_h > 0.0:
+		row_h = maxf(row_h, title_h + 16.0)
+	row.custom_minimum_size.y = row_h
 	return row

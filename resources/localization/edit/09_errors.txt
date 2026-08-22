@@ -1,0 +1,122 @@
+# English game text — edit the lines below each [KEY].
+# Do NOT change or remove [KEY] headers. Edit only the text under them.
+# Keep placeholders as-is: %s, %d, %d/%d, etc.
+# Blank line ends a string block. Use a single blank line inside text if needed.
+# Files in this folder are for editing only; the game reads translations.csv.
+
+# Section: Validation error messages
+
+[ERR_CONSTRAINT_EQUALS]
+Tiles linked by [outline_size=6][outline_color=black] = [/outline_color][/outline_size] must be the same color.
+
+[ERR_CONSTRAINT_NOT_EQUALS]
+Tiles linked by [outline_size=6][outline_color=black] × [/outline_color][/outline_size] must be different colors.
+
+[ERR_MAX_GREEN_PER_LINE]
+Max 1 [color=#4DFF4D]Green[/color] tile per line.
+
+[ERR_MAX_GREEN_PER_ROW]
+Max 1 [color=#4DFF4D]Green[/color] tile per row.
+
+[ERR_MAX_GREEN_PER_COLUMN]
+Max 1 [color=#4DFF4D]Green[/color] tile per column.
+
+[ERR_GREEN_THREE_YELLOW]
+[color=#4DFF4D]Green[/color] tile makes 3 [color=#FFD700]Yellow[/color] in a row.
+
+[ERR_GREEN_THREE_YELLOW_ROW]
+[color=#4DFF4D]Green[/color] tile makes 3 [color=#FFD700]Yellow[/color] in a row.
+
+[ERR_GREEN_THREE_YELLOW_COLUMN]
+[color=#4DFF4D]Green[/color] tile makes 3 [color=#FFD700]Yellow[/color] in a column.
+
+[ERR_THREE_YELLOW]
+3 [color=#FFD700]Yellow[/color] tiles in a row.
+
+[ERR_THREE_YELLOW_ROW]
+3 [color=#FFD700]Yellow[/color] tiles in a row.
+
+[ERR_THREE_YELLOW_COLUMN]
+3 [color=#FFD700]Yellow[/color] tiles in a column.
+
+[ERR_GREEN_THREE_BLUE]
+[color=#4DFF4D]Green[/color] tile makes 3 [color=#4DA6FF]Blue[/color] in a row.
+
+[ERR_GREEN_THREE_BLUE_ROW]
+[color=#4DFF4D]Green[/color] tile makes 3 [color=#4DA6FF]Blue[/color] in a row.
+
+[ERR_GREEN_THREE_BLUE_COLUMN]
+[color=#4DFF4D]Green[/color] tile makes 3 [color=#4DA6FF]Blue[/color] in a column.
+
+[ERR_THREE_BLUE]
+3 [color=#4DA6FF]Blue[/color] tiles in a row.
+
+[ERR_THREE_BLUE_ROW]
+3 [color=#4DA6FF]Blue[/color] tiles in a row.
+
+[ERR_THREE_BLUE_COLUMN]
+3 [color=#4DA6FF]Blue[/color] tiles in a column.
+
+[ERR_UNEQUAL_LINE]
+Unequal [color=#FFD700]Yellow[/color] and [color=#4DA6FF]Blue[/color] in a line.
+
+[ERR_UNEQUAL_MORE_YELLOW_ROW]
+%d [color=#FFD700]Yellow[/color] but only %d [color=#4DA6FF]Blue[/color] in row.
+
+[ERR_UNEQUAL_MORE_YELLOW_COLUMN]
+%d [color=#FFD700]Yellow[/color] but only %d [color=#4DA6FF]Blue[/color] in column.
+
+[ERR_UNEQUAL_MORE_BLUE_ROW]
+%d [color=#4DA6FF]Blue[/color] but only %d [color=#FFD700]Yellow[/color] in row.
+
+[ERR_UNEQUAL_MORE_BLUE_COLUMN]
+%d [color=#4DA6FF]Blue[/color] but only %d [color=#FFD700]Yellow[/color] in column.
+
+[ERR_UNEQUAL_MORE_YELLOW_ROW_NO_BLUE]
+%d [color=#FFD700]Yellow[/color] but no [color=#4DA6FF]Blue[/color] in row.
+
+[ERR_UNEQUAL_MORE_YELLOW_COLUMN_NO_BLUE]
+%d [color=#FFD700]Yellow[/color] but no [color=#4DA6FF]Blue[/color] in column.
+
+[ERR_UNEQUAL_MORE_BLUE_ROW_NO_YELLOW]
+%d [color=#4DA6FF]Blue[/color] but no [color=#FFD700]Yellow[/color] in row.
+
+[ERR_UNEQUAL_MORE_BLUE_COLUMN_NO_YELLOW]
+%d [color=#4DA6FF]Blue[/color] but no [color=#FFD700]Yellow[/color] in column.
+
+[ERR_TOO_MANY_GREEN]
+Too many [color=#4DFF4D]Green[/color] tiles.
+
+[ERR_TOO_FEW_GREEN]
+Not enough [color=#4DFF4D]Green[/color] tiles.
+
+[ERR_SHIFTER_BLOCKED]
+No space! Blocked by another [color=#9c27b0]Purple[/color] tile.
+
+[ERR_GEN_WALLS]
+GENERATION FAILED: THE LOCKED WALLS MAKE A VALID SOLUTION IMPOSSIBLE.
+
+[ERR_GEN_CONSTRAINTS]
+GENERATION FAILED: THE CONSTRAINTS ARE TOO RESTRICTIVE FOR THIS GRID SIZE.
+
+[ERR_PLACEMENT_ABORTED]
+PLACEMENT ABORTED
+
+[ERR_CELLS_NOT_ADJACENT]
+CELLS MUST BE ADJACENT
+
+[ERROR_INVALID_SHAPE]
+ERROR: This level's shape cannot mathematically generate a valid puzzle.
+
+[ERROR_NO_HINTS]
+No hints available. Check the board!
+
+[ERROR_AD_HINT_UNAVAILABLE]
+Ad not available right now. Try again in a moment.
+
+[ERROR_AD_HINT_LOADING]
+Loading ad… it will play when ready.
+
+[WARN_HINT_WATCH_AD]
+Out of hints. Watch an ad for 3 more hints.
+

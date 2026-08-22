@@ -1,0 +1,10 @@
+# English game text — edit the lines below each [KEY].
+# Do NOT change or remove [KEY] headers. Edit only the text under them.
+# Keep placeholders as-is: %s, %d, %d/%d, etc.
+# Blank line ends a string block. Use a single blank line inside text if needed.
+# Files in this folder are for editing only; the game reads translations.csv.
+
+# Section: Victory, pause, completion messages
+
+[ALL_COMPLETED]
+ALL LEVELS COMPLETED

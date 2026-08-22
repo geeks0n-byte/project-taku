@@ -11,6 +11,56 @@ const _PREV_ICON_TEX := preload("res://resources/icons/icon_prev.svg")
 const _NEXT_ICON_TEX := preload("res://resources/icons/icon_next.svg")
 # Default icon render size in pixels for square top-bar buttons.
 const _TOP_BAR_ICON_PX := 83.0
+## Horizontal inset from screen edges for auto-sized popups and wrapped controls.
+const UI_SAFE_SIDE_MARGIN := 32.0
+## Minimum width for centered dialog/popup panels (capped by viewport when narrow).
+const UI_MIN_DIALOG_WIDTH := 640.0
+## Default width for standard confirmation / dialog panels.
+const UI_DEFAULT_DIALOG_WIDTH := 720.0
+## Maximum width for centered dialog/popup panels on wide screens.
+const UI_MAX_DIALOG_WIDTH := 760.0
+## Side margin when clamping dialog panels to the viewport (slightly tighter than generic UI).
+const UI_DIALOG_SCREEN_MARGIN := 20.0
+
+## Usable content width inside centered overlays (viewport minus side margins).
+static func max_ui_content_width(extra_margin: float = UI_SAFE_SIDE_MARGIN) -> float:
+	var window_w := 0.0
+	var tree := Engine.get_main_loop()
+	if tree is SceneTree:
+		var root := (tree as SceneTree).root
+		if root:
+			window_w = root.get_viewport().get_visible_rect().size.x
+	if window_w <= 0.0:
+		window_w = float(DisplayServer.window_get_size().x)
+	if window_w <= 0.0:
+		window_w = float(ProjectSettings.get_setting("display/window/size/viewport_width", 1080))
+	return maxf(240.0, window_w - extra_margin * 2.0)
+
+static func clamp_ui_width(width: float, extra_margin: float = UI_SAFE_SIDE_MARGIN) -> float:
+	var max_w := max_ui_content_width(extra_margin)
+	var min_w := minf(UI_MIN_DIALOG_WIDTH, max_w)
+	return clampf(width, min_w, max_w)
+
+## Clamps a dialog panel's outer width to the viewport (uses tighter side margins).
+static func clamp_dialog_panel_width(width: float) -> float:
+	var viewport_max := max_ui_content_width(UI_DIALOG_SCREEN_MARGIN)
+	var max_w := minf(viewport_max, UI_MAX_DIALOG_WIDTH)
+	var min_w := minf(UI_MIN_DIALOG_WIDTH, max_w)
+	return clampf(width, min_w, max_w)
+
+## Inner content width for a dialog panel with symmetric vbox insets.
+static func dialog_content_width(
+	panel_width: float, horizontal_inset: float = HudDialogs.DIALOG_EDGE_INSET * 2.0
+) -> float:
+	return maxf(120.0, clamp_dialog_panel_width(panel_width) - horizontal_inset)
+
+## Single-line width of a label's current text (locale-aware, respects label_settings).
+static func measure_label_min_width(label: Label) -> float:
+	return HudDialogs.measure_label_min_width(label)
+
+## Caps width to the viewport without applying the dialog minimum (for buttons/controls).
+static func cap_ui_width(width: float, extra_margin: float = UI_SAFE_SIDE_MARGIN) -> float:
+	return minf(width, max_ui_content_width(extra_margin))
 
 # Stretches a control to the full horizontal width with symmetric side margins,
 # anchored to the top of its parent at the given pixel offset.
@@ -90,6 +140,10 @@ static func _is_message_key(text: String) -> bool:
 			return false
 	return true
 
+# True for message ids (UI_YES), not short translated words that also look all-caps (TAK, JA).
+static func _is_i18n_key(text: String) -> bool:
+	return _is_message_key(text) and text.contains("_")
+
 # Reverse-looks up the original i18n key from an already-translated string.
 # Necessary when a scene was saved with tr() output baked into .text,
 # making it impossible to retranslate on locale change without this recovery.
@@ -146,6 +200,49 @@ static func _bind_header_translation_key(label: Label, key: String) -> void:
 	label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
 	label.notification(Node.NOTIFICATION_TRANSLATION_CHANGED)
 
+static func _screen_header_display_text(label: Label) -> String:
+	if label == null:
+		return ""
+	var key := _header_translation_key(label)
+	if not key.is_empty() and _is_message_key(key):
+		return String(TranslationServer.translate(key))
+	return String(label.text)
+
+static func _screen_header_side_margin(label: Label) -> float:
+	if label == null:
+		return UI_SAFE_SIDE_MARGIN
+	var margin := maxf(absf(label.offset_left), absf(label.offset_right))
+	if margin <= 0.0:
+		return UI_SAFE_SIDE_MARGIN
+	return margin
+
+static func _screen_header_available_width(label: Label, outline_size: int) -> float:
+	var inner_pad := float(outline_size) * 2.0 + 8.0
+	if label != null and label.size.x > 1.0:
+		return maxf(120.0, label.size.x - inner_pad)
+	return maxf(120.0, max_ui_content_width(_screen_header_side_margin(label)) - inner_pad)
+
+static func _fit_screen_header_font_size(
+	display: String,
+	font: Font,
+	base_size: int,
+	max_width: float,
+	snap_pixel: bool = false
+) -> int:
+	if display.is_empty() or font == null or max_width <= 0.0:
+		return base_size
+	var size := base_size
+	var min_size := 16 if snap_pixel else 14
+	var step := 8 if snap_pixel else 1
+	while size > min_size:
+		var text_w := HudDialogs.measure_text_max_line_width(font, display, size)
+		if text_w <= max_width + 1.0:
+			break
+		size -= step
+	if snap_pixel:
+		size = snap_pixel_font_size(maxi(min_size, size))
+	return maxi(min_size, size)
+
 # Applies the canonical screen-header look: centred, correct font, outline, colour.
 # Handles both the pixel-font and scalable-font (ka/uk) paths,
 # and ensures the translation key stays in .text rather than a baked string.
@@ -176,15 +273,25 @@ static func apply_screen_header_style(label: Label) -> void:
 	label.clip_text = false
 	label.clip_contents = false
 	label.add_theme_color_override("font_color", GameConstants.SCREEN_HEADER_COLOR)
+	var display := _screen_header_display_text(label)
+	var max_w := _screen_header_available_width(label, outline_size)
+	var font: Font
+	var fitted_size: int
 	if force_pixel or needs_pixel_text_raster():
 		label.set_meta("_use_default_font", false)
-		label.add_theme_font_override("font", pixel_font_clean())
-		label.add_theme_font_size_override("font_size", header_size)
+		font = pixel_font_clean()
+		fitted_size = _fit_screen_header_font_size(display, font, header_size, max_w, true)
+		label.add_theme_font_override("font", font)
+		label.add_theme_font_size_override("font_size", fitted_size)
 		_strip_live_pixel_outline(label)
 		return
 	label.set_meta("_use_default_font", true)
-	label.add_theme_font_override("font", screen_header_font(false))
-	label.add_theme_font_size_override("font_size", body_font_size(header_size))
+	font = screen_header_font(false)
+	fitted_size = _fit_screen_header_font_size(
+		display, font, body_font_size(header_size), max_w, false
+	)
+	label.add_theme_font_override("font", font)
+	label.add_theme_font_size_override("font_size", fitted_size)
 	apply_safe_outline(label, outline_size)
 
 # Styles the victory/completion header label. Reduces font size on mobile to prevent
@@ -419,18 +526,24 @@ static func _translate_status_token(token: String, force_english: bool = false) 
 	return translated
 
 # Inserts a newline after sentence-ending punctuation followed by a space and a
-# non-numeric character. Prevents two-sentence status messages from running together
-# on a single line without breaking mid-number (e.g. "1.5 seconds").
+# non-numeric character. Skips BBCode tags so [color=...] markup stays intact.
 static func break_after_sentences(text: String) -> String:
 	if text.is_empty():
 		return text
 	var out := ""
 	var i := 0
 	var n := text.length()
+	var in_tag := false
 	while i < n:
 		var c := text[i]
-		out += c
-		if c == "." or c == "!" or c == "?":
+		if c == "[":
+			in_tag = true
+			out += c
+		elif c == "]":
+			in_tag = false
+			out += c
+		elif not in_tag and (c == "." or c == "!" or c == "?"):
+			out += c
 			var j := i + 1
 			while j < n and (text[j] == " " or text[j] == "\t"):
 				j += 1
@@ -440,6 +553,8 @@ static func break_after_sentences(text: String) -> String:
 					out += "\n"
 					i = j
 					continue
+		else:
+			out += c
 		i += 1
 	return out
 
@@ -667,6 +782,9 @@ static func apply_raster_pixel_label(
 		if force_pixel or _in_force_pixel_subtree(label):
 			label.set_meta("_force_pixel_font", true)
 		apply_live_pixel_label_settings(label, text, font_size, color)
+		if _max_width > 0:
+			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			label.custom_minimum_size.x = float(_max_width)
 		return
 	clear_label_settings(label)
 	_clear_pixel_raster(label)
@@ -679,6 +797,9 @@ static func apply_raster_pixel_label(
 	label.add_theme_font_size_override("font_size", body_font_size(font_size))
 	label.add_theme_color_override("font_color", color)
 	apply_safe_outline(label, 8)
+	if _max_width > 0:
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.custom_minimum_size.x = float(_max_width)
 
 # Styles a Button for pixel or scalable text rendering.
 # In English, creates a PixelSafeCaption child Label with Press Start so the
@@ -764,6 +885,7 @@ static func apply_status_font(label: RichTextLabel, base_size: int = GameConstan
 	]:
 		label.add_theme_font_size_override(size_name, size)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.bbcode_enabled = true
 	label.fit_content = true
 	label.scroll_active = false
 
@@ -1030,20 +1152,311 @@ static func apply_secondary_button(button: Button) -> void:
 
 # Sizes and styles a dialog confirm/cancel button (Yes/No), translating its text
 # and routing through apply_raster_pixel_button for font consistency.
-static func apply_dialog_button(button: Button) -> void:
+static func apply_dialog_button(button: Button, display_override: String = "") -> void:
 	if not button:
 		return
 	button.focus_mode = Control.FOCUS_NONE
 	button.custom_minimum_size = GameConstants.UI_BTN_DIALOG_SIZE
-	var display := button.text
-	if not display.is_empty() and _is_message_key(display):
-		display = String(TranslationServer.translate(display))
-	elif (
-		button.auto_translate_mode != Node.AUTO_TRANSLATE_MODE_DISABLED
-		and not display.is_empty()
-	):
+	# Prefer explicit / button.text when set (e.g. after tr() on locale change); stale
+	# PixelSafeCaption would otherwise win for words like Polish "TAK" that look like keys.
+	var display := display_override.strip_edges()
+	if display.is_empty():
+		display = String(button.text)
+	if display.is_empty() or _is_i18n_key(display):
+		var info := _button_label_display(button)
+		display = String(info.get("text", ""))
+	if not display.is_empty() and _is_i18n_key(display):
 		display = String(TranslationServer.translate(display))
 	apply_raster_pixel_button(button, display, GameConstants.UI_BTN_DIALOG_FONT)
+	grow_dialog_button_to_text(button)
+
+## Applies dialog styling and grows width to fit the label (single-button popups).
+static func apply_dialog_button_fitted(
+	button: Button,
+	min_width: float = -1.0
+) -> void:
+	apply_dialog_button(button)
+	var base := GameConstants.UI_BTN_DIALOG_SIZE
+	grow_button_to_text(
+		button,
+		base.y,
+		48.0,
+		base.x if min_width < 0.0 else min_width
+	)
+
+## Styles dialog buttons and optionally gives them a shared width (max of the group).
+## When `max_total_width` is set, the group is capped to that width (e.g. panel content area).
+static func fit_dialog_button_group(
+	buttons: Array,
+	equal_width: bool = true,
+	min_width: float = GameConstants.UI_BTN_DIALOG_SIZE.x,
+	height: float = GameConstants.UI_BTN_DIALOG_SIZE.y,
+	max_total_width: float = -1.0
+) -> void:
+	if buttons.is_empty():
+		return
+	for btn in buttons:
+		if btn == null or not (btn is Button):
+			continue
+		apply_dialog_button(btn)
+	if not equal_width:
+		return
+	equalize_button_group_widths(buttons, min_width, height, max_total_width)
+
+## Sets every button in the group to the widest minimum width (locale-aware sizing).
+static func equalize_button_group_widths(
+	buttons: Array,
+	min_width: float = 160.0,
+	height: float = -1.0,
+	max_total_width: float = -1.0
+) -> void:
+	var visible_btns: Array[Button] = []
+	for btn in buttons:
+		if btn == null or not (btn is Button):
+			continue
+		if not (btn as CanvasItem).visible:
+			continue
+		visible_btns.append(btn)
+	if visible_btns.is_empty():
+		return
+	for btn in visible_btns:
+		grow_dialog_button_to_text(btn)
+	var shared_w := min_width
+	for btn in visible_btns:
+		shared_w = maxf(shared_w, HudLayout.measure_dialog_button_min_width(btn))
+	if max_total_width > 0.0:
+		var in_hbox := false
+		if not visible_btns.is_empty():
+			var parent := visible_btns[0].get_parent()
+			in_hbox = parent is HBoxContainer
+		if in_hbox:
+			var n := visible_btns.size()
+			var sep_total := 40.0 * float(maxi(n - 1, 0))
+			var row_natural := shared_w * float(n) + sep_total
+			if row_natural > max_total_width:
+				shared_w = maxf(
+					80.0, (max_total_width - sep_total) / float(maxi(n, 1))
+				)
+	else:
+		shared_w = cap_ui_width(shared_w)
+	for btn in visible_btns:
+		var button := btn as Button
+		var btn_h := height if height > 0.0 else button.custom_minimum_size.y
+		var info := _button_label_display(button)
+		var caption: Label = info.get("caption")
+		_reset_button_single_line(button, caption)
+		button.custom_minimum_size = Vector2(shared_w, btn_h)
+
+static func _button_label_display(button: Button) -> Dictionary:
+	var display := button.text
+	var font: Font = button.get_theme_font("font")
+	var font_size := button.get_theme_font_size("font_size")
+	var caption := button.get_node_or_null("PixelSafeCaption/Caption") as Label
+	if caption:
+		display = caption.text
+		if caption.label_settings != null:
+			font = caption.label_settings.font
+			font_size = caption.label_settings.font_size
+		else:
+			font = caption.get_theme_font("font")
+			font_size = caption.get_theme_font_size("font_size")
+	elif display.is_empty() or _is_i18n_key(display):
+		var key := display if not display.is_empty() else String(button.get_meta("_tr_key", ""))
+		if not key.is_empty():
+			display = String(TranslationServer.translate(key))
+	return {"text": display, "font": font, "font_size": font_size, "caption": caption}
+
+## Single-line width for a dialog button label (used to size panels before wrapping).
+static func measure_dialog_button_min_width(
+	button: Button, horizontal_padding: float = 48.0
+) -> float:
+	if button == null:
+		return GameConstants.UI_BTN_DIALOG_SIZE.x
+	var info := _button_label_display(button)
+	var display: String = info.get("text", "")
+	var font: Font = info.get("font")
+	var font_size: int = info.get("font_size", GameConstants.UI_BTN_DIALOG_FONT)
+	if font == null:
+		font = HudFonts.default_font()
+	if display.is_empty():
+		return GameConstants.UI_BTN_DIALOG_SIZE.x
+	var text_w := HudDialogs.measure_text_max_line_width(font, display, font_size)
+	return maxf(GameConstants.UI_BTN_DIALOG_SIZE.x, text_w + horizontal_padding)
+
+static func _reset_button_single_line(button: Button, caption: Label) -> void:
+	if caption:
+		caption.autowrap_mode = TextServer.AUTOWRAP_OFF
+	button.autowrap_mode = TextServer.AUTOWRAP_OFF
+
+static func _apply_button_wrapped_size(
+	button: Button,
+	caption: Label,
+	display: String,
+	font: Font,
+	font_size: int,
+	width: float,
+	min_height: float,
+	horizontal_padding: float,
+	vertical_padding: float = 20.0
+) -> void:
+	var inner_w := maxf(40.0, width - horizontal_padding)
+	if caption:
+		caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	else:
+		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var measured := font.get_multiline_string_size(
+		display, HORIZONTAL_ALIGNMENT_CENTER, inner_w, font_size
+	)
+	var line_h := maxf(1.0, font.get_height(font_size))
+	var max_text_h := line_h * float(UI_TILE_BUTTON_MAX_LINES)
+	var text_h := minf(measured.y, max_text_h)
+	var btn_h := maxf(min_height, text_h + vertical_padding)
+	button.custom_minimum_size = Vector2(width, btn_h)
+
+static func _button_uses_tile_style(button: Button) -> bool:
+	if button == null:
+		return false
+	var normal := button.get_theme_stylebox("normal")
+	return normal is StyleBoxTexture
+
+## Tile-style overlay buttons (consent, etc.).
+const UI_TILE_BUTTON_H_PAD := 96.0
+const UI_TILE_BUTTON_V_PAD := 40.0
+const UI_TILE_BUTTON_MIN_HEIGHT := 118.0
+## Single-line tile buttons wider than this wrap (up to [member UI_TILE_BUTTON_MAX_LINES] lines).
+const UI_TILE_BUTTON_PREFER_WRAP_WIDTH := 560.0
+const UI_TILE_BUTTON_MAX_LINES := 2
+
+## Width/height for a tile button label — single line when narrow, else ≤2 wrapped lines.
+static func compute_tile_button_size(
+	display: String,
+	font: Font,
+	font_size: int,
+	column_w: float,
+	min_width: float = 280.0,
+	min_height: float = UI_TILE_BUTTON_MIN_HEIGHT,
+	h_pad: float = UI_TILE_BUTTON_H_PAD,
+	v_pad: float = UI_TILE_BUTTON_V_PAD
+) -> Vector2:
+	if display.is_empty() or font == null:
+		return Vector2(min_width, min_height)
+	var line_h := maxf(1.0, font.get_height(font_size))
+	var text_w := HudDialogs.measure_text_max_line_width(font, display, font_size)
+	var single_w := maxf(min_width, text_w + h_pad)
+	var single_h := maxf(min_height, line_h + v_pad)
+	# Keep short labels on one line; wider copy wraps near the preferred width.
+	if single_w <= UI_TILE_BUTTON_PREFER_WRAP_WIDTH + 2.0:
+		return Vector2(minf(column_w, single_w), single_h)
+	var btn_w := maxf(min_width, minf(UI_TILE_BUTTON_PREFER_WRAP_WIDTH, column_w))
+	var inner_w := maxf(40.0, btn_w - h_pad)
+	while (
+		HudDialogs.count_wrapped_text_lines(font, display, inner_w, font_size) > UI_TILE_BUTTON_MAX_LINES
+		and btn_w < column_w - 1.0
+	):
+		btn_w = minf(column_w, btn_w + 24.0)
+		inner_w = maxf(40.0, btn_w - h_pad)
+	var measured := font.get_multiline_string_size(
+		display, HORIZONTAL_ALIGNMENT_CENTER, inner_w, font_size
+	)
+	var max_text_h := line_h * float(UI_TILE_BUTTON_MAX_LINES)
+	var text_h := minf(measured.y, max_text_h)
+	var btn_h := maxf(min_height, text_h + v_pad)
+	return Vector2(btn_w, btn_h)
+
+## Single-line width/height for a tile-style button label.
+static func compute_tile_button_single_line_size(
+	display: String,
+	font: Font,
+	font_size: int,
+	min_width: float = 280.0,
+	min_height: float = UI_TILE_BUTTON_MIN_HEIGHT,
+	h_pad: float = UI_TILE_BUTTON_H_PAD,
+	v_pad: float = UI_TILE_BUTTON_V_PAD
+) -> Vector2:
+	if display.is_empty() or font == null:
+		return Vector2(min_width, min_height)
+	var line_h := maxf(1.0, font.get_height(font_size))
+	var text_w := HudDialogs.measure_text_max_line_width(font, display, font_size)
+	return Vector2(maxf(min_width, text_w + h_pad), maxf(min_height, line_h + v_pad))
+
+static func apply_tile_button_single_line_size(
+	button: Button,
+	display: String,
+	font: Font,
+	font_size: int,
+	min_height: float = UI_TILE_BUTTON_MIN_HEIGHT,
+	min_width: float = 280.0,
+	h_pad: float = UI_TILE_BUTTON_H_PAD,
+	v_pad: float = UI_TILE_BUTTON_V_PAD
+) -> void:
+	if button == null:
+		return
+	var info := _button_label_display(button)
+	var caption: Label = info.get("caption")
+	_reset_button_single_line(button, caption)
+	button.autowrap_mode = TextServer.AUTOWRAP_OFF
+	button.custom_minimum_size = compute_tile_button_single_line_size(
+		display, font, font_size, min_width, min_height, h_pad, v_pad
+	)
+
+static func apply_tile_button_size(
+	button: Button,
+	display: String,
+	font: Font,
+	font_size: int,
+	column_w: float,
+	min_height: float = UI_TILE_BUTTON_MIN_HEIGHT,
+	min_width: float = 280.0,
+	h_pad: float = UI_TILE_BUTTON_H_PAD,
+	v_pad: float = UI_TILE_BUTTON_V_PAD
+) -> void:
+	if button == null:
+		return
+	var info := _button_label_display(button)
+	var caption: Label = info.get("caption")
+	var size := compute_tile_button_size(
+		display, font, font_size, column_w, min_width, min_height, h_pad, v_pad
+	)
+	var text_w := HudDialogs.measure_text_max_line_width(font, display, font_size)
+	var use_single_line := text_w + h_pad <= UI_TILE_BUTTON_PREFER_WRAP_WIDTH + 2.0
+	if use_single_line:
+		_reset_button_single_line(button, caption)
+		button.custom_minimum_size = size
+	else:
+		_apply_button_wrapped_size(
+			button, caption, display, font, font_size,
+			size.x, min_height, h_pad, v_pad
+		)
+		button.custom_minimum_size.y = size.y
+
+## Sets a button's width from its current label (locale-aware). Height is fixed.
+static func grow_button_to_text(
+	button: Button,
+	height: float,
+	horizontal_padding: float = 48.0,
+	min_width: float = 160.0
+) -> void:
+	if not button:
+		return
+	var info := _button_label_display(button)
+	var display: String = info.get("text", "")
+	var font: Font = info.get("font")
+	var font_size: int = info.get("font_size", 16)
+	var caption: Label = info.get("caption")
+	if font == null or display.is_empty():
+		button.custom_minimum_size = Vector2(min_width, height)
+		return
+	var text_w := HudDialogs.measure_text_max_line_width(font, display, font_size)
+	var desired_w := maxf(min_width, text_w + horizontal_padding)
+	_reset_button_single_line(button, caption)
+	button.custom_minimum_size = Vector2(desired_w, height)
+
+## Grows a dialog button's width to fit its current label (locale-aware).
+## Height stays at UI_BTN_DIALOG_SIZE.y. Used by the tutorial NEXT control.
+static func grow_dialog_button_to_text(button: Button, horizontal_padding: float = 48.0) -> void:
+	var base := GameConstants.UI_BTN_DIALOG_SIZE
+	grow_button_to_text(button, base.y, horizontal_padding, base.x)
 
 # Styles a PREV/NEXT navigation button: tile background, directional icon chosen
 # by whether the button name contains "next", and an extra +1 px icon lift.
@@ -1137,14 +1550,14 @@ static func apply_tile_button(
 	button.add_theme_font_override("font", HudFonts.default_font() if use_default else pixel_font())
 	apply_locale_font_to_control(button)
 	button.add_theme_font_size_override("font_size", scaled_font_size(font_size))
-	# Long privacy-policy labels need room; grow width to the fitted text.
 	fit_text_button_single_line(button, font_size, maxi(18, font_size - 24))
 	var font := button.get_theme_font("font")
 	var size := button.get_theme_font_size("font_size")
 	var display := button.text
 	if font and not display.is_empty():
-		var text_w := font.get_string_size(display, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
-		button.custom_minimum_size = Vector2(maxf(text_w + 96.0, 280.0), height)
+		apply_tile_button_single_line_size(
+			button, display, font, size, height
+		)
 	apply_safe_outline(button, GameConstants.MENU_TEXT_OUTLINE)
 
 # Iterates all Label descendants of a panel button and shrinks each one's font
@@ -1255,22 +1668,70 @@ static func apply_popup_label(label: Label, base_size: int = GameConstants.UI_BO
 			label.set_meta("_force_pixel_font", true)
 		apply_live_pixel_label_settings(label, display, base_size, color)
 		label.add_theme_constant_override("line_spacing", 8)
+	else:
+		clear_label_settings(label)
+		var use_default := prefer_default_font()
+		label.set_meta("_use_default_font", use_default)
+		label.set_meta("_force_pixel_font", false)
+		# Drop scene-baked Press Start so ka/uk can show real glyphs.
+		if label.has_theme_font_override("font"):
+			label.remove_theme_font_override("font")
+		label.text = _popup_prompt_with_title_gap(label.text, false)
+		apply_locale_font_to_control(label)
+		label.add_theme_font_override("font", HudFonts.default_font() if use_default else pixel_font())
+		var size := body_font_size(base_size) if use_default else base_size
+		label.add_theme_font_size_override("font_size", size)
+		# Default fonts already read taller than Press Start — keep gaps tight.
+		label.add_theme_constant_override("line_spacing", 4 if use_default else 8)
+		apply_safe_outline(label, 8)
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.custom_minimum_size.x = 0.0
+	label.clip_contents = true
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+# True when copy is numeric display (level numbers, MM:SS clocks, etc.).
+static func text_is_digit_display(text: String) -> bool:
+	if text.is_empty() or text == "∞":
+		return false
+	for i in text.length():
+		var c := text[i]
+		if c >= "0" and c <= "9":
+			continue
+		if c in [":", "/", " "]:
+			continue
+		return false
+	return true
+
+## Popup heading with a locale word + level number; digits use Press Start in ka/uk.
+static func apply_popup_title_with_number(
+	label: RichTextLabel, prefix: String, num_str: String, base_size: int, color: Color
+) -> void:
+	if label == null:
 		return
-	clear_label_settings(label)
-	var use_default := prefer_default_font()
-	label.set_meta("_use_default_font", use_default)
-	label.set_meta("_force_pixel_font", false)
-	# Drop scene-baked Press Start so ka/uk can show real glyphs.
-	if label.has_theme_font_override("font"):
-		label.remove_theme_font_override("font")
-	label.text = _popup_prompt_with_title_gap(label.text, false)
-	apply_locale_font_to_control(label)
-	label.add_theme_font_override("font", HudFonts.default_font() if use_default else pixel_font())
-	var size := body_font_size(base_size) if use_default else base_size
-	label.add_theme_font_size_override("font_size", size)
-	# Default fonts already read taller than Press Start — keep gaps tight.
-	label.add_theme_constant_override("line_spacing", 4 if use_default else 8)
-	apply_safe_outline(label, 8)
+	label.bbcode_enabled = true
+	label.fit_content = true
+	label.scroll_active = false
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var hex := color.to_html(false)
+	if uses_pixel_font():
+		var display := "%s %s" % [prefix, num_str]
+		label.text = "[center][color=#%s]%s[/color][/center]" % [hex, display]
+		apply_live_pixel_richtext(label, base_size)
+		label.add_theme_color_override("default_color", color)
+	else:
+		label.set_meta("_use_default_font", true)
+		label.set_meta("_force_pixel_font", false)
+		apply_locale_font_to_control(label)
+		var size := body_font_size(base_size)
+		label.add_theme_font_size_override("normal_font_size", size)
+		label.text = "[center][color=#%s]%s [font=%s][font_size=%d]%s[/font_size][/font][/color][/center]" % [
+			hex, prefix, PIXEL_FONT_PATH, size, num_str
+		]
+		apply_safe_outline(label, 8)
+		label.add_theme_color_override("default_color", color)
 
 ## Ensures a blank line after the first line of a multi-line confirm prompt.
 ## Pixel English keeps a full blank line; other locales use a single break so
@@ -1285,6 +1746,9 @@ static func _popup_prompt_with_title_gap(text: String, use_pixel_gap: bool = fal
 		return normalized
 	var parts := normalized.split("\n", true, 1)
 	if parts.size() < 2:
+		return normalized
+	# CSV copy often already includes a blank line after the title.
+	if parts[1].begins_with("\n"):
 		return normalized
 	var gap := "\n\n" if (use_pixel_gap or uses_pixel_font()) else "\n"
 	return parts[0] + gap + parts[1].lstrip("\n")
@@ -1302,8 +1766,11 @@ static func raise_centered_dialog_host(
 	HudDialogs.raise_centered_dialog_host(center, raise_px)
 
 ## Fit a Yes/No dialog panel height to current locale text (+ top/bottom margin).
-static func fit_dialog_panel(panel: Panel, width: float = 640.0) -> void:
-	HudDialogs.fit_vbox_dialog_panel(panel, width)
+## Returns the inner content width so callers can size nested widgets to match.
+static func fit_dialog_panel(
+	panel: Panel, width: float = UI_DEFAULT_DIALOG_WIDTH, min_height: float = 280.0
+) -> float:
+	return HudDialogs.fit_vbox_dialog_panel(panel, width, HudDialogs.DIALOG_EDGE_INSET, HudDialogs.DIALOG_EXTRA_PAD_V, min_height)
 
 static func fit_session_resume_panel(
 	panel: Panel, prompt: Label, buttons: Control, width: float = 820.0

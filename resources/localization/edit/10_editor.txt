@@ -1,0 +1,100 @@
+# English game text — edit the lines below each [KEY].
+# Do NOT change or remove [KEY] headers. Edit only the text under them.
+# Keep placeholders as-is: %s, %d, %d/%d, etc.
+# Blank line ends a string block. Use a single blank line inside text if needed.
+# Files in this folder are for editing only; the game reads translations.csv.
+
+# Section: Level editor strings
+
+[ED_HINT_SELECT_SHIFTER]
+SELECT SECOND CELL
+
+[ED_HINT_SELECT_EQUALS]
+SELECT SECOND CELL
+
+[ED_HINT_SELECT_NOT_EQUALS]
+SELECT SECOND CELL
+
+[ED_MSG_SHIFTER_PLACED]
+PURPLE TILE PLACED
+
+[ED_MSG_EQUALS_PLACED]
+= LINK PLACED
+
+[ED_MSG_NOT_EQUALS_PLACED]
+× LINK PLACED
+
+[ED_MSG_LEVEL_SAVED]
+CUSTOM LEVEL %d SAVED SUCCESSFULLY
+
+[ED_MSG_LEVEL_SAVE_FAILED]
+ERROR: CUSTOM LEVEL %d SAVE FAILED (%s)
+
+[ED_MSG_LEVEL_NOT_FOUND]
+NO SAVED DATA FOUND FOR CUSTOM LEVEL %d
+
+[ED_MSG_LEVEL_READ_FAILED]
+ERROR: FAILED TO READ CUSTOM LEVEL %d DATA
+
+[ED_MSG_LEVEL_LOADED]
+CUSTOM LEVEL %d LOADED SUCCESSFULLY
+
+[ED_MSG_UNSOLVABLE]
+CANNOT SAVE: PUZZLE HAS NO SOLUTION.
+
+[ED_MSG_SOLVE_TIMEOUT]
+CANNOT SAVE: SOLUTION CHECK TIMED OUT (BOARD MAY BE TOO LARGE).
+
+[ED_MSG_NOT_UNIQUE]
+CANNOT SAVE: UNIQUE SOLUTION IS ON BUT THIS PUZZLE HAS MULTIPLE SOLUTIONS.
+
+[ED_VICTORY_SOLVABLE]
+LEVEL SOLVED
+
+[ED_DEFEAT_TIME]
+DEFEAT!\nTIME RAN OUT
+
+[EDIT_MODE]
+EDIT MODE
+
+[TEST_MODE]
+TEST MODE
+
+[LOCK_WALLS]
+LOCK WALLS
+
+[UNIQUE_SOLVE]
+UNIQUE SOLVE
+
+[ALLOW]
+ALLOW:
+
+[LEVEL_EXISTS_OVERWRITE]
+LEVEL ALREADY EXISTS?
+
+OVERWRITE?
+
+[Wall]
+Wall
+
+[Empty (Clear)]
+Empty (Clear)
+
+[Yellow Tile]
+Yellow Tile
+
+[Blue Tile]
+Blue Tile
+
+[Joker Tile]
+Joker Tile
+
+[Shifter Tile Link Tool]
+Shifter Tile Link Tool
+
+[Equals (=) Link Tool]
+Equals (=) Link Tool
+
+[Not Equals (×) Link Tool]
+Not Equals (×) Link Tool
+

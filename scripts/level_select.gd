@@ -7,6 +7,11 @@ const LOCK_ICON := preload("res://resources/tiles/tile_lock.svg")
 const LEVEL_LOCK_ICON_SIZE := 200.0
 const TAB_LOCK_ICON_SIZE := 64.0
 const TAB_LOCK_ALPHA := 0.9
+## Above CloseButtonHost/BackButton (z_index 20) and PageNav so the dimmer covers all chrome.
+const LEVEL_GOALS_OVERLAY_Z := 30
+const LEVEL_GOALS_PANEL_WIDTH := 720.0
+const LEVEL_GOALS_TITLE_FONT := 36
+const LEVEL_GOALS_TITLE_COLOR := Color(1.0, 0.92, 0.55, 1.0)
 
 @onready var level_grid: GridContainer = $"UILayer/CenterContainer/VBoxContainer/LevelListHost/LevelGrid"
 @onready var back_button: Button = $"UILayer/CloseButtonHost/BackButton"
@@ -43,6 +48,12 @@ var _tutorial_intro_blocker: ColorRect
 var _tutorial_intro_label: Label
 var _tutorial_intro_yes: Button
 var _tutorial_intro_no: Button
+var _level_goals_blocker: ColorRect
+var _level_goals_title: RichTextLabel
+var _level_goals_host: Control
+var _level_goals_play: Button
+var _level_goals_close: Button
+var _level_goals_level: LevelData = null
 
 func _ready() -> void:
 	if AdsManager:
@@ -76,8 +87,14 @@ func _ready() -> void:
 	_update_tab_button_visuals()
 	populate_level_menu()
 	_setup_tutorial_intro_panel()
+	_setup_level_goals_popup()
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
+	if not get_viewport().size_changed.is_connected(_on_viewport_resized):
+		get_viewport().size_changed.connect(_on_viewport_resized)
+
+func _on_viewport_resized() -> void:
+	_layout_level_select()
 
 func _notification(what: int) -> void:
 	# Handle the Android/iOS hardware back button — treat it the same as the UI back button.
@@ -85,6 +102,9 @@ func _notification(what: int) -> void:
 		if GlobalGameManager and GlobalGameManager.consume_system_back():
 			if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
 				_hide_tutorial_intro_prompt()
+				return
+			if _level_goals_blocker and _level_goals_blocker.visible:
+				_hide_level_goals_popup()
 				return
 			_on_back_pressed()
 
@@ -134,6 +154,9 @@ func _on_language_changed() -> void:
 		HudLayout.apply_screen_header_style(_title_label)
 	if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
 		_show_tutorial_intro_prompt()
+	if _level_goals_blocker and _level_goals_blocker.visible and _level_goals_level:
+		var earned_bits := SaveManager.get_level_star_bits(_level_goals_level.level_number) if SaveManager else 0
+		_show_level_goals_popup(_level_goals_level, earned_bits)
 
 func _layout_level_select() -> void:
 	if _title_label:
@@ -470,14 +493,7 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 	label.grow_vertical = Control.GROW_DIRECTION_END
 	const TITLE_FONT := 32
 	var title_color := Color(0.55, 0.55, 0.55, 1.0) if locked else Color.WHITE
-	if HudFonts.uses_pixel_font():
-		HudLayout.apply_raster_pixel_label(label, title, TITLE_FONT, title_color, 0, true)
-	else:
-		label.text = title
-		label.add_theme_font_override("font", HudLayout.ui_font())
-		label.add_theme_font_size_override("font_size", HudLayout.scaled_font_size(TITLE_FONT))
-		HudLayout.apply_safe_outline(label, GameConstants.MENU_TEXT_OUTLINE)
-		label.add_theme_color_override("font_color", title_color)
+	HudLayout.apply_raster_pixel_label(label, title, TITLE_FONT, title_color, 0, true)
 	content.add_child(label)
 
 	# Small top inset for the preview stack (independent of the corner number overlay).
@@ -543,14 +559,10 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 
 	btn.add_child(content)
 
-## Stores the chosen level on GlobalGameManager and loads the gameplay scene.
-## First-time players see the tutorial intro prompt before entering gameplay.
+## Opens the level detail popup (star goals + play). Locked levels stay disabled.
 func _on_level_selected(resource: LevelData) -> void:
-	if SaveManager and not SaveManager.tutorial_intro_answered:
-		_pending_level = resource
-		_show_tutorial_intro_prompt()
-		return
-	_enter_gameplay(resource)
+	var earned_bits := SaveManager.get_level_star_bits(resource.level_number) if SaveManager else 0
+	_show_level_goals_popup(resource, earned_bits)
 
 func _enter_gameplay(resource: LevelData) -> void:
 	GlobalGameManager.selected_level_resource = resource
@@ -559,6 +571,9 @@ func _enter_gameplay(resource: LevelData) -> void:
 func _on_back_pressed() -> void:
 	if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
 		_hide_tutorial_intro_prompt()
+		return
+	if _level_goals_blocker and _level_goals_blocker.visible:
+		_hide_level_goals_popup()
 		return
 	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")
 
@@ -573,7 +588,7 @@ func _setup_tutorial_intro_panel() -> void:
 	_tutorial_intro_blocker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_ui_layer.add_child(_tutorial_intro_blocker)
 
-	var center := Control.new()
+	var center := CenterContainer.new()
 	center.name = "CenterContainer"
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -582,18 +597,12 @@ func _setup_tutorial_intro_panel() -> void:
 
 	var panel := Panel.new()
 	panel.name = "Panel"
-	panel.custom_minimum_size = Vector2(680, 380)
+	panel.custom_minimum_size = Vector2(HudLayout.UI_DEFAULT_DIALOG_WIDTH, 380)
 	panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
 	center.add_child(panel)
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	panel.offset_left = -340.0
-	panel.offset_right = 340.0
-	panel.offset_top = -190.0
-	panel.offset_bottom = 190.0
 
 	var vbox := VBoxContainer.new()
+	vbox.name = "VBoxContainer"
 	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	vbox.offset_left = 36.0
 	vbox.offset_top = 36.0
@@ -607,7 +616,6 @@ func _setup_tutorial_intro_panel() -> void:
 	_tutorial_intro_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_tutorial_intro_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_tutorial_intro_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_tutorial_intro_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_tutorial_intro_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.55, 1.0))
 	vbox.add_child(_tutorial_intro_label)
 
@@ -658,14 +666,12 @@ func _show_tutorial_intro_prompt() -> void:
 	if _tutorial_intro_yes:
 		_tutorial_intro_yes.text = tr("UI_YES")
 		_copy_dialog_button_styles(_tutorial_intro_yes)
-		HudLayout.apply_dialog_button(_tutorial_intro_yes)
 	if _tutorial_intro_no:
 		_tutorial_intro_no.text = tr("UI_NO")
 		_copy_dialog_button_styles(_tutorial_intro_no)
-		HudLayout.apply_dialog_button(_tutorial_intro_no)
 	var panel := _tutorial_intro_blocker.get_node_or_null("CenterContainer/Panel") as Panel if _tutorial_intro_blocker else null
 	if panel:
-		HudLayout.fit_dialog_panel(panel, 680.0)
+		HudLayout.fit_dialog_panel(panel, HudLayout.UI_DEFAULT_DIALOG_WIDTH)
 	if _tutorial_intro_blocker:
 		_tutorial_intro_blocker.color = Color(0, 0, 0, 0)
 		_tutorial_intro_blocker.visible = true
@@ -697,11 +703,134 @@ func _on_tutorial_intro_no() -> void:
 	if chosen:
 		_enter_gameplay(chosen)
 
+func _setup_level_goals_popup() -> void:
+	if _level_goals_blocker != null or _ui_layer == null:
+		return
+	_level_goals_blocker = ColorRect.new()
+	_level_goals_blocker.name = "LevelGoalsBlocker"
+	_level_goals_blocker.visible = false
+	_level_goals_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+	_level_goals_blocker.color = Color(0, 0, 0, 0.45)
+	_level_goals_blocker.z_index = LEVEL_GOALS_OVERLAY_Z
+	_level_goals_blocker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_level_goals_blocker.gui_input.connect(_on_level_goals_blocker_gui_input)
+	_ui_layer.add_child(_level_goals_blocker)
+
+	var center := CenterContainer.new()
+	center.name = "CenterContainer"
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_level_goals_blocker.add_child(center)
+	HudLayout.raise_centered_dialog_host(center)
+
+	var panel := Panel.new()
+	panel.name = "Panel"
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.custom_minimum_size = Vector2(LEVEL_GOALS_PANEL_WIDTH, 360)
+	panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
+	center.add_child(panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.name = "VBoxContainer"
+	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	vbox.offset_left = 36.0
+	vbox.offset_top = 36.0
+	vbox.offset_right = -36.0
+	vbox.offset_bottom = -36.0
+	vbox.add_theme_constant_override("separation", 16)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	panel.add_child(vbox)
+
+	_level_goals_title = RichTextLabel.new()
+	_level_goals_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_level_goals_title.add_theme_color_override("default_color", LEVEL_GOALS_TITLE_COLOR)
+	vbox.add_child(_level_goals_title)
+
+	_level_goals_host = Control.new()
+	_level_goals_host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_level_goals_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	vbox.add_child(_level_goals_host)
+
+	var buttons := VBoxContainer.new()
+	buttons.name = "DialogButtons"
+	buttons.add_theme_constant_override("separation", 16)
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(buttons)
+
+	_level_goals_play = Button.new()
+	_level_goals_play.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_level_goals_play.pressed.connect(_on_level_goals_play)
+	buttons.add_child(_level_goals_play)
+	_copy_dialog_button_styles(_level_goals_play)
+
+	_level_goals_close = Button.new()
+	_level_goals_close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_level_goals_close.pressed.connect(_hide_level_goals_popup)
+	buttons.add_child(_level_goals_close)
+	_copy_dialog_button_styles(_level_goals_close)
+
+func _on_level_goals_blocker_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_hide_level_goals_popup()
+
+func _show_level_goals_popup(level: LevelData, earned_bits: int) -> void:
+	if _level_goals_blocker == null or _level_goals_host == null:
+		return
+	_level_goals_level = level
+	var title_num := (
+		str(int(level.level_number))
+		if current_view == ViewMode.CUSTOM
+		else str(int(LevelUtils.get_display_level_number(level)))
+	)
+	_level_goals_title.text = "%s %s" % [tr("LEVEL"), title_num]
+	HudLayout.apply_popup_title_with_number(
+		_level_goals_title, tr("LEVEL"), title_num, LEVEL_GOALS_TITLE_FONT, LEVEL_GOALS_TITLE_COLOR
+	)
+	if _level_goals_play:
+		_level_goals_play.text = tr("UI_PLAY")
+		_copy_dialog_button_styles(_level_goals_play)
+		HudLayout.apply_dialog_button(_level_goals_play)
+	if _level_goals_close:
+		_level_goals_close.text = tr("UI_CLOSE")
+		_copy_dialog_button_styles(_level_goals_close)
+		HudLayout.apply_dialog_button(_level_goals_close)
+	var panel := _level_goals_blocker.get_node_or_null("CenterContainer/Panel") as Panel
+	while _level_goals_host.get_child_count() > 0:
+		_level_goals_host.get_child(0).free()
+	LevelStars.populate_requirements(
+		_level_goals_host,
+		level,
+		earned_bits,
+		HudLayout.max_ui_content_width(),
+		true
+	)
+	if panel:
+		var content_w := HudLayout.fit_dialog_panel(panel, LEVEL_GOALS_PANEL_WIDTH, 420.0)
+		if _level_goals_host.get_child_count() > 0:
+			var stars_root := _level_goals_host.get_child(0) as Control
+			if stars_root:
+				_level_goals_host.custom_minimum_size.y = HudDialogs.measure_control_height(
+					stars_root, content_w
+				)
+		HudLayout.fit_dialog_panel(panel, LEVEL_GOALS_PANEL_WIDTH, 420.0)
+	_level_goals_blocker.visible = true
+	_level_goals_blocker.move_to_front()
+
+func _hide_level_goals_popup() -> void:
+	_level_goals_level = null
+	if _level_goals_blocker:
+		_level_goals_blocker.visible = false
+
+func _on_level_goals_play() -> void:
+	var resource := _level_goals_level
+	_hide_level_goals_popup()
+	if resource == null:
+		return
+	if SaveManager and not SaveManager.tutorial_intro_answered:
+		_pending_level = resource
+		_show_tutorial_intro_prompt()
+		return
+	_enter_gameplay(resource)
+
 func _first_tutorial_level() -> LevelData:
-	var paths := LevelUtils.scan_directory(GameConstants.CAMPAIGN_TUTORIALS_DIR)
-	LevelUtils.sort_level_paths(paths)
-	for path in paths:
-		var resource = load(path)
-		if resource is LevelData:
-			return resource
-	return null
+	return TutorialScripts.first_incomplete_level()

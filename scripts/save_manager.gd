@@ -13,6 +13,7 @@ var bgm_enabled: bool = true
 var sfx_enabled: bool = true
 var haptic_enabled: bool = true
 var tutorial_intro_answered: bool = false
+var completed_tutorial_scripts: Array = []
 # True once the player has tapped ACCEPT on the first-launch consent popup.
 # Defaults to true for existing saves (no save file key = already accepted).
 var privacy_accepted: bool = false
@@ -148,6 +149,9 @@ func load_progress() -> void:
 			tutorial_intro_answered = bool(config.get_value("Progression", "tutorial_intro_answered", false))
 		else:
 			tutorial_intro_answered = true
+		completed_tutorial_scripts = config.get_value("Progression", "completed_tutorial_scripts", [])
+		if typeof(completed_tutorial_scripts) != TYPE_ARRAY:
+			completed_tutorial_scripts = []
 		if config.has_section_key("Progression", "privacy_accepted"):
 			privacy_accepted = bool(config.get_value("Progression", "privacy_accepted", false))
 		else:
@@ -201,6 +205,7 @@ func save_progress() -> void:
 	config.set_value("Progression", "sfx_enabled", sfx_enabled)
 	config.set_value("Progression", "haptic_enabled", haptic_enabled)
 	config.set_value("Progression", "tutorial_intro_answered", tutorial_intro_answered)
+	config.set_value("Progression", "completed_tutorial_scripts", completed_tutorial_scripts)
 	config.set_value("Progression", "privacy_accepted", privacy_accepted)
 	# dev_mode_enabled is not saved — it resets each session by design.
 	config.set_value("Progression", "level_star_bits", level_star_bits)
@@ -344,6 +349,7 @@ func delete_save_file() -> void:
 	level_star_bits.clear()
 	session_data = {}
 	tutorial_intro_answered = false
+	completed_tutorial_scripts = []
 	privacy_accepted = false
 	ads_wins_since_interstitial = 0
 	if FileAccess.file_exists(SAVE_PATH):
@@ -352,6 +358,17 @@ func delete_save_file() -> void:
 
 func set_tutorial_intro_answered(answered: bool = true) -> void:
 	tutorial_intro_answered = answered
+	save_progress()
+
+func is_tutorial_script_complete(script_id: String) -> bool:
+	var id := String(script_id).strip_edges()
+	return not id.is_empty() and completed_tutorial_scripts.has(id)
+
+func mark_tutorial_script_complete(script_id: String) -> void:
+	var id := String(script_id).strip_edges()
+	if id.is_empty() or completed_tutorial_scripts.has(id):
+		return
+	completed_tutorial_scripts.append(id)
 	save_progress()
 
 static func _coord_key(v: Vector2i) -> String:

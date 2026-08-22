@@ -29,6 +29,7 @@ const MAX_GRID_HEIGHT: int = 8
 @onready var main_menu_button: Button = $"../EditorUI/TopHUD/TopBarRow/LeftButtons/MainMenuButton"
 @onready var test_button: Button = $"../EditorUI/TopHUD/TopBarRow/LeftButtons/TestButton"
 @onready var clear_button: Button = $"../EditorUI/TopHUD/TopBarRow/LeftButtons/ClearButton"
+@onready var editor_hint_button: Button = $"../EditorUI/TopHUD/TopBarRow/RightButtons/EditorHintButton"
 @onready var editor_undo_button: Button = $"../EditorUI/TopHUD/TopBarRow/RightButtons/EditorUndoButton"
 @onready var editor_redo_button: Button = $"../EditorUI/TopHUD/TopBarRow/RightButtons/EditorRedoButton"
 @onready var editor_mode_label: RichTextLabel = $"../EditorUI/TopHUD/TopBarRow/EditorModeLabelWrap/EditorModeLabelInset/EditorModeLabel"
@@ -102,11 +103,13 @@ func setup_ui(grid_width: int, grid_height: int) -> void:
 	_refresh_difficulty_button()
 	_apply_default_font_to_link_buttons()
 	_apply_star_time_label()
+	_disable_editor_hint_button()
 	if status_label and control_panel:
 		HudLayout.position_editor_status_below_panel(control_panel, status_label)
 	call_deferred("_emit_startup_signals")
 	call_deferred("_apply_default_font_to_link_buttons")
 	call_deferred("_apply_star_time_label")
+	call_deferred("_disable_editor_hint_button")
 	call_deferred("_refresh_editor_pixel_fonts")
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
@@ -115,6 +118,7 @@ func _refresh_editor_pixel_fonts() -> void:
 	EditorUiPolicy.refresh_editor_pixel_fonts(get_node_or_null("../EditorUI"))
 	_apply_default_font_to_link_buttons()
 	_apply_top_bar_buttons()
+	_disable_editor_hint_button()
 
 # Re-applies locale-dependent UI details (font overrides, label text) when the
 # player changes language without reloading the editor scene.
@@ -127,6 +131,19 @@ func _on_language_changed() -> void:
 	# Re-apply Press Start to editor chrome after a global locale font walk.
 	EditorUiPolicy.refresh_editor_pixel_fonts(get_node_or_null("../EditorUI"))
 	_apply_default_font_to_link_buttons()
+	_disable_editor_hint_button()
+
+# Hint is not usable in edit mode (no reference solution), but stay visible
+# and permanently disabled so the top bar matches playtest layout.
+func _disable_editor_hint_button() -> void:
+	if not editor_hint_button:
+		return
+	editor_hint_button.visible = true
+	editor_hint_button.toggle_mode = true
+	editor_hint_button.button_pressed = false
+	HintController.update_toggle_button(editor_hint_button, false)
+	editor_hint_button.disabled = true
+	HudLayout.refresh_button_icon_modulate(editor_hint_button)
 
 # The equals (=) and not-equals (×) buttons use Unicode symbols that only render
 # correctly with the fallback system font. This overrides the theme font explicitly
@@ -188,7 +205,7 @@ func _bind_hold_button(button: Button, target: String, amount: int) -> void:
 func _apply_top_bar_buttons() -> void:
 	HudLayout.apply_top_bar_button_cluster(top_bar_row.get_node_or_null("LeftButtons") as HBoxContainer)
 	HudLayout.apply_top_bar_button_cluster(top_bar_row.get_node_or_null("RightButtons") as HBoxContainer)
-	for button in [main_menu_button, test_button, clear_button, editor_undo_button, editor_redo_button]:
+	for button in [main_menu_button, test_button, clear_button, editor_hint_button, editor_undo_button, editor_redo_button]:
 		HudLayout.apply_square_top_bar_button(button)
 	HudLayout.apply_top_bar_mode_label(editor_mode_label)
 	if top_hud:
@@ -672,12 +689,10 @@ func show_overwrite_warning() -> void:
 	if confirm_button:
 		confirm_button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		confirm_button.text = HudLayout.english("UI_YES")
-		HudLayout.apply_dialog_button(confirm_button)
 	if cancel_button:
 		cancel_button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		cancel_button.text = HudLayout.english("UI_NO")
-		HudLayout.apply_dialog_button(cancel_button)
-	HudLayout.fit_dialog_panel(overwrite_panel, 640.0)
+	HudLayout.fit_dialog_panel(overwrite_panel, HudLayout.UI_DEFAULT_DIALOG_WIDTH)
 	overwrite_blocker.z_index = 4096
 	overwrite_blocker.move_to_front()
 	overwrite_blocker.visible = true

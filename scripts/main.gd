@@ -822,6 +822,11 @@ func trigger_victory():
 	if not is_custom:
 		if won_tutorial:
 			SaveManager.unlock_level(LevelUtils.first_campaign_level_number())
+			var script_id := TutorialScripts.script_id_from_path(
+				levels[current_level_index].resource_path
+			)
+			if not script_id.is_empty():
+				SaveManager.mark_tutorial_script_complete(script_id)
 		else:
 			SaveManager.unlock_level(unlock_num + 1)
 		if not _challenges_disabled:

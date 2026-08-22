@@ -269,7 +269,7 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 	if not _victory_panel or not _victory_results_host:
 		return
 	var goal_count := int(star_result.get("total_count", 0))
-	var panel_w := 840.0
+	var panel_w := HudLayout.UI_MAX_DIALOG_WIDTH
 	var title_top := 28.0
 	var title_side := 24.0
 	var title_h := 82.0

@@ -44,6 +44,9 @@ const FOCUS_BORDER_COLOR := Color(1.0, 1.0, 1.0, 1.0)
 const FOCUS_BORDER_ALPHA_MIN := 0.35
 const FOCUS_BORDER_ALPHA_MAX := 1.0
 const ERROR_BORDER_COLOR := Color.RED
+const HIGHLIGHT_INSET := 4.0
+const HIGHLIGHT_BORDER_WIDTH := 4.0
+const HIGHLIGHT_FILL_ALPHA_SCALE := 0.55
 
 var _guide_breathe_tween: Tween
 var _focus_breathe_tween: Tween
@@ -90,6 +93,10 @@ func _ready():
 
 	_stretch_node_to_parent(error_highlight, 0.0)
 	_stretch_node_to_parent(link_highlight, 0.0)
+	link_highlight.offset_left = HIGHLIGHT_INSET
+	link_highlight.offset_top = HIGHLIGHT_INSET
+	link_highlight.offset_right = -HIGHLIGHT_INSET
+	link_highlight.offset_bottom = -HIGHLIGHT_INSET
 	_stretch_node_to_parent(tile_icon, 0.0)
 
 	if lock_icon:
@@ -114,17 +121,63 @@ func _ready():
 func _draw_error_border():
 	if error_highlight == null:
 		return
-	var border_color: Color
 	if validation_error_active:
-		border_color = ERROR_BORDER_COLOR
-	else:
-		border_color = Color(
-			FOCUS_BORDER_COLOR.r,
-			FOCUS_BORDER_COLOR.g,
-			FOCUS_BORDER_COLOR.b,
-			_focus_border_alpha
+		error_highlight.draw_rect(
+			Rect2(Vector2.ZERO, error_highlight.size), ERROR_BORDER_COLOR, false, 10.0
 		)
-	error_highlight.draw_rect(Rect2(Vector2.ZERO, error_highlight.size), border_color, false, 10.0)
+		return
+	if not focus_active:
+		return
+	var inner := _highlight_inner_rect()
+	var border_color := Color(
+		FOCUS_BORDER_COLOR.r,
+		FOCUS_BORDER_COLOR.g,
+		FOCUS_BORDER_COLOR.b,
+		_focus_border_alpha
+	)
+	if guide_active and focus_active:
+		var half_border := HIGHLIGHT_BORDER_WIDTH * 0.5
+		var fill_rect := Rect2(
+			inner.position + Vector2(half_border, half_border),
+			inner.size - Vector2(half_border * 2.0, half_border * 2.0)
+		)
+		var fill_alpha := _focus_border_alpha * HIGHLIGHT_FILL_ALPHA_SCALE
+		error_highlight.draw_rect(
+			fill_rect,
+			Color(FOCUS_BORDER_COLOR.r, FOCUS_BORDER_COLOR.g, FOCUS_BORDER_COLOR.b, fill_alpha),
+			true
+		)
+		error_highlight.draw_rect(inner, border_color, false, HIGHLIGHT_BORDER_WIDTH)
+	elif focus_active:
+		error_highlight.draw_rect(inner, border_color, false, HIGHLIGHT_BORDER_WIDTH)
+
+func _highlight_inner_rect() -> Rect2:
+	var panel_size: Vector2 = error_highlight.size
+	return Rect2(
+		Vector2(HIGHLIGHT_INSET, HIGHLIGHT_INSET),
+		panel_size - Vector2(HIGHLIGHT_INSET * 2.0, HIGHLIGHT_INSET * 2.0)
+	)
+
+func _uses_unified_highlight() -> bool:
+	return guide_active and focus_active and not validation_error_active
+
+func _update_highlight_breathe() -> void:
+	_stop_guide_breathe()
+	_stop_focus_breathe()
+	if validation_error_active:
+		return
+	if _uses_unified_highlight():
+		if state != GameConstants.TileState.WALL:
+			_start_unified_breathe()
+	elif guide_active:
+		if (
+			state == GameConstants.TileState.EMPTY
+			or is_locked
+			or state == GameConstants.TileState.SHIFTER
+		):
+			_start_guide_breathe()
+	elif focus_active:
+		_start_focus_breathe()
 
 func _stretch_node_to_parent(node: Control, margin: float = 0.0):
 	if node:
@@ -138,9 +191,6 @@ func _stretch_node_to_parent(node: Control, margin: float = 0.0):
 		node.offset_right = margin
 		node.offset_bottom = margin
 
-# Handles tap/hold input on the tile.
-# On press: starts the hold-to-clear timer.
-# On release: either fires the normal tile cycle (tap) or does nothing (hold already cleared).
 func _gui_input(event):
 	# Editor placement uses canvas interceptors / brush input — never cycle here.
 	if is_editor_mode:
@@ -319,14 +369,16 @@ func update_visuals():
 
 	if link_highlight:
 		var show_guide := guide_active and state != GameConstants.TileState.WALL
-		if show_guide:
+		if show_guide and _uses_unified_highlight():
+			if _guide_breathe_tween:
+				_stop_guide_breathe()
+			link_highlight.visible = false
+		elif show_guide:
 			var alpha: float = (
 				float(link_highlight.color.a) if link_highlight.visible else GUIDE_ALPHA_MAX
 			)
 			link_highlight.color = Color(GUIDE_COLOR.r, GUIDE_COLOR.g, GUIDE_COLOR.b, alpha)
 			link_highlight.visible = true
-			if guide_active and _guide_breathe_tween == null:
-				_start_guide_breathe()
 		elif is_linked_pair:
 			if _guide_breathe_tween:
 				_stop_guide_breathe()
@@ -393,7 +445,10 @@ func update_visuals():
 
 func set_error_highlight():
 	validation_error_active = true
+	_stop_guide_breathe()
 	_stop_focus_breathe()
+	if link_highlight and guide_active and not _uses_unified_highlight():
+		link_highlight.visible = true
 	if error_highlight:
 		error_highlight.visible = true
 		error_highlight.queue_redraw()
@@ -420,24 +475,17 @@ func play_blocked_shake() -> void:
 
 func set_guide_highlight(enabled: bool) -> void:
 	guide_active = enabled
-	_stop_guide_breathe()
 	update_visuals()
-	if enabled and (
-		state == GameConstants.TileState.EMPTY
-		or is_locked
-		or state == GameConstants.TileState.SHIFTER
-	):
-		_start_guide_breathe()
+	_update_highlight_breathe()
 
 func set_focus_highlight(enabled: bool) -> void:
 	focus_active = enabled
-	_stop_focus_breathe()
 	if error_highlight:
-		error_highlight.visible = enabled or validation_error_active
+		error_highlight.visible = enabled or validation_error_active or _uses_unified_highlight()
 		if error_highlight.visible:
 			error_highlight.queue_redraw()
-	if enabled and not validation_error_active:
-		_start_focus_breathe()
+	update_visuals()
+	_update_highlight_breathe()
 
 func set_mask_color(mask_color: Color):
 	if link_highlight:
@@ -447,14 +495,29 @@ func set_mask_color(mask_color: Color):
 func clear_highlight():
 	validation_error_active = false
 	if error_highlight:
-		error_highlight.visible = focus_active
-		if focus_active:
+		error_highlight.visible = focus_active or _uses_unified_highlight()
+		if error_highlight.visible:
 			error_highlight.queue_redraw()
-			if not _focus_breathe_tween:
-				_start_focus_breathe()
+	_update_highlight_breathe()
+
+func _start_unified_breathe() -> void:
+	if error_highlight == null or not _uses_unified_highlight():
+		return
+	if state == GameConstants.TileState.WALL:
+		return
+	_focus_border_alpha = FOCUS_BORDER_ALPHA_MAX
+	error_highlight.visible = true
+	error_highlight.queue_redraw()
+	_focus_breathe_tween = create_tween().set_loops()
+	_focus_breathe_tween.tween_method(
+		_set_focus_border_alpha, FOCUS_BORDER_ALPHA_MAX, FOCUS_BORDER_ALPHA_MIN, 1.1
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_focus_breathe_tween.tween_method(
+		_set_focus_border_alpha, FOCUS_BORDER_ALPHA_MIN, FOCUS_BORDER_ALPHA_MAX, 1.1
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func _start_guide_breathe() -> void:
-	if link_highlight == null or not guide_active:
+	if link_highlight == null or not guide_active or _uses_unified_highlight():
 		return
 	if state == GameConstants.TileState.WALL:
 		return
@@ -478,6 +541,9 @@ func _stop_guide_breathe() -> void:
 
 func _start_focus_breathe() -> void:
 	if error_highlight == null or not focus_active or validation_error_active:
+		return
+	if _uses_unified_highlight():
+		_start_unified_breathe()
 		return
 	_stop_focus_breathe()
 	_focus_border_alpha = FOCUS_BORDER_ALPHA_MAX

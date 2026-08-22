@@ -27,6 +27,7 @@ func _ready():
 	# Grid lines sit behind tiles so hold-to-clear shrink animations aren't
 	# crossed by the static border (tile art already leaves an edge margin).
 	grid_drawer = Node2D.new()
+	grid_drawer.position = BoardRenderer.grid_drawer_offset()
 	grid_drawer.z_index = -1
 	grid_drawer.draw.connect(_draw_grid)
 	add_child(grid_drawer)

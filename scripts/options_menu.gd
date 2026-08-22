@@ -84,6 +84,8 @@ func _ready() -> void:
 	_update_haptic_label()
 	_fit_option_buttons()
 	_style_close_button()
+	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
+		SaveManager.language_changed.connect(_on_language_changed)
 
 # Binds the i18n key and applies the screen-header visual style to the title label.
 func _style_header() -> void:
@@ -136,9 +138,6 @@ func handle_system_back() -> bool:
 func _configure_main_menu_buttons() -> void:
 	if del_save_btn:
 		del_save_btn.visible = _from_main_menu
-		if _from_main_menu:
-			del_save_btn.text = "UI_RESET_PROGRESS"
-			del_save_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
 	var show_debug := _show_debug_options
 	if debug_buttons:
 		debug_buttons.visible = show_debug
@@ -229,12 +228,7 @@ func _fit_option_buttons() -> void:
 	if title_label:
 		HudLayout._bind_header_translation_key(title_label, "UI_OPTIONS")
 		HudLayout.apply_screen_header_style(title_label)
-	if privacy_btn:
-		privacy_btn.text = "UI_PRIVACY_POLICY"
-		privacy_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
-	if privacy_options_btn:
-		privacy_options_btn.text = "UI_PRIVACY_OPTIONS"
-		privacy_options_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
+	_bind_option_button_keys()
 	for btn in [del_save_btn, bg_btn, bgm_btn, sfx_btn, haptic_btn, privacy_btn, privacy_options_btn, del_custom_btn, unlock_all_btn]:
 		_apply_option_button(btn)
 	_style_close_button()
@@ -267,8 +261,20 @@ func _fit_option_buttons() -> void:
 	call_deferred("_layout_content_below_title")
 	_refresh_confirm_texts()
 
+# Re-binds i18n keys before sizing so locale changes re-translate correctly.
+func _bind_option_button_keys() -> void:
+	if privacy_btn:
+		privacy_btn.text = "UI_PRIVACY_POLICY"
+		privacy_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
+	if privacy_options_btn:
+		privacy_options_btn.text = "UI_PRIVACY_OPTIONS"
+		privacy_options_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
+	if del_save_btn and del_save_btn.visible:
+		del_save_btn.text = "UI_RESET_PROGRESS"
+		del_save_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
+
 # Applies the gray-dark tile style to a single option button and sizes it so its
-# translated text fits with standard padding. Toggle rows skip text override since
+# translated text fits on one line with standard padding. Toggle rows skip text override since
 # their label lives in a ToggleCaptionHost RichTextLabel child.
 func _apply_option_button(button: Button) -> void:
 	if not button or not button.visible:
@@ -286,25 +292,34 @@ func _apply_option_button(button: Button) -> void:
 	)
 	if font == null:
 		font = HudFonts.default_font()
-	var measured := font.get_string_size(
-		display if not display.is_empty() else "M", HORIZONTAL_ALIGNMENT_CENTER, -1, font_size
-	)
-	var pad_x := 56.0 + float(GameConstants.MENU_TEXT_OUTLINE)
-	var pad_y := 48.0 + float(GameConstants.MENU_TEXT_OUTLINE)
-	button.custom_minimum_size = Vector2(
-		maxf(220.0, measured.x + pad_x),
-		maxf(100.0, measured.y + pad_y)
-	)
+	var pad_x := 56.0 + float(GameConstants.MENU_TEXT_OUTLINE) + 16.0
+	var pad_y := 48.0 + float(GameConstants.MENU_TEXT_OUTLINE) + 16.0
+	var min_h := maxf(100.0, float(font_size) + pad_y)
 	# Toggle rows keep empty button text; caption RichTextLabel draws the label.
 	if button.get_node_or_null("ToggleCaptionHost") != null:
 		button.text = ""
 		HudLayout.apply_locale_font_to_control(button)
+		var caption_display := _option_button_display_text(button)
+		if not caption_display.is_empty():
+			var caption_size := font.get_string_size(
+				caption_display, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size
+			)
+			button.custom_minimum_size = Vector2(maxf(220.0, caption_size.x + pad_x), min_h)
+		else:
+			button.custom_minimum_size = Vector2(220.0, min_h)
 		HudLayout.apply_safe_outline(button, GameConstants.MENU_TEXT_OUTLINE)
 		return
 	if not display.is_empty() and button.text.is_empty():
 		button.text = display
 	HudLayout.apply_locale_font_to_control(button)
 	button.add_theme_font_size_override("font_size", font_size)
+	var measured := font.get_string_size(
+		display if not display.is_empty() else "M", HORIZONTAL_ALIGNMENT_CENTER, -1, font_size
+	)
+	button.custom_minimum_size = Vector2(
+		maxf(220.0, measured.x + pad_x),
+		min_h
+	)
 	HudLayout.apply_safe_outline(button, GameConstants.MENU_TEXT_OUTLINE)
 
 # Returns the display text for an option button, preferring the ToggleCaptionHost
@@ -447,6 +462,16 @@ func _update_haptic_label() -> void:
 		haptic_btn, tr("UI_HAPTIC_ON" if SaveManager.haptic_enabled else "UI_HAPTIC_OFF")
 	)
 
+func _on_language_changed() -> void:
+	if not visible:
+		return
+	_update_lang_label()
+	_update_background_label()
+	_update_bgm_label()
+	_update_sfx_label()
+	_update_haptic_label()
+	_fit_option_buttons()
+
 # Cycles to the previous language in the LANGUAGES array (wraps around).
 # Refreshes all toggle labels and button sizes because font metrics change per locale.
 func _on_prev_lang() -> void:
@@ -532,6 +557,10 @@ func _setup_confirm_panel() -> void:
 		_confirm_yes_btn.pressed.connect(_on_confirm_yes)
 	if _confirm_no_btn and not _confirm_no_btn.pressed.is_connected(_hide_confirm):
 		_confirm_no_btn.pressed.connect(_hide_confirm)
+	if _confirm_yes_btn:
+		_confirm_yes_btn.set_meta("_tr_key", "UI_YES")
+	if _confirm_no_btn:
+		_confirm_no_btn.set_meta("_tr_key", "UI_NO")
 	_copy_button_styles(_confirm_yes_btn)
 	_copy_button_styles(_confirm_no_btn)
 	_refresh_confirm_texts()
@@ -561,11 +590,13 @@ func _copy_button_styles(target: Button) -> void:
 # Must be called after a locale change so the dialog doesn't show stale text.
 func _refresh_confirm_texts() -> void:
 	if _confirm_yes_btn:
-		_confirm_yes_btn.text = tr("UI_YES")
-		HudLayout.apply_dialog_button(_confirm_yes_btn)
+		var yes_text := tr("UI_YES")
+		_confirm_yes_btn.text = yes_text
+		HudLayout.apply_dialog_button(_confirm_yes_btn, yes_text)
 	if _confirm_no_btn:
-		_confirm_no_btn.text = tr("UI_NO")
-		HudLayout.apply_dialog_button(_confirm_no_btn)
+		var no_text := tr("UI_NO")
+		_confirm_no_btn.text = no_text
+		HudLayout.apply_dialog_button(_confirm_no_btn, no_text)
 	if _confirm_label:
 		match _pending_confirm:
 			ConfirmAction.RESET_PROGRESS:
@@ -587,7 +618,7 @@ func _refresh_confirm_texts() -> void:
 	if _confirm_blocker and _confirm_blocker.visible:
 		var panel := _confirm_blocker.get_node_or_null("CenterContainer/Panel") as Panel
 		if panel:
-			HudLayout.fit_dialog_panel(panel, 640.0)
+			HudLayout.fit_dialog_panel(panel, HudLayout.UI_DEFAULT_DIALOG_WIDTH)
 
 # Shows the confirmation overlay for a destructive action with the appropriate message.
 func _show_confirm(action: ConfirmAction, message: String) -> void:
@@ -597,7 +628,7 @@ func _show_confirm(action: ConfirmAction, message: String) -> void:
 	_refresh_confirm_texts()
 	var panel := _confirm_blocker.get_node_or_null("CenterContainer/Panel") as Panel if _confirm_blocker else null
 	if panel:
-		HudLayout.fit_dialog_panel(panel, 640.0)
+		HudLayout.fit_dialog_panel(panel, HudLayout.UI_DEFAULT_DIALOG_WIDTH)
 	_set_options_chrome_visible(false)
 	if _confirm_blocker:
 		_confirm_blocker.color = Color(0, 0, 0, 0)

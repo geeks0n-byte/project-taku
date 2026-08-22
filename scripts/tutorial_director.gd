@@ -498,6 +498,7 @@ func _apply_focus(step: Dictionary) -> void:
 # and error highlight accordingly. Handles three distinct practice modes:
 #   wait_blocked_shifter – player must try (and fail) to move a blocked shifter
 #   wait_shifter         – player must move a shifter to its "from" neighbor
+#   wait_hold_clear      – player must hold on a filled cell to remove its tile
 #   default              – player must set the cell to a specific tile state
 func _update_practice_feedback(step: Dictionary) -> void:
 	if not board_manager or not step.has("coord"):
@@ -521,6 +522,16 @@ func _update_practice_feedback(step: Dictionary) -> void:
 		else:
 			_practice_succeeded = false
 			_show_message_from_step(step, false)
+		return
+
+	if step.get("wait_hold_clear", false):
+		if cell.state == GameConstants.TileState.EMPTY:
+			_clear_practice_error(cell)
+			_on_practice_success(step)
+		else:
+			_practice_succeeded = false
+			_show_message_from_step(step, false)
+			_apply_focus(step)
 		return
 
 	if cell.state == target:
@@ -757,8 +768,9 @@ func _style_tutorial_next_button() -> void:
 	if icon_root:
 		icon_root.queue_free()
 	_next_button.text = "UI_NEXT"
+	_next_button.set_meta("_tr_key", "UI_NEXT")
 	_next_button.flat = false
-	_next_button.clip_text = true
+	_next_button.clip_text = false
 	_next_button.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_next_button.custom_minimum_size = GameConstants.UI_BTN_DIALOG_SIZE
 	_next_button.set_meta("_use_default_font", HudLayout.prefer_default_font())

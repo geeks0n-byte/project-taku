@@ -1,0 +1,171 @@
+# English game text — edit the lines below each [KEY].
+# Do NOT change or remove [KEY] headers. Edit only the text under them.
+# Keep placeholders as-is: %s, %d, %d/%d, etc.
+# Blank line ends a string block. Use a single blank line inside text if needed.
+# Files in this folder are for editing only; the game reads translations.csv.
+
+# Section: Menus, options, confirmations, consent
+
+[UI_PLAY]
+PLAY
+
+[UI_CONTINUE]
+CONTINUE
+
+[SESSION_RESUME_PROMPT]
+SAVE PROGRESS FOUND
+
+Continue or start a new puzzle?
+
+[UI_BACK]
+BACK
+
+[UI_HOW_TO_PLAY]
+HOW TO PLAY
+
+[UI_OPTIONS]
+OPTIONS
+
+[UI_CREDITS]
+CREDITS
+
+[UI_EDITOR]
+EDITOR
+
+[UI_CLOSE]
+CLOSE
+
+[UI_PREVIOUS]
+PREVIOUS
+
+[UI_NEXT]
+NEXT
+
+[UI_BACK_TO_MENU]
+BACK TO MENU
+
+[UI_MAIN_MENU]
+MAIN MENU
+
+[UI_RESUME]
+RESUME
+
+[UI_RESTART]
+RESTART
+
+[UI_NEW_LAYOUT]
+NEW PUZZLE
+
+[UI_TRY_AGAIN]
+TRY AGAIN
+
+[UI_YES]
+YES
+
+[UI_AD]
+Ad
+
+[UI_NO]
+NO
+
+[UI_SAVE]
+SAVE
+
+[UI_LOAD]
+LOAD
+
+[UI_LOADING]
+LOADING
+
+[UI_RESET_PROGRESS]
+RESET PROFILE
+
+[CONFIRM_RESET_PROGRESS]
+RESET PROFILE?
+
+This clears progress and the privacy policy agreement.
+
+[CONFIRM_NEW_PUZZLE]
+NEW PUZZLE?
+
+Current progress will be lost.
+
+[CONFIRM_RESTART_LEVEL]
+RESTART LEVEL?
+
+Current progress will be lost.
+
+[CONFIRM_DELETE_CUSTOM]
+DELETE ALL CUSTOM LEVELS FROM THIS DEVICE?
+
+[UI_DELETE_CUSTOM]
+DELETE CUSTOM LEVELS
+
+[UI_UNLOCK_ALL_LEVELS]
+UNLOCK ALL LEVELS
+
+[UI_BG_DYNAMIC]
+BACKGROUND: DYNAMIC
+
+[UI_BG_STATIC]
+BACKGROUND: STATIC
+
+[UI_BGM_ON]
+MUSIC: ON
+
+[UI_BGM_OFF]
+MUSIC: OFF
+
+[UI_SFX_ON]
+SOUND EFFECTS: ON
+
+[UI_SFX_OFF]
+SOUND EFFECTS: OFF
+
+[UI_HAPTIC_ON]
+VIBRATION: ON
+
+[UI_HAPTIC_OFF]
+VIBRATION: OFF
+
+[UI_CONSENT_TITLE]
+WELCOME
+
+[UI_CONSENT_BODY]
+This game shows ads and may collect data to personalise them. You can review our Privacy Policy before continuing.
+
+[UI_CONSENT_READ_POLICY]
+PRIVACY POLICY
+
+[UI_CONSENT_ACCEPT]
+ACCEPT
+
+[UI_PRIVACY_POLICY]
+PRIVACY POLICY
+
+[UI_PRIVACY_OPTIONS]
+PRIVACY OPTIONS
+
+[UI_PRIVACY_OPTIONS_OPENING]
+Opening privacy options...
+
+[UI_PRIVACY_OPTIONS_DONE]
+Privacy options closed.
+
+[UI_PRIVACY_OPTIONS_UNAVAILABLE]
+Privacy options are available on Android builds.
+
+[UI_PRIVACY_OPTIONS_LOADING]
+Privacy options are still loading.
+
+[UI_PRIVACY_OPTIONS_NOT_REQUIRED]
+Privacy options are not required for your region right now.
+
+[SAVE_DELETED]
+SAVE DELETED! PROGRESS RESET.
+
+[UNLOCK_ALL_DONE]
+ALL LEVELS UNLOCKED
+
+[CONFIRM_UNLOCK_ALL]
+UNLOCK ALL LEVELS?

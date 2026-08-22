@@ -1,0 +1,133 @@
+# English game text — edit the lines below each [KEY].
+# Do NOT change or remove [KEY] headers. Edit only the text under them.
+# Keep placeholders as-is: %s, %d, %d/%d, etc.
+# Blank line ends a string block. Use a single blank line inside text if needed.
+# Files in this folder are for editing only; the game reads translations.csv.
+
+# Section: How To Play overlay pages
+
+[HTP_TITLE]
+HOW TO PLAY
+
+[HTP_GOAL_TAP]
+Tap %s empty cells to place %s [color=#ffeb3b]Yellow[/color], %s [color=#2196f3]Blue[/color], and %s [color=#4caf50]Green[/color].
+
+[HTP_GOAL_WIN]
+Fill every %s empty cell without breaking any rules.
+
+[HTP_CORE_TITLE]
+CORE RULES
+
+[HTP_EXAMPLES_TITLE]
+EXAMPLES
+
+[HTP_EXAMPLE_INVALID]
+INVALID
+
+[HTP_EXAMPLE_VALID]
+VALID
+
+[HTP_EQUAL_BALANCE]
+Equal Balance: the same number of %s [color=#ffeb3b]Yellow[/color] and %s [color=#2196f3]Blue[/color] in each completed row or column.
+
+[HTP_RULE_OF_TWO]
+Rule of Two: never place three %s [color=#ffeb3b]Yellow[/color] or %s [color=#2196f3]Blue[/color] tiles in a row.
+
+[HTP_EXAMPLE_THREE_YELLOWS]
+(Three [color=#ffeb3b]Yellows[/color])
+
+[HTP_EXAMPLE_THREE_BLUES]
+(Three [color=#2196f3]Blues[/color])
+
+[HTP_EXAMPLE_VALID_MIX]
+(Valid)
+
+[HTP_GREEN_TITLE]
+GREEN TILES
+
+[HTP_PURPLE_TITLE]
+PURPLE TILES
+
+[HTP_GREEN_TILES_DESC]
+%s [color=#4caf50]Green[/color] counts as both %s [color=#ffeb3b]Yellow[/color] and %s [color=#2196f3]Blue[/color].
+
+[HTP_RULE_OF_ONE]
+Rule of One: at most one %s [color=#4caf50]Green[/color] per row or column. Equal Balance ignores Green.
+
+[HTP_GREEN_BALANCE_NOTE]
+Equal Balance ignores %s [color=#4caf50]Green[/color] — only %s [color=#ffeb3b]Yellow[/color] and %s [color=#2196f3]Blue[/color] count.
+
+[HTP_GREEN_EXAMPLE_INVALID_1]
+(Two [color=#2196f3]Blues[/color] + [color=#4caf50]Green[/color])
+
+[HTP_GREEN_EXAMPLE_INVALID_2]
+([color=#ffeb3b]Yellow[/color] + [color=#4caf50]Green[/color] + [color=#ffeb3b]Yellow[/color])
+
+[HTP_EXAMPLE_TWO_GREENS]
+(Two [color=#4caf50]Greens[/color])
+
+[HTP_GREEN_EXAMPLE_VALID]
+(Valid mix)
+
+[HTP_SPECIALS_TITLE]
+SPECIAL RULES
+
+[HTP_LINKS_TITLE]
+LOCKS & LINKS
+
+[HTP_SHIFTER_TILES_DESC]
+%s [color=#9c27b0]Purple[/color] tiles hop between two linked cells. Tap one to slide it along the arrow.
+
+[HTP_SHIFTER_BLOCK_NOTE]
+Another %s [color=#9c27b0]Purple[/color] on the destination blocks the hop — clear that path first.
+
+[HTP_SHIFTER_BALANCE_NOTE]
+Like %s [color=#4caf50]Green[/color], %s [color=#9c27b0]Purple[/color] fills a cell without counting toward Equal Balance.
+
+[HTP_LOCKS_LABEL]
+Locks:
+
+[HTP_LOCKS_DESC]
+Tiles with a lock icon are fixed and cannot be changed.
+
+[HTP_EQUALS_RULE]
+[b]=[/b] between two cells means they must be the [i]same[/i] color.
+
+[HTP_NOT_EQUALS_RULE]
+[b]×[/b] between two cells means they must be [i]different[/i] colors.
+
+[HTP_STARS_TITLE]
+STARS
+
+[HTP_STARS_INTRO]
+Earn up to three stars: solve the level, finish with no hints used, and beat the time limit.
+
+[HTP_STARS_COMPLETE_LABEL]
+Solved:
+
+[HTP_STARS_COMPLETE_DESC]
+Finish a valid board to earn the first star.
+
+[HTP_STARS_TIME_LABEL]
+Time:
+
+[HTP_STARS_TIME_DESC]
+Finish within that star's time limit.
+
+[HTP_STARS_HINTS_LABEL]
+No hints used:
+
+[HTP_STARS_HINTS_DESC]
+Finish without using any hints.
+
+[HTP_STARS_GREEN_LABEL]
+No hints used:
+
+[HTP_STARS_GREEN_DESC]
+Finish without using any hints.
+
+[HTP_STARS_MOVES_LABEL]
+Moves:
+
+[HTP_STARS_MOVES_DESC]
+Make no more %s [color=#9c27b0]Purple[/color] hops than that star allows.

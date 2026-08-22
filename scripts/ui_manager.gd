@@ -676,17 +676,15 @@ func show_reset_confirm() -> void:
 		HudLayout.apply_popup_label(reset_confirm_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
 	if reset_confirm_yes:
 		reset_confirm_yes.text = tr("UI_YES")
-		HudLayout.apply_dialog_button(reset_confirm_yes)
 	if reset_confirm_no:
 		reset_confirm_no.text = tr("UI_NO")
-		HudLayout.apply_dialog_button(reset_confirm_no)
 	if victory_panel:
 		victory_panel.visible = false
 	if resume_panel:
 		resume_panel.visible = false
 	if reset_confirm_panel:
 		reset_confirm_panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
-		HudLayout.fit_dialog_panel(reset_confirm_panel, 640.0)
+		HudLayout.fit_dialog_panel(reset_confirm_panel, HudLayout.UI_DEFAULT_DIALOG_WIDTH)
 		reset_confirm_panel.visible = true
 		reset_confirm_panel.move_to_front()
 	set_hud_buttons_disabled(true)
@@ -751,12 +749,17 @@ func show_session_resume_prompt() -> void:
 		var continue_btn := resume_panel.get_node_or_null("Buttons/ContinueButton") as Button
 		var restart_btn := resume_panel.get_node_or_null("Buttons/RestartButton") as Button
 		var back_btn := resume_panel.get_node_or_null("Buttons/BackButton") as Button
+		var resume_btns: Array = []
 		if continue_btn:
 			_style_resume_button(continue_btn, tr("UI_CONTINUE"))
+			resume_btns.append(continue_btn)
 		if restart_btn:
 			_style_resume_button(restart_btn, tr("UI_NEW_LAYOUT"))
+			resume_btns.append(restart_btn)
 		if back_btn:
 			_style_resume_button(back_btn, tr("UI_BACK"))
+			resume_btns.append(back_btn)
+		HudLayout.equalize_button_group_widths(resume_btns, 260.0, 110.0)
 	if victory_panel:
 		victory_panel.visible = false
 	if resume_panel:
@@ -794,13 +797,15 @@ func _make_end_screen_panel_style() -> StyleBoxFlat:
 func _style_resume_button(button: Button, text: String = "") -> void:
 	if not button:
 		return
-	button.custom_minimum_size = Vector2(460, 110)
+	const RESUME_BTN_MIN_W := 260.0
+	const RESUME_BTN_H := 110.0
 	var display := text if not text.is_empty() else button.text
 	if button.auto_translate_mode != Node.AUTO_TRANSLATE_MODE_DISABLED and text.is_empty():
 		display = String(TranslationServer.translate(button.text))
 	HudLayout.apply_raster_pixel_button(button, display, 28)
 	button.autowrap_mode = TextServer.AUTOWRAP_OFF
 	button.clip_text = false
+	HudLayout.grow_button_to_text(button, RESUME_BTN_H, 48.0, RESUME_BTN_MIN_W)
 
 # HTP page navigation handlers (bounded to valid page range).
 func _on_htp_prev_pressed() -> void:
@@ -1017,7 +1022,7 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 		return
 	var goal_count := int(star_result.get("total_count", 0))
 	var untimed := bool(star_result.get("untimed", false))
-	var panel_w := 840.0
+	var panel_w := HudLayout.UI_MAX_DIALOG_WIDTH
 	var title_top := 28.0
 	var title_side := 24.0
 	var title_h := 82.0

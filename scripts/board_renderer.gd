@@ -41,6 +41,14 @@ static func is_board_full(board_cells: Dictionary) -> bool:
 			return false
 	return true
 
+const GRID_LINE_WIDTH := 4.0
+
+# Half-line inset applied to grid_drawer.position so outer corner caps are not
+# clipped at the board origin (only the bottom-right cap was visible before).
+static func grid_drawer_offset() -> Vector2:
+	var half := GRID_LINE_WIDTH * 0.5
+	return Vector2(half, half)
+
 # Draws the grid border lines for all cells.
 # full_grid=true (editor mode) always draws all interior lines.
 # full_grid=false (play mode) omits borders between two wall cells to keep walls visually solid.
@@ -51,23 +59,27 @@ static func draw_grid(
 	full_grid: bool = false
 ) -> void:
 	var line_color := Color.BLACK
-	var line_width := 4.0
+	var line_width := GRID_LINE_WIDTH
 	var half := line_width * 0.5
-	var min_px := Vector2(INF, INF)
-	var max_px := Vector2(-INF, -INF)
+	# Pair with grid_drawer.position = grid_drawer_offset() on the drawer node.
+	var draw_shift := -half
 
 	for coord in board_cells:
 		var cell = board_cells[coord]
 		var is_playable: bool = cell.state != GameConstants.TileState.WALL
 
 		var pos_tl := Vector2(coord.x * cell_size, coord.y * cell_size)
+		pos_tl.x += draw_shift
+		pos_tl.y += draw_shift
 		var pos_tr := Vector2((coord.x + 1) * cell_size, coord.y * cell_size)
+		pos_tr.x += draw_shift
+		pos_tr.y += draw_shift
 		var pos_bl := Vector2(coord.x * cell_size, (coord.y + 1) * cell_size)
+		pos_bl.x += draw_shift
+		pos_bl.y += draw_shift
 		var pos_br := Vector2((coord.x + 1) * cell_size, (coord.y + 1) * cell_size)
-		min_px.x = mini(min_px.x, pos_tl.x)
-		min_px.y = mini(min_px.y, pos_tl.y)
-		max_px.x = maxi(max_px.x, pos_br.x)
-		max_px.y = maxi(max_px.y, pos_br.y)
+		pos_br.x += draw_shift
+		pos_br.y += draw_shift
 
 		var draw_right: bool
 		var draw_bottom: bool
@@ -106,34 +118,20 @@ static func draw_grid(
 		if draw_left:
 			_draw_grid_v_edge(canvas, pos_tl.x, pos_tl.y, pos_bl.y, line_width, line_color)
 
-	# draw_line butt-caps leave a 1px gap at outer corners; fill them explicitly.
-	if min_px.x < max_px.x and min_px.y < max_px.y:
-		for corner in [
-			Vector2(min_px.x, min_px.y),
-			Vector2(max_px.x, min_px.y),
-			Vector2(min_px.x, max_px.y),
-			Vector2(max_px.x, max_px.y),
-		]:
-			canvas.draw_rect(
-				Rect2(corner.x - half, corner.y - half, line_width, line_width),
-				line_color,
-				true
-			)
-
 static func _draw_grid_h_edge(
 	canvas: CanvasItem, x0: float, x1: float, y: float, width: float, color: Color
 ) -> void:
 	var half := width * 0.5
-	var left := mini(x0, x1)
-	var right := maxi(x0, x1)
+	var left := minf(x0, x1) - half
+	var right := maxf(x0, x1) + half
 	canvas.draw_rect(Rect2(left, y - half, right - left, width), color, true)
 
 static func _draw_grid_v_edge(
 	canvas: CanvasItem, x: float, y0: float, y1: float, width: float, color: Color
 ) -> void:
 	var half := width * 0.5
-	var top := mini(y0, y1)
-	var bottom := maxi(y0, y1)
+	var top := minf(y0, y1) - half
+	var bottom := maxf(y0, y1) + half
 	canvas.draw_rect(Rect2(x - half, top, width, bottom - top), color, true)
 
 # Draws "=" (equals) or "X" (not-equals) constraint symbols between adjacent cell pairs.

@@ -39,10 +39,11 @@ var constraint_drawer: Node2D
 var is_playtesting: bool = false
 
 func _ready():
-	# Grid lines sit behind tiles so hold-to-clear shrink animations aren't
-	# crossed by the static border (tile art already leaves an edge margin).
+	# Edit mode: grid above cells so opaque editor-empty tiles don't hide borders.
+	# Playtest switches this to -1 in set_playtest_input_mode (hold-to-clear).
 	grid_drawer = Node2D.new()
-	grid_drawer.z_index = -1
+	grid_drawer.position = BoardRenderer.grid_drawer_offset()
+	grid_drawer.z_index = 10
 	grid_drawer.draw.connect(_draw_grid)
 	add_child(grid_drawer)
 
@@ -160,6 +161,10 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 # In edit mode the interceptor stays on top so brush painting keeps working.
 func set_playtest_input_mode(enabled: bool) -> void:
 	is_playtesting = enabled
+	if grid_drawer:
+		# Behind tiles in playtest so hold-to-clear shrink isn't crossed by borders.
+		# Above tiles while editing so the black grid stays visible.
+		grid_drawer.z_index = -1 if enabled else 10
 	for entry in cell_pool:
 		var cell: Node = entry["cell"]
 		var interceptor: Control = entry["interceptor"]

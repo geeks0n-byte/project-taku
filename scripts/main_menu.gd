@@ -405,6 +405,8 @@ func _apply_credits_fonts(credits_text_node: RichTextLabel) -> void:
 		bbcode = bbcode.replace("[font_size=36]", "[font_size=%d]" % header_sz)
 		bbcode = bbcode.replace("[font_size=34]", "[font_size=%d]" % body_sz)
 		bbcode = bbcode.replace("[font_size=28]", "[font_size=%d]" % body_sz)
+		var pixel_sz := int(round(float(CREDITS_NAME_SIZE) * locale_mul))
+		bbcode = _wrap_credits_author_pixel_font(bbcode, body_sz, pixel_sz)
 		credits_text_node.set_meta("_use_default_font", true)
 		HudLayout.apply_locale_font_to_control(credits_text_node)
 		for size_name in [
@@ -418,6 +420,57 @@ func _apply_credits_fonts(credits_text_node: RichTextLabel) -> void:
 		credits_text_node.text = bbcode
 		HudLayout.apply_safe_outline(credits_text_node, GameConstants.MENU_TEXT_OUTLINE)
 	_refresh_credits_version()
+
+# ka credits: Georgian name/surname in locale font; Press Start only for "gix0n".
+# uk credits: full Latin author name in Press Start (no Georgian script to localize).
+const CREDITS_NICKNAME := "\"gix0n\""
+
+func _credits_author_single_line(text: String) -> String:
+	return text.replace(" ", "\u00a0")
+
+func _wrap_credits_nickname_pixel_font(text: String, pixel_sz: int) -> String:
+	if not text.contains(CREDITS_NICKNAME):
+		return text
+	var pixel := "[font=%s][font_size=%d]%s[/font_size][/font]" % [
+		HudLayout.PIXEL_FONT_PATH, pixel_sz, CREDITS_NICKNAME
+	]
+	return text.replace(CREDITS_NICKNAME, pixel)
+
+func _wrap_credits_full_name_pixel_font(text: String, pixel_sz: int) -> String:
+	return "[font=%s][font_size=%d]%s[/font_size][/font]" % [
+		HudLayout.PIXEL_FONT_PATH, pixel_sz, text
+	]
+
+func _wrap_credits_author_name_display(author: String, pixel_sz: int) -> String:
+	var single_line := _credits_author_single_line(author)
+	if HudFonts.locale_code() == "ka":
+		return _wrap_credits_nickname_pixel_font(single_line, pixel_sz)
+	return _wrap_credits_full_name_pixel_font(single_line, pixel_sz)
+
+func _wrap_credits_author_pixel_font(bbcode: String, body_sz: int, pixel_sz: int) -> String:
+	var author := String(TranslationServer.translate("SPLASH_AUTHOR"))
+	var author_display := _wrap_credits_author_name_display(author, pixel_sz)
+	var author_single := _credits_author_single_line(author)
+	if author_display == author_single and HudFonts.locale_code() == "ka":
+		return bbcode
+	var name_mixed: String
+	if HudFonts.locale_code() == "ka":
+		name_mixed = "[font_size=%d]%s[/font_size]" % [body_sz, author_display]
+	else:
+		name_mixed = author_display
+	for name_plain in [
+		"[font_size=%d]%s[/font_size]" % [body_sz, author_single],
+		"[font_size=%d]%s[/font_size]" % [body_sz, author],
+	]:
+		if bbcode.contains(name_plain):
+			return bbcode.replace(name_plain, name_mixed)
+	var normalized := bbcode.replace("\u00a0", " ")
+	for name_plain in [
+		"[font_size=%d]%s[/font_size]" % [body_sz, author],
+	]:
+		if normalized.contains(name_plain):
+			return normalized.replace(name_plain, name_mixed)
+	return bbcode
 
 func _app_version_string() -> String:
 	var version := String(ProjectSettings.get_setting("application/config/version", "1.0.0"))
@@ -538,7 +591,7 @@ func _start_game() -> void:
 	GlobalGameManager.go_to_scene("res://scenes/main.tscn")
 
 func _launch_tutorial() -> void:
-	var tutorial := _first_level_in_dir(GameConstants.CAMPAIGN_TUTORIALS_DIR)
+	var tutorial := TutorialScripts.first_incomplete_level()
 	if tutorial:
 		GlobalGameManager.selected_level_resource = tutorial
 	_start_game()
@@ -700,17 +753,15 @@ func _show_tutorial_intro_prompt() -> void:
 		HudLayout.apply_popup_label(_tutorial_intro_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
 	if _tutorial_intro_yes:
 		_tutorial_intro_yes.text = tr("UI_YES")
-		HudLayout.apply_dialog_button(_tutorial_intro_yes)
 	if _tutorial_intro_no:
 		_tutorial_intro_no.text = tr("UI_NO")
-		HudLayout.apply_dialog_button(_tutorial_intro_no)
 	var panel := (
 		_tutorial_intro_blocker.get_node_or_null("CenterContainer/Panel") as Panel
 		if _tutorial_intro_blocker
 		else null
 	)
 	if panel:
-		HudLayout.fit_dialog_panel(panel, 680.0)
+		HudLayout.fit_dialog_panel(panel, HudLayout.UI_DEFAULT_DIALOG_WIDTH)
 	if _tutorial_intro_blocker:
 		_tutorial_intro_blocker.color = Color(0, 0, 0, 0)
 		_tutorial_intro_blocker.visible = true
