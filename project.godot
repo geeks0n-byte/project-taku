@@ -23,7 +23,6 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 boot_splash/bg_color=Color(0, 0.070588, 0.227451, 1)
 boot_splash/use_filter=false
 boot_splash/image="res://resources/background/boot_void.png"
-boot_splash/fullsize=true
 config/icon="res://resources/icons/app_icon_cosmos_256.png"
 
 [autoload]

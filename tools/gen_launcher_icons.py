@@ -905,7 +905,9 @@ FEATURE_SPECS = [
 ]
 
 
-def render_space_canvas(w: int, h: int, seed: int = STAR_SEED) -> list[tuple[int, int, int, int]]:
+def render_space_canvas(
+	w: int, h: int, seed: int = STAR_SEED, density: float = 0.55, base_short: int | None = None
+) -> list[tuple[int, int, int, int]]:
 	"""Full-bleed space void matching the app icon language (no tiles / no round mask).
 
 	Builds at a mid pixel-art resolution (short side ~128), then nearest-neighbor
@@ -913,7 +915,8 @@ def render_space_canvas(w: int, h: int, seed: int = STAR_SEED) -> list[tuple[int
 	upscale would.
 	"""
 	# Finer than the 64×64 icon so 1px stars don't become huge after upscale.
-	base_short = ICON_SIZE * 2
+	if base_short is None:
+		base_short = ICON_SIZE * 2
 	if w >= h:
 		base_h = base_short
 		base_w = max(base_short // 2, int(round(base_short * w / h)))
@@ -926,15 +929,14 @@ def render_space_canvas(w: int, h: int, seed: int = STAR_SEED) -> list[tuple[int
 	rng = random.Random(seed ^ (base_w * 7919) ^ (base_h * 104729))
 	area = (base_w * base_h) / float(ICON_SIZE * ICON_SIZE)
 	# Slightly denser than a pure area scale so the finer grid still reads as space.
-	density = 0.55
 	dust_n = max(STAR_DUST_COUNT, int(round(STAR_DUST_COUNT * area * density)))
 	bright_n = max(STAR_BRIGHT_COUNT, int(round(STAR_BRIGHT_COUNT * area * density)))
 	cyan_n = max(STAR_ACCENT_CYAN_COUNT, int(round(STAR_ACCENT_CYAN_COUNT * area * density)))
 	pink_n = max(STAR_ACCENT_PINK_COUNT, int(round(STAR_ACCENT_PINK_COUNT * area * density)))
 	spark_n = max(2, int(round(STAR_SPARKLER_COUNT * area * density * 0.7)))
-	min_dist = max(STAR_MIN_DIST, int(round(STAR_MIN_DIST * base_short / ICON_SIZE)))
+	min_dist = max(2, int(round(STAR_MIN_DIST * base_short / ICON_SIZE / max(1.0, density * 0.85))))
 	# Keep asteroid on-screen size similar to the old 64-base renders.
-	ast_dst = ICON_ASTEROID_DST * 2
+	ast_dst = max(8, int(round(ICON_ASTEROID_DST * (base_short / float(ICON_SIZE)))))
 
 	def setp(x: int, y: int, rgb: tuple[int, int, int], a: int = 255) -> None:
 		if 0 <= x < base_w and 0 <= y < base_h:

@@ -213,7 +213,7 @@ static func _measure_star_row_min_width(goal: Dictionary, font: Font, font_size:
 	var detail_w := _measure_goal_detail_width(detail, font, font_size)
 	var icon_w := STAR_ICON_SIZE + 8.0
 	var row_sep := 12.0
-	var detail_gap := TIME_DETAIL_GAP if detail_w > 0.0 else 0.0
+	var detail_gap := 16.0 if detail_w > 0.0 else 0.0
 	return icon_w + row_sep + title_w + detail_gap + detail_w + 12.0
 
 static func _measure_goal_detail_width(
@@ -254,7 +254,7 @@ static func populate_results(host: Control, star_result: Dictionary) -> void:
 		stars_box.add_child(_make_star_row(g))
 
 ## Clears `host` and fills it with star-goal rows built from the level's requirements.
-## Used on the pre-play info panel rather than the post-game results screen.
+## Same row layout as [method populate_results] (left-aligned icon+title, detail on the right).
 static func populate_requirements(
 	host: Control,
 	level: LevelData,
@@ -267,24 +267,21 @@ static func populate_requirements(
 	while host.get_child_count() > 0:
 		host.get_child(0).free()
 	var preview := build_requirements(level, earned_bits)
-	var min_w := measure_requirements_min_width(level, earned_bits)
-	# Shrink-wrap to the widest goal row; only use content_width as a max cap (not a stretch floor).
-	var width_cap := content_width if content_width > 0.0 else RESULTS_CONTENT_WIDTH
-	var block_w := minf(maxf(min_w, 200.0), width_cap)
+	var width := content_width if content_width > 0.0 else RESULTS_CONTENT_WIDTH
+	width = maxf(width, 200.0)
 	var root := VBoxContainer.new()
-	root.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	root.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_theme_constant_override("separation", 16)
 	root.alignment = BoxContainer.ALIGNMENT_CENTER
 	host.add_child(root)
 	var stars_box := VBoxContainer.new()
-	# Same row layout as victory; width hugs content so TIME: sits near the clock.
-	stars_box.custom_minimum_size.x = block_w
+	stars_box.custom_minimum_size = Vector2(width, 0)
 	stars_box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	stars_box.add_theme_constant_override("separation", 12)
 	root.add_child(stars_box)
 	for g in preview.get("goals", []):
-		stars_box.add_child(_make_star_row(g, block_w, white_text, false))
+		stars_box.add_child(_make_star_row(g, width, white_text, false))
+
 
 ## Helper to create a centered pixel-font label used for section headings in result rows.
 static func _make_text_row(text: String, color: Color, font_size: int) -> Label:
@@ -294,25 +291,9 @@ static func _make_text_row(text: String, color: Color, font_size: int) -> Label:
 	HudLayout.apply_raster_pixel_label(label, text, font_size, color)
 	return label
 
-
-## Fixed gap between TIME: and the clock on level-select (tighter than victory stretch, not flush).
-const TIME_DETAIL_GAP := 36.0
-
-static func _add_time_detail_with_gap(
-	row: HBoxContainer, title_slot: Control, title: Label, detail: Control
-) -> void:
-	title.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	title_slot.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(TIME_DETAIL_GAP, 0)
-	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	spacer.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	row.add_child(spacer)
-	row.add_child(detail)
-
 ## Builds one HBox row for a single star goal: star icon | title | optional detail.
 ## Earned goals use green text; missed goals use red (and hints swap to HINTS USED).
-## compact=true packs title+detail tightly (level-select popup); false spreads detail right (results).
+## compact=true packs title+detail tightly; false spreads detail right (victory / level-select).
 static func _make_star_row(
 	goal: Dictionary,
 	_content_width: float = RESULTS_CONTENT_WIDTH,
@@ -419,10 +400,7 @@ static func _make_star_row(
 			HudLayout.apply_live_pixel_richtext(detail, RESULTS_ROW_FONT)
 			detail.add_theme_color_override("default_color", detail_color)
 			detail.text = detail_text if compact else "[right]%s[/right]" % detail_text
-			if white_text and str(goal.get("id", "")) == "time":
-				_add_time_detail_with_gap(row, title_slot, title, detail)
-			else:
-				row.add_child(detail)
+			row.add_child(detail)
 		else:
 			var detail := Label.new()
 			detail.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -439,11 +417,7 @@ static func _make_star_row(
 				0,
 				HudLayout.text_is_digit_display(detail_text)
 			)
-			if white_text and str(goal.get("id", "")) == "time":
-				detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-				_add_time_detail_with_gap(row, title_slot, title, detail)
-			else:
-				row.add_child(detail)
+			row.add_child(detail)
 
 	var row_h := ROW_HEIGHT
 	var title_h := title.get_minimum_size().y

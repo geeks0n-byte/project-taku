@@ -94,6 +94,7 @@ script = ExtResource("pt_ui_mgr")
 [node name="EditorUI" type="CanvasLayer" parent="." unique_id=495483212]
 
 [node name="EditorBackground" type="ColorRect" parent="EditorUI" unique_id=1493736825]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0

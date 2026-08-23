@@ -746,7 +746,7 @@ func _setup_level_goals_popup() -> void:
 	_level_goals_title.add_theme_color_override("default_color", LEVEL_GOALS_TITLE_COLOR)
 	vbox.add_child(_level_goals_title)
 
-	_level_goals_host = CenterContainer.new()
+	_level_goals_host = Control.new()
 	_level_goals_host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_level_goals_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	vbox.add_child(_level_goals_host)
@@ -801,7 +801,7 @@ func _show_level_goals_popup(level: LevelData, earned_bits: int) -> void:
 		_level_goals_host,
 		level,
 		earned_bits,
-		LEVEL_GOALS_PANEL_WIDTH - 72.0,
+		LevelStars.RESULTS_CONTENT_WIDTH,
 		true
 	)
 	if panel:
@@ -809,12 +809,8 @@ func _show_level_goals_popup(level: LevelData, earned_bits: int) -> void:
 		if _level_goals_host.get_child_count() > 0:
 			var stars_root := _level_goals_host.get_child(0) as Control
 			if stars_root:
-				var measure_w := maxf(
-					stars_root.get_combined_minimum_size().x,
-					minf(content_w, LEVEL_GOALS_PANEL_WIDTH - 72.0)
-				)
 				_level_goals_host.custom_minimum_size.y = HudDialogs.measure_control_height(
-					stars_root, measure_w
+					stars_root, minf(content_w, LevelStars.RESULTS_CONTENT_WIDTH)
 				)
 		HudLayout.fit_dialog_panel(panel, LEVEL_GOALS_PANEL_WIDTH, 420.0)
 	_level_goals_blocker.visible = true

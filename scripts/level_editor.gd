@@ -545,8 +545,14 @@ func _on_clear_board():
 # Swaps between the opaque editor background and the animated SpaceBackground.
 # The editor uses its own solid background so the parallax doesn't distract during design work.
 func _apply_background_for_mode(is_playtest: bool) -> void:
-	var editor_bg = get_node_or_null("EditorUI/EditorBackground")
+	var editor_bg = get_node_or_null("EditorUI/EditorBackground") as ColorRect
 	if editor_bg:
+		# Anchors alone can be ignored without a layout mode — force full-bleed cover.
+		editor_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		editor_bg.offset_left = 0.0
+		editor_bg.offset_top = 0.0
+		editor_bg.offset_right = 0.0
+		editor_bg.offset_bottom = 0.0
 		editor_bg.visible = not is_playtest
 	if SpaceBackground:
 		SpaceBackground.visible = is_playtest
