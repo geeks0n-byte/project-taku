@@ -120,12 +120,14 @@ func _ready() -> void:
 
 	if GlobalGameManager.main_menu_should_fade_in:
 		GlobalGameManager.main_menu_should_fade_in = false
+		# Survive an immediate Android pause during the boot fade.
+		process_mode = Node.PROCESS_MODE_ALWAYS
 		_set_menu_ui_alpha(0.0)
 		call_deferred("_fade_in_menu_ui")
-		get_tree().create_timer(MENU_FADE_IN + 0.75).timeout.connect(_ensure_menu_ui_visible)
 
 func _ensure_menu_ui_visible() -> void:
 	_set_menu_ui_alpha(1.0)
+	process_mode = Node.PROCESS_MODE_INHERIT
 
 func _notification(what: int) -> void:
 	if what != NOTIFICATION_WM_GO_BACK_REQUEST:
@@ -180,12 +182,21 @@ func _fade_in_menu_ui() -> void:
 		_set_menu_ui_alpha(1.0)
 		return
 	_set_menu_ui_alpha(0.0)
+	# PROCESS_MODE_ALWAYS: an early Android pause used to freeze this tween
+	# while UI alpha was 0, leaving a black screen on resume.
 	var tween := create_tween()
+	tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tween.set_parallel(true)
 	for node in nodes:
 		tween.tween_property(node, "modulate:a", 1.0, MENU_FADE_IN).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	if not tween.finished.is_connected(_ensure_menu_ui_visible):
 		tween.finished.connect(_ensure_menu_ui_visible)
+	# Wall-clock fallback if the app is suspended mid-fade.
+	var tree := get_tree()
+	if tree:
+		var failsafe := tree.create_timer(MENU_FADE_IN + 0.35, true, false, true)
+		failsafe.timeout.connect(_ensure_menu_ui_visible)
 
 func _setup_title_under_fx() -> void:
 	var ui_layer := $UILayer as CanvasLayer

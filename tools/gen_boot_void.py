@@ -1,103 +1,58 @@
 # -*- coding: utf-8 -*-
-"""Bake resources/background/boot_void.png from the in-game starfield SVGs.
+"""Bake resources/background/boot_void.png — one launch screen.
 
-Must match SpaceBackground layers (sparse dust/stars/accents/sparkles), not the
-dense app-icon star generator. Asteroids are runtime FX and are omitted.
+Combines the Android “big icon” splash and the Godot sky splash:
+full-bleed icon-style sky, with the real 64×64 app icon (same stars/tiles/
+asteroids) scaled nearest-neighbor and centered. Android splash_screen/icon
+is left empty so this image is the only splash.
 """
 from __future__ import annotations
 
 import importlib.util
 import os
-import re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOLS = os.path.join(ROOT, "tools", "gen_launcher_icons.py")
-BG_DIR = os.path.join(ROOT, "resources", "background")
+OUT = os.path.join(ROOT, "resources", "background", "boot_void.png")
 
 spec = importlib.util.spec_from_file_location("gen_launcher_icons", TOOLS)
 mod = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
 spec.loader.exec_module(mod)
 
-# Native SVG artboard (same as bg_*.svg viewBox). Godot boot splash stretches.
-VW, VH = 360, 640
-VOID = mod.hex_rgb("#00123a")
-
-LAYERS = [
-	"bg_1_far_dust.svg",
-	"bg_2_medium_stars.svg",
-	"bg_3_foreground_accents.svg",
-	"bg_4_sparkler_crosses.svg",
-]
+W, H = 1080, 1920
 
 
-def _parse_fill_groups(svg: str) -> list[tuple[str, str]]:
-	groups: list[tuple[str, str]] = []
-	for m in re.finditer(r'<g\s+fill="(#[0-9a-fA-F]+)"\s*>(.*?)</g>', svg, re.S):
-		groups.append((m.group(1), m.group(2)))
-	return groups
-
-
-def _parse_dots(body: str) -> list[tuple[int, int]]:
-	dots: list[tuple[int, int]] = []
-	# SVG paths use "M60 80h1v1h-1z" (no comma).
-	for m in re.finditer(r"M(\d+)\s+(\d+)h1v1h-1z", body):
-		dots.append((int(m.group(1)), int(m.group(2))))
-	return dots
-
-
-def _parse_rects(body: str) -> list[tuple[int, int, int, int]]:
-	rects: list[tuple[int, int, int, int]] = []
-	for m in re.finditer(
-		r'<rect\s+x="(\d+)"\s+y="(\d+)"\s+width="(\d+)"\s+height="(\d+)"',
-		body,
-	):
-		rects.append((int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4))))
-	return rects
-
-
-def render_ingame_sky() -> list[tuple[int, int, int, int]]:
-	px = [(*VOID, 255)] * (VW * VH)
-	plotted = 0
-
-	def plot(x: int, y: int, rgb: tuple[int, int, int]) -> None:
-		nonlocal plotted
-		if 0 <= x < VW and 0 <= y < VH:
-			px[y * VW + x] = (*rgb, 255)
-			plotted += 1
-
-	for name in LAYERS:
-		path = os.path.join(BG_DIR, name)
-		if not os.path.isfile(path):
-			raise FileNotFoundError(path)
-		svg = open(path, encoding="utf-8").read()
-		groups = _parse_fill_groups(svg)
-		if not groups:
-			raise RuntimeError(f"no fill groups in {name}")
-		for fill, body in groups:
-			rgb = mod.hex_rgb(fill)
-			for x, y in _parse_dots(body):
-				plot(x, y, rgb)
-			for x, y, w, h in _parse_rects(body):
-				for yy in range(y, y + h):
-					for xx in range(x, x + w):
-						plot(xx, yy, rgb)
-	if plotted < 40:
-		raise RuntimeError(f"too few star pixels plotted ({plotted}); parser mismatch")
-	print(f"plotted {plotted} star pixels from in-game layers")
-	return px
+def render_launch_splash(w: int, h: int) -> list[tuple[int, int, int, int]]:
+	# Portrait sky in the same language as the app icon (not the sparse in-game layers).
+	sky = mod.render_space_canvas(w, h, mod.STAR_SEED)
+	tiles = mod.render_tiles_via_godot()
+	icon = mod.render_base_64(tiles)
+	void = (*mod.hex_rgb(mod.BG_VOID), 255)
+	# Drop the round launcher mask so the icon is a full square.
+	square = [p if p[3] > 0 else void for p in icon]
+	side = min(w, h)  # 1080 — fills width, letterbox uses sky above/below.
+	scaled = mod.scale_nn(square, mod.ICON_SIZE, mod.ICON_SIZE, side, side)
+	ox = (w - side) // 2
+	oy = (h - side) // 2
+	out = list(sky)
+	for y in range(side):
+		dst_y = oy + y
+		if dst_y < 0 or dst_y >= h:
+			continue
+		src_row = y * side
+		dst_row = dst_y * w
+		for x in range(side):
+			dst_x = ox + x
+			if 0 <= dst_x < w:
+				out[dst_row + dst_x] = scaled[src_row + x]
+	return out
 
 
 def main() -> None:
-	art = render_ingame_sky()
-	# Same pixel grid as the in-game SVGs (viewBox 360×640, exported 1080×1920).
-	# 3× nearest-neighbor keeps 1px stars as 3×3 blocks — identical to Godot's
-	# SVG import at width=1080, without inventing extra stars.
-	w, h = VW * 3, VH * 3
-	out = mod.scale_nn(art, VW, VH, w, h)
-	path = os.path.join(BG_DIR, "boot_void.png")
-	mod.write_png(path, w, h, out)
-	print(f"wrote {path} ({w}x{h}, {os.path.getsize(path)} bytes)")
+	px = render_launch_splash(W, H)
+	mod.write_png(OUT, W, H, px)
+	print(f"wrote {OUT} ({W}x{H}, {os.path.getsize(OUT)} bytes)")
 
 
 if __name__ == "__main__":

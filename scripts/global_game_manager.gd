@@ -23,11 +23,26 @@ func _ready() -> void:
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
-		# Android can restore GUI focus on resume and pop the soft keyboard,
-		# which resizes the window and lifts AdMob banners off the true bottom.
-		_dismiss_soft_keyboard()
-		call_deferred("_dismiss_soft_keyboard")
+	match what:
+		NOTIFICATION_APPLICATION_FOCUS_IN, NOTIFICATION_WM_WINDOW_FOCUS_IN, NOTIFICATION_APPLICATION_RESUMED:
+			# Android can restore GUI focus on resume and pop the soft keyboard,
+			# which resizes the window and lifts AdMob banners off the true bottom.
+			_dismiss_soft_keyboard()
+			call_deferred("_dismiss_soft_keyboard")
+			# Cold-launch suspend can leave the tree paused with the menu faded out.
+			_ensure_boot_menu_visible()
+			call_deferred("_ensure_boot_menu_visible")
+		NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_WINDOW_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED:
+			_ensure_boot_menu_visible()
+
+func _ensure_boot_menu_visible() -> void:
+	var tree := get_tree()
+	if tree == null:
+		return
+	tree.paused = false
+	var scene := tree.current_scene
+	if scene and scene.has_method("_ensure_menu_ui_visible"):
+		scene.call("_ensure_menu_ui_visible")
 
 # Releases GUI focus and hides the virtual keyboard to avoid banner/layout drift on Android.
 func _dismiss_soft_keyboard() -> void:
