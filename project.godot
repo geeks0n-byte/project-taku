@@ -24,6 +24,7 @@ boot_splash/bg_color=Color(0, 0, 0, 1)
 boot_splash/use_filter=false
 boot_splash/image="res://resources/background/boot_void.png"
 config/icon="res://resources/icons/app_icon_cosmos_256.png"
+<<<<<<<HEADboot_splash/bg_color=Color(0, 0, 0, 1)
 
 [autoload]
 

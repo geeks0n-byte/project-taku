@@ -94,7 +94,6 @@ script = ExtResource("pt_ui_mgr")
 [node name="EditorUI" type="CanvasLayer" parent="." unique_id=495483212]
 
 [node name="EditorBackground" type="ColorRect" parent="EditorUI" unique_id=1493736825]
-layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -284,8 +283,8 @@ theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
-toggle_mode = true
 disabled = true
+toggle_mode = true
 
 [node name="IconContainer" type="MarginContainer" parent="EditorUI/TopHUD/TopBarRow/RightButtons/EditorHintButton" unique_id=1318201818]
 layout_mode = 1
