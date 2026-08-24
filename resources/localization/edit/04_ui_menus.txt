@@ -13,8 +13,8 @@ PLAY
 CONTINUE
 
 [SESSION_RESUME_PROMPT]
-SAVE PROGRESS FOUND
-
+SAVE PROGRESS FOUND
+
 Continue or start a new puzzle?
 
 [UI_BACK]
@@ -81,18 +81,18 @@ LOADING
 RESET PROFILE
 
 [CONFIRM_RESET_PROGRESS]
-RESET PROFILE?
-
-This clears progress and the privacy policy agreement.
+RESET PROFILE?
+
+This will erase progress and the privacy-policy agreement.
 
 [CONFIRM_NEW_PUZZLE]
-NEW PUZZLE?
-
+NEW PUZZLE?
+
 Current progress will be lost.
 
 [CONFIRM_RESTART_LEVEL]
-RESTART LEVEL?
-
+RESTART LEVEL?
+
 Current progress will be lost.
 
 [CONFIRM_DELETE_CUSTOM]

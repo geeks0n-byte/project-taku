@@ -215,10 +215,12 @@ def parse_txt(path: Path) -> dict[str, str]:
             nxt = lines[i]
             if KEY_RE.match(nxt.strip()):
                 break
-            if nxt.strip() == "" and body_lines:
-                break
             body_lines.append(nxt)
             i += 1
+        while body_lines and body_lines[0].strip() == "":
+            body_lines.pop(0)
+        while body_lines and body_lines[-1].strip() == "":
+            body_lines.pop()
         out[key] = "\n".join(body_lines)
     return out
 

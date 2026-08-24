@@ -87,6 +87,10 @@ func _reset_hint_quota(level: LevelData) -> void:
 # the board has a cell that can actually be hinted, the quota isn't zero,
 # OR an ad-rewarded hint could be offered.
 func _can_use_hint() -> bool:
+	# Tutorial boards are rebuilt teaching layouts; campaign constraint hints
+	# don't match them and can brick the last free-solve cells.
+	if tutorial_director and tutorial_director.is_active():
+		return false
 	var board_ok := HintController.has_usable_hints(
 		board_manager.board_cells if board_manager else {},
 		board_manager.active_constraint_pairs if board_manager else [],
@@ -686,6 +690,8 @@ func _on_rewarded_hint_earned() -> void:
 # Reveals one constraint hint, updates pools/counters, redraws, validates, autosaves.
 func _apply_hint() -> void:
 	if not is_game_active or is_paused:
+		return
+	if tutorial_director and tutorial_director.is_active():
 		return
 	if not board_manager or levels.is_empty() or current_level_index < 0:
 		return

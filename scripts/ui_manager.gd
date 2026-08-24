@@ -519,7 +519,10 @@ func _apply_tutorial_tool_state() -> void:
 			continue
 		if not _tutorial_tools_locked:
 			if id == "hint":
-				pass
+				# Stay off during tutorial free-solve — constraint hints don't
+				# match teaching boards and can make the last cells unsolvable.
+				HintController.update_button(button, false, _hint_remaining)
+				continue
 			elif id == "undo" or id == "redo":
 				pass
 			else:

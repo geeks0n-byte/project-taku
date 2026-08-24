@@ -127,7 +127,7 @@ func enter(current_level_required_jokers: int) -> void:
 	_update_joker_count()
 
 	_undo_stack.reset(_create_snapshot())
-	hints_remaining = GameConstants.hint_limit_for_difficulty(editor_ui.editor_difficulty)
+	hints_remaining = GameConstants.HINT_LIMIT_UNLIMITED
 	hints_used = 0
 	pt_ui.toggle_playtest_visibility(true)
 	_update_hud()
@@ -179,7 +179,7 @@ func reset() -> void:
 	pt_ui.set_playtest_joker_counter_visibility(false)
 	_update_joker_count()
 	_undo_stack.reset(_create_snapshot())
-	hints_remaining = GameConstants.hint_limit_for_difficulty(editor_ui.editor_difficulty)
+	hints_remaining = GameConstants.HINT_LIMIT_UNLIMITED
 	hints_used = 0
 	_update_hud()
 	_timer.start()

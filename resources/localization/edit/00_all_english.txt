@@ -17,8 +17,8 @@ PLAY
 CONTINUE
 
 [SESSION_RESUME_PROMPT]
-SAVE PROGRESS FOUND
-
+SAVE PROGRESS FOUND
+
 Continue or start a new puzzle?
 
 [TUTORIAL_INTRO_PROMPT]
@@ -91,18 +91,18 @@ LOADING
 RESET PROFILE
 
 [CONFIRM_RESET_PROGRESS]
-RESET PROFILE?
-
-This clears progress and the privacy policy agreement.
+RESET PROFILE?
+
+This will erase progress and the privacy-policy agreement.
 
 [CONFIRM_NEW_PUZZLE]
-NEW PUZZLE?
-
+NEW PUZZLE?
+
 Current progress will be lost.
 
 [CONFIRM_RESTART_LEVEL]
-RESTART LEVEL?
-
+RESTART LEVEL?
+
 Current progress will be lost.
 
 [CONFIRM_DELETE_CUSTOM]
@@ -271,28 +271,28 @@ Fill empty cells with %s [color=#FFD700]Yellow[/color] or %s [color=#4DA6FF]Blue
 Tiles with the %s lock icon are fixed - you cannot change them.
 
 [TUT1_CYCLE]
-Tap the white-highlighted empty cell to cycle: empty → %s [color=#FFD700]Yellow[/color] → %s [color=#4DA6FF]Blue[/color]. Stop on Blue.
+Tap the highlighted empty cell to cycle: empty → %s [color=#FFD700]Yellow[/color] → %s [color=#4DA6FF]Blue[/color]. Stop on Blue.
 
 [TUT1_RULE_OF_TWO]
 [color=#E53935]Rule of Two[/color]: never place three matching colors in a row or column — no three %s [color=#FFD700]Yellow[/color] or three %s [color=#4DA6FF]Blue[/color] in a line. Red highlights show the break.
 
 [TUT1_BALANCE]
-[color=#E53935]Equal Balance[/color]: number of %s [color=#FFD700]Yellow[/color] and %s [color=#4DA6FF]Blue[/color] tiles in rows and collumns should be the same. Red highlights mark unbalanced lines.
+[color=#E53935]Equal Balance[/color]: number of %s [color=#FFD700]Yellow[/color] and %s [color=#4DA6FF]Blue[/color] tiles in rows and columns should be the same. Red highlights mark unbalanced lines.
 
 [TUT1_PLACE_NEXT]
-Place %s in the white-highlighted empty cell.
+Place %s in the highlighted empty cell.
 
 [TUT1_WRONG_PLACE]
-Not that color — keep tapping to cycle until the white-highlighted cell matches.
+Not that color — keep tapping to cycle until the highlighted cell matches.
 
 [TUT1_GOOD_BOARD]
-Nice! Locked tiles stayed fixed and every empty cell is filled correctly.
+Nice! Every empty cell is filled correctly.
 
 [TUT2_RULE_INTRO]
 [color=#E53935]Rule of Two[/color]: these two %s [color=#FFD700]Yellow[/color] tiles already sit in a row. A third Yellow here would break the rule.
 
 [TUT2_RULE_PRACTICE]
-Place %s [color=#4DA6FF]Blue[/color] in the glowing cell to break the three-in-a-row.
+Place %s [color=#4DA6FF]Blue[/color] in the highlighted cell to break the three-in-a-row.
 
 [TUT2_WRONG_THREE]
 Not quite - that makes three %s [color=#FFD700]Yellow[/color] in a row. Place %s [color=#4DA6FF]Blue[/color] instead.
@@ -304,7 +304,7 @@ Correct! That color breaks the three-in-a-row.
 [color=#E53935]Equal Balance[/color]: this row must end with equal %s [color=#FFD700]Yellow[/color] and %s [color=#4DA6FF]Blue[/color].
 
 [TUT2_BALANCE_PRACTICE]
-Place %s [color=#FFD700]Yellow[/color] in the glowing cell to balance the row.
+Place %s [color=#FFD700]Yellow[/color] in the highlighted cell to balance the row.
 
 [TUT2_WRONG_BALANCE]
 That breaks [color=#E53935]Equal Balance[/color]. Place %s [color=#FFD700]Yellow[/color] instead.
@@ -487,7 +487,7 @@ Hold on the highlighted cell until it clears.
 Tile removed. You can tap to place a new one.
 
 [TUT2_STARS]
-%s %s %s Each campaign level has three star goals: solve it, finish without hints, and beat the time limit. Tap stars on level select for details.
+%s %s %s Each campaign level has three star goals: solve it, finish without hints, and beat the time limit.
 
 [TUT2_LINKS_REMINDER]
 Use = and × links from lesson 1 — fill the remaining empties without breaking any rules.
@@ -757,8 +757,8 @@ UNIQUE SOLVE
 ALLOW:
 
 [LEVEL_EXISTS_OVERWRITE]
-LEVEL ALREADY EXISTS?
-
+LEVEL ALREADY EXISTS?
+
 OVERWRITE?
 
 [LEVEL_SOLVABLE]
@@ -792,10 +792,10 @@ Equals (=) Link Tool
 Not Equals (×) Link Tool
 
 [CREDITS_TEXT]
-[center]
-[font_size=42][color=#ffd700][b]CREATED BY[/b][/color][/font_size]
-
-[font_size=34]Giga "gix0n" Sichinava[/font_size]
+[center]
+[font_size=42][color=#ffd700][b]CREATED BY[/b][/color][/font_size]
+
+[font_size=34]Giga "gix0n" Sichinava[/font_size]
 [/center]
 
 [HTP_TITLE]
@@ -928,7 +928,7 @@ Make no more %s [color=#9c27b0]Purple[/color] hops than that star allows.
 Look at this row: %s [color=#4DFF4D]Green[/color] already counts as %s [color=#FFD700]Yellow[/color]. Another Yellow here would break the [color=#E53935]Rule of Two[/color].
 
 [TUT4_DUAL_PRACTICE]
-Place %s [color=#4DA6FF]Blue[/color] in the white-highlighted cell. %s [color=#FFD700]Yellow[/color] would make three Yellows in a row with the %s [color=#4DFF4D]Green[/color] — that breaks the [color=#E53935]Rule of Two[/color].
+Place %s [color=#4DA6FF]Blue[/color] in the highlighted cell. %s [color=#FFD700]Yellow[/color] would make three Yellows in a row with the %s [color=#4DFF4D]Green[/color] — that breaks the [color=#E53935]Rule of Two[/color].
 
 [TUT4_DUAL_WRONG]
 Not that — %s [color=#4DFF4D]Green[/color] already counts as %s [color=#FFD700]Yellow[/color]. Place %s [color=#4DA6FF]Blue[/color] instead.
@@ -940,7 +940,7 @@ Correct — %s [color=#4DA6FF]Blue[/color] avoids three Yellows in a row.
 [color=#E53935]One Green per line[/color]: each row and column may have at most one %s [color=#4DFF4D]Green[/color]. The Greens already on the board claim their lines.
 
 [TUT4_MAX_PRACTICE]
-This white-highlighted empty cell needs %s [color=#4DFF4D]Green[/color] for [color=#E53935]Equal Balance[/color] — and it is still alone in its row and column.
+This highlighted empty cell needs %s [color=#4DFF4D]Green[/color] for [color=#E53935]Equal Balance[/color] — and it is still alone in its row and column.
 
 [TUT4_WRONG_COLOR]
 Use %s [color=#4DFF4D]Green[/color] here — %s [color=#FFD700]Yellow[/color] or %s [color=#4DA6FF]Blue[/color] will not balance this line.
@@ -949,19 +949,19 @@ Use %s [color=#4DFF4D]Green[/color] here — %s [color=#FFD700]Yellow[/color] or
 Nice! [color=#E53935]One Green per line[/color] — and it still counts as both colors.
 
 [TUT5_MOVE_SHIFTER]
-Tap the white-highlighted %s [color=#C77DFF]Purple[/color] tile to slide it along the arrow.
+Tap the highlighted %s [color=#C77DFF]Purple[/color] tile to slide it along the arrow.
 
 [TUT5_MOVE_SHIFTER_2]
-Now tap the other white-highlighted %s [color=#C77DFF]Purple[/color] tile.
+Now tap the other highlighted %s [color=#C77DFF]Purple[/color] tile.
 
 [TUT5_GOOD_SHIFTER]
 Great move! %s [color=#C77DFF]Purple[/color] hopped along the arrow.
 
 [TUT5_PLACE_FILL]
-Fill the white-highlighted empty cell with %s [color=#4DA6FF]Blue[/color].
+Fill the highlighted empty cell with %s [color=#4DA6FF]Blue[/color].
 
 [TUT5_PLACE_FILL_2]
-Fill this white-highlighted empty cell with %s [color=#4DA6FF]Blue[/color] too.
+Fill this highlighted empty cell with %s [color=#4DA6FF]Blue[/color] too.
 
 [TUT5_WRONG_FILL]
 Place %s [color=#4DA6FF]Blue[/color] here to keep the line balanced.
@@ -976,7 +976,7 @@ Cell filled!
 An [b]=[/b] between two cells means they must be the [i]same[/i] color. Look at the marked pair.
 
 [TUT6_EQUALS_PRACTICE]
-The locked tile is %s [color=#FFD700]Yellow[/color] — place the same color in the glowing cell.
+The locked tile is %s [color=#FFD700]Yellow[/color] — place the same color in the highlighted cell.
 
 [TUT6_WRONG_EQUALS]
 They must match. Place %s [color=#FFD700]Yellow[/color] to satisfy =.
@@ -1003,7 +1003,7 @@ These top-bar buttons help while you play. We will highlight each one — tap it
 [color=#E53935]Rule of Two[/color] also blocks three %s [color=#4DA6FF]Blue[/color] in a row. Two Blues already sit here.
 
 [TUT2_RULE_PRACTICE_2]
-Place %s [color=#FFD700]Yellow[/color] in the glowing cell to break the three-in-a-row.
+Place %s [color=#FFD700]Yellow[/color] in the highlighted cell to break the three-in-a-row.
 
 [TUT2_WRONG_THREE_BLUE]
 Not quite — that makes three %s [color=#4DA6FF]Blue[/color] in a row. Place %s [color=#FFD700]Yellow[/color] instead.
@@ -1012,7 +1012,7 @@ Not quite — that makes three %s [color=#4DA6FF]Blue[/color] in a row. Place %s
 [color=#E53935]Equal Balance[/color]: every completed row and column needs equal %s [color=#FFD700]Yellow[/color] and %s [color=#4DA6FF]Blue[/color].
 
 [TUT3_BALANCE_PRACTICE_B]
-Place %s [color=#4DA6FF]Blue[/color] in the glowing cell to balance this row.
+Place %s [color=#4DA6FF]Blue[/color] in the highlighted cell to balance this row.
 
 [TUT3_WRONG_BALANCE_B]
 That breaks [color=#E53935]Equal Balance[/color]. Place %s [color=#4DA6FF]Blue[/color] instead.
@@ -1024,7 +1024,7 @@ Perfect — %s [color=#FFD700]Yellow[/color] and %s [color=#4DA6FF]Blue[/color] 
 Same rule for this row — count %s [color=#FFD700]Yellow[/color] and %s [color=#4DA6FF]Blue[/color].
 
 [TUT3_BALANCE_PRACTICE_Y]
-Place %s [color=#FFD700]Yellow[/color] in the glowing cell to balance this row.
+Place %s [color=#FFD700]Yellow[/color] in the highlighted cell to balance this row.
 
 [TUT3_WRONG_BALANCE_Y]
 That breaks [color=#E53935]Equal Balance[/color]. Place %s [color=#FFD700]Yellow[/color] instead.
@@ -1039,7 +1039,7 @@ Like %s [color=#4DFF4D]Green[/color], %s [color=#C77DFF]Purple[/color] fills a c
 One more %s [color=#4DFF4D]Green[/color] still fits — this corner cell has none in its row or column yet.
 
 [TUT4_MAX_PRACTICE_2]
-Place %s [color=#4DFF4D]Green[/color] in the white-highlighted corner to finish the odd-line [color=#E53935]Equal Balance[/color].
+Place %s [color=#4DFF4D]Green[/color] in the highlighted corner to finish the odd-line [color=#E53935]Equal Balance[/color].
 
 [TUT1_FILL_TRY]
 Your turn — fill the remaining empty cells. If something breaks a rule, those cells get a red highlight.
@@ -1048,7 +1048,7 @@ Your turn — fill the remaining empty cells. If something breaks a rule, those 
 This highlighted board is the playable area. You will solve puzzles inside this grid.
 
 [TUTF_EMPTY_CELL]
-This white-highlighted tile is an empty cell. Empty cells are where you place colors.
+This highlighted tile is an empty cell. Empty cells are where you place colors.
 
 [TUTF_TILE_CONTROLS]
 Goal: fill every empty cell with tiles. Tap a cell to cycle through %s Yellow, %s Blue, and %s Green.
