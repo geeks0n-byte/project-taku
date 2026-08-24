@@ -29,20 +29,16 @@ func _notification(what: int) -> void:
 			# which resizes the window and lifts AdMob banners off the true bottom.
 			_dismiss_soft_keyboard()
 			call_deferred("_dismiss_soft_keyboard")
-			# Cold-launch suspend can leave the tree paused with the menu faded out.
-			_ensure_boot_menu_visible()
-			call_deferred("_ensure_boot_menu_visible")
+			# Unpause so boot tweens keep running; do not skip the title intro.
+			_unpause_tree()
+			call_deferred("_unpause_tree")
 		NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_WINDOW_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED:
-			_ensure_boot_menu_visible()
+			_unpause_tree()
 
-func _ensure_boot_menu_visible() -> void:
+func _unpause_tree() -> void:
 	var tree := get_tree()
-	if tree == null:
-		return
-	tree.paused = false
-	var scene := tree.current_scene
-	if scene and scene.has_method("_ensure_menu_ui_visible"):
-		scene.call("_ensure_menu_ui_visible")
+	if tree:
+		tree.paused = false
 
 # Releases GUI focus and hides the virtual keyboard to avoid banner/layout drift on Android.
 func _dismiss_soft_keyboard() -> void:

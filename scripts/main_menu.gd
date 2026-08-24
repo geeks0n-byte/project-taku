@@ -58,10 +58,19 @@ const CREDITS_HEADER_SIZE := 42
 const CREDITS_NAME_SIZE := 34
 const CREDITS_HEADER_LOCALE_SIZE := 52
 const CREDITS_NAME_LOCALE_SIZE := 42
-const MENU_FADE_IN := 0.65
+const MENU_FADE_IN := 1.35
+const TITLE_LETTER_INTERVAL := 0.12
+const TITLE_AFTER_LETTERS := 0.22
+const TITLE_TILE_FADE := 0.28
+const TITLE_TILE_GAP := 0.1
+## Same horizontal insets as the settled TitleLabel in main_menu.tscn.
+const TITLE_H_INSET := 24.0
 
 var _htp_header: Label
 var _htp_page: int = 0
+var _boot_intro_active: bool = false
+var _boot_intro_tween: Tween
+var _button_fade_tween: Tween
 
 # Instance of consent_popup.tscn. Kept as a reference so we can check
 # its visibility for the back-button handler.
@@ -111,6 +120,8 @@ func _ready() -> void:
 	if _tutorial_intro_yes: _tutorial_intro_yes.pressed.connect(_on_tutorial_intro_yes)
 	if _tutorial_intro_no: _tutorial_intro_no.pressed.connect(_on_tutorial_intro_no)
 	_mount_credits_close_button()
+
+	_boot_intro_active = GlobalGameManager.main_menu_should_fade_in
 	_build_consent_popup()
 
 	if options_menu:
@@ -118,15 +129,15 @@ func _ready() -> void:
 		if not options_menu.save_deleted.is_connected(_on_save_deleted):
 			options_menu.save_deleted.connect(_on_save_deleted)
 
-	if GlobalGameManager.main_menu_should_fade_in:
+	if _boot_intro_active:
 		GlobalGameManager.main_menu_should_fade_in = false
-		# Survive an immediate Android pause during the boot fade.
+		# Survive an immediate Android pause during the boot intro.
 		process_mode = Node.PROCESS_MODE_ALWAYS
-		_set_menu_ui_alpha(0.0)
-		call_deferred("_fade_in_menu_ui")
+		_prepare_boot_intro()
+		call_deferred("_play_boot_intro")
 
 func _ensure_menu_ui_visible() -> void:
-	_set_menu_ui_alpha(1.0)
+	_complete_boot_intro()
 	process_mode = Node.PROCESS_MODE_INHERIT
 
 func _notification(what: int) -> void:
@@ -158,11 +169,8 @@ func _exit_tree() -> void:
 	if SpaceBackground and SpaceBackground.has_method("set_foreground_events_enabled"):
 		SpaceBackground.set_foreground_events_enabled(false)
 
-func _menu_fade_targets() -> Array[CanvasItem]:
+func _button_fade_targets() -> Array[CanvasItem]:
 	var nodes: Array[CanvasItem] = []
-	var title_host := get_node_or_null("TitleLayer/TitleHost") as CanvasItem
-	if title_host:
-		nodes.append(title_host)
 	var center := menu_center as CanvasItem
 	if center:
 		nodes.append(center)
@@ -171,32 +179,137 @@ func _menu_fade_targets() -> Array[CanvasItem]:
 		nodes.append(bar)
 	return nodes
 
-func _set_menu_ui_alpha(alpha: float) -> void:
-	for node in _menu_fade_targets():
+func _set_button_ui_alpha(alpha: float) -> void:
+	for node in _button_fade_targets():
 		if node:
 			node.modulate.a = alpha
 
-func _fade_in_menu_ui() -> void:
-	var nodes := _menu_fade_targets()
-	if nodes.is_empty():
-		_set_menu_ui_alpha(1.0)
-		return
-	_set_menu_ui_alpha(0.0)
-	# PROCESS_MODE_ALWAYS: an early Android pause used to freeze this tween
-	# while UI alpha was 0, leaving a black screen on resume.
-	var tween := create_tween()
-	tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tween.set_parallel(true)
-	for node in nodes:
-		tween.tween_property(node, "modulate:a", 1.0, MENU_FADE_IN).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	if not tween.finished.is_connected(_ensure_menu_ui_visible):
-		tween.finished.connect(_ensure_menu_ui_visible)
-	# Wall-clock fallback if the app is suspended mid-fade.
+func _title_label() -> Label:
+	return get_node_or_null("TitleLayer/TitleHost/TitleCluster/TitleLabel") as Label
+
+func _title_tiles() -> Array[CanvasItem]:
+	var tiles: Array[CanvasItem] = []
+	var host := get_node_or_null("TitleLayer/TitleHost/TitleCluster/TitleTileHost") as Control
+	if host == null:
+		return tiles
+	for child in host.get_children():
+		if child is CanvasItem:
+			tiles.append(child)
+	return tiles
+
+func _prepare_boot_intro() -> void:
+	var title := _title_label()
+	if title:
+		_layout_title_for_typewriter(title)
+		title.visible_characters = 0
+	for tile in _title_tiles():
+		tile.modulate.a = 0.0
+	var title_host := get_node_or_null("TitleLayer/TitleHost") as CanvasItem
+	if title_host:
+		title_host.modulate.a = 1.0
+	_set_button_ui_alpha(0.0)
+
+func _layout_title_for_typewriter(title: Label) -> void:
+	# Measure in the settled (centered, 24px-inset) rect, then left-align at that
+	# same glyph origin so typing matches the title after the intro.
+	_restore_title_layout(title)
+	var font := title.get_theme_font("font")
+	var font_size := title.get_theme_font_size("font_size")
+	var text_w := 0.0
+	if font and font_size > 0:
+		text_w = font.get_string_size(title.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var cluster := title.get_parent() as Control
+	var host_w := cluster.size.x if cluster and cluster.size.x > 1.0 else 1080.0
+	var box_w := title.size.x
+	if box_w <= 1.0:
+		box_w = host_w - TITLE_H_INSET * 2.0
+	var x := TITLE_H_INSET + (box_w - text_w) * 0.5
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	title.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	title.anchor_right = 0.0
+	title.offset_left = x
+	title.offset_right = x + maxf(text_w, 1.0)
+	title.offset_top = 240.0
+	title.offset_bottom = 400.0
+
+func _restore_title_layout(title: Label) -> void:
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	title.anchor_left = 0.0
+	title.anchor_right = 1.0
+	title.offset_left = 24.0
+	title.offset_right = -24.0
+	title.offset_top = 240.0
+	title.offset_bottom = 400.0
+	title.visible_characters = -1
+
+func _play_boot_intro() -> void:
+	var title := _title_label()
+	if title:
+		_layout_title_for_typewriter(title)
+		title.visible_characters = 0
+	if _boot_intro_tween and _boot_intro_tween.is_valid():
+		_boot_intro_tween.kill()
+	_boot_intro_tween = create_tween()
+	_boot_intro_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	_boot_intro_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	var letter_count := title.text.length() if title else 0
+	for i in range(1, letter_count + 1):
+		var count := i
+		_boot_intro_tween.tween_callback(func() -> void:
+			if title:
+				title.visible_characters = count
+		)
+		_boot_intro_tween.tween_interval(TITLE_LETTER_INTERVAL)
+	_boot_intro_tween.tween_interval(TITLE_AFTER_LETTERS)
+	for tile in _title_tiles():
+		_boot_intro_tween.tween_property(tile, "modulate:a", 1.0, TITLE_TILE_FADE).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		_boot_intro_tween.tween_interval(TITLE_TILE_GAP)
+	_boot_intro_tween.tween_callback(_fade_buttons_after_title)
 	var tree := get_tree()
 	if tree:
-		var failsafe := tree.create_timer(MENU_FADE_IN + 0.35, true, false, true)
+		var intro_len := float(letter_count) * TITLE_LETTER_INTERVAL + TITLE_AFTER_LETTERS
+		intro_len += float(_title_tiles().size()) * (TITLE_TILE_FADE + TITLE_TILE_GAP) + MENU_FADE_IN + 0.6
+		var failsafe := tree.create_timer(intro_len, true, false, true)
 		failsafe.timeout.connect(_ensure_menu_ui_visible)
+
+func _fade_buttons_after_title() -> void:
+	var buttons := _button_fade_targets()
+	if buttons.is_empty():
+		_complete_boot_intro()
+		return
+	_set_button_ui_alpha(0.0)
+	if _button_fade_tween and _button_fade_tween.is_valid():
+		_button_fade_tween.kill()
+	_button_fade_tween = create_tween()
+	_button_fade_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	_button_fade_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_button_fade_tween.set_parallel(true)
+	for node in buttons:
+		_button_fade_tween.tween_property(node, "modulate:a", 1.0, MENU_FADE_IN).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_button_fade_tween.chain().tween_callback(_complete_boot_intro)
+
+func _complete_boot_intro() -> void:
+	if _boot_intro_tween and _boot_intro_tween.is_valid():
+		_boot_intro_tween.kill()
+	_boot_intro_tween = null
+	if _button_fade_tween and _button_fade_tween.is_valid():
+		_button_fade_tween.kill()
+	_button_fade_tween = null
+	var title := _title_label()
+	if title:
+		_restore_title_layout(title)
+	for tile in _title_tiles():
+		tile.modulate.a = 1.0
+	var title_host := get_node_or_null("TitleLayer/TitleHost") as CanvasItem
+	if title_host:
+		title_host.modulate.a = 1.0
+	_set_button_ui_alpha(1.0)
+	var was_intro := _boot_intro_active
+	_boot_intro_active = false
+	process_mode = Node.PROCESS_MODE_INHERIT
+	if was_intro:
+		_show_privacy_consent_if_needed(false)
 
 func _setup_title_under_fx() -> void:
 	var ui_layer := $UILayer as CanvasLayer
@@ -705,6 +818,8 @@ func _bias_consent_popup_up() -> void:
 # Shows the privacy consent overlay when the profile has not accepted it yet.
 # If close_options is true, closes Options first so the consent is unobstructed.
 func _show_privacy_consent_if_needed(close_options: bool = false) -> void:
+	if _boot_intro_active:
+		return
 	if SaveManager == null or SaveManager.privacy_accepted:
 		return
 	if _consent_blocker == null:
