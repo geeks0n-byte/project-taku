@@ -800,7 +800,11 @@ def sync_icon_svgs(godot_tiles: list[tuple[int, int, int, int]] | None = None) -
 		f.write(flat_head + tile_section + "\n</svg>\n")
 
 
-def render_base_64(godot_tiles: list[tuple[int, int, int, int]] | None = None) -> list[tuple[int, int, int, int]]:
+def render_base_64(
+	godot_tiles: list[tuple[int, int, int, int]] | None = None,
+	include_stars: bool = True,
+	include_sky: bool = True,
+) -> list[tuple[int, int, int, int]]:
 	px = [(0, 0, 0, 0)] * (64 * 64)
 	bg = hex_rgb(BG_VOID)
 
@@ -812,29 +816,31 @@ def render_base_64(godot_tiles: list[tuple[int, int, int, int]] | None = None) -
 		if 0 <= x < 64 and 0 <= y < 64:
 			px[y * 64 + x] = (rgb[0], rgb[1], rgb[2], a)
 
-	for y in range(64):
-		for x in range(64):
-			if in_rounded_rect(x, y):
-				px[y * 64 + x] = (*bg, 255)
+	if include_sky:
+		for y in range(64):
+			for x in range(64):
+				if in_rounded_rect(x, y):
+					px[y * 64 + x] = (*bg, 255)
 
-	for ox, oy, stamp in ICON_ASTEROID_STAMPS:
-		for y in range(ICON_ASTEROID_DST):
-			for x in range(ICON_ASTEROID_DST):
-				r, g, b, a = stamp[y * ICON_ASTEROID_DST + x]
-				if a > 0:
-					setp_bg(ox + x, oy + y, (r, g, b), a)
+		for ox, oy, stamp in ICON_ASTEROID_STAMPS:
+			for y in range(ICON_ASTEROID_DST):
+				for x in range(ICON_ASTEROID_DST):
+					r, g, b, a = stamp[y * ICON_ASTEROID_DST + x]
+					if a > 0:
+						setp_bg(ox + x, oy + y, (r, g, b), a)
 
-	for x, y in STAR_DUST:
-		setp_bg(x, y, hex_rgb(BG_DUST))
-	for x, y in STAR_CYAN:
-		setp_bg(x, y, hex_rgb(BG_ACCENT_CYAN))
-	for x, y in STAR_PINK:
-		setp_bg(x, y, hex_rgb(BG_ACCENT_PINK))
-	for x, y in STAR_BRIGHT:
-		setp_bg(x, y, hex_rgb(BG_STAR))
-	for cx, cy in STAR_SPARKLERS:
-		for x, y in sparkler_pixels(cx, cy):
-			setp_bg(x, y, hex_rgb(BG_STAR))
+		if include_stars:
+			for x, y in STAR_DUST:
+				setp_bg(x, y, hex_rgb(BG_DUST))
+			for x, y in STAR_CYAN:
+				setp_bg(x, y, hex_rgb(BG_ACCENT_CYAN))
+			for x, y in STAR_PINK:
+				setp_bg(x, y, hex_rgb(BG_ACCENT_PINK))
+			for x, y in STAR_BRIGHT:
+				setp_bg(x, y, hex_rgb(BG_STAR))
+			for cx, cy in STAR_SPARKLERS:
+				for x, y in sparkler_pixels(cx, cy):
+					setp_bg(x, y, hex_rgb(BG_STAR))
 
 	if godot_tiles is not None:
 		for y in range(ICON_SIZE):
@@ -1075,6 +1081,14 @@ def main() -> None:
 	write_png(os.path.join(ROOT, "launcher_adaptive_bg_432.png"), 432, 432, make_adaptive_bg())
 	icon_256 = scale_nn(base, 64, 64, 256, 256)
 	write_png(os.path.join(ROOT, "app_icon_cosmos_256.png"), 256, 256, icon_256)
+	splash = scale_nn(
+		render_base_64(godot_tiles, include_stars=False, include_sky=False),
+		64,
+		64,
+		256,
+		256,
+	)
+	write_png(os.path.join(ROOT, "splash_app_icon_256.png"), 256, 256, splash)
 	icon_512 = scale_nn(base, 64, 64, 512, 512)
 	write_png(os.path.join(STORE_ROOT, "play_store_icon_512.png"), 512, 512, icon_512)
 	write_store_feature_graphics()

@@ -243,7 +243,7 @@ func _on_try_again_pressed() -> void:
 	playtest_reset_requested.emit()
 
 func _on_return_pressed() -> void:
-	test_mode_exited.emit()
+		test_mode_exited.emit()
 
 func _setup_end_layer() -> void:
 	if _center:

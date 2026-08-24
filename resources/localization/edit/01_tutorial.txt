@@ -10,7 +10,7 @@
 Play the tutorial first?
 
 [TUT1_WELCOME]
-Fill empty cells with %s [color=#FFD700]Yellow[/color] or %s [color=#4DA6FF]Blue[/color] to solve the puzzle.
+Goal is to fill %s empty cells with %s [color=#FFD700]Yellow[/color] or %s [color=#4DA6FF]Blue[/color] to solve the puzzle.
 
 [TUT1_LOCKS]
 Tiles with the %s lock icon are fixed - you cannot change them.

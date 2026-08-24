@@ -287,7 +287,7 @@ static func _add_feature_asteroids(parent: Control, size: Vector2) -> void:
 		["res://resources/background/fx_asteroid_2.svg", Vector2(0.88, 0.10), false, false, 1.12],
 		["res://resources/background/fx_asteroid_3.svg", Vector2(0.05, 0.78), false, false, 1.0],
 	]
-	var base := mini(size.x, size.y) * 0.11
+	var base := minf(size.x, size.y) * 0.11
 	for entry in specs:
 		var path: String = entry[0]
 		var frac: Vector2 = entry[1]

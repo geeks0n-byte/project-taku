@@ -59,6 +59,7 @@ static func icon_bbcode(token: String, size: int = -1) -> String:
 static func _icon_path(token: String) -> String:
 	match token:
 		"lock":  return GameConstants.TILE_LOCK
+		"empty":  return GameConstants.TILE_EMPTY
 		"yellow": return GameConstants.TILE_YELLOW
 		"blue":   return GameConstants.TILE_BLUE
 		"green":  return GameConstants.TILE_GREEN
@@ -87,6 +88,12 @@ static func _level_1() -> Array:
 		Vector2i(1, 1), Vector2i(2, 1),
 		Vector2i(0, 2), Vector2i(3, 2),
 		Vector2i(1, 3), Vector2i(2, 3),
+	]
+	var empty_p1 := [
+		Vector2i(1, 0), Vector2i(2, 0),
+		Vector2i(0, 1), Vector2i(3, 1),
+		Vector2i(1, 2), Vector2i(2, 2),
+		Vector2i(0, 3), Vector2i(3, 3),
 	]
 	var rule_row_p1 := [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)]
 	var bal_row_p1 := [Vector2i(0, 3), Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3)]
@@ -141,8 +148,10 @@ static func _level_1() -> Array:
 		{
 			"type": "message",
 			"text_key": "TUT1_WELCOME",
-			"icons": yb,
+			"icons": ["empty", "yellow", "blue"],
 			"show_next": true,
+			"mask": empty_p1.duplicate(),
+			"red": empty_p1.duplicate(),
 		},
 		{
 			"type": "message",

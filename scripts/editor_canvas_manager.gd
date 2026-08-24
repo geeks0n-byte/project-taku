@@ -102,6 +102,8 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 
 			cell.coord = coord
 			cell.position = Vector2(float(x * GameConstants.CELL_SIZE), float(y * GameConstants.CELL_SIZE))
+			if cell is Control:
+				(cell as Control).size = Vector2(GameConstants.CELL_SIZE, GameConstants.CELL_SIZE)
 			cell.state = GameConstants.TileState.EMPTY
 			cell.is_playable = true
 			cell.is_locked = false
@@ -113,6 +115,7 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 					Control.MOUSE_FILTER_IGNORE if not is_playtesting else Control.MOUSE_FILTER_STOP
 				)
 			cell.update_visuals()
+			cell.call_deferred("update_visuals")
 
 			# Full-cell hit target so border clicks cannot fall through to Cell
 			# (which would cycle EMPTY → YELLOW while a link brush is active).

@@ -477,6 +477,74 @@ static func style_top_bar_close_button(button: Button) -> void:
 	apply_top_bar_tile_styles(button)
 	ensure_top_bar_icon(button, _CLOSE_ICON_TEX)
 	apply_square_top_bar_button(button)
+	_place_overlay_close_like_pause(button)
+	_register_overlay_close_layout(button)
+
+# One size_changed hook per viewport; Godot treats binds of the same method as one connection.
+static func _register_overlay_close_layout(button: Button) -> void:
+	if button == null or not button.is_inside_tree():
+		return
+	var viewport := button.get_viewport()
+	if viewport == null:
+		return
+	var buttons: Array = viewport.get_meta("_overlay_close_layout_buttons", [])
+	if not buttons.has(button):
+		buttons.append(button)
+	viewport.set_meta("_overlay_close_layout_buttons", buttons)
+	if not viewport.get_meta("_overlay_close_layout_hooked", false):
+		viewport.set_meta("_overlay_close_layout_hooked", true)
+		viewport.size_changed.connect(_relayout_overlay_close_buttons.bind(viewport))
+	if not button.get_meta("_overlay_close_layout_reg", false):
+		button.set_meta("_overlay_close_layout_reg", true)
+		button.tree_exiting.connect(_unregister_overlay_close_layout.bind(viewport, button), CONNECT_ONE_SHOT)
+
+static func _relayout_overlay_close_buttons(viewport: Viewport) -> void:
+	if not is_instance_valid(viewport):
+		return
+	var buttons: Array = viewport.get_meta("_overlay_close_layout_buttons", [])
+	var kept: Array = []
+	for item in buttons:
+		if not is_instance_valid(item):
+			continue
+		kept.append(item)
+		if item is Button:
+			_place_overlay_close_like_pause(item)
+	viewport.set_meta("_overlay_close_layout_buttons", kept)
+
+static func _unregister_overlay_close_layout(viewport: Viewport, button: Button) -> void:
+	if not is_instance_valid(viewport):
+		return
+	var buttons: Array = viewport.get_meta("_overlay_close_layout_buttons", [])
+	var kept: Array = []
+	for item in buttons:
+		if not is_instance_valid(item) or item == button:
+			continue
+		kept.append(item)
+	viewport.set_meta("_overlay_close_layout_buttons", kept)
+
+# Match the in-game pause button: HUD top-bar left cluster, not the raw screen corner.
+static func _place_overlay_close_like_pause(button: Button) -> void:
+	if button == null or not is_instance_valid(button):
+		return
+	if button.get_parent() is HBoxContainer:
+		return
+	var viewport_w := 1080.0
+	if button.is_inside_tree():
+		viewport_w = button.get_viewport_rect().size.x
+	var edge := float(GameConstants.HUD_TOP_BAR_EDGE_MARGIN)
+	var inner := viewport_w - edge * 2.0
+	var fixed := (
+		float(GameConstants.HUD_BUTTON_CLUSTER_WIDTH) * 2.0
+		+ float(GameConstants.HUD_CENTER_LABEL_WIDTH)
+	)
+	var leftover := maxf(inner - fixed, 0.0)
+	var left := edge + leftover * 0.5
+	var size := float(GameConstants.HUD_BUTTON_WIDTH)
+	button.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	button.offset_left = left
+	button.offset_top = edge
+	button.offset_right = left + size
+	button.offset_bottom = edge + size
 
 # Returns the English translation of an i18n key regardless of the active locale.
 # Used by the editor preview and forced-English paths to get consistent layout metrics.

@@ -86,6 +86,7 @@ func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shi
 
 		cell.coord = coord
 		cell.position = Vector2(float(coord.x * GameConstants.CELL_SIZE), float(coord.y * GameConstants.CELL_SIZE))
+		cell.size = Vector2(GameConstants.CELL_SIZE, GameConstants.CELL_SIZE)
 
 		cell.allowed_cycle_tiles = int_allowed_tiles.duplicate()
 

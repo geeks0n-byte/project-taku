@@ -59,18 +59,27 @@ const CREDITS_NAME_SIZE := 34
 const CREDITS_HEADER_LOCALE_SIZE := 52
 const CREDITS_NAME_LOCALE_SIZE := 42
 const MENU_FADE_IN := 1.35
+const TITLE_BG_HOLD := 0.7
 const TITLE_LETTER_INTERVAL := 0.12
-const TITLE_AFTER_LETTERS := 0.22
-const TITLE_TILE_FADE := 0.28
+const TITLE_AFTER_LETTERS := 0.16
+const TITLE_TILE_POP := 0.16
 const TITLE_TILE_GAP := 0.1
+const TITLE_AFTER_TILES := 0.18
+const TITLE_SLIDE_DUR := 0.55
 ## Same horizontal insets as the settled TitleLabel in main_menu.tscn.
 const TITLE_H_INSET := 24.0
+const TITLE_CLUSTER_HEIGHT := 420.0
+const TITLE_CLUSTER_REST_TOP := 0.0
+## Midpoint of TitleLabel (offset 240–400) inside TitleCluster.
+const TITLE_GLYPH_MID := 320.0
+const TITLE_TILE_PIVOT := Vector2(14, 14)
 
 var _htp_header: Label
 var _htp_page: int = 0
 var _boot_intro_active: bool = false
 var _boot_intro_tween: Tween
 var _button_fade_tween: Tween
+var _boot_intro_failsafe: SceneTreeTimer
 
 # Instance of consent_popup.tscn. Kept as a reference so we can check
 # its visibility for the back-button handler.
@@ -140,6 +149,24 @@ func _ensure_menu_ui_visible() -> void:
 	_complete_boot_intro()
 	process_mode = Node.PROCESS_MODE_INHERIT
 
+func _input(event: InputEvent) -> void:
+	if not _boot_intro_active:
+		return
+	if _consent_blocker and _consent_blocker.visible:
+		return
+	if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
+		return
+	var skip := false
+	if event is InputEventMouseButton:
+		var mouse := event as InputEventMouseButton
+		skip = mouse.pressed and mouse.button_index == MOUSE_BUTTON_LEFT
+	elif event is InputEventScreenTouch:
+		skip = (event as InputEventScreenTouch).pressed
+	if not skip:
+		return
+	get_viewport().set_input_as_handled()
+	_ensure_menu_ui_visible()
+
 func _notification(what: int) -> void:
 	if what != NOTIFICATION_WM_GO_BACK_REQUEST:
 		return
@@ -197,13 +224,73 @@ func _title_tiles() -> Array[CanvasItem]:
 			tiles.append(child)
 	return tiles
 
+func _title_cluster() -> Control:
+	return get_node_or_null("TitleLayer/TitleHost/TitleCluster") as Control
+
+func _title_intro_center_top() -> float:
+	return get_viewport_rect().size.y * 0.5 - TITLE_GLYPH_MID
+
+func _place_title_cluster(top: float) -> void:
+	var cluster := _title_cluster()
+	if cluster == null:
+		return
+	cluster.offset_top = top
+	cluster.offset_bottom = top + TITLE_CLUSTER_HEIGHT
+
+func _prepare_title_tile_pops() -> void:
+	for tile in _title_tiles():
+		var ctrl := tile as Control
+		if ctrl == null:
+			continue
+		if not ctrl.has_meta("_rest_scale"):
+			ctrl.set_meta("_rest_scale", ctrl.scale)
+		if not ctrl.has_meta("_rest_offsets"):
+			ctrl.set_meta("_rest_offsets", Vector4(
+				ctrl.offset_left, ctrl.offset_top, ctrl.offset_right, ctrl.offset_bottom
+			))
+		var rest_scale: Vector2 = ctrl.get_meta("_rest_scale")
+		var rest: Vector4 = ctrl.get_meta("_rest_offsets")
+		var pivot := ctrl.size * 0.5
+		if pivot.x < 1.0 or pivot.y < 1.0:
+			pivot = TITLE_TILE_PIVOT
+		ctrl.pivot_offset = pivot
+		# Scene offsets assume top-left pivot + scale 1.15. Shift so a center
+		# pivot keeps that same visual center while the tile pops.
+		var dx := pivot.x * (rest_scale.x - 1.0)
+		var dy := pivot.y * (rest_scale.y - 1.0)
+		ctrl.offset_left = rest.x + dx
+		ctrl.offset_top = rest.y + dy
+		ctrl.offset_right = rest.z + dx
+		ctrl.offset_bottom = rest.w + dy
+		ctrl.scale = Vector2.ZERO
+		ctrl.modulate.a = 1.0
+
+func _restore_title_tile_pops() -> void:
+	for tile in _title_tiles():
+		var ctrl := tile as Control
+		if ctrl == null:
+			tile.modulate.a = 1.0
+			continue
+		ctrl.modulate.a = 1.0
+		ctrl.pivot_offset = Vector2.ZERO
+		if ctrl.has_meta("_rest_scale"):
+			ctrl.scale = ctrl.get_meta("_rest_scale")
+		else:
+			ctrl.scale = Vector2(1.15, 1.15)
+		if ctrl.has_meta("_rest_offsets"):
+			var rest: Vector4 = ctrl.get_meta("_rest_offsets")
+			ctrl.offset_left = rest.x
+			ctrl.offset_top = rest.y
+			ctrl.offset_right = rest.z
+			ctrl.offset_bottom = rest.w
+
 func _prepare_boot_intro() -> void:
 	var title := _title_label()
 	if title:
 		_layout_title_for_typewriter(title)
 		title.visible_characters = 0
-	for tile in _title_tiles():
-		tile.modulate.a = 0.0
+	_prepare_title_tile_pops()
+	_place_title_cluster(_title_intro_center_top())
 	var title_host := get_node_or_null("TitleLayer/TitleHost") as CanvasItem
 	if title_host:
 		title_host.modulate.a = 1.0
@@ -248,30 +335,68 @@ func _play_boot_intro() -> void:
 	if title:
 		_layout_title_for_typewriter(title)
 		title.visible_characters = 0
+	_prepare_title_tile_pops()
+	_place_title_cluster(_title_intro_center_top())
 	if _boot_intro_tween and _boot_intro_tween.is_valid():
 		_boot_intro_tween.kill()
 	_boot_intro_tween = create_tween()
 	_boot_intro_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	_boot_intro_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_boot_intro_tween.tween_interval(TITLE_BG_HOLD)
 	var letter_count := title.text.length() if title else 0
 	for i in range(1, letter_count + 1):
 		var count := i
-		_boot_intro_tween.tween_callback(func() -> void:
-			if title:
-				title.visible_characters = count
-		)
+		_boot_intro_tween.tween_callback(_reveal_title_letter.bind(count))
 		_boot_intro_tween.tween_interval(TITLE_LETTER_INTERVAL)
 	_boot_intro_tween.tween_interval(TITLE_AFTER_LETTERS)
+	var tile_i := 0
 	for tile in _title_tiles():
-		_boot_intro_tween.tween_property(tile, "modulate:a", 1.0, TITLE_TILE_FADE).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		var ctrl := tile as Control
+		if ctrl == null:
+			continue
+		var pop_i := tile_i
+		tile_i += 1
+		var rest_scale: Vector2 = ctrl.get_meta("_rest_scale", Vector2(1.15, 1.15))
+		_boot_intro_tween.tween_callback(_play_title_tile_pop_sfx.bind(pop_i))
+		_boot_intro_tween.tween_property(ctrl, "scale", rest_scale, TITLE_TILE_POP).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		_boot_intro_tween.tween_interval(TITLE_TILE_GAP)
+	_boot_intro_tween.tween_interval(TITLE_AFTER_TILES)
+	_boot_intro_tween.tween_callback(_on_title_slide_start)
+	var cluster := _title_cluster()
+	if cluster:
+		_boot_intro_tween.parallel().tween_property(cluster, "offset_top", TITLE_CLUSTER_REST_TOP, TITLE_SLIDE_DUR).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+		_boot_intro_tween.parallel().tween_property(
+			cluster, "offset_bottom", TITLE_CLUSTER_REST_TOP + TITLE_CLUSTER_HEIGHT, TITLE_SLIDE_DUR
+		).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 	_boot_intro_tween.tween_callback(_fade_buttons_after_title)
 	var tree := get_tree()
 	if tree:
-		var intro_len := float(letter_count) * TITLE_LETTER_INTERVAL + TITLE_AFTER_LETTERS
-		intro_len += float(_title_tiles().size()) * (TITLE_TILE_FADE + TITLE_TILE_GAP) + MENU_FADE_IN + 0.6
+		var intro_len := TITLE_BG_HOLD + float(letter_count) * TITLE_LETTER_INTERVAL + TITLE_AFTER_LETTERS
+		intro_len += float(_title_tiles().size()) * (TITLE_TILE_POP + TITLE_TILE_GAP)
+		intro_len += TITLE_AFTER_TILES + TITLE_SLIDE_DUR + MENU_FADE_IN + 0.6
 		var failsafe := tree.create_timer(intro_len, true, false, true)
+		if _boot_intro_failsafe and _boot_intro_failsafe.timeout.is_connected(_ensure_menu_ui_visible):
+			_boot_intro_failsafe.timeout.disconnect(_ensure_menu_ui_visible)
+		_boot_intro_failsafe = failsafe
 		failsafe.timeout.connect(_ensure_menu_ui_visible)
+
+func _reveal_title_letter(count: int) -> void:
+	var title := _title_label()
+	if is_instance_valid(title):
+		title.visible_characters = count
+	if UiSfx:
+		UiSfx.play_title_letter(count - 1)
+
+func _play_title_tile_pop_sfx(index: int) -> void:
+	if UiSfx:
+		UiSfx.play_title_tile_pop(index)
+
+func _on_title_slide_start() -> void:
+	var title := _title_label()
+	if is_instance_valid(title):
+		_restore_title_layout(title)
+	if UiSfx:
+		UiSfx.play_title_slide()
 
 func _fade_buttons_after_title() -> void:
 	var buttons := _button_fade_targets()
@@ -290,6 +415,10 @@ func _fade_buttons_after_title() -> void:
 	_button_fade_tween.chain().tween_callback(_complete_boot_intro)
 
 func _complete_boot_intro() -> void:
+	if _boot_intro_failsafe:
+		if _boot_intro_failsafe.timeout.is_connected(_ensure_menu_ui_visible):
+			_boot_intro_failsafe.timeout.disconnect(_ensure_menu_ui_visible)
+		_boot_intro_failsafe = null
 	if _boot_intro_tween and _boot_intro_tween.is_valid():
 		_boot_intro_tween.kill()
 	_boot_intro_tween = null
@@ -299,8 +428,8 @@ func _complete_boot_intro() -> void:
 	var title := _title_label()
 	if title:
 		_restore_title_layout(title)
-	for tile in _title_tiles():
-		tile.modulate.a = 1.0
+	_restore_title_tile_pops()
+	_place_title_cluster(TITLE_CLUSTER_REST_TOP)
 	var title_host := get_node_or_null("TitleLayer/TitleHost") as CanvasItem
 	if title_host:
 		title_host.modulate.a = 1.0

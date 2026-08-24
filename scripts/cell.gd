@@ -47,12 +47,16 @@ const ERROR_BORDER_COLOR := Color.RED
 const HIGHLIGHT_INSET := 4.0
 const HIGHLIGHT_BORDER_WIDTH := 4.0
 const HIGHLIGHT_FILL_ALPHA_SCALE := 0.55
+# Tile SVGs are 16×16 with a 1px empty rim, so the painted tile is 14×14.
+const TILE_ART_GRID := 16.0
+const TILE_ART_PAD := 1.0
 
 var _guide_breathe_tween: Tween
 var _focus_breathe_tween: Tween
 var _shake_tween: Tween           # Used for the blocked-move lateral shake.
 var _focus_border_alpha: float = 1.0
 var _shake_rest_position: Vector2 = Vector2.ZERO
+var _tutorial_fill: ColorRect
 
 # Tile textures — assigned in the scene editor, overridable per cell type.
 @export var tex_empty: Texture2D = preload("res://resources/tiles/tile_empty.svg")
@@ -90,20 +94,24 @@ func _notification(what: int) -> void:
 func _ready():
 	set_process(false)
 	custom_minimum_size = Vector2(120, 120)
+	clip_contents = false
 
 	_stretch_node_to_parent(error_highlight, 0.0)
 	_stretch_node_to_parent(link_highlight, 0.0)
-	link_highlight.offset_left = HIGHLIGHT_INSET
-	link_highlight.offset_top = HIGHLIGHT_INSET
-	link_highlight.offset_right = -HIGHLIGHT_INSET
-	link_highlight.offset_bottom = -HIGHLIGHT_INSET
 	_stretch_node_to_parent(tile_icon, 0.0)
+	if tile_icon:
+		tile_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tile_icon.stretch_mode = TextureRect.STRETCH_SCALE
+		tile_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		tile_icon.z_index = 3
 
 	if lock_icon:
 		_stretch_node_to_parent(lock_icon, 0.0)
+		lock_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 	if chevron_icon:
 		_stretch_node_to_parent(chevron_icon, 0.0)
+		chevron_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		chevron_icon.z_index = 4
 
 	if error_highlight:
@@ -114,9 +122,22 @@ func _ready():
 		error_highlight.add_theme_stylebox_override("panel", clear_style)
 		if not error_highlight.draw.is_connected(_draw_error_border):
 			error_highlight.draw.connect(_draw_error_border)
-
-	if tile_icon:
-		tile_icon.z_index = 3
+		error_highlight.clip_contents = false
+		_tutorial_fill = ColorRect.new()
+		_tutorial_fill.name = "TutorialFill"
+		_tutorial_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_tutorial_fill.color = Color(
+			FOCUS_BORDER_COLOR.r, FOCUS_BORDER_COLOR.g, FOCUS_BORDER_COLOR.b,
+			FOCUS_BORDER_ALPHA_MAX * HIGHLIGHT_FILL_ALPHA_SCALE
+		)
+		_tutorial_fill.visible = false
+		_tutorial_fill.z_index = 50
+		add_child(_tutorial_fill)
+		_layout_highlight_overlays()
+		if not resized.is_connected(_layout_highlight_overlays):
+			resized.connect(_layout_highlight_overlays)
+		if tile_icon and not tile_icon.resized.is_connected(_layout_highlight_overlays):
+			tile_icon.resized.connect(_layout_highlight_overlays)
 
 func _draw_error_border():
 	if error_highlight == null:
@@ -128,6 +149,9 @@ func _draw_error_border():
 		return
 	if not focus_active:
 		return
+	if guide_active and focus_active:
+		# Fill is a ColorRect sized in layout, not draw_rect (avoids pixel snap).
+		return
 	var inner := _highlight_inner_rect()
 	var border_color := Color(
 		FOCUS_BORDER_COLOR.r,
@@ -135,28 +159,65 @@ func _draw_error_border():
 		FOCUS_BORDER_COLOR.b,
 		_focus_border_alpha
 	)
-	if guide_active and focus_active:
-		var half_border := HIGHLIGHT_BORDER_WIDTH * 0.5
-		var fill_rect := Rect2(
-			inner.position + Vector2(half_border, half_border),
-			inner.size - Vector2(half_border * 2.0, half_border * 2.0)
-		)
-		var fill_alpha := _focus_border_alpha * HIGHLIGHT_FILL_ALPHA_SCALE
-		error_highlight.draw_rect(
-			fill_rect,
-			Color(FOCUS_BORDER_COLOR.r, FOCUS_BORDER_COLOR.g, FOCUS_BORDER_COLOR.b, fill_alpha),
-			true
-		)
-		error_highlight.draw_rect(inner, border_color, false, HIGHLIGHT_BORDER_WIDTH)
-	elif focus_active:
-		error_highlight.draw_rect(inner, border_color, false, HIGHLIGHT_BORDER_WIDTH)
+	error_highlight.draw_rect(inner, border_color, false, HIGHLIGHT_BORDER_WIDTH)
 
 func _highlight_inner_rect() -> Rect2:
 	var panel_size: Vector2 = error_highlight.size
+	# Unfilled draw_rect includes both far edges, which reads 1px too wide/tall.
 	return Rect2(
 		Vector2(HIGHLIGHT_INSET, HIGHLIGHT_INSET),
-		panel_size - Vector2(HIGHLIGHT_INSET * 2.0, HIGHLIGHT_INSET * 2.0)
+		panel_size - Vector2(HIGHLIGHT_INSET * 2.0 + 1.0, HIGHLIGHT_INSET * 2.0 + 1.0)
 	)
+
+func _layout_tutorial_fill() -> void:
+	_layout_highlight_overlays()
+
+func _layout_highlight_overlays() -> void:
+	_apply_tile_art_frame(_tutorial_fill)
+	if link_highlight and link_highlight.visible:
+		_apply_tile_art_frame(link_highlight)
+
+func _highlight_cell_size() -> Vector2:
+	return Vector2(GameConstants.CELL_SIZE, GameConstants.CELL_SIZE)
+
+func _apply_tile_art_frame(node: Control) -> void:
+	if node == null:
+		return
+	var pad := _highlight_cell_size() / TILE_ART_GRID * TILE_ART_PAD
+	node.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var left := floorf(pad.x)
+	var top := floorf(pad.y)
+	var right := -ceilf(pad.x)
+	var bottom := -ceilf(pad.y)
+	if node == link_highlight or node == _tutorial_fill:
+		left += 1.0
+		top += 1.0
+		right += 1.0
+		bottom += 1.0
+	node.offset_left = left
+	node.offset_top = top
+	node.offset_right = right
+	node.offset_bottom = bottom
+
+func _apply_full_cell_frame(node: Control) -> void:
+	if node == null:
+		return
+	node.set_anchors_preset(Control.PRESET_FULL_RECT)
+	node.offset_left = 0.0
+	node.offset_top = 0.0
+	node.offset_right = 0.0
+	node.offset_bottom = 0.0
+
+func _set_tutorial_fill_visible(enabled: bool) -> void:
+	if _tutorial_fill == null:
+		return
+	_layout_tutorial_fill()
+	_tutorial_fill.visible = enabled
+	if enabled:
+		_tutorial_fill.color = Color(
+			FOCUS_BORDER_COLOR.r, FOCUS_BORDER_COLOR.g, FOCUS_BORDER_COLOR.b,
+			_focus_border_alpha * HIGHLIGHT_FILL_ALPHA_SCALE
+		)
 
 func _uses_unified_highlight() -> bool:
 	return guide_active and focus_active and not validation_error_active
@@ -373,21 +434,30 @@ func update_visuals():
 			if _guide_breathe_tween:
 				_stop_guide_breathe()
 			link_highlight.visible = false
+			_set_tutorial_fill_visible(true)
 		elif show_guide:
-			var alpha: float = (
-				float(link_highlight.color.a) if link_highlight.visible else GUIDE_ALPHA_MAX
-			)
+			_set_tutorial_fill_visible(false)
+			var alpha: float = GUIDE_ALPHA_MAX
+			if link_highlight.visible:
+				alpha = float(link_highlight.color.a)
 			link_highlight.color = Color(GUIDE_COLOR.r, GUIDE_COLOR.g, GUIDE_COLOR.b, alpha)
+			_apply_tile_art_frame(link_highlight)
 			link_highlight.visible = true
+			call_deferred("_layout_highlight_overlays")
 		elif is_linked_pair:
+			_set_tutorial_fill_visible(false)
 			if _guide_breathe_tween:
 				_stop_guide_breathe()
 			link_highlight.color = Color(0.6, 0.36, 0.9, 0.4)
+			_apply_tile_art_frame(link_highlight)
 			link_highlight.visible = true
+			call_deferred("_layout_highlight_overlays")
 		else:
 			if guide_active and _guide_breathe_tween:
 				_stop_guide_breathe()
 			link_highlight.visible = false
+			if not _uses_unified_highlight():
+				_set_tutorial_fill_visible(false)
 
 	if chevron_icon:
 		chevron_icon.offset_left = 0
@@ -490,6 +560,10 @@ func set_focus_highlight(enabled: bool) -> void:
 func set_mask_color(mask_color: Color):
 	if link_highlight:
 		link_highlight.color = mask_color
+		if is_editor_mode:
+			_apply_full_cell_frame(link_highlight)
+		else:
+			_apply_tile_art_frame(link_highlight)
 		link_highlight.visible = true
 
 func clear_highlight():
@@ -506,8 +580,10 @@ func _start_unified_breathe() -> void:
 	if state == GameConstants.TileState.WALL:
 		return
 	_focus_border_alpha = FOCUS_BORDER_ALPHA_MAX
-	error_highlight.visible = true
-	error_highlight.queue_redraw()
+	_set_tutorial_fill_visible(true)
+	if error_highlight:
+		error_highlight.visible = true
+		error_highlight.queue_redraw()
 	_focus_breathe_tween = create_tween().set_loops()
 	_focus_breathe_tween.tween_method(
 		_set_focus_border_alpha, FOCUS_BORDER_ALPHA_MAX, FOCUS_BORDER_ALPHA_MIN, 1.1
@@ -522,7 +598,9 @@ func _start_guide_breathe() -> void:
 	if state == GameConstants.TileState.WALL:
 		return
 	_stop_guide_breathe()
+	_apply_tile_art_frame(link_highlight)
 	link_highlight.visible = true
+	call_deferred("_layout_highlight_overlays")
 	link_highlight.color = Color(GUIDE_COLOR.r, GUIDE_COLOR.g, GUIDE_COLOR.b, GUIDE_ALPHA_MAX)
 	_guide_breathe_tween = create_tween().set_loops()
 	_guide_breathe_tween.tween_property(
@@ -559,8 +637,15 @@ func _stop_focus_breathe() -> void:
 	_focus_border_alpha = FOCUS_BORDER_ALPHA_MAX
 	if error_highlight and focus_active:
 		error_highlight.queue_redraw()
+	if not _uses_unified_highlight():
+		_set_tutorial_fill_visible(false)
 
 func _set_focus_border_alpha(alpha: float) -> void:
 	_focus_border_alpha = alpha
+	if _tutorial_fill and _tutorial_fill.visible:
+		_tutorial_fill.color = Color(
+			FOCUS_BORDER_COLOR.r, FOCUS_BORDER_COLOR.g, FOCUS_BORDER_COLOR.b,
+			_focus_border_alpha * HIGHLIGHT_FILL_ALPHA_SCALE
+		)
 	if error_highlight and error_highlight.visible:
 		error_highlight.queue_redraw()

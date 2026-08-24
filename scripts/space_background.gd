@@ -454,32 +454,32 @@ func _build_background_layers() -> void:
 		fallback_bg.color = Color(0.04, 0.04, 0.08, 1)
 		_apply_cover_rect(fallback_bg, view_size)
 		add_child(fallback_bg)
-
+	
 	if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["dust"]):
 		_parallax_layer_nodes.append(_build_parallax_layer(load(ASSET_DIR + ASSET_FILES["dust"]), Vector2(0.2, 0.2), view_size))
-
+		
 	var layer_stars_mid = null
 	if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["stars_mid"]):
 		layer_stars_mid = _build_parallax_layer(load(ASSET_DIR + ASSET_FILES["stars_mid"]), Vector2(0.4, 0.4), view_size)
 		_parallax_layer_nodes.append(layer_stars_mid)
-
+	
 	dyn_layer_stars = Node2D.new()
 	add_child(dyn_layer_stars)
-
+	
 	var layer_accents = null
 	if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["accents"]):
 		layer_accents = _build_parallax_layer(load(ASSET_DIR + ASSET_FILES["accents"]), Vector2(0.6, 0.6), view_size)
 		_parallax_layer_nodes.append(layer_accents)
-
+	
 	dyn_layer_comets = Node2D.new()
 	add_child(dyn_layer_comets)
-
+	
 	if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["sparklers"]):
 		_parallax_layer_nodes.append(_build_parallax_layer(load(ASSET_DIR + ASSET_FILES["sparklers"]), Vector2(0.9, 0.9), view_size))
-
+	
 	dyn_layer_asteroids = Node2D.new()
 	add_child(dyn_layer_asteroids)
-
+	
 	if layer_stars_mid and layer_accents:
 		_twinkle_tween = create_tween().set_loops()
 		_twinkle_tween.tween_property(layer_stars_mid, "modulate:a", 0.5, 3.0)
@@ -493,7 +493,7 @@ func _build_background_layers() -> void:
 func _load_fx_assets() -> void:
 	if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["fx_star"]):
 		tex_shooting_star = load(ASSET_DIR + ASSET_FILES["fx_star"])
-
+		
 	if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["fx_comet_1"]):
 		sf_comet_anim = SpriteFrames.new()
 		sf_comet_anim.set_animation_speed("default", 12.0)
@@ -502,7 +502,7 @@ func _load_fx_assets() -> void:
 			sf_comet_anim.add_frame("default", load(ASSET_DIR + ASSET_FILES["fx_comet_2"]))
 		if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["fx_comet_3"]):
 			sf_comet_anim.add_frame("default", load(ASSET_DIR + ASSET_FILES["fx_comet_3"]))
-
+			
 	tex_asteroids.clear()
 	if ResourceLoader.exists(ASSET_DIR + "fx_asteroid_1.svg"):
 		tex_asteroids.append(load(ASSET_DIR + "fx_asteroid_1.svg"))
@@ -510,7 +510,7 @@ func _load_fx_assets() -> void:
 		tex_asteroids.append(load(ASSET_DIR + "fx_asteroid_2.svg"))
 	if ResourceLoader.exists(ASSET_DIR + "fx_asteroid_3.svg"):
 		tex_asteroids.append(load(ASSET_DIR + "fx_asteroid_3.svg"))
-
+	
 # Returns the size each background layer should be so it covers the viewport even during
 # parallax scrolling. The 1.35× factor prevents edge gaps when the scroll offset shifts layers.
 # Layers scale a single texture copy to this size (no in-rect tiling).
@@ -629,7 +629,7 @@ func _restart_timer(key: String) -> void:
 func _on_event_timeout() -> void:
 	if _static_mode:
 		return
-	var roll = randi() % 1000 + 1
+	var roll = randi() % 1000 + 1 
 	if roll <= 1:
 		_trigger_meteor_shower()
 	elif roll <= 11:
@@ -822,10 +822,13 @@ func _trigger_meteor_shower() -> void:
 		var delay = randf_range(0.0, 2.5)
 		var t = create_tween()
 		t.tween_interval(delay)
-		t.tween_callback(func():
-			var target := _fg_comets if use_fg else dyn_layer_comets
-			_spawn_entity(sf_comet_anim, target, Vector2(128, 64), 3.0, 6.0, "comet")
-		)
+		t.tween_callback(_spawn_shower_comet.bind(use_fg))
+
+func _spawn_shower_comet(use_fg: bool) -> void:
+	if not is_inside_tree():
+		return
+	var target := _fg_comets if use_fg else dyn_layer_comets
+	_spawn_entity(sf_comet_anim, target, Vector2(128, 64), 3.0, 6.0, "comet")
 
 # Plays a small particle burst at the midpoint between two colliding asteroids.
 # The instance ID guard ensures only the lower-ID body handles the event,
@@ -846,7 +849,7 @@ func _on_asteroid_collided(body: Node, self_entity: RigidBody2D) -> void:
 	vfx.scale_amount_min = 2.0
 	vfx.scale_amount_max = 6.0
 	# Grey-blue tint matches the overall cool colour palette of the background.
-	vfx.color = Color(0.6, 0.6, 0.65)
+	vfx.color = Color(0.6, 0.6, 0.65) 
 	vfx.global_position = (self_entity.global_position + body.global_position) / 2.0
 	dyn_layer_asteroids.add_child(vfx)
 	get_tree().create_timer(1.0).timeout.connect(vfx.queue_free)
@@ -886,7 +889,7 @@ func _spawn_entity(
 		rb.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		if not rb.body_entered.is_connected(_on_asteroid_collided):
 			rb.body_entered.connect(_on_asteroid_collided.bind(rb))
-
+		
 		var sprite := rb.get_node("Sprite") as Sprite2D
 		sprite.texture = tex
 		var base_scale := 1.0
@@ -908,7 +911,7 @@ func _spawn_entity(
 		var col := rb.get_node("Collision") as CollisionShape2D
 		if col and col.shape is CircleShape2D:
 			(col.shape as CircleShape2D).radius = size.x * 0.4
-
+		
 		entity = rb
 		
 	else:
