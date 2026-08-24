@@ -250,6 +250,21 @@ static func get_shifter_pairs(level: LevelData) -> Array:
 		return level.shifter_pairs
 	return []
 
+## True when two shifter pairs currently sit on the same active cell.
+## Pairs may share a cell (A–B and B–C); they must not both be active on B.
+static func shifter_pairs_share_active_cell(shifter_pairs: Array) -> bool:
+	var actives: Dictionary = {}
+	for raw in shifter_pairs:
+		if typeof(raw) != TYPE_DICTIONARY:
+			continue
+		if not raw.has("active"):
+			continue
+		var active: Vector2i = raw["active"]
+		if actives.has(active):
+			return true
+		actives[active] = true
+	return false
+
 # Applies lock/playability flags to a cell as if it were being loaded for playtesting.
 # Walls block interaction entirely; pre-placed coloured tiles are locked in place;
 # empty and shifter cells remain freely playable.

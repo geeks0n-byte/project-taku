@@ -17,6 +17,7 @@ func _init() -> void:
 	_test_solver_empty_not_unique()
 	_test_solver_equals_forces_match()
 	_test_generator_smoke_easy()
+	_test_shifter_shared_cell_unique_active()
 	_test_font_locale_policy()
 	_test_save_migration_v1_to_v2()
 	print("logic_tests: %d passed, %d failed" % [_passed, _failed])
@@ -161,6 +162,56 @@ func _test_generator_smoke_easy() -> void:
 		PuzzleValidator.starting_layout_is_clean(layout, 4, 4, constraints, shifters),
 		"generator: starting layout is clean"
 	)
+	_ok(
+		not LevelUtils.shifter_pairs_share_active_cell(shifters),
+		"generator: shifter actives are unique"
+	)
+
+func _test_shifter_shared_cell_unique_active() -> void:
+	var a := Vector2i(0, 0)
+	var b := Vector2i(1, 0)
+	var c := Vector2i(2, 0)
+	# Chain A–B–C sharing B, each pair on a different active — allowed.
+	var chain := [
+		{"a": a, "b": b, "active": a, "inactive": b},
+		{"a": b, "b": c, "active": c, "inactive": b},
+	]
+	_ok(not LevelUtils.shifter_pairs_share_active_cell(chain), "shifters: shared inactive is ok")
+	var empty := _grid(3, 2, func(_x: int, _y: int) -> int:
+		return GameConstants.TileState.EMPTY
+	)
+	_ok(
+		PuzzleValidator.starting_layout_is_clean(empty, 3, 2, [], chain),
+		"shifters: chain with unique actives is clean"
+	)
+	var clash := [
+		{"a": a, "b": b, "active": b, "inactive": a},
+		{"a": b, "b": c, "active": b, "inactive": c},
+	]
+	_ok(LevelUtils.shifter_pairs_share_active_cell(clash), "shifters: duplicate active is detected")
+	_ok(
+		not PuzzleValidator.starting_layout_is_clean(empty, 3, 2, [], clash),
+		"shifters: duplicate active is not clean"
+	)
+	var flipped := [
+		{"a": a, "b": b, "active": b, "inactive": a},
+		{"a": b, "b": c, "active": b, "inactive": c},
+	]
+	_ok(PuzzleGenerator._assign_distinct_actives(flipped), "shifters: reassignment succeeds")
+	_ok(not LevelUtils.shifter_pairs_share_active_cell(flipped), "shifters: reassignment unique actives")
+	_ok(
+		(flipped[0].active == a or flipped[0].active == b)
+		and (flipped[1].active == b or flipped[1].active == c)
+		and flipped[0].active != flipped[1].active,
+		"shifters: each pair stays on its own cells"
+	)
+	var triangle := [
+		{"a": a, "b": b, "active": a, "inactive": b},
+		{"a": b, "b": c, "active": a, "inactive": c},
+		{"a": c, "b": a, "active": a, "inactive": c},
+	]
+	_ok(PuzzleGenerator._assign_distinct_actives(triangle), "shifters: triangle can uniquify")
+	_ok(not LevelUtils.shifter_pairs_share_active_cell(triangle), "shifters: triangle actives unique")
 
 func _test_font_locale_policy() -> void:
 	TranslationServer.set_locale("en")

@@ -414,18 +414,15 @@ func _update_editor_joker_counter_display():
 	pt_ui.update_playtest_joker_counter(placed_jokers, total_required)
 
 # Creates a shifter pair between coord_a (active/home) and coord_b (inactive partner).
-# First removes any existing pair that shares coord_a as its active cell, or that already
-# links the same two coords, to enforce a one-pair-per-cell invariant.
-# All affected cell visuals are recalculated after the array is mutated.
+# Pairs may share a cell (chains). Remove an existing pair only if it already uses
+# coord_a as its active cell, or if it already links the same two coords.
 func _execute_pair_link_creation(coord_a: Vector2i, coord_b: Vector2i):
 	var pairs_to_remove: Array = []
 	for i in range(canvas_manager.loaded_shifter_pairs.size() - 1, -1, -1):
 		var p = canvas_manager.loaded_shifter_pairs[i]
-		if p["active"] == coord_a:
+		var same_link: bool = (p["a"] == coord_a and p["b"] == coord_b) or (p["a"] == coord_b and p["b"] == coord_a)
+		if p["active"] == coord_a or same_link:
 			pairs_to_remove.append(i)
-		elif (p["a"] == coord_a and p["b"] == coord_b) or (p["a"] == coord_b and p["b"] == coord_a):
-			if not pairs_to_remove.has(i):
-				pairs_to_remove.append(i)
 	pairs_to_remove.sort()
 	pairs_to_remove.reverse()
 	var changed_cells := [coord_a, coord_b]

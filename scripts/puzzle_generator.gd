@@ -94,10 +94,13 @@ static func generate_random_layout(
 		var pairs_placed = 0
 		var available_starts = empty_cells.duplicate()
 		available_starts.shuffle()
+		# Pairs may share a cell (chain A–B–C). They must not share an *active* cell.
+		var used_actives: Dictionary = {}
 		
 		while pairs_placed < target_shifter_pairs and available_starts.size() > 0:
 			var candidate_a = available_starts.pop_back()
-			if not empty_cells.has(candidate_a): continue
+			if not layout.has(candidate_a) or layout[candidate_a] != -1:
+				continue
 			
 			var neighbors = [
 				candidate_a + Vector2i(1, 0), candidate_a + Vector2i(-1, 0),
@@ -107,22 +110,34 @@ static func generate_random_layout(
 			
 			var placed = false
 			for candidate_b in neighbors:
-				if layout.has(candidate_b) and layout[candidate_b] == -1 and empty_cells.has(candidate_b):
-					var active_node = candidate_a if randi() % 2 == 0 else candidate_b
-					var inactive_node = candidate_b if active_node == candidate_a else candidate_a
-					
-					layout[active_node] = 3
+				if not layout.has(candidate_b):
+					continue
+				# Partner may be empty or already another pair's active (shared cell / chain).
+				if layout[candidate_b] != -1 and layout[candidate_b] != 3:
+					continue
+				if _pair_already_exists(shifters, candidate_a, candidate_b):
+					continue
+				var active_node = _pick_unused_active(candidate_a, candidate_b, used_actives)
+				if active_node == null:
+					continue
+				var inactive_node: Vector2i = candidate_b if active_node == candidate_a else candidate_a
+				
+				layout[active_node] = 3
+				if layout[inactive_node] != 3:
 					layout[inactive_node] = -1
-					
-					shifters.append({"a": candidate_a, "b": candidate_b, "active": active_node, "inactive": inactive_node})
-					empty_cells.erase(active_node)
-					available_starts.erase(candidate_b) 
-					placed = true
-					pairs_placed += 1
-					break
+				
+				shifters.append({"a": candidate_a, "b": candidate_b, "active": active_node, "inactive": inactive_node})
+				empty_cells.erase(active_node)
+				used_actives[active_node] = true
+				available_starts.erase(candidate_b)
+				placed = true
+				pairs_placed += 1
+				break
 			if placed: continue
 
 		if pairs_placed < target_shifter_pairs:
+			continue
+		if LevelUtils.shifter_pairs_share_active_cell(shifters):
 			continue
 
 		# Parity check: for a balanced solution to exist, every row and every column
@@ -313,6 +328,7 @@ static func generate_random_layout(
 		# Randomly flip some shifter pairs so the active node is on the "wrong" side.
 		# This forces the player to move shifters before placing tiles there.
 		# required_shifter_moves tracks how many shifts are needed for metadata.
+		# Pairs may share a cell; after flips, reassign so no two share the same active.
 		var required_shifter_moves := 0
 		for pair in shifters:
 			pair["home"] = pair.active
@@ -322,6 +338,9 @@ static func generate_random_layout(
 				var temp = pair.active
 				pair.active = pair.inactive
 				pair.inactive = temp
+		if not _assign_distinct_actives(shifters):
+			continue
+		for pair in shifters:
 			if pair.active != pair.home:
 				required_shifter_moves += 1
 
@@ -626,3 +645,43 @@ static func _is_valid_placement(coord: Vector2i, val: int, layout: Dictionary, w
 
 	layout[coord] = -1 
 	return true
+
+static func _pair_already_exists(shifters: Array, a: Vector2i, b: Vector2i) -> bool:
+	for p in shifters:
+		if (p.a == a and p.b == b) or (p.a == b and p.b == a):
+			return true
+	return false
+
+static func _pick_unused_active(a: Vector2i, b: Vector2i, used_actives: Dictionary) -> Variant:
+	var first: Vector2i = a if randi() % 2 == 0 else b
+	var second: Vector2i = b if first == a else a
+	if not used_actives.has(first):
+		return first
+	if not used_actives.has(second):
+		return second
+	return null
+
+## Each pair picks one of its two cells as active; all actives must be unique.
+## Prefers the current (post-flip) active when that still works.
+static func _assign_distinct_actives(shifters: Array) -> bool:
+	return _assign_distinct_actives_at(shifters, 0, {})
+
+static func _assign_distinct_actives_at(shifters: Array, index: int, used: Dictionary) -> bool:
+	if index >= shifters.size():
+		return true
+	var pair = shifters[index]
+	var choices: Array = [pair.active, pair.inactive]
+	for cell in choices:
+		if used.has(cell):
+			continue
+		used[cell] = true
+		var old_active = pair.active
+		var old_inactive = pair.inactive
+		pair.active = cell
+		pair.inactive = old_inactive if cell == old_active else old_active
+		if _assign_distinct_actives_at(shifters, index + 1, used):
+			return true
+		pair.active = old_active
+		pair.inactive = old_inactive
+		used.erase(cell)
+	return false
