@@ -132,6 +132,9 @@ func _ready() -> void:
 
 	_boot_intro_active = GlobalGameManager.main_menu_should_fade_in
 	_build_consent_popup()
+	_apply_safe_area_layout()
+	if not get_viewport().size_changed.is_connected(_on_safe_area_viewport_resized):
+		get_viewport().size_changed.connect(_on_safe_area_viewport_resized)
 
 	if options_menu:
 		options_menu.back_requested.connect(_on_options_back)
@@ -488,10 +491,23 @@ func _on_language_changed() -> void:
 	HudLayout.apply_locale_fonts_to_tree(self)
 	HudLayout.clear_how_to_play_nav_lock(_htp_host)
 	_refresh_how_to_play_text()
+	_apply_safe_area_layout()
 	if _consent_blocker and _consent_blocker.visible and _consent_blocker.has_method("refresh_locale"):
 		_consent_blocker.refresh_locale()
 	if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
 		_show_tutorial_intro_prompt()
+
+func _on_safe_area_viewport_resized() -> void:
+	_apply_safe_area_layout()
+
+func _apply_safe_area_layout() -> void:
+	HudLayout.apply_content_edge_safe_area(menu_center)
+	if debug_bar:
+		var top := SafeInsets.padded_top(24.0)
+		debug_bar.offset_left = 24.0 + SafeInsets.left()
+		debug_bar.offset_top = top
+		debug_bar.offset_right = -24.0 - SafeInsets.right()
+		debug_bar.offset_bottom = top + 96.0
 
 func _refresh_start_button_label() -> void:
 	if not start_btn:

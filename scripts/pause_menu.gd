@@ -79,6 +79,7 @@ func _menu_row_height() -> float:
 	return maxf(MENU_BTN_ROW_H_MIN, floor(row_h))
 
 func _fit_menu_buttons() -> void:
+	HudLayout.apply_content_edge_safe_area(_btn_host)
 	if _btn_vbox:
 		_btn_vbox.add_theme_constant_override("separation", MENU_BTN_SEP)
 	if restart_btn:
@@ -87,14 +88,17 @@ func _fit_menu_buttons() -> void:
 	if quit_btn:
 		quit_btn.text = "UI_MAIN_MENU"
 		quit_btn.set_meta("_tr_key", "UI_MAIN_MENU")
-	var row_h := _menu_row_height()
-	for btn in [resume_btn, restart_btn, level_select_btn, settings_btn, quit_btn]:
-		_apply_pause_button(btn, row_h)
-	_style_auto_win_button(row_h)
 	if title_label:
 		title_label.set_meta("_screen_header_font_size", PAUSE_TITLE_FONT_SIZE)
 		HudLayout._bind_header_translation_key(title_label, "PAUSED")
 		HudLayout.apply_screen_header_style(title_label)
+		var title_top := SafeInsets.padded_top(GameConstants.SCREEN_HEADER_TOP)
+		title_label.offset_top = title_top
+		title_label.offset_bottom = title_top + GameConstants.SCREEN_HEADER_HEIGHT
+	var row_h := _menu_row_height()
+	for btn in [resume_btn, restart_btn, level_select_btn, settings_btn, quit_btn]:
+		_apply_pause_button(btn, row_h)
+	_style_auto_win_button(row_h)
 
 # Keeps Auto Win in the same pause-menu slot, but fully invisible while still clickable.
 func _style_auto_win_button(row_h: float = MENU_BTN_ROW_H) -> void:

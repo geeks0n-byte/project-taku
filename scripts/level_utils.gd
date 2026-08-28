@@ -233,10 +233,15 @@ static func is_constraint_in_list(a: Vector2i, b: Vector2i, list: Array) -> bool
 # of the screen for small grids, but pinned just below the HUD for larger ones.
 static func center_board_y(grid_height: int, cell_size: float, screen_height: float) -> float:
 	var board_pixel_height := grid_height * cell_size
+	var min_y := (
+		GameConstants.TOP_HUD_BOTTOM
+		+ GameConstants.BOARD_GAP
+		+ SafeInsets.extra_top(GameConstants.HUD_TOP_BAR_EDGE_MARGIN)
+	)
 	if grid_height <= 7:
 		var centered := (screen_height / 3.0) - (board_pixel_height / 2.0)
-		return maxf(centered, GameConstants.TOP_HUD_BOTTOM + GameConstants.BOARD_GAP)
-	return GameConstants.TOP_HUD_BOTTOM + GameConstants.BOARD_GAP
+		return maxf(centered, min_y)
+	return min_y
 
 # Centers the board horizontally within the screen.
 static func center_board_x(grid_width: int, cell_size: float, screen_width: float) -> float:

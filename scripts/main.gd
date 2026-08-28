@@ -139,7 +139,20 @@ func _ready():
 	_apply_debug_tools_visibility()
 	if timer_node:
 		timer_node.timeout.connect(_on_timer_timeout)
+	if not get_viewport().size_changed.is_connected(_on_viewport_resized):
+		get_viewport().size_changed.connect(_on_viewport_resized)
 	_begin_level_entry()
+
+func _on_viewport_resized() -> void:
+	if board_manager == null or board_manager.board_cells.is_empty():
+		return
+	var dims := LevelUtils.get_dimensions_from_cells(board_manager.board_cells)
+	var centered_board_y := LevelUtils.center_board_y(
+		dims.y, GameConstants.CELL_SIZE, get_viewport_rect().size.y
+	)
+	board_manager.position.y = centered_board_y
+	if ui_manager:
+		ui_manager.update_dynamic_layout(centered_board_y, dims.y * GameConstants.CELL_SIZE)
 
 # Pauses the game timer while a fullscreen ad is displayed.
 # The timer only stops if the game is actually running and not already paused.

@@ -73,6 +73,11 @@ func _ready() -> void:
 	call_deferred("_apply_top_bar_buttons")
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
+	if not get_viewport().size_changed.is_connected(_on_safe_area_viewport_resized):
+		get_viewport().size_changed.connect(_on_safe_area_viewport_resized)
+
+func _on_safe_area_viewport_resized() -> void:
+	_apply_top_bar_buttons()
 
 func _on_language_changed() -> void:
 	_apply_top_bar_buttons()
@@ -117,13 +122,9 @@ func _apply_top_bar_buttons() -> void:
 	set_playtest_joker_counter_visibility(false)
 	set_playtest_move_counter_visibility(false)
 	HudLayout.align_counter_row(counter_container)
-	if playtest_hud_container:
-		playtest_hud_container.offset_bottom = GameConstants.HUD_TOP_BAR_HEIGHT
+	HudLayout.apply_top_hud_safe_area(playtest_hud_container, counter_container)
 	if top_bar_row:
 		top_bar_row.custom_minimum_size.y = float(GameConstants.HUD_BUTTON_HEIGHT)
-	if counter_container:
-		counter_container.offset_top = GameConstants.HUD_COUNTER_ROW_TOP
-		counter_container.offset_bottom = GameConstants.HUD_COUNTER_ROW_TOP + GameConstants.HUD_COUNTER_ROW_HEIGHT
 	_start_test_mode_label_breathe()
 
 ## Starts an infinite alpha pulse on the "TEST MODE" label to remind developers

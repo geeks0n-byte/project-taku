@@ -20,6 +20,7 @@ func _init() -> void:
 	_test_shifter_shared_cell_unique_active()
 	_test_font_locale_policy()
 	_test_save_migration_v1_to_v2()
+	_test_safe_insets()
 	print("logic_tests: %d passed, %d failed" % [_passed, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -234,3 +235,40 @@ func _test_save_migration_v1_to_v2() -> void:
 	_ok(bits.has("1") and int(bits["1"]) == 7, "migrate: key 1 stringified")
 	_ok(bits.has("2") and int(bits["2"]) == 4, "migrate: key 2 stringified")
 	_ok(int(Migration.FORMAT_VERSION) >= 2, "migrate: format version is 2+")
+
+func _approx4(got: Vector4, expected: Vector4, name: String) -> void:
+	_ok(
+		is_equal_approx(got.x, expected.x)
+		and is_equal_approx(got.y, expected.y)
+		and is_equal_approx(got.z, expected.z)
+		and is_equal_approx(got.w, expected.w),
+		name
+	)
+
+func _test_safe_insets() -> void:
+	var none := SafeInsets.margins_from(
+		Rect2(0, 0, 1080, 1920), Vector2(1080, 1920), Vector2.ZERO, Vector2(1080, 1920)
+	)
+	_approx4(none, Vector4.ZERO, "safe: no inset when safe covers the window")
+	var empty := SafeInsets.margins_from(
+		Rect2(0, 0, 1080, 1920), Vector2.ZERO, Vector2.ZERO, Vector2(1080, 1920)
+	)
+	_approx4(empty, Vector4.ZERO, "safe: zero window size is empty insets")
+	var bars := SafeInsets.margins_from(
+		Rect2(0, 120, 1080, 1720), Vector2(1080, 1920), Vector2.ZERO, Vector2(1080, 1920)
+	)
+	_approx4(bars, Vector4(0, 120, 0, 80), "safe: 120 top / 80 bottom in viewport px")
+	var scaled := SafeInsets.margins_from(
+		Rect2(0, 160, 1440, 2240), Vector2(1440, 2560), Vector2.ZERO, Vector2(1080, 1920)
+	)
+	_approx4(scaled, Vector4(0, 120, 0, 120), "safe: screen insets scale into viewport")
+	var shifted := SafeInsets.margins_from(
+		Rect2(40, 160, 1000, 1700), Vector2(1080, 1920), Vector2(40, 40), Vector2(1080, 1920)
+	)
+	_approx4(shifted, Vector4(0, 120, 80, 100), "safe: window origin subtracted from screen rect")
+	_ok(SafeInsets.padded_top(4.0) >= 4.0, "safe: padded_top never shrinks authored HUD top")
+	_ok(
+		SafeInsets.padded_bottom_offset(-192.0) <= -192.0,
+		"safe: padded_bottom_offset only grows the bottom reserve"
+	)
+	_ok(SafeInsets.extra_top(4.0) >= 0.0, "safe: extra_top is non-negative")

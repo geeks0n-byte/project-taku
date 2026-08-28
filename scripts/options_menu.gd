@@ -86,6 +86,13 @@ func _ready() -> void:
 	_style_close_button()
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
+	if not get_viewport().size_changed.is_connected(_on_safe_area_viewport_resized):
+		get_viewport().size_changed.connect(_on_safe_area_viewport_resized)
+
+func _on_safe_area_viewport_resized() -> void:
+	if visible:
+		_layout_content_below_title()
+		_style_close_button()
 
 # Binds the i18n key and applies the screen-header visual style to the title label.
 func _style_header() -> void:
@@ -157,7 +164,7 @@ func _configure_main_menu_buttons() -> void:
 func _layout_content_below_title() -> void:
 	if title_label == null or _options_center == null:
 		return
-	title_label.offset_top = GameConstants.SCREEN_HEADER_TOP
+	title_label.offset_top = SafeInsets.padded_top(GameConstants.SCREEN_HEADER_TOP)
 	var font := title_label.get_theme_font("font")
 	var font_size := title_label.get_theme_font_size("font_size")
 	var key := String(title_label.text)
@@ -175,6 +182,15 @@ func _layout_content_below_title() -> void:
 		)
 	title_label.offset_bottom = title_label.offset_top + text_h
 	_options_center.offset_top = title_label.offset_bottom + _OPTIONS_BELOW_TITLE_GAP
+	if not _options_center.has_meta("_safe_b"):
+		_options_center.set_meta("_safe_b", _options_center.offset_bottom)
+		_options_center.set_meta("_safe_l", _options_center.offset_left)
+		_options_center.set_meta("_safe_r", _options_center.offset_right)
+	_options_center.offset_bottom = SafeInsets.padded_bottom_offset(
+		float(_options_center.get_meta("_safe_b"))
+	)
+	_options_center.offset_left = float(_options_center.get_meta("_safe_l")) + SafeInsets.left()
+	_options_center.offset_right = float(_options_center.get_meta("_safe_r")) - SafeInsets.right()
 
 # The "Privacy Options" button is only visible when UMP has a form ready to display
 # (i.e. the user is in a region that requires consent management).
