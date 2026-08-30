@@ -115,6 +115,8 @@ func setup_ui(grid_width: int, grid_height: int) -> void:
 		SaveManager.language_changed.connect(_on_language_changed)
 	if not get_viewport().size_changed.is_connected(_on_safe_area_viewport_resized):
 		get_viewport().size_changed.connect(_on_safe_area_viewport_resized)
+	if control_panel and not control_panel.resized.is_connected(_cap_wide_editor_rows):
+		control_panel.resized.connect(_cap_wide_editor_rows)
 
 func _on_safe_area_viewport_resized() -> void:
 	_apply_top_bar_buttons()
@@ -217,9 +219,19 @@ func _apply_top_bar_buttons() -> void:
 	HudLayout.apply_bottom_bar_safe_area(control_panel)
 	if status_label and control_panel:
 		HudLayout.position_editor_status_below_panel(control_panel, status_label)
+	_cap_wide_editor_rows()
+	call_deferred("_cap_wide_editor_rows")
 	if top_bar_row:
 		top_bar_row.custom_minimum_size.y = float(GameConstants.HUD_BUTTON_HEIGHT)
 	_nudge_editor_control_icons()
+
+
+# Caps SAVE/LOAD and grid-size rows on tablets / landscape so they keep phone width.
+func _cap_wide_editor_rows() -> void:
+	if width_label:
+		HudLayout.cap_box_row_width(width_label.get_parent() as Control)
+	if save_button:
+		HudLayout.cap_box_row_width(save_button.get_parent() as Control)
 
 # Shifts button icons slightly upward to compensate for the theme's default
 # vertical padding, keeping icons visually centred in their buttons.

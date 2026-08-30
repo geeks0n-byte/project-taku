@@ -21,6 +21,13 @@ const UI_DEFAULT_DIALOG_WIDTH := 720.0
 const UI_MAX_DIALOG_WIDTH := 760.0
 ## Side margin when clamping dialog panels to the viewport (slightly tighter than generic UI).
 const UI_DIALOG_SCREEN_MARGIN := 20.0
+## Authored phone portrait width (project.godot display/window/size/viewport_width).
+## Wide-screen caps keep phone chrome unchanged once the viewport grows past this.
+const UI_PHONE_VIEWPORT_WIDTH := 1080.0
+## Level-select content width on phones (1080 minus 24px HUD_SIDE_MARGIN each side).
+const UI_PHONE_CONTENT_WIDTH := 1032.0
+## Editor ControlPanel inner row width on phones (1080 minus 20px scroll pad each side).
+const UI_PHONE_EDITOR_ROW_WIDTH := 1040.0
 
 ## Usable content width inside centered overlays (viewport minus side margins).
 static func max_ui_content_width(extra_margin: float = UI_SAFE_SIDE_MARGIN) -> float:
@@ -61,6 +68,73 @@ static func measure_label_min_width(label: Label) -> float:
 ## Caps width to the viewport without applying the dialog minimum (for buttons/controls).
 static func cap_ui_width(width: float, extra_margin: float = UI_SAFE_SIDE_MARGIN) -> float:
 	return minf(width, max_ui_content_width(extra_margin))
+
+## Extra inset on each side so a stretched control is at most max_width. 0 on phones.
+static func extra_side_inset_for_cap(current_width: float, max_width: float) -> float:
+	if current_width <= max_width + 0.5:
+		return 0.0
+	return (current_width - max_width) * 0.5
+
+
+## Centers a left-right stretched Control so it never exceeds max_width.
+## Call after setting left/right offsets (safe-area included). No-op on narrow screens.
+static func cap_stretched_width(control: Control, max_width: float = UI_PHONE_CONTENT_WIDTH) -> void:
+	if control == null or max_width <= 0.0:
+		return
+	var span := control.anchor_right - control.anchor_left
+	if span <= 0.0001:
+		return
+	var parent_w := _layout_parent_width(control)
+	if parent_w <= 1.0:
+		return
+	var current_w := parent_w * span + control.offset_right - control.offset_left
+	var extra := extra_side_inset_for_cap(current_w, max_width)
+	if extra <= 0.0:
+		return
+	control.offset_left += extra
+	control.offset_right -= extra
+
+
+## On viewports wider than max_width, shrink-center a fill row; restore phone flags otherwise.
+static func cap_box_row_width(row: Control, max_width: float = UI_PHONE_EDITOR_ROW_WIDTH) -> void:
+	if row == null or max_width <= 0.0:
+		return
+	if not row.has_meta("_wide_cap_hflags"):
+		row.set_meta("_wide_cap_hflags", row.size_flags_horizontal)
+		row.set_meta("_wide_cap_min_x", row.custom_minimum_size.x)
+	# Use the box parent only — viewport fallback would treat a 1080 phone as wide.
+	var parent := row.get_parent()
+	if not (parent is Control):
+		return
+	var parent_w := (parent as Control).size.x
+	if parent_w <= 1.0:
+		return
+	if parent_w <= max_width + 0.5:
+		row.size_flags_horizontal = int(row.get_meta("_wide_cap_hflags"))
+		var min_sz := row.custom_minimum_size
+		min_sz.x = float(row.get_meta("_wide_cap_min_x"))
+		row.custom_minimum_size = min_sz
+		return
+	row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var capped := row.custom_minimum_size
+	capped.x = max_width
+	row.custom_minimum_size = capped
+
+
+static func _layout_parent_width(control: Control) -> float:
+	if control == null:
+		return 0.0
+	var parent := control.get_parent()
+	if parent is Control:
+		var pw := (parent as Control).size.x
+		if pw > 1.0:
+			return pw
+	var vp := control.get_viewport()
+	if vp:
+		var w := vp.get_visible_rect().size.x
+		if w > 0.0:
+			return w
+	return float(ProjectSettings.get_setting("display/window/size/viewport_width", 1080))
 
 ## Shifts a top-anchored HUD bar (and optional counter row) below the status bar / cutout.
 static func apply_top_hud_safe_area(top_bar: Control, counter: Control = null) -> void:

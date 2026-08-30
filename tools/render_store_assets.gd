@@ -1,6 +1,6 @@
 extends SceneTree
 
-const Renderer = preload("res://scripts/store_asset_renderer.gd")
+const Renderer = preload("res://tools/store_asset_renderer.gd")
 
 func _init() -> void:
 	call_deferred("_run")

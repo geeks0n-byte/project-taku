@@ -34,15 +34,15 @@ static func margins_from(
 	if window_size.x <= 0.0 or window_size.y <= 0.0:
 		return Vector4.ZERO
 	var local := Rect2(safe_area.position - window_pos, safe_area.size)
-	var left := maxf(0.0, local.position.x)
-	var top := maxf(0.0, local.position.y)
-	var right := maxf(0.0, window_size.x - local.end.x)
-	var bottom := maxf(0.0, window_size.y - local.end.y)
+	var inset_left := maxf(0.0, local.position.x)
+	var inset_top := maxf(0.0, local.position.y)
+	var inset_right := maxf(0.0, window_size.x - local.end.x)
+	var inset_bottom := maxf(0.0, window_size.y - local.end.y)
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
-		return Vector4(left, top, right, bottom)
+		return Vector4(inset_left, inset_top, inset_right, inset_bottom)
 	var sx := viewport_size.x / window_size.x
 	var sy := viewport_size.y / window_size.y
-	return Vector4(left * sx, top * sy, right * sx, bottom * sy)
+	return Vector4(inset_left * sx, inset_top * sy, inset_right * sx, inset_bottom * sy)
 
 
 static func left() -> float:

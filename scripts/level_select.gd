@@ -173,6 +173,7 @@ func _layout_level_select() -> void:
 			content_vbox.offset_bottom = SafeInsets.padded_bottom_offset(-164.0)
 			content_vbox.offset_left = 24.0 + SafeInsets.left()
 			content_vbox.offset_right = -24.0 - SafeInsets.right()
+			HudLayout.cap_stretched_width(content_vbox, HudLayout.UI_PHONE_CONTENT_WIDTH)
 	_connect_level_list_host()
 	_pin_level_list_to_top()
 

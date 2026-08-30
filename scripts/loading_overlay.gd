@@ -4,14 +4,14 @@ extends CanvasLayer
 ## Runs at process mode ALWAYS so it ticks even when the tree is paused.
 ## Hides visible scene children while active to reduce GPU overdraw and visual confusion.
 
-# How long each dot-animation step lasts (cycles through 1, 2, 3 dots).
+# How long each dot-animation step lasts (cycles 1, 2, 3, then 0 dots).
 const DOT_INTERVAL_SEC := 0.45
 
 var _root: Control          # Full-rect control that blocks all pointer events while loading.
 var _label: Label           # The "LOADING..." text label, rebuilt each tick.
 var _busy: bool = false     # True while a loading operation is in progress.
 var _base_text: String = "LOADING"  # Translated message with trailing dots stripped.
-var _dot_count: int = 0    # Current dot count (1–3), advanced by _dot_timer.
+var _dot_count: int = 1    # Current visible dots (1, 2, 3, then 0), advanced by _dot_timer.
 var _dot_timer: Timer      # Drives the animated dots; restarted on each show_loading call.
 var _hidden_nodes: Array = []  # Scene children hidden during loading; restored on hide_loading.
 
@@ -58,7 +58,7 @@ func _build() -> void:
 func show_loading(message_key: String = "UI_LOADING") -> void:
 	_hide_scene_underlay()
 	_base_text = _loading_base_text(message_key)
-	_dot_count = 0
+	_dot_count = 1
 	_refresh_loading_label()
 	if _dot_timer:
 		_dot_timer.start()
@@ -118,7 +118,7 @@ func _loading_base_text(message_key: String) -> String:
 	return raw
 
 func _on_dot_tick() -> void:
-	_dot_count = (_dot_count % 3) + 1
+	_dot_count = (_dot_count + 1) % 4
 	_refresh_loading_label()
 
 func _refresh_loading_label() -> void:

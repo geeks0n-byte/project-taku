@@ -21,6 +21,8 @@ func _init() -> void:
 	_test_font_locale_policy()
 	_test_save_migration_v1_to_v2()
 	_test_safe_insets()
+	_test_wide_ui_cap()
+	_test_hint_selection_policy()
 	print("logic_tests: %d passed, %d failed" % [_passed, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -272,3 +274,77 @@ func _test_safe_insets() -> void:
 		"safe: padded_bottom_offset only grows the bottom reserve"
 	)
 	_ok(SafeInsets.extra_top(4.0) >= 0.0, "safe: extra_top is non-negative")
+
+func _test_wide_ui_cap() -> void:
+	_ok(is_equal_approx(HudLayout.extra_side_inset_for_cap(1032.0, 1032.0), 0.0), "wide-cap: phone width is no-op")
+	_ok(is_equal_approx(HudLayout.extra_side_inset_for_cap(1031.0, 1032.0), 0.0), "wide-cap: slightly narrow is no-op")
+	_ok(is_equal_approx(HudLayout.extra_side_inset_for_cap(2032.0, 1032.0), 500.0), "wide-cap: tablet splits extra")
+	_ok(is_equal_approx(HudLayout.UI_PHONE_CONTENT_WIDTH, 1032.0), "wide-cap: phone content is 1080-48")
+	_ok(is_equal_approx(HudLayout.UI_PHONE_EDITOR_ROW_WIDTH, 1040.0), "wide-cap: editor row is 1080-40")
+
+func _mock_cell(state: int, locked: bool = false) -> Dictionary:
+	return {"state": state, "is_locked": locked}
+
+
+func _test_hint_selection_policy() -> void:
+	var y := GameConstants.TileState.YELLOW
+	var b := GameConstants.TileState.BLUE
+	var e := GameConstants.TileState.EMPTY
+	var tiles := [y, b]
+	# 4x2 start: Y _ _ B / B _ _ Y  solved checkerboard Y B Y B / B Y B Y
+	var board := {
+		Vector2i(0, 0): _mock_cell(y, true),
+		Vector2i(1, 0): _mock_cell(e),
+		Vector2i(2, 0): _mock_cell(e),
+		Vector2i(3, 0): _mock_cell(b, true),
+		Vector2i(0, 1): _mock_cell(b, true),
+		Vector2i(1, 1): _mock_cell(e),
+		Vector2i(2, 1): _mock_cell(e),
+		Vector2i(3, 1): _mock_cell(y, true),
+	}
+	var solved := {
+		Vector2i(0, 0): y, Vector2i(1, 0): b, Vector2i(2, 0): y, Vector2i(3, 0): b,
+		Vector2i(0, 1): b, Vector2i(1, 1): y, Vector2i(2, 1): b, Vector2i(3, 1): y,
+	}
+	var pick: Variant = HintSystem.pick_hint(board, [], solved, [], Vector2i(4, 2), false, tiles)
+	_ok(pick != null, "hint: finds an open-pair hint")
+	if pick != null:
+		var a: Vector2i = pick["a"]
+		var bcoord: Vector2i = pick["b"]
+		var a_empty: bool = int(board[a].state) == e
+		var b_empty: bool = int(board[bcoord].state) == e
+		_ok(a_empty or b_empty, "hint: involves an empty cell")
+		var both_correct := (
+			not a_empty and not b_empty
+			and int(board[a].state) == int(solved[a])
+			and int(board[bcoord].state) == int(solved[bcoord])
+		)
+		_ok(not both_correct, "hint: does not reveal an already-correct pair")
+
+	# A mistaken fill should be preferred over open-pair progress.
+	board[Vector2i(1, 0)] = _mock_cell(y, false)
+	var pick_wrong: Variant = HintSystem.pick_hint(board, [], solved, [], Vector2i(4, 2), false, tiles)
+	_ok(pick_wrong != null, "hint: still finds a hint with a wrong cell")
+	if pick_wrong != null:
+		_ok(
+			HintSystem._involves_wrong_cell(board, solved, pick_wrong),
+			"hint: prefers a pair involving the wrong cell"
+		)
+
+	board[Vector2i(1, 0)] = _mock_cell(e)
+	var usable := HintSystem.count_usable_hints(board, [], solved, [], Vector2i(4, 2), false)
+	_ok(usable > 0, "hint: usable count is positive while empties remain")
+
+	# Fully correct board: no empty cells and no mistakes — nothing useful to hint.
+	board[Vector2i(1, 0)] = _mock_cell(b)
+	board[Vector2i(2, 0)] = _mock_cell(y)
+	board[Vector2i(1, 1)] = _mock_cell(y)
+	board[Vector2i(2, 1)] = _mock_cell(b)
+	_ok(
+		HintSystem.count_usable_hints(board, [], solved, [], Vector2i(4, 2), false) == 0,
+		"hint: no usable hints when the board is already correct"
+	)
+	_ok(
+		HintSystem.pick_hint(board, [], solved, [], Vector2i(4, 2), false, tiles) == null,
+		"hint: pick is null when nothing would advance the player"
+	)

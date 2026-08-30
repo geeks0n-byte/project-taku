@@ -169,6 +169,7 @@ static func reveal_hint(
 		solved,
 		hidden_reference_constraints,
 		LevelUtils.get_dimensions_from_cells(board_cells),
-		prefer_hidden_pool
+		prefer_hidden_pool,
+		tiles
 	)
 	return {"hint": hint, "solved_reference": solved}

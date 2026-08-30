@@ -15,8 +15,9 @@ extends RefCounted
 # solution and can be offered as bonus hints.
 
 
-# Returns the total number of hints that could currently be shown: the sum of
-# open-pair candidates and filled-pair candidates.
+# Returns the total number of hints that could currently be shown: open pairs
+# (at least one empty cell) plus filled pairs that involve a player mistake.
+# Already-correct filled pairs are not counted — they do not help the player.
 static func count_usable_hints(
 	board_cells: Dictionary,
 	active_constraints: Array,
@@ -43,12 +44,18 @@ static func count_usable_hints(
 		prefer_hidden_pool,
 		true
 	)
-	return open.size() + filled.size()
+	var wrong_n := 0
+	for candidate in filled:
+		if _involves_wrong_cell(board_cells, solved_reference, candidate):
+			wrong_n += 1
+	return open.size() + wrong_n
 
 # Selects the single best hint to show. Priority order:
 #   1. A filled pair where at least one cell is wrong (corrective hint)
-#   2. The highest-priority open pair (see _pick_by_priority)
-#   3. Any filled pair that satisfies the reference (informational hint)
+#   2. An open-pair constraint that creates a new forced cell or reduces options
+#      on a stuck empty cell (a useful next deduction from the current board)
+#   3. Fallback open-pair priority (locked neighbour, existing links, ...)
+# Correctly filled pairs are never hinted — they do not advance a stuck player.
 # Returns null when no suitable hint exists.
 static func pick_hint(
 	board_cells: Dictionary,
@@ -56,7 +63,8 @@ static func pick_hint(
 	solved_reference: Dictionary,
 	hidden_reference_constraints: Array = [],
 	grid_size: Vector2i = Vector2i.ZERO,
-	prefer_hidden_pool: bool = false
+	prefer_hidden_pool: bool = false,
+	available_tiles: Array = []
 ) -> Variant:
 	var filled: Array = _collect_candidates(
 		board_cells,
@@ -82,14 +90,125 @@ static func pick_hint(
 		prefer_hidden_pool,
 		false
 	)
-	var pick: Variant = _pick_by_priority(
-		board_cells, active_constraints, solved_reference, open, prefer_hidden_pool
+	return _pick_progress_hint(
+		board_cells,
+		active_constraints,
+		solved_reference,
+		open,
+		prefer_hidden_pool,
+		available_tiles
 	)
-	if pick != null:
-		return pick
-	return _pick_both_filled(
-		board_cells, active_constraints, solved_reference, filled, prefer_hidden_pool, false
-	)
+
+# Picks the open-pair hint that most helps the current board: prefers a
+# constraint that turns a stuck cell (2+ options) into a naked single.
+static func _pick_progress_hint(
+	board_cells: Dictionary,
+	active_constraints: Array,
+	solved_reference: Dictionary,
+	candidates: Array,
+	prefer_hidden_pool: bool,
+	available_tiles: Array
+) -> Variant:
+	if candidates.is_empty():
+		return null
+	var usable: Array = []
+	for candidate in candidates:
+		if not prefer_hidden_pool and not solved_reference.is_empty() and not _reference_satisfies(solved_reference, candidate):
+			continue
+		usable.append(candidate)
+	if usable.is_empty():
+		return null
+
+	var tiles := _hint_tiles(available_tiles)
+	var layout := {}
+	var empty_cells: Array = []
+	for coord in board_cells:
+		var st := int(board_cells[coord].state)
+		layout[coord] = st
+		if st == GameConstants.TileState.EMPTY:
+			empty_cells.append(coord)
+	var size := LevelUtils.get_dimensions_from_cells(board_cells)
+	var before := {}
+	var stuck := {}
+	if not empty_cells.is_empty():
+		var base_ctx := PuzzleGenerator._prepare_solver_ctx(layout, size.x, size.y, active_constraints)
+		for coord in empty_cells:
+			var n := PuzzleGenerator._fast_option_count(base_ctx, coord.y * size.x + coord.x, tiles, true)
+			before[coord] = n
+			if n > 1:
+				stuck[coord] = true
+
+	var best_score := -1
+	var best: Array = []
+	for candidate in usable:
+		var score := _score_hint_candidate(
+			candidate, layout, empty_cells, before, stuck, size, tiles, active_constraints
+		)
+		if score > best_score:
+			best_score = score
+			best = [candidate]
+		elif score == best_score:
+			best.append(candidate)
+	if best_score > 0 and not best.is_empty():
+		return best.pick_random()
+
+	if not stuck.is_empty():
+		var touching: Array = []
+		for candidate in usable:
+			if stuck.has(candidate["a"]) or stuck.has(candidate["b"]):
+				touching.append(candidate)
+		if not touching.is_empty():
+			return touching.pick_random()
+
+	return _pick_by_priority(board_cells, active_constraints, solved_reference, usable, prefer_hidden_pool)
+
+
+static func _hint_tiles(available_tiles: Array) -> Array:
+	var tiles: Array = []
+	for tile in available_tiles:
+		var state := int(tile)
+		if state == GameConstants.TileState.SHIFTER:
+			continue
+		if not tiles.has(state):
+			tiles.append(state)
+	if tiles.is_empty():
+		return [
+			GameConstants.TileState.YELLOW,
+			GameConstants.TileState.BLUE,
+			GameConstants.TileState.JOKER,
+		]
+	return tiles
+
+
+static func _score_hint_candidate(
+	candidate: Dictionary,
+	layout: Dictionary,
+	empty_cells: Array,
+	before: Dictionary,
+	stuck: Dictionary,
+	size: Vector2i,
+	tiles: Array,
+	active_constraints: Array
+) -> int:
+	if empty_cells.is_empty():
+		return 0
+	var trial: Array = active_constraints.duplicate()
+	trial.append(candidate)
+	var ctx := PuzzleGenerator._prepare_solver_ctx(layout, size.x, size.y, trial)
+	var score := 0
+	for coord in empty_cells:
+		var after := PuzzleGenerator._fast_option_count(ctx, coord.y * size.x + coord.x, tiles, true)
+		var bcnt := int(before.get(coord, 0))
+		if after < bcnt:
+			score += (bcnt - after) * 10
+		if bcnt > 1 and after == 1:
+			score += 100
+		if bcnt > 0 and after == 0:
+			score -= 1000
+	if stuck.has(candidate["a"]) or stuck.has(candidate["b"]):
+		score += 5
+	return score
+
 
 # Runs a quick solve on the board in its current state (respecting existing
 # locked tiles) to produce a reference solution on demand, e.g. when the level
