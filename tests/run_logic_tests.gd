@@ -281,6 +281,20 @@ func _test_wide_ui_cap() -> void:
 	_ok(is_equal_approx(HudLayout.extra_side_inset_for_cap(2032.0, 1032.0), 500.0), "wide-cap: tablet splits extra")
 	_ok(is_equal_approx(HudLayout.UI_PHONE_CONTENT_WIDTH, 1032.0), "wide-cap: phone content is 1080-48")
 	_ok(is_equal_approx(HudLayout.UI_PHONE_EDITOR_ROW_WIDTH, 1040.0), "wide-cap: editor row is 1080-40")
+	_ok(is_equal_approx(HudLayout.extra_side_inset_for_cap(1872.0, 1032.0), 420.0), "wide-cap: status wrap inset on 1920")
+	_ok(is_equal_approx(HudLayout.extra_side_inset_for_cap(1072.0, 1072.0), 0.0), "wide-cap: editor status phone is no-op")
+	_ok(HudLayout.grid_row_pad_count(12, 3) == 0, "grid-pad: full page needs none")
+	_ok(HudLayout.grid_row_pad_count(5, 3) == 1, "grid-pad: custom leftover 5")
+	_ok(HudLayout.grid_row_pad_count(1, 3) == 2, "grid-pad: single leftover")
+	_ok(HudLayout.grid_row_pad_count(0, 3) == 0, "grid-pad: empty is none")
+	_ok(HudLayout.grid_row_pad_count(11, 3) == 1, "grid-pad: eleven needs one")
+	# Same formula as SpaceBackground.phone_layer_scale (do not preload that node script here).
+	var phone := Vector2(1080.0, 1920.0)
+	var pad := 1.35
+	var tile := phone * pad
+	_ok(is_equal_approx(maxf(tile.x / 1080.0, tile.y / 1920.0), 1.35), "bg-scale: phone tex is 1.35")
+	var wide_tile := Vector2(1920.0, 1920.0) * pad
+	_ok(not is_equal_approx(maxf(wide_tile.x / 1080.0, wide_tile.y / 1920.0), 1.35), "bg-scale: wider base would zoom")
 
 func _mock_cell(state: int, locked: bool = false) -> Dictionary:
 	return {"state": state, "is_locked": locked}

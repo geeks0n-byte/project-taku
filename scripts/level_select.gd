@@ -209,17 +209,22 @@ func _pin_level_list_to_top() -> void:
 		level_grid.clip_contents = false
 		const ROW_H := 240.0
 		for child in level_grid.get_children():
-			if child is Button:
-				var btn := child as Button
-				btn.custom_minimum_size = Vector2(btn.custom_minimum_size.x, ROW_H)
-				btn.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+			if child is Control:
+				var cell := child as Control
+				cell.custom_minimum_size = Vector2(cell.custom_minimum_size.x, ROW_H)
+				cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				cell.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		var cols := maxi(1, level_grid.columns)
 		var page_rows := int(ceili(float(LEVELS_PER_PAGE) / float(cols)))
 		var sep := level_grid.get_theme_constant("v_separation")
 		# Always reserve a full page so paging never shifts the list upward.
 		var reserved_h := page_rows * ROW_H + maxi(0, page_rows - 1) * sep
-		level_grid.position = Vector2.ZERO
-		level_grid.size = Vector2(host_w, reserved_h)
+		# Cap to phone content width and center. No-op when host is already 1032 (phones).
+		var grid_w := minf(host_w, HudLayout.UI_PHONE_CONTENT_WIDTH)
+		if grid_w < 1.0:
+			grid_w = host_w
+		level_grid.size = Vector2(grid_w, reserved_h)
+		level_grid.position = Vector2((host_w - grid_w) * 0.5, 0.0)
 		host.custom_minimum_size = Vector2(0, reserved_h)
 		host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
@@ -438,6 +443,17 @@ func _refresh_page() -> void:
 		_apply_level_button_content(btn, resource, title, locked)
 		btn.pressed.connect(_on_level_selected.bind(resource))
 		level_grid.add_child(btn)
+
+	# Pad the last row so a short custom page keeps the same 3-column widths as campaign.
+	var page_count := end - start
+	var pad := HudLayout.grid_row_pad_count(page_count, maxi(1, level_grid.columns))
+	for _i in pad:
+		var filler := Control.new()
+		filler.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		filler.custom_minimum_size = Vector2(260, 240)
+		filler.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		filler.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		level_grid.add_child(filler)
 
 	_update_page_nav_visibility()
 	_pin_level_list_to_top()

@@ -18,6 +18,10 @@ const ASSET_DIR = "res://resources/background/"
 # Extra pixels beyond the asteroid's visual radius before it is considered fully offscreen.
 const ASTEROID_POOL_SIZE := 16
 const ASTEROID_OFFSCREEN_MARGIN := 64.0
+# Authored portrait size (project.godot). Layers tile at this scale so tablets
+# get more stars, not bigger stars, when canvas_items expand grows the viewport.
+const PHONE_VIEWPORT_SIZE := Vector2(1080.0, 1920.0)
+const LAYER_COVER_PAD := 1.35
 
 # Maps logical layer names to their SVG asset filenames, keeping paths in one place.
 const ASSET_FILES = {
@@ -359,13 +363,12 @@ func _present_baked_composite() -> void:
 		_static_rect = TextureRect.new()
 		_static_rect.name = "StaticComposite"
 		_static_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		_static_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		_static_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(_static_rect)
 		move_child(_static_rect, 0)
 	_static_rect.texture = _get_baked_texture()
 	_static_rect.visible = true
-	_apply_cover_rect(_static_rect, _cover_size())
+	_apply_phone_scale_cover(_static_rect, _cover_size())
 
 func _show_static_composite() -> void:
 	_present_baked_composite()
@@ -511,14 +514,23 @@ func _load_fx_assets() -> void:
 	if ResourceLoader.exists(ASSET_DIR + "fx_asteroid_3.svg"):
 		tex_asteroids.append(load(ASSET_DIR + "fx_asteroid_3.svg"))
 	
+# KEEP_ASPECT_COVERED scale of a layer texture onto one authored phone cover tile.
+# Independent of the live viewport so tablets cannot zoom stars.
+static func phone_layer_scale(tex_size: Vector2, phone_viewport: Vector2 = Vector2(1080.0, 1920.0)) -> float:
+	var tile := phone_viewport * LAYER_COVER_PAD
+	var tw := maxf(1.0, tex_size.x)
+	var th := maxf(1.0, tex_size.y)
+	return maxf(tile.x / tw, tile.y / th)
+
+
 # Returns the size each background layer should be so it covers the viewport even during
-# parallax scrolling. The 1.35× factor prevents edge gaps when the scroll offset shifts layers.
-# Layers scale a single texture copy to this size (no in-rect tiling).
+# parallax scrolling. The 1.35x factor prevents edge gaps when the scroll offset shifts layers.
+# Star size stays at phone scale; extra viewport is filled by tiling (see _apply_phone_scale_cover).
 func _cover_size() -> Vector2:
 	var view := get_viewport().get_visible_rect().size
 	if view.x <= 1.0 or view.y <= 1.0:
-		view = Vector2(1080.0, 1920.0)
-	return view * 1.35
+		view = PHONE_VIEWPORT_SIZE
+	return view * LAYER_COVER_PAD
 
 # Sizes and centers a Control rect so it covers the viewport symmetrically.
 # Since the layer is oversized (1.35×), centering keeps the overflow equally distributed
@@ -526,8 +538,26 @@ func _cover_size() -> Vector2:
 func _apply_cover_rect(rect: Control, view_size: Vector2) -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
 	if viewport_size.x <= 1.0 or viewport_size.y <= 1.0:
-		viewport_size = Vector2(1080.0, 1920.0)
+		viewport_size = PHONE_VIEWPORT_SIZE
+	rect.scale = Vector2.ONE
 	rect.size = view_size
+	rect.position = (viewport_size - view_size) * 0.5
+
+
+# Sizes a TextureRect so one phone cover tile matches 1080x1920 KEEP_ASPECT_COVERED,
+# then tiles that texture to fill view_size. On phones this is one tile at the same 1.35 cover scale.
+func _apply_phone_scale_cover(rect: TextureRect, view_size: Vector2) -> void:
+	var viewport_size := get_viewport().get_visible_rect().size
+	if viewport_size.x <= 1.0 or viewport_size.y <= 1.0:
+		viewport_size = PHONE_VIEWPORT_SIZE
+	var tex_size := PHONE_VIEWPORT_SIZE
+	if rect.texture:
+		tex_size = Vector2(float(rect.texture.get_width()), float(rect.texture.get_height()))
+	var phone_scale := phone_layer_scale(tex_size)
+	rect.stretch_mode = TextureRect.STRETCH_TILE
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.scale = Vector2(phone_scale, phone_scale)
+	rect.size = view_size / phone_scale
 	rect.position = (viewport_size - view_size) * 0.5
 
 func _on_viewport_size_changed() -> void:
@@ -536,12 +566,16 @@ func _on_viewport_size_changed() -> void:
 		if child is ParallaxLayer:
 			child.motion_mirroring = view_size
 			for rect_child in child.get_children():
-				if rect_child is Control:
-					_apply_cover_rect(rect_child, view_size)
+				if rect_child is TextureRect:
+					_apply_phone_scale_cover(rect_child as TextureRect, view_size)
+				elif rect_child is Control:
+					_apply_cover_rect(rect_child as Control, view_size)
+		elif child is TextureRect:
+			_apply_phone_scale_cover(child as TextureRect, view_size)
 		elif child is Control:
-			_apply_cover_rect(child, view_size)
+			_apply_cover_rect(child as Control, view_size)
 	if _static_mode and _static_rect and _static_rect.visible:
-		_apply_cover_rect(_static_rect, view_size)
+		_apply_phone_scale_cover(_static_rect, view_size)
 
 # Advances the parallax scroll and checks for asteroids that have left the screen.
 func _process(delta: float) -> void:
@@ -573,7 +607,7 @@ func _release_offscreen_asteroids() -> void:
 
 # Creates a parallax layer for a given texture.
 # motion_offset is seeded so layers don't all start aligned and each launch differs.
-# motion_mirroring wraps the scaled layer during scroll; the TextureRect itself is not tiled.
+# motion_mirroring wraps the cover during scroll; the TextureRect tiles at phone star size.
 func _build_parallax_layer(tex: Texture2D, speed_scale: Vector2, view_size: Vector2 = Vector2.ZERO) -> ParallaxLayer:
 	if view_size == Vector2.ZERO:
 		view_size = _cover_size()
@@ -594,8 +628,8 @@ func _create_pixel_rect(tex: Texture2D, view_size: Vector2 = Vector2.ZERO) -> Te
 	var rect = TextureRect.new()
 	rect.texture = tex
 	rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	_apply_cover_rect(rect, view_size)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_apply_phone_scale_cover(rect, view_size)
 	return rect
 
 # Creates a one-shot Timer registered under `key` and immediately starts it with a random

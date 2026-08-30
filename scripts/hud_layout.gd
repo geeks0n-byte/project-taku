@@ -121,6 +121,17 @@ static func cap_box_row_width(row: Control, max_width: float = UI_PHONE_EDITOR_R
 	row.custom_minimum_size = capped
 
 
+## Invisible cells needed so the last GridContainer row keeps the same column count.
+## 0 when item_count is empty or already fills the row (phone and full pages).
+static func grid_row_pad_count(item_count: int, columns: int) -> int:
+	if item_count <= 0 or columns <= 1:
+		return 0
+	var rem := item_count % columns
+	if rem == 0:
+		return 0
+	return columns - rem
+
+
 static func _layout_parent_width(control: Control) -> float:
 	if control == null:
 		return 0.0
@@ -204,8 +215,10 @@ static func position_top_wide(control: Control, top: float, height: float, margi
 
 # Places the in-game status label (error / success messages) directly below the board
 # with the standard gap defined in GameConstants.
+# Caps wrap width to the phone content column so tablets keep the same line breaks.
 static func position_status_below_board(status: Control, board_y: float, board_height: float) -> void:
 	position_top_wide(status, board_y + board_height + GameConstants.HUD_STATUS_GAP, GameConstants.HUD_STATUS_MIN_HEIGHT)
+	cap_stretched_width(status, UI_PHONE_CONTENT_WIDTH)
 
 # Pins the editor's status bar at the bottom of its parent and shrinks the control
 # panel's bottom edge flush so there's no gap between them.
@@ -220,6 +233,9 @@ static func position_editor_status_below_panel(control_panel: Control, status: C
 	status.offset_bottom = -bottom_margin
 	status.offset_top = status_top
 	control_panel.offset_bottom = 0.0
+	# Phone editor bar is 1080 minus 4px edge each side; no-op at 1080.
+	var phone_w := UI_PHONE_VIEWPORT_WIDTH - 2.0 * float(GameConstants.HUD_TOP_BAR_EDGE_MARGIN)
+	cap_stretched_width(status, phone_w)
 
 # Public entry point for counter row layout. Actual position offsets are
 # managed by the HUD scene tree; this call handles only the internal alignment.
