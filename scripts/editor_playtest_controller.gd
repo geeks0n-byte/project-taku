@@ -401,6 +401,7 @@ func _run_validation() -> void:
 	pt_ui.update_playtest_undo_redo_buttons(_undo_stack.can_undo(), _undo_stack.can_redo())
 	if not results["valid"]:
 		pt_ui.update_playtest_status("\n".join(results["errors"]), Color.WHITE)
+		canvas_manager.refresh_error_bridges()
 	else:
 		pt_ui.update_playtest_status("MSG_FILL_EMPTY", Color.WHITE)
 	if results["valid"] and canvas_manager.is_board_full():

@@ -143,8 +143,13 @@ func _draw_error_border():
 	if error_highlight == null:
 		return
 	if validation_error_active:
+		# Same 1px down-right shift as other overlays; extra -1 on size so
+		# unfilled draw_rect does not sit 1px too far on the right/bottom.
 		error_highlight.draw_rect(
-			Rect2(Vector2.ZERO, error_highlight.size), ERROR_BORDER_COLOR, false, 10.0
+			Rect2(Vector2(1.0, 1.0), error_highlight.size - Vector2(1.0, 1.0)),
+			ERROR_BORDER_COLOR,
+			false,
+			10.0
 		)
 		return
 	if not focus_active:

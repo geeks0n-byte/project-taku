@@ -2,7 +2,7 @@ extends Node
 
 # Interstitial ads are first shown after this many level-win/restart events in a session.
 # Each shown ad increments the threshold by 1, spacing them out over time.
-const INTERSTITIAL_START_EVERY_N := 5
+const INTERSTITIAL_START_EVERY_N := 3
 
 # AdMob test unit IDs — safe to ship; they never charge real money.
 const TEST_BANNER_UNIT_ID := "ca-app-pub-3940256099942544/6300978111"
@@ -42,7 +42,7 @@ var _interstitial: InterstitialAd = null
 var _loading_interstitial: bool = false
 # Called after the interstitial is dismissed (e.g. go-to-next-level callback).
 var _pending_after_ad: Callable = Callable()
-## Session-only interstitial cadence: first at 5 events, then +1 after each shown ad.
+## Session-only interstitial cadence: first at 3 events, then +1 after each shown ad.
 var _interstitial_progress: int = 0
 var _interstitial_every_n: int = INTERSTITIAL_START_EVERY_N
 
@@ -76,6 +76,18 @@ func _ready() -> void:
 	_rewarded_load_watchdog = _make_timer(_on_rewarded_load_timeout)
 	# Defer so the scene tree is fully ready before consent flow starts.
 	call_deferred("ensure_started")
+	call_deferred("_connect_safe_area_resize")
+
+func _connect_safe_area_resize() -> void:
+	var tree := get_tree()
+	if tree == null or tree.root == null:
+		return
+	if not tree.root.size_changed.is_connected(_on_root_resized):
+		tree.root.size_changed.connect(_on_root_resized)
+
+func _on_root_resized() -> void:
+	if _banner_wanted_visible:
+		_pin_banner_bottom()
 
 # Creates a one-shot Timer and connects it to the given callback.
 func _make_timer(on_timeout: Callable) -> Timer:
@@ -274,11 +286,22 @@ func hide_menu_banner() -> void:
 	if _banner:
 		_banner.hide()
 
-# Hard-pins the banner to BOTTOM; called repeatedly after focus/fullscreen changes.
+# Hard-pins the banner above the system nav bar / home indicator.
 func _pin_banner_bottom() -> void:
 	if _banner == null:
 		return
-	_banner.set_position(AdPosition.BOTTOM)
+	_banner.set_position(_banner_safe_bottom_position())
+
+func _banner_safe_bottom_position() -> AdPosition:
+	var bottom := int(round(SafeInsets.screen_margins().w))
+	if bottom <= 0:
+		return AdPosition.BOTTOM
+	var banner_h := _banner.get_height_in_pixels() if _banner else 0
+	if banner_h <= 0:
+		return AdPosition.BOTTOM
+	var window_h := DisplayServer.window_get_size().y
+	var y := window_h - banner_h - bottom
+	return AdPosition.custom(0, maxi(0, y))
 
 # Shows banner and re-pins on the next frame to survive transient layout shifts.
 func _show_banner_pinned() -> void:
@@ -299,7 +322,7 @@ func _ensure_banner_loaded() -> void:
 		return
 	_banner_loading = true
 	var ad_size := AdSize.get_current_orientation_anchored_adaptive_banner_ad_size(AdSize.FULL_WIDTH)
-	_banner = AdView.new(_banner_unit_id(), ad_size, AdPosition.BOTTOM)
+	_banner = AdView.new(_banner_unit_id(), ad_size, _banner_safe_bottom_position())
 	var listener := AdListener.new()
 	listener.on_ad_loaded = func() -> void:
 		_banner_loading = false

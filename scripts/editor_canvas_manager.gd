@@ -34,6 +34,8 @@ var hidden_constraint_pairs: Array = []
 # Separate draw nodes so grid lines and constraint symbols have independent z-order and redraw.
 var grid_drawer: Node2D
 var constraint_drawer: Node2D
+var focus_bridge_drawer: Node2D
+var _error_bridge_coords: Array = []
 
 # When true, cells are configured for play (locked tiles, no editor chrome).
 var is_playtesting: bool = false
@@ -49,9 +51,14 @@ func _ready():
 
 	# constraint_drawer is at maximum z so symbols always render on top of everything.
 	constraint_drawer = Node2D.new()
-	constraint_drawer.z_index = 4096
+	constraint_drawer.z_index = 4095
 	constraint_drawer.draw.connect(_draw_constraints)
 	add_child(constraint_drawer)
+
+	focus_bridge_drawer = Node2D.new()
+	focus_bridge_drawer.z_index = 4096
+	focus_bridge_drawer.draw.connect(_draw_highlight_bridges)
+	add_child(focus_bridge_drawer)
 
 # Forces all draw nodes to re-emit their draw signals on the next frame.
 func trigger_redraw():
@@ -60,6 +67,8 @@ func trigger_redraw():
 		grid_drawer.queue_redraw()
 	if constraint_drawer:
 		constraint_drawer.queue_redraw()
+	if focus_bridge_drawer:
+		focus_bridge_drawer.queue_redraw()
 
 # Resets the canvas to an empty grid of the given size. Reuses pooled cells where possible
 # to avoid the cost of instantiating and destroying nodes on every grid resize.
@@ -155,6 +164,8 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 	# Keep draw nodes on top of all cells at all times.
 	move_child(grid_drawer, -1)
 	move_child(constraint_drawer, -1)
+	if focus_bridge_drawer:
+		move_child(focus_bridge_drawer, -1)
 
 	cached_lines = BoardRenderer.cache_board_lines(board_cells)
 	trigger_redraw()
@@ -252,11 +263,25 @@ func load_layout(new_width: int, new_height: int, layout_data: Dictionary, shift
 
 	move_child(grid_drawer, -1)
 	move_child(constraint_drawer, -1)
+	if focus_bridge_drawer:
+		move_child(focus_bridge_drawer, -1)
 
 	trigger_redraw()
 
 func clear_highlights():
 	BoardRenderer.clear_highlights(board_cells)
+	_error_bridge_coords.clear()
+	if focus_bridge_drawer:
+		focus_bridge_drawer.queue_redraw()
+
+func refresh_error_bridges() -> void:
+	_error_bridge_coords.clear()
+	for coord in board_cells:
+		var cell = board_cells[coord]
+		if cell.validation_error_active and cell.state != GameConstants.TileState.WALL:
+			_error_bridge_coords.append(coord)
+	if focus_bridge_drawer:
+		focus_bridge_drawer.queue_redraw()
 
 func is_board_full() -> bool:
 	return BoardRenderer.is_board_full(board_cells)
@@ -269,4 +294,14 @@ func _draw_grid():
 func _draw_constraints():
 	BoardRenderer.draw_constraints(
 		constraint_drawer, board_cells, loaded_constraint_pairs, GameConstants.CELL_SIZE
+	)
+
+func _draw_highlight_bridges() -> void:
+	if not is_playtesting:
+		return
+	BoardRenderer.draw_highlight_bridges(
+		focus_bridge_drawer,
+		board_cells,
+		_error_bridge_coords,
+		GameConstants.CELL_SIZE
 	)

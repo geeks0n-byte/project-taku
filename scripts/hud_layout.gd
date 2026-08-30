@@ -62,6 +62,61 @@ static func measure_label_min_width(label: Label) -> float:
 static func cap_ui_width(width: float, extra_margin: float = UI_SAFE_SIDE_MARGIN) -> float:
 	return minf(width, max_ui_content_width(extra_margin))
 
+## Shifts a top-anchored HUD bar (and optional counter row) below the status bar / cutout.
+static func apply_top_hud_safe_area(top_bar: Control, counter: Control = null) -> void:
+	var edge := float(GameConstants.HUD_TOP_BAR_EDGE_MARGIN)
+	var top := SafeInsets.padded_top(edge)
+	var left := SafeInsets.left()
+	var right := SafeInsets.right()
+	if top_bar:
+		top_bar.offset_left = edge + left
+		top_bar.offset_top = top
+		top_bar.offset_right = -edge - right
+		top_bar.offset_bottom = top + GameConstants.HUD_TOP_BAR_HEIGHT - edge
+	if counter:
+		var shift := top - edge
+		counter.offset_left = edge + left
+		counter.offset_top = GameConstants.HUD_COUNTER_ROW_TOP + shift
+		counter.offset_right = -edge - right
+		counter.offset_bottom = (
+			GameConstants.HUD_COUNTER_ROW_TOP + GameConstants.HUD_COUNTER_ROW_HEIGHT + shift
+		)
+
+
+## Lifts a bottom-anchored panel above the nav bar / home indicator.
+static func apply_bottom_bar_safe_area(control: Control) -> void:
+	if control == null:
+		return
+	if not control.has_meta("_safe_authored"):
+		control.set_meta("_safe_authored", true)
+		control.set_meta("_safe_t", control.offset_top)
+		control.set_meta("_safe_b", control.offset_bottom)
+		control.set_meta("_safe_l", control.offset_left)
+		control.set_meta("_safe_r", control.offset_right)
+	var m := SafeInsets.viewport_margins()
+	control.offset_top = float(control.get_meta("_safe_t")) - m.w
+	control.offset_bottom = float(control.get_meta("_safe_b")) - m.w
+	control.offset_left = float(control.get_meta("_safe_l")) + m.x
+	control.offset_right = float(control.get_meta("_safe_r")) - m.z
+
+
+## Pads a full-rect content host so authored top/bottom/side offsets clear system bars.
+static func apply_content_edge_safe_area(control: Control) -> void:
+	if control == null:
+		return
+	if not control.has_meta("_safe_authored"):
+		control.set_meta("_safe_authored", true)
+		control.set_meta("_safe_t", control.offset_top)
+		control.set_meta("_safe_b", control.offset_bottom)
+		control.set_meta("_safe_l", control.offset_left)
+		control.set_meta("_safe_r", control.offset_right)
+	var m := SafeInsets.viewport_margins()
+	control.offset_top = SafeInsets.padded_top(float(control.get_meta("_safe_t")))
+	control.offset_bottom = SafeInsets.padded_bottom_offset(float(control.get_meta("_safe_b")))
+	control.offset_left = float(control.get_meta("_safe_l")) + m.x
+	control.offset_right = float(control.get_meta("_safe_r")) - m.z
+
+
 # Stretches a control to the full horizontal width with symmetric side margins,
 # anchored to the top of its parent at the given pixel offset.
 static func position_top_wide(control: Control, top: float, height: float, margin: float = GameConstants.HUD_SIDE_MARGIN) -> void:
@@ -83,7 +138,7 @@ static func position_status_below_board(status: Control, board_y: float, board_h
 static func position_editor_status_below_panel(control_panel: Control, status: Control) -> void:
 	if not control_panel or not status:
 		return
-	var bottom_margin := GameConstants.HUD_TOP_BAR_EDGE_MARGIN
+	var bottom_margin := GameConstants.HUD_TOP_BAR_EDGE_MARGIN + SafeInsets.bottom()
 	var status_top := -(bottom_margin + GameConstants.HUD_EDITOR_STATUS_HEIGHT)
 	status.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	status.offset_left = bottom_margin
@@ -355,10 +410,11 @@ static func layout_how_to_play_stack(
 			ProjectSettings.get_setting("display/window/size/viewport_height", 1920)
 		)
 	var nav_h := GameConstants.UI_BTN_NAV_SIZE.y
-	var bottom_limit := host_h - GameConstants.AD_BANNER_RESERVE - 16.0
+	var panel_top := SafeInsets.padded_top(GameConstants.HTP_PANEL_TOP)
+	var bottom_limit := host_h - GameConstants.AD_BANNER_RESERVE - 16.0 - SafeInsets.bottom()
 	var max_panel_h := maxf(
 		GameConstants.HTP_PANEL_MIN_HEIGHT,
-		bottom_limit - GameConstants.HTP_PANEL_TOP - nav_h - GameConstants.SCREEN_NAV_GAP
+		bottom_limit - panel_top - nav_h - GameConstants.SCREEN_NAV_GAP
 	)
 
 	# Lock horizontal size first so RichTextLabel can measure wrap height.
@@ -368,8 +424,8 @@ static func layout_how_to_play_stack(
 	panel.anchor_bottom = 0.0
 	panel.offset_left = -GameConstants.HTP_PANEL_HALF_WIDTH
 	panel.offset_right = GameConstants.HTP_PANEL_HALF_WIDTH
-	panel.offset_top = GameConstants.HTP_PANEL_TOP
-	panel.offset_bottom = GameConstants.HTP_PANEL_TOP + max_panel_h
+	panel.offset_top = panel_top
+	panel.offset_bottom = panel_top + max_panel_h
 	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
@@ -385,15 +441,15 @@ static func layout_how_to_play_stack(
 	if update_nav_lock or not host.has_meta("_htp_nav_top"):
 		host.set_meta(
 			"_htp_nav_top",
-			GameConstants.HTP_PANEL_TOP + natural_panel_h + GameConstants.SCREEN_NAV_GAP
+			panel_top + natural_panel_h + GameConstants.SCREEN_NAV_GAP
 		)
 	var nav_top: float = float(host.get_meta("_htp_nav_top"))
 	var max_under_nav := maxf(
 		GameConstants.HTP_PANEL_MIN_HEIGHT,
-		nav_top - GameConstants.HTP_PANEL_TOP - GameConstants.SCREEN_NAV_GAP
+		nav_top - panel_top - GameConstants.SCREEN_NAV_GAP
 	)
 	var panel_h := clampf(content_h, GameConstants.HTP_PANEL_MIN_HEIGHT, minf(max_panel_h, max_under_nav))
-	panel.offset_bottom = GameConstants.HTP_PANEL_TOP + panel_h
+	panel.offset_bottom = panel_top + panel_h
 	if rules:
 		var needs_scroll := content_h > panel_h + 1.0
 		rules.scroll_active = needs_scroll
@@ -403,8 +459,8 @@ static func layout_how_to_play_stack(
 	nav.anchor_right = 1.0
 	nav.anchor_top = 0.0
 	nav.anchor_bottom = 0.0
-	nav.offset_left = 40.0
-	nav.offset_right = -40.0
+	nav.offset_left = 40.0 + SafeInsets.left()
+	nav.offset_right = -40.0 - SafeInsets.right()
 	nav.offset_top = nav_top
 	nav.offset_bottom = nav_top + nav_h
 	nav.grow_horizontal = Control.GROW_DIRECTION_BOTH
@@ -532,19 +588,21 @@ static func _place_overlay_close_like_pause(button: Button) -> void:
 	if button.is_inside_tree():
 		viewport_w = button.get_viewport_rect().size.x
 	var edge := float(GameConstants.HUD_TOP_BAR_EDGE_MARGIN)
-	var inner := viewport_w - edge * 2.0
+	var safe := SafeInsets.viewport_margins()
+	var top := SafeInsets.padded_top(edge)
+	var inner := viewport_w - edge * 2.0 - safe.x - safe.z
 	var fixed := (
 		float(GameConstants.HUD_BUTTON_CLUSTER_WIDTH) * 2.0
 		+ float(GameConstants.HUD_CENTER_LABEL_WIDTH)
 	)
 	var leftover := maxf(inner - fixed, 0.0)
-	var left := edge + leftover * 0.5
+	var left := edge + safe.x + leftover * 0.5
 	var size := float(GameConstants.HUD_BUTTON_WIDTH)
 	button.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	button.offset_left = left
-	button.offset_top = edge
+	button.offset_top = top
 	button.offset_right = left + size
-	button.offset_bottom = edge + size
+	button.offset_bottom = top + size
 
 # Returns the English translation of an i18n key regardless of the active locale.
 # Used by the editor preview and forced-English paths to get consistent layout metrics.

@@ -113,6 +113,11 @@ func setup_ui(grid_width: int, grid_height: int) -> void:
 	call_deferred("_refresh_editor_pixel_fonts")
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
+	if not get_viewport().size_changed.is_connected(_on_safe_area_viewport_resized):
+		get_viewport().size_changed.connect(_on_safe_area_viewport_resized)
+
+func _on_safe_area_viewport_resized() -> void:
+	_apply_top_bar_buttons()
 
 func _refresh_editor_pixel_fonts() -> void:
 	EditorUiPolicy.refresh_editor_pixel_fonts(get_node_or_null("../EditorUI"))
@@ -208,8 +213,10 @@ func _apply_top_bar_buttons() -> void:
 	for button in [main_menu_button, test_button, clear_button, editor_hint_button, editor_undo_button, editor_redo_button]:
 		HudLayout.apply_square_top_bar_button(button)
 	HudLayout.apply_top_bar_mode_label(editor_mode_label)
-	if top_hud:
-		top_hud.offset_bottom = GameConstants.HUD_TOP_BAR_HEIGHT
+	HudLayout.apply_top_hud_safe_area(top_hud)
+	HudLayout.apply_bottom_bar_safe_area(control_panel)
+	if status_label and control_panel:
+		HudLayout.position_editor_status_below_panel(control_panel, status_label)
 	if top_bar_row:
 		top_bar_row.custom_minimum_size.y = float(GameConstants.HUD_BUTTON_HEIGHT)
 	_nudge_editor_control_icons()

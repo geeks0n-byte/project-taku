@@ -18,9 +18,6 @@ var _screenshot_busy: bool = false
 func _ready() -> void:
 	# Always process so back-button and focus events work even when the tree is paused.
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	if OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios"):
-		# sensorPortrait: portrait-only UX without hard manifest lock (Play large-screen policy).
-		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
 
 func _notification(what: int) -> void:
 	match what:

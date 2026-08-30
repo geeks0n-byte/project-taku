@@ -75,10 +75,10 @@ func _difficulty_for_level(level: LevelData) -> int:
 		return PuzzleGenerator.Difficulty.MEDIUM
 	return PuzzleGenerator.Difficulty.MEDIUM
 
-# Sets hints_remaining based on level type. Tutorials get unlimited hints;
-# campaign levels get a difficulty-based quota.
+# Sets hints_remaining based on level type. Tutorials and debug-tools sessions
+# get unlimited hints; campaign levels get a difficulty-based quota.
 func _reset_hint_quota(level: LevelData) -> void:
-	if _is_campaign_tutorial(level):
+	if GlobalGameManager.debug_tools_enabled or _is_campaign_tutorial(level):
 		hints_remaining = GameConstants.HINT_LIMIT_UNLIMITED
 	else:
 		hints_remaining = GameConstants.hint_limit_for_difficulty(_difficulty_for_level(level))
@@ -139,7 +139,20 @@ func _ready():
 	_apply_debug_tools_visibility()
 	if timer_node:
 		timer_node.timeout.connect(_on_timer_timeout)
+	if not get_viewport().size_changed.is_connected(_on_viewport_resized):
+		get_viewport().size_changed.connect(_on_viewport_resized)
 	_begin_level_entry()
+
+func _on_viewport_resized() -> void:
+	if board_manager == null or board_manager.board_cells.is_empty():
+		return
+	var dims := LevelUtils.get_dimensions_from_cells(board_manager.board_cells)
+	var centered_board_y := LevelUtils.center_board_y(
+		dims.y, GameConstants.CELL_SIZE, get_viewport_rect().size.y
+	)
+	board_manager.position.y = centered_board_y
+	if ui_manager:
+		ui_manager.update_dynamic_layout(centered_board_y, dims.y * GameConstants.CELL_SIZE)
 
 # Pauses the game timer while a fullscreen ad is displayed.
 # The timer only stops if the game is actually running and not already paused.
@@ -494,7 +507,7 @@ func generate_board():
 	ui_manager.set_joker_counter_visibility(false)
 	ui_manager.set_move_counter_visibility(false)
 	var is_tutorial := _is_campaign_tutorial(current_level_resource)
-	ui_manager.set_reset_mode_restart(is_tutorial)
+	ui_manager.set_reset_mode_restart(LevelUtils.level_has_preset_tiles(current_level_resource))
 	ui_manager.display_level(
 		LevelUtils.get_display_level_number(current_level_resource),
 		is_custom,
@@ -873,7 +886,12 @@ func _on_pause():
 	ui_manager.set_hud_buttons_disabled(true)
 	if pause_menu:
 		if pause_menu.has_method("set_restart_label_key"):
-			pause_menu.set_restart_label_key("UI_RESTART" if _challenges_disabled else "UI_NEW_LAYOUT")
+			var restart_label := "UI_RESTART"
+			if levels.is_empty() or current_level_index < 0 or current_level_index >= levels.size():
+				restart_label = "UI_NEW_LAYOUT"
+			elif not LevelUtils.level_has_preset_tiles(levels[current_level_index]):
+				restart_label = "UI_NEW_LAYOUT"
+			pause_menu.set_restart_label_key(restart_label)
 		pause_menu.show()
 
 # Opens in-game how-to-play overlay from active run.
@@ -1087,6 +1105,7 @@ func _begin_level_entry() -> void:
 			pause_menu.hide()
 		if options_menu:
 			options_menu.visible = false
+		ui_manager.set_reset_mode_restart(LevelUtils.level_has_preset_tiles(level))
 		ui_manager.show_session_resume_prompt()
 		return
 	if SaveManager.has_session():
@@ -1223,13 +1242,15 @@ func restore_session() -> void:
 		hints_remaining = int(data.get("hints_remaining", GameConstants.HINT_LIMIT_UNLIMITED))
 	else:
 		_reset_hint_quota(current_level_resource)
+	if GlobalGameManager.debug_tools_enabled:
+		hints_remaining = GameConstants.HINT_LIMIT_UNLIMITED
 	hidden_reference_constraints = data.get("hidden_reference_constraints", []).duplicate(true)
 	solved_solution_reference = data.get("solved_solution_reference", {}).duplicate(true)
 
 	ui_manager.set_joker_counter_visibility(false)
 	ui_manager.set_move_counter_visibility(false)
 	var is_tutorial := _is_campaign_tutorial(current_level_resource)
-	ui_manager.set_reset_mode_restart(is_tutorial)
+	ui_manager.set_reset_mode_restart(LevelUtils.level_has_preset_tiles(current_level_resource))
 	ui_manager.display_level(
 		LevelUtils.get_display_level_number(current_level_resource),
 		is_custom,

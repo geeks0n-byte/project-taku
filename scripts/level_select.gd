@@ -162,6 +162,17 @@ func _layout_level_select() -> void:
 	if _title_label:
 		HudLayout._bind_header_translation_key(_title_label, "UI_SELECT_LEVEL")
 		HudLayout.apply_screen_header_style(_title_label)
+		const TITLE_AUTHORED_TOP := 160.0
+		const TITLE_AUTHORED_H := 152.0
+		var title_top := SafeInsets.padded_top(TITLE_AUTHORED_TOP)
+		_title_label.offset_top = title_top
+		_title_label.offset_bottom = title_top + TITLE_AUTHORED_H
+		if content_vbox:
+			const VBOX_AUTHORED_TOP := 348.0
+			content_vbox.offset_top = VBOX_AUTHORED_TOP + (title_top - TITLE_AUTHORED_TOP)
+			content_vbox.offset_bottom = SafeInsets.padded_bottom_offset(-164.0)
+			content_vbox.offset_left = 24.0 + SafeInsets.left()
+			content_vbox.offset_right = -24.0 - SafeInsets.right()
 	_connect_level_list_host()
 	_pin_level_list_to_top()
 

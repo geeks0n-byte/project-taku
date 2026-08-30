@@ -18,7 +18,7 @@ const MEDIUM_SKIP_OBVIOUS_FRACTION := 0.30
 
 # Attempts up to 2500 times to generate a valid, playable puzzle layout.
 # Each attempt:
-#   1. Builds a blank grid (preserving any pre-existing walls).
+#   1. Builds a blank grid (preserving locked walls, or generating new ones).
 #   2. Randomly places shifter pairs (only when jokers are allowed).
 #   3. Checks parity: every row and column must have the same (playable+shifter) parity
 #      so that a balanced solution is mathematically possible.
@@ -35,7 +35,7 @@ static func generate_random_layout(
 	allowed_tiles: Array,
 	current_layout: Dictionary = {},
 	require_unique: bool = true,
-	_lock_walls: bool = false,
+	lock_walls: bool = false,
 	difficulty: int = Difficulty.MEDIUM
 ) -> Dictionary:
 	var attempt = 0
@@ -53,18 +53,20 @@ static func generate_random_layout(
 	
 	while attempt < 2500: 
 		attempt += 1
+		# Late attempts drop random walls so parity-stuck boards can still solve.
+		var force_no_walls: bool = attempt > 2000
 		
 		var layout = {}
 		for y in range(height):
 			for x in range(width):
 				var c = Vector2i(x, y)
-				if current_layout.has(c) and int(current_layout[c]) == -2:
+				if lock_walls and current_layout.has(c) and int(current_layout[c]) == -2:
 					layout[c] = -2
 				else:
 					layout[c] = -1
 
-		var all_cells = layout.keys()
-		all_cells.shuffle()
+		if not lock_walls and not force_no_walls:
+			_place_random_walls(layout, width, height, punch_difficulty, attempt)
 
 		var empty_cells = []
 		for c in layout.keys():
@@ -379,7 +381,59 @@ static func generate_random_layout(
 		}
 		
 	push_error("Generator failed: Generated walls may be mathematically impossible with the strict parity rules.")
-	return {} 
+	return {}
+
+# Places a difficulty-scaled number of walls. Interior cells and 2×2 clusters are
+# allowed; a row or column is never fully walled. Later attempts use the low end
+# of the range so parity-stuck boards can still solve.
+static func _place_random_walls(
+	layout: Dictionary,
+	width: int,
+	height: int,
+	difficulty: int,
+	attempt: int
+) -> void:
+	if width <= 1 or height <= 1:
+		return
+	var area := width * height
+	var min_frac := 0.12
+	var max_frac := 0.24
+	match clampi(difficulty, Difficulty.EASY, Difficulty.HARD):
+		Difficulty.EASY:
+			min_frac = 0.08
+			max_frac = 0.18
+		Difficulty.HARD:
+			min_frac = 0.18
+			max_frac = 0.32
+		_:
+			min_frac = 0.12
+			max_frac = 0.24
+	var line_cap := mini(width * (height - 1), height * (width - 1))
+	var lo := clampi(int(round(float(area) * min_frac)), 1, line_cap)
+	var hi := clampi(int(round(float(area) * max_frac)), lo, line_cap)
+	if attempt > 1500:
+		hi = lo
+	var target := randi_range(lo, hi)
+	var coords: Array = layout.keys()
+	coords.shuffle()
+	var row_counts := {}
+	var col_counts := {}
+	for i in range(height):
+		row_counts[i] = 0
+	for i in range(width):
+		col_counts[i] = 0
+	var placed := 0
+	for coord in coords:
+		if placed >= target:
+			break
+		if int(layout[coord]) == -2:
+			continue
+		if int(row_counts[coord.y]) >= width - 1 or int(col_counts[coord.x]) >= height - 1:
+			continue
+		layout[coord] = -2
+		row_counts[coord.y] += 1
+		col_counts[coord.x] += 1
+		placed += 1
 
 # Returns true if at least one empty cell in the layout has exactly one valid
 # tile value, i.e. can be filled by pure logical deduction without guessing.

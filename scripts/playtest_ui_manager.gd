@@ -48,6 +48,7 @@ var _htp_header: Label                     # Page header label injected by HudLa
 var _hint_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED  # -1 = unlimited; 0 = ad required.
 var _hint_forced_disabled: bool = false    # True while the board is solved or overlay is open.
 var _button_style_source: Button           # Reference button whose StyleBoxes are copied to end-screen buttons.
+const _ICON_RESET: Texture2D = preload("res://resources/icons/icon_reset.svg")
 
 # Hold-to-repeat undo/redo (same timing as main-game HUD).
 const _HOLD_INITIAL_DELAY := 0.4
@@ -73,6 +74,11 @@ func _ready() -> void:
 	call_deferred("_apply_top_bar_buttons")
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
+	if not get_viewport().size_changed.is_connected(_on_safe_area_viewport_resized):
+		get_viewport().size_changed.connect(_on_safe_area_viewport_resized)
+
+func _on_safe_area_viewport_resized() -> void:
+	_apply_top_bar_buttons()
 
 func _on_language_changed() -> void:
 	_apply_top_bar_buttons()
@@ -108,6 +114,7 @@ func _apply_top_bar_buttons() -> void:
 	HudLayout.apply_top_bar_button_cluster(top_bar_row.get_node_or_null("RightButtons") as HBoxContainer)
 	for button in [exit_button, reset_button, rules_button, hint_button, undo_button, redo_button]:
 		HudLayout.apply_square_top_bar_button(button)
+	_apply_reset_button_icon()
 	HudLayout.apply_top_bar_mode_label(test_mode_label)
 	HudLayout.align_counter_label(timer_label, GameConstants.HUD_TIMER_Y_NUDGE)
 	HudLayout.align_counter_label(jokers_label)
@@ -117,14 +124,17 @@ func _apply_top_bar_buttons() -> void:
 	set_playtest_joker_counter_visibility(false)
 	set_playtest_move_counter_visibility(false)
 	HudLayout.align_counter_row(counter_container)
-	if playtest_hud_container:
-		playtest_hud_container.offset_bottom = GameConstants.HUD_TOP_BAR_HEIGHT
+	HudLayout.apply_top_hud_safe_area(playtest_hud_container, counter_container)
 	if top_bar_row:
 		top_bar_row.custom_minimum_size.y = float(GameConstants.HUD_BUTTON_HEIGHT)
-	if counter_container:
-		counter_container.offset_top = GameConstants.HUD_COUNTER_ROW_TOP
-		counter_container.offset_bottom = GameConstants.HUD_COUNTER_ROW_TOP + GameConstants.HUD_COUNTER_ROW_HEIGHT
 	_start_test_mode_label_breathe()
+
+func _apply_reset_button_icon() -> void:
+	if not reset_button:
+		return
+	var icon := reset_button.get_node_or_null("IconContainer/Icon") as TextureRect
+	if icon:
+		icon.texture = _ICON_RESET
 
 ## Starts an infinite alpha pulse on the "TEST MODE" label to remind developers
 ## they are in playtest mode. Kills any existing tween before starting a new one
@@ -243,7 +253,7 @@ func _on_try_again_pressed() -> void:
 	playtest_reset_requested.emit()
 
 func _on_return_pressed() -> void:
-		test_mode_exited.emit()
+	test_mode_exited.emit()
 
 func _setup_end_layer() -> void:
 	if _center:
@@ -347,12 +357,10 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 	var soft_min := 560.0 if preview_h > 0.0 else 520.0
 	_victory_panel.custom_minimum_size = Vector2(panel_w, maxf(soft_min, height))
 
-## Disables (or re-enables) all playtest action buttons.
-## Reset is always kept disabled regardless of `disabled` — it is only enabled by
-## external code once the board has been interacted with.
+## Disables (or re-enables) all playtest action buttons, including restart.
 func _set_playtest_buttons_disabled(disabled: bool) -> void:
 	if reset_button:
-		reset_button.disabled = true
+		reset_button.disabled = disabled
 		HudLayout.refresh_button_icon_modulate(reset_button)
 	if rules_button:
 		rules_button.disabled = disabled
@@ -391,7 +399,7 @@ func toggle_playtest_visibility(is_playtesting: bool) -> void:
 		hide_end_overlays()
 	if is_playtesting:
 		if reset_button:
-			reset_button.disabled = true
+			reset_button.disabled = false
 			HudLayout.refresh_button_icon_modulate(reset_button)
 		_start_test_mode_label_breathe()
 	elif _test_label_breathe_tween:

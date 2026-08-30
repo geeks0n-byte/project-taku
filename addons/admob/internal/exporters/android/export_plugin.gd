@@ -137,11 +137,64 @@ func _get_android_manifest_application_element_contents(
 	return "\n".join(content)
 
 
+var _last_android_export_path := ""
+var _last_android_export_debug := true
+
+
 func _export_begin(_features: PackedStringArray, _is_debug: bool, _path: String, _flags: int) -> void:
-	if not _features.has("android"):
-		return
+	_last_android_export_path = _path
+	_last_android_export_debug = _is_debug
 	PluginVersion.check_version_mismatch(PluginVersion.android_version, "Android")
 	_patch_android_gradle_file()
+
+
+func _export_end() -> void:
+	if _last_android_export_debug or _last_android_export_path.is_empty():
+		return
+	_copy_play_console_artifacts(_last_android_export_path)
+
+
+func _copy_play_console_artifacts(aab_path: String) -> void:
+	var dest_dir := aab_path.get_base_dir()
+	if dest_dir.is_empty():
+		dest_dir = ProjectSettings.globalize_path("res://android/build/build/outputs")
+	var outputs := ProjectSettings.globalize_path("res://android/build/build/outputs")
+	var mapping := _find_named_file(outputs, "mapping.txt")
+	var symbols := _find_named_file(outputs, "native-debug-symbols.zip")
+	if not mapping.is_empty():
+		_copy_file(mapping, dest_dir.path_join("mapping.txt"))
+	if not symbols.is_empty():
+		_copy_file(symbols, dest_dir.path_join("native-debug-symbols.zip"))
+
+
+func _find_named_file(abs_dir: String, filename: String) -> String:
+	var d := DirAccess.open(abs_dir)
+	if d == null:
+		return ""
+	d.list_dir_begin()
+	var name := d.get_next()
+	while name != "":
+		if name != "." and name != "..":
+			var path := abs_dir.path_join(name)
+			if d.current_is_dir():
+				var found := _find_named_file(path, filename)
+				if not found.is_empty():
+					return found
+			elif name == filename:
+				return path
+		name = d.get_next()
+	return ""
+
+
+func _copy_file(src: String, dest: String) -> void:
+	var bytes := FileAccess.get_file_as_bytes(src)
+	if bytes.is_empty():
+		return
+	var out := FileAccess.open(dest, FileAccess.WRITE)
+	if out:
+		out.store_buffer(bytes)
+		out.close()
+		print("Play Console artifact copied to ", dest)
 
 
 func _patch_android_gradle_file() -> void:
@@ -151,23 +204,35 @@ func _patch_android_gradle_file() -> void:
 		if not FileAccess.file_exists(gradle_path):
 			return
 
+	var gradle_dir := gradle_path.get_base_dir()
+	_copy_res_file("res://tools/android_proguard-rules.pro", gradle_dir.path_join("proguard-rules.pro"))
+	_copy_res_file("res://tools/spaceblox-r8.gradle", gradle_dir.path_join("spaceblox-r8.gradle"))
+
 	var content := FileAccess.get_file_as_string(gradle_path)
 	if content.is_empty():
 		return
+	content = content.replace("\r\n", "\n").replace("\r", "\n")
+	content = content.replace("debugSymbolLevel 'NONE'", "debugSymbolLevel 'SYMBOL_TABLE'")
 
-	if 'exclude group: "com.google.android.gms", module: "play-services-ads"' in content:
-		return
+	if not ("spaceblox-r8.gradle" in content):
+		content += "\napply from: 'spaceblox-r8.gradle'\n"
 
-	var patch := """
-// Added by Poing Godot AdMob Plugin to support GMA Next-Gen SDK
-configurations.configureEach {
-    exclude group: "com.google.android.gms", module: "play-services-ads"
-    exclude group: "com.google.android.gms", module: "play-services-ads-lite"
-}
-"""
-	content += patch
+	if not ('exclude group: "com.google.android.gms", module: "play-services-ads"' in content):
+		content += "\nconfigurations.configureEach {\n    exclude group: \"com.google.android.gms\", module: \"play-services-ads\"\n    exclude group: \"com.google.android.gms\", module: \"play-services-ads-lite\"\n}\n"
 
 	var file := FileAccess.open(gradle_path, FileAccess.WRITE)
 	if file:
 		file.store_string(content)
 		file.close()
+
+
+func _copy_res_file(src: String, dest: String) -> void:
+	if not FileAccess.file_exists(src):
+		return
+	var bytes := FileAccess.get_file_as_bytes(src)
+	if bytes.is_empty():
+		return
+	var out := FileAccess.open(dest, FileAccess.WRITE)
+	if out:
+		out.store_buffer(bytes)
+		out.close()

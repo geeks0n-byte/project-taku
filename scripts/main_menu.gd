@@ -80,6 +80,8 @@ var _boot_intro_active: bool = false
 var _boot_intro_tween: Tween
 var _button_fade_tween: Tween
 var _boot_intro_failsafe: SceneTreeTimer
+var _boot_intro_waiting_on_consent: bool = false
+var _eat_intro_pointer: bool = false
 
 # Instance of consent_popup.tscn. Kept as a reference so we can check
 # its visibility for the back-button handler.
@@ -132,6 +134,9 @@ func _ready() -> void:
 
 	_boot_intro_active = GlobalGameManager.main_menu_should_fade_in
 	_build_consent_popup()
+	_apply_safe_area_layout()
+	if not get_viewport().size_changed.is_connected(_on_safe_area_viewport_resized):
+		get_viewport().size_changed.connect(_on_safe_area_viewport_resized)
 
 	if options_menu:
 		options_menu.back_requested.connect(_on_options_back)
@@ -142,28 +147,59 @@ func _ready() -> void:
 		GlobalGameManager.main_menu_should_fade_in = false
 		# Survive an immediate Android pause during the boot intro.
 		process_mode = Node.PROCESS_MODE_ALWAYS
-		_prepare_boot_intro()
-		call_deferred("_play_boot_intro")
+		if _needs_privacy_consent():
+			_boot_intro_waiting_on_consent = true
+			_show_privacy_consent_if_needed(false)
+			_prepare_boot_intro()
+		else:
+			_prepare_boot_intro()
+			call_deferred("_play_boot_intro")
 
 func _ensure_menu_ui_visible() -> void:
 	_complete_boot_intro()
 	process_mode = Node.PROCESS_MODE_INHERIT
 
+func _is_primary_pointer_press(event: InputEvent) -> bool:
+	if event is InputEventMouseButton:
+		var mouse := event as InputEventMouseButton
+		return mouse.pressed and mouse.button_index == MOUSE_BUTTON_LEFT
+	if event is InputEventScreenTouch:
+		return (event as InputEventScreenTouch).pressed
+	return false
+
+func _is_primary_pointer_release(event: InputEvent) -> bool:
+	if event is InputEventMouseButton:
+		var mouse := event as InputEventMouseButton
+		return not mouse.pressed and mouse.button_index == MOUSE_BUTTON_LEFT
+	if event is InputEventScreenTouch:
+		return not (event as InputEventScreenTouch).pressed
+	return false
+
+func _set_boot_menu_input_enabled(enabled: bool) -> void:
+	var filter := Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
+	for btn in [start_btn, tutorial_btn, levels_btn, how_to_play_btn, options_btn, credits_btn, editor_btn]:
+		if btn:
+			btn.mouse_filter = filter
+	for btn in [debug_star_btn, debug_asteroid_btn, debug_asteroid_cloud_btn, debug_comet_btn, debug_comet_shower_btn]:
+		if btn:
+			btn.mouse_filter = filter
+
 func _input(event: InputEvent) -> void:
+	if _eat_intro_pointer:
+		get_viewport().set_input_as_handled()
+		if _is_primary_pointer_release(event):
+			_eat_intro_pointer = false
+			call_deferred("_set_boot_menu_input_enabled", true)
+		return
 	if not _boot_intro_active:
 		return
 	if _consent_blocker and _consent_blocker.visible:
 		return
 	if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
 		return
-	var skip := false
-	if event is InputEventMouseButton:
-		var mouse := event as InputEventMouseButton
-		skip = mouse.pressed and mouse.button_index == MOUSE_BUTTON_LEFT
-	elif event is InputEventScreenTouch:
-		skip = (event as InputEventScreenTouch).pressed
-	if not skip:
+	if not _is_primary_pointer_press(event):
 		return
+	_eat_intro_pointer = true
 	get_viewport().set_input_as_handled()
 	_ensure_menu_ui_visible()
 
@@ -295,6 +331,7 @@ func _prepare_boot_intro() -> void:
 	if title_host:
 		title_host.modulate.a = 1.0
 	_set_button_ui_alpha(0.0)
+	_set_boot_menu_input_enabled(false)
 
 func _layout_title_for_typewriter(title: Label) -> void:
 	# Measure in the settled (centered, 24px-inset) rect, then left-align at that
@@ -434,11 +471,10 @@ func _complete_boot_intro() -> void:
 	if title_host:
 		title_host.modulate.a = 1.0
 	_set_button_ui_alpha(1.0)
-	var was_intro := _boot_intro_active
 	_boot_intro_active = false
 	process_mode = Node.PROCESS_MODE_INHERIT
-	if was_intro:
-		_show_privacy_consent_if_needed(false)
+	if not _eat_intro_pointer:
+		_set_boot_menu_input_enabled(true)
 
 func _setup_title_under_fx() -> void:
 	var ui_layer := $UILayer as CanvasLayer
@@ -488,10 +524,23 @@ func _on_language_changed() -> void:
 	HudLayout.apply_locale_fonts_to_tree(self)
 	HudLayout.clear_how_to_play_nav_lock(_htp_host)
 	_refresh_how_to_play_text()
+	_apply_safe_area_layout()
 	if _consent_blocker and _consent_blocker.visible and _consent_blocker.has_method("refresh_locale"):
 		_consent_blocker.refresh_locale()
 	if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
 		_show_tutorial_intro_prompt()
+
+func _on_safe_area_viewport_resized() -> void:
+	_apply_safe_area_layout()
+
+func _apply_safe_area_layout() -> void:
+	HudLayout.apply_content_edge_safe_area(menu_center)
+	if debug_bar:
+		var top := SafeInsets.padded_top(24.0)
+		debug_bar.offset_left = 24.0 + SafeInsets.left()
+		debug_bar.offset_top = top
+		debug_bar.offset_right = -24.0 - SafeInsets.right()
+		debug_bar.offset_bottom = top + 96.0
 
 func _refresh_start_button_label() -> void:
 	if not start_btn:
@@ -919,19 +968,27 @@ func _on_htp_close() -> void:
 
 const _CONSENT_POPUP_SCENE := preload("res://scenes/consent_popup.tscn")
 
-# Instantiates the consent popup scene and shows it on first launch.
-# The popup blocks interaction with the main menu until the player accepts.
-# On subsequent launches, privacy_accepted is true so the popup stays hidden.
+func _needs_privacy_consent() -> bool:
+	return SaveManager != null and not SaveManager.privacy_accepted
+
+# Instantiates the consent popup scene. Shown on first launch before the title
+# intro, or immediately when a reset profile still needs acceptance.
 func _build_consent_popup() -> void:
-	var ui_layer := get_node_or_null("UILayer") as CanvasLayer
-	if ui_layer == null:
+	_ensure_overlays_above_fx()
+	var host := get_node_or_null("OverlayLayer") as CanvasLayer
+	if host == null:
+		host = get_node_or_null("UILayer") as CanvasLayer
+	if host == null:
 		return
 	var popup := _CONSENT_POPUP_SCENE.instantiate()
-	ui_layer.add_child(popup)
+	host.add_child(popup)
 	_consent_blocker = popup as ColorRect
+	if _consent_blocker:
+		_consent_blocker.visible = false
 	popup.accepted.connect(_on_consent_accepted)
 	_bias_consent_popup_up()
-	_show_privacy_consent_if_needed(false)
+	if not _boot_intro_active:
+		_show_privacy_consent_if_needed(false)
 
 # Raises the consent card above true center for easier reach on tall phones.
 func _bias_consent_popup_up() -> void:
@@ -947,9 +1004,7 @@ func _bias_consent_popup_up() -> void:
 # Shows the privacy consent overlay when the profile has not accepted it yet.
 # If close_options is true, closes Options first so the consent is unobstructed.
 func _show_privacy_consent_if_needed(close_options: bool = false) -> void:
-	if _boot_intro_active:
-		return
-	if SaveManager == null or SaveManager.privacy_accepted:
+	if not _needs_privacy_consent():
 		return
 	if _consent_blocker == null:
 		return
@@ -964,10 +1019,17 @@ func _show_privacy_consent_if_needed(close_options: bool = false) -> void:
 	_consent_blocker.move_to_front()
 
 # Called when the player taps ACCEPT on the consent popup.
-# Saves acceptance, restores the main menu UI, and applies debug visibility.
+# Saves acceptance, then either starts the title intro or restores the menu.
 func _on_consent_accepted() -> void:
 	if SaveManager:
 		SaveManager.accept_privacy()
+	if _boot_intro_waiting_on_consent:
+		_boot_intro_waiting_on_consent = false
+		_set_main_menu_chrome_visible(true)
+		_apply_debug_tools_visibility()
+		_prepare_boot_intro()
+		_play_boot_intro()
+		return
 	_set_main_menu_chrome_visible(true)
 	_apply_debug_tools_visibility()
 
