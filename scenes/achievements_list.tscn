@@ -1,0 +1,103 @@
+[gd_scene load_steps=3 format=3 uid="uid://cachlistscene01"]
+
+[ext_resource type="Script" path="res://scripts/achievements_list.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://cn061ew22eo3d" path="res://resources/icons/icon_close.svg" id="2_close"]
+
+[node name="AchievementsList" type="CanvasLayer"]
+layer = 22
+process_mode = 3
+visible = false
+script = ExtResource("1_script")
+
+[node name="Dim" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0, 0, 0.35)
+
+[node name="ScreenHeaderHost" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TitleLabel" type="Label" parent="ScreenHeaderHost"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 260.0
+offset_right = -24.0
+offset_bottom = 412.0
+grow_horizontal = 2
+mouse_filter = 2
+text = "UI_ACHIEVEMENTS"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ListHost" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 460.0
+offset_right = -24.0
+offset_bottom = -200.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="ListHost"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_scroll_mode = 0
+
+[node name="Rows" type="VBoxContainer" parent="ListHost/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 18
+
+[node name="CloseButtonHost" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="CloseButton" type="Button" parent="CloseButtonHost"]
+z_index = 20
+custom_minimum_size = Vector2(140, 140)
+layout_mode = 1
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 144.0
+offset_bottom = 144.0
+
+[node name="IconContainer" type="MarginContainer" parent="CloseButtonHost/CloseButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_bottom = 4
+
+[node name="Icon" type="TextureRect" parent="CloseButtonHost/CloseButton/IconContainer"]
+custom_minimum_size = Vector2(83, 83)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("2_close")
+expand_mode = 1
+stretch_mode = 5

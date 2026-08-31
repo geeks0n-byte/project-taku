@@ -24,6 +24,12 @@ var dev_mode_enabled: bool = false
 var level_star_bits: Dictionary = {}
 var session_data: Dictionary = {}
 var ads_wins_since_interstitial: int = 0
+# Local achievements: id -> unix timestamp. New section; existing keys stay intact.
+var achievements_unlocked: Dictionary = {}
+# Campaign clears with zero hints (hint_saver progress).
+var no_hint_clears: int = 0
+# Last local save time (unix seconds) for cloud conflict resolution.
+var updated_unix: int = 0
 
 ## Loads save data, applies background mode, and walks new text controls for locale fonts.
 func _ready() -> void:
@@ -170,6 +176,11 @@ func load_progress() -> void:
 		if typeof(session_data) != TYPE_DICTIONARY:
 			session_data = {}
 		ads_wins_since_interstitial = int(config.get_value("Ads", "wins_since_interstitial", 0))
+		achievements_unlocked = config.get_value("Achievements", "unlocked", {})
+		if typeof(achievements_unlocked) != TYPE_DICTIONARY:
+			achievements_unlocked = {}
+		no_hint_clears = int(config.get_value("Achievements", "no_hint_clears", 0))
+		updated_unix = int(config.get_value("Meta", "updated_unix", 0))
 		if not SUPPORTED_LANGUAGES.has(current_language):
 			current_language = "en"
 		TranslationServer.set_locale(current_language)
@@ -181,6 +192,9 @@ func load_progress() -> void:
 		session_data = {}
 		tutorial_intro_answered = false
 		ads_wins_since_interstitial = 0
+		achievements_unlocked = {}
+		no_hint_clears = 0
+		updated_unix = 0
 		max_unlocked_level = get_campaign_start_unlock()
 		save_progress()
 	_ensure_campaign_start_unlock()
@@ -205,7 +219,9 @@ func _detect_system_language() -> String:
 ## Writes progression.cfg. Session section is erased when session_data is empty. Dev mode is never saved.
 func save_progress() -> void:
 	var config = ConfigFile.new()
+	updated_unix = int(Time.get_unix_time_from_system())
 	config.set_value("Meta", "version", SAVE_FORMAT_VERSION)
+	config.set_value("Meta", "updated_unix", updated_unix)
 	config.set_value("Progression", "max_unlocked_level", max_unlocked_level)
 	config.set_value("Progression", "current_language", current_language)
 	config.set_value("Progression", "background_static", background_static)
@@ -218,6 +234,8 @@ func save_progress() -> void:
 	# dev_mode_enabled is not saved — it resets each session by design.
 	config.set_value("Progression", "level_star_bits", level_star_bits)
 	config.set_value("Ads", "wins_since_interstitial", ads_wins_since_interstitial)
+	config.set_value("Achievements", "unlocked", achievements_unlocked)
+	config.set_value("Achievements", "no_hint_clears", no_hint_clears)
 	if session_data.is_empty():
 		if config.has_section("Session"):
 			config.erase_section("Session")
@@ -400,6 +418,9 @@ func delete_save_file() -> void:
 	completed_tutorial_scripts = []
 	privacy_accepted = false
 	ads_wins_since_interstitial = 0
+	achievements_unlocked.clear()
+	no_hint_clears = 0
+	updated_unix = 0
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(SAVE_PATH)
 	save_progress()
@@ -421,6 +442,69 @@ func mark_tutorial_script_complete(script_id: String) -> void:
 		return
 	completed_tutorial_scripts.append(id)
 	save_progress()
+
+
+## Portable JSON-friendly snapshot for CloudSaveManager (no in-progress session).
+func export_cloud_payload() -> Dictionary:
+	var ts := updated_unix if updated_unix > 0 else int(Time.get_unix_time_from_system())
+	return CloudSaveLogic.build_blob(
+		{
+			"max_unlocked_level": max_unlocked_level,
+			"level_star_bits": level_star_bits.duplicate(true),
+			"tutorial_intro_answered": tutorial_intro_answered,
+			"completed_tutorial_scripts": completed_tutorial_scripts.duplicate(),
+			"privacy_accepted": privacy_accepted,
+		},
+		{
+			"current_language": current_language,
+			"background_static": background_static,
+			"bgm_enabled": bgm_enabled,
+			"sfx_enabled": sfx_enabled,
+			"haptic_enabled": haptic_enabled,
+		},
+		{
+			"unlocked": achievements_unlocked.duplicate(true),
+			"no_hint_clears": no_hint_clears,
+		},
+		ts
+	)
+
+
+## Applies a cloud blob then saves. Unknown keys are ignored so older blobs stay safe.
+func apply_cloud_payload(blob: Dictionary) -> void:
+	if not CloudSaveLogic.is_valid_blob(blob):
+		return
+	var progress: Dictionary = blob.get("progress", {})
+	var settings: Dictionary = blob.get("settings", {})
+	var ach: Dictionary = blob.get("achievements", {})
+	max_unlocked_level = int(progress.get("max_unlocked_level", max_unlocked_level))
+	var bits = progress.get("level_star_bits", level_star_bits)
+	if typeof(bits) == TYPE_DICTIONARY:
+		level_star_bits = bits
+	tutorial_intro_answered = bool(progress.get("tutorial_intro_answered", tutorial_intro_answered))
+	var scripts = progress.get("completed_tutorial_scripts", completed_tutorial_scripts)
+	if typeof(scripts) == TYPE_ARRAY:
+		completed_tutorial_scripts = scripts
+	privacy_accepted = bool(progress.get("privacy_accepted", privacy_accepted))
+	var lang := str(settings.get("current_language", current_language))
+	if SUPPORTED_LANGUAGES.has(lang):
+		current_language = lang
+		TranslationServer.set_locale(current_language)
+	background_static = bool(settings.get("background_static", background_static))
+	bgm_enabled = bool(settings.get("bgm_enabled", bgm_enabled))
+	sfx_enabled = bool(settings.get("sfx_enabled", sfx_enabled))
+	haptic_enabled = bool(settings.get("haptic_enabled", haptic_enabled))
+	var unlocked = ach.get("unlocked", achievements_unlocked)
+	if typeof(unlocked) == TYPE_DICTIONARY:
+		achievements_unlocked = unlocked
+	no_hint_clears = int(ach.get("no_hint_clears", no_hint_clears))
+	updated_unix = int(blob.get("timestamp", updated_unix))
+	_apply_background_mode()
+	if BgmManager and BgmManager.has_method("apply_enabled"):
+		BgmManager.apply_enabled()
+	save_progress()
+	language_changed.emit()
+	request_locale_fonts()
 
 ## Vector2i as "x,y" for ConfigFile-friendly dictionary keys.
 static func _coord_key(v: Vector2i) -> String:

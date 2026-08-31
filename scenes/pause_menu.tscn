@@ -77,6 +77,11 @@ layout_mode = 2
 size_flags_horizontal = 4
 text = "UI_OPTIONS"
 
+[node name="AchievementsButton" type="Button" parent="CenterContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "UI_ACHIEVEMENTS"
+
 [node name="QuitButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=389499878]
 layout_mode = 2
 size_flags_horizontal = 4

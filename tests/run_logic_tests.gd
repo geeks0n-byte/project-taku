@@ -26,6 +26,9 @@ func _init() -> void:
 	_test_hint_selection_policy()
 	_test_hint_unique_pool_only()
 	_test_hold_repeat()
+	_test_achievement_catalog()
+	_test_cloud_save_logic()
+	_test_cloud_save_stub()
 	print("logic_tests: %d passed, %d failed" % [_passed, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -498,3 +501,83 @@ func _test_hold_repeat() -> void:
 	_ok(h.interval >= HoldRepeat.REPEAT_MIN, "hold: interval never below REPEAT_MIN")
 	_ok(is_equal_approx(h.interval, HoldRepeat.REPEAT_MIN), "hold: interval floors at REPEAT_MIN")
 
+
+
+# AchievementCatalog: starter ids, counters, and set flags.
+func _test_achievement_catalog() -> void:
+	var empty := AchievementCatalog.collect_unlocks({})
+	_ok(empty.is_empty(), "ach: empty state unlocks nothing")
+	var first := AchievementCatalog.collect_unlocks({"campaign_clears": 1})
+	_ok(first.has(AchievementCatalog.ID_FIRST_CLEAR), "ach: first_clear")
+	_ok(not first.has(AchievementCatalog.ID_FIRST_HARD), "ach: first_hard not from easy")
+	var hard := AchievementCatalog.collect_unlocks({"campaign_clears": 1, "hard_clears": 1})
+	_ok(hard.has(AchievementCatalog.ID_FIRST_HARD), "ach: first_hard")
+	var hinted := AchievementCatalog.collect_unlocks({"campaign_clears": 1, "no_hint_clears": 0})
+	_ok(not hinted.has(AchievementCatalog.ID_NO_HINT_CLEAR), "ach: hinted clear is not no_hint")
+	var no_hint := AchievementCatalog.collect_unlocks({"campaign_clears": 1, "no_hint_clears": 1})
+	_ok(no_hint.has(AchievementCatalog.ID_NO_HINT_CLEAR), "ach: no_hint_clear")
+	_ok(not no_hint.has(AchievementCatalog.ID_HINT_SAVER), "ach: hint_saver needs 10")
+	var saver := AchievementCatalog.collect_unlocks({"campaign_clears": 10, "no_hint_clears": 10})
+	_ok(saver.has(AchievementCatalog.ID_HINT_SAVER), "ach: hint_saver at 10")
+	var sets := AchievementCatalog.collect_unlocks({
+		"campaign_clears": 60,
+		"easy_complete": true,
+		"medium_complete": true,
+		"hard_complete": true,
+		"hard_clears": 10,
+		"no_hint_clears": 10,
+	})
+	_ok(sets.has(AchievementCatalog.ID_EASY_SET), "ach: easy_set")
+	_ok(sets.has(AchievementCatalog.ID_MEDIUM_SET), "ach: medium_set")
+	_ok(sets.has(AchievementCatalog.ID_HARD_SET), "ach: hard_set")
+	var already := {AchievementCatalog.ID_FIRST_CLEAR: 1}
+	var skip := AchievementCatalog.collect_unlocks({"campaign_clears": 2}, already)
+	_ok(not skip.has(AchievementCatalog.ID_FIRST_CLEAR), "ach: already unlocked is skipped")
+	var easy_last := AchievementCatalog.last_level_number_in_dir(GameConstants.CAMPAIGN_EASY_DIR)
+	var hard_first := AchievementCatalog.first_level_number_in_dir(GameConstants.CAMPAIGN_HARD_DIR)
+	_ok(easy_last > 0, "ach: easy folder is detectable")
+	_ok(hard_first > easy_last, "ach: hard starts after easy")
+
+
+# CloudSaveLogic: newest timestamp wins; empty side yields the other.
+func _test_cloud_save_logic() -> void:
+	var progress := {"max_unlocked_level": 20, "level_star_bits": {"15": 7}}
+	var settings := {"current_language": "en", "bgm_enabled": true}
+	var ach := {"unlocked": {"first_clear": 1}, "no_hint_clears": 1}
+	var older := CloudSaveLogic.build_blob(progress, settings, ach, 100)
+	var newer_progress := progress.duplicate(true)
+	newer_progress["max_unlocked_level"] = 40
+	var newer := CloudSaveLogic.build_blob(newer_progress, settings, ach, 200)
+	_ok(CloudSaveLogic.is_valid_blob(older), "cloud: valid blob")
+	_ok(not CloudSaveLogic.is_valid_blob({}), "cloud: empty is invalid")
+	var win_new: Dictionary = CloudSaveLogic.winner(older, newer)
+	var win_new_progress: Dictionary = win_new.get("progress", {})
+	_ok(int(win_new_progress.get("max_unlocked_level", 0)) == 40, "cloud: newer remote wins")
+	var win_local: Dictionary = CloudSaveLogic.winner(newer, older)
+	var win_local_progress: Dictionary = win_local.get("progress", {})
+	_ok(int(win_local_progress.get("max_unlocked_level", 0)) == 40, "cloud: newer local wins")
+	var only_local: Dictionary = CloudSaveLogic.winner(older, {})
+	_ok(int(only_local.get("timestamp", 0)) == 100, "cloud: missing remote keeps local")
+	var only_remote: Dictionary = CloudSaveLogic.winner({}, newer)
+	_ok(int(only_remote.get("timestamp", 0)) == 200, "cloud: missing local takes remote")
+	var tie: Dictionary = CloudSaveLogic.winner(older, CloudSaveLogic.build_blob(newer_progress, settings, ach, 100))
+	var tie_progress: Dictionary = tie.get("progress", {})
+	_ok(int(tie_progress.get("max_unlocked_level", 0)) == 20, "cloud: equal timestamp keeps local")
+	var encoded := CloudSaveLogic.encode_json(older)
+	var decoded := CloudSaveLogic.decode_json(encoded)
+	_ok(int(decoded.get("timestamp", 0)) == 100, "cloud: json roundtrip timestamp")
+	var decoded_progress: Dictionary = decoded.get("progress", {})
+	var decoded_settings: Dictionary = decoded.get("settings", {})
+	var decoded_ach: Dictionary = decoded.get("achievements", {})
+	_ok(int(decoded_progress.get("max_unlocked_level", 0)) == 20, "cloud: json roundtrip progress")
+	# Existing progression keys survive the blob shape.
+	_ok(decoded_progress.has("level_star_bits"), "cloud: star bits preserved")
+	_ok(decoded_settings.has("current_language"), "cloud: settings preserved")
+	_ok(decoded_ach.has("unlocked"), "cloud: achievements preserved")
+
+
+# Cloud save scaffolding: no Play Games plugin in this tree (desktop stub).
+func _test_cloud_save_stub() -> void:
+	_ok(not CloudSaveLogic.play_games_plugin_present(), "cloud: Play Games plugin absent")
+	_ok(not Engine.has_singleton("GodotPlayGamesServices"), "cloud: no PGS singleton")
+	_ok(not FileAccess.file_exists("res://addons/godot-play-games-services/plugin.cfg"), "cloud: no PGS addon folder")

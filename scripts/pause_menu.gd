@@ -5,6 +5,7 @@ extends Control
 signal resume_pressed
 signal restart_pressed
 signal settings_pressed
+signal achievements_pressed
 signal level_select_pressed
 signal auto_win_pressed
 signal quit_pressed
@@ -20,6 +21,7 @@ const PAUSE_TITLE_FONT_SIZE := GameConstants.SCREEN_HEADER_FONT_SIZE + 2
 @onready var resume_btn: Button = $CenterContainer/VBoxContainer/ResumeButton
 @onready var restart_btn: Button = $CenterContainer/VBoxContainer/RestartButton
 @onready var settings_btn: Button = $CenterContainer/VBoxContainer/SettingsButton
+@onready var achievements_btn: Button = $CenterContainer/VBoxContainer/AchievementsButton
 @onready var level_select_btn: Button = $CenterContainer/VBoxContainer/LevelSelectButton
 @onready var auto_win_btn: Button = $CenterContainer/VBoxContainer/AutoWinButton
 @onready var quit_btn: Button = $CenterContainer/VBoxContainer/QuitButton
@@ -38,6 +40,8 @@ func _ready() -> void:
 		restart_btn.pressed.connect(_on_restart)
 	if settings_btn:
 		settings_btn.pressed.connect(_on_settings)
+	if achievements_btn:
+		achievements_btn.pressed.connect(_on_achievements)
 	if level_select_btn:
 		level_select_btn.pressed.connect(_on_level_select)
 	if auto_win_btn:
@@ -62,7 +66,7 @@ func _style_header() -> void:
 ## Pause buttons that are currently shown (debug auto-win may be hidden).
 func _visible_menu_buttons() -> Array[Button]:
 	var buttons: Array[Button] = []
-	for btn in [resume_btn, restart_btn, level_select_btn, settings_btn, quit_btn, auto_win_btn]:
+	for btn in [resume_btn, restart_btn, level_select_btn, settings_btn, achievements_btn, quit_btn, auto_win_btn]:
 		if btn and btn.visible:
 			buttons.append(btn)
 	return buttons
@@ -93,6 +97,9 @@ func _fit_menu_buttons() -> void:
 	if quit_btn:
 		quit_btn.text = "UI_MAIN_MENU"
 		quit_btn.set_meta("_tr_key", "UI_MAIN_MENU")
+	if achievements_btn:
+		achievements_btn.text = "UI_ACHIEVEMENTS"
+		achievements_btn.set_meta("_tr_key", "UI_ACHIEVEMENTS")
 	if title_label:
 		title_label.set_meta("_screen_header_font_size", PAUSE_TITLE_FONT_SIZE)
 		HudLayout._bind_header_translation_key(title_label, "PAUSED")
@@ -101,7 +108,7 @@ func _fit_menu_buttons() -> void:
 		title_label.offset_top = title_top
 		title_label.offset_bottom = title_top + GameConstants.SCREEN_HEADER_HEIGHT
 	var row_h := _menu_row_height()
-	for btn in [resume_btn, restart_btn, level_select_btn, settings_btn, quit_btn]:
+	for btn in [resume_btn, restart_btn, level_select_btn, settings_btn, achievements_btn, quit_btn]:
 		_apply_pause_button(btn, row_h)
 	_style_auto_win_button(row_h)
 
@@ -202,6 +209,10 @@ func _on_restart() -> void:
 ## Forwards Settings to the game scene.
 func _on_settings() -> void:
 	settings_pressed.emit()
+
+## Forwards Achievements to the game scene.
+func _on_achievements() -> void:
+	achievements_pressed.emit()
 
 ## Forwards Level Select to the game scene.
 func _on_level_select() -> void:

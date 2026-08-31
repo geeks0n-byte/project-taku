@@ -186,6 +186,9 @@ func _on_system_back() -> void:
 		return
 	if _is_generating_board or (_loading_overlay and _loading_overlay.is_busy()):
 		return
+	if AchievementManager and AchievementManager.is_list_open():
+		AchievementManager.hide_list()
+		return
 	if options_menu and options_menu.visible:
 		if options_menu.has_method("handle_system_back"):
 			options_menu.handle_system_back()
@@ -241,6 +244,8 @@ func _bind_submanager_signals():
 		pause_menu.resume_pressed.connect(_on_resume)
 		pause_menu.restart_pressed.connect(_on_restart_level)
 		pause_menu.settings_pressed.connect(_on_pause_settings)
+		if pause_menu.has_signal("achievements_pressed"):
+			pause_menu.achievements_pressed.connect(_on_pause_achievements)
 		pause_menu.level_select_pressed.connect(_on_quit_to_level_select)
 		pause_menu.auto_win_pressed.connect(_on_auto_win)
 		pause_menu.quit_pressed.connect(_on_quit_to_menu)
@@ -864,6 +869,14 @@ func trigger_victory():
 			SaveManager.unlock_level(unlock_num + 1)
 		if not _challenges_disabled:
 			SaveManager.record_level_stars(unlock_num, int(star_result.get("bits", 0)))
+	if not is_custom and AchievementManager:
+		AchievementManager.record_level_clear(
+			levels[current_level_index],
+			0 if _challenges_disabled else hints_used,
+			_difficulty_for_level(levels[current_level_index]),
+			won_tutorial,
+			is_custom
+		)
 	_set_board_and_hud_visible(false)
 	var solved_preview := LevelPreview.make_texture_from_board_cells(board_manager.board_cells, 320)
 	if AdsManager:
@@ -1018,6 +1031,22 @@ func _on_restart_level():
 	_set_board_and_hud_visible(false)
 	ui_manager.set_hud_buttons_disabled(true)
 	ui_manager.show_reset_confirm()
+
+# Opens the achievements list from pause; returning restores the pause menu.
+func _on_pause_achievements() -> void:
+	if pause_menu:
+		pause_menu.hide()
+	_set_board_and_hud_visible(false)
+	if AchievementManager:
+		AchievementManager.show_list(_on_achievements_back_to_pause)
+
+## Restores pause when backing out of the achievements overlay.
+func _on_achievements_back_to_pause() -> void:
+	if not is_paused:
+		return
+	_set_board_and_hud_visible(false)
+	if pause_menu:
+		pause_menu.show()
 
 # Opens options from pause while keeping gameplay hidden.
 func _on_pause_settings() -> void:

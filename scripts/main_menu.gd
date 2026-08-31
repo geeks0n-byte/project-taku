@@ -216,6 +216,9 @@ func _notification(what: int) -> void:
 		return
 	if GlobalGameManager == null or not GlobalGameManager.consume_system_back():
 		return
+	if AchievementManager and AchievementManager.is_list_open():
+		AchievementManager.hide_list()
+		return
 	if _htp_host and _htp_host.visible:
 		_on_htp_close()
 		return

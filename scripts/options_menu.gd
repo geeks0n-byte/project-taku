@@ -16,21 +16,23 @@ const LANG_NAMES = ["ENGLISH", "ESPAÑOL", "DEUTSCH", "FRANÇAIS", "POLSKI", "�
 enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM, UNLOCK_ALL }
 
 @onready var title_label: Label = $ScreenHeaderHost/TitleLabel
-@onready var lang_label: Label = $CenterContainer/OptionsPanel/VBoxContainer/LanguageContainer/LanguageLabel
-@onready var prev_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/LanguageContainer/PrevLangButton
-@onready var next_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/LanguageContainer/NextLangButton
-@onready var bg_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/BackgroundButton
-@onready var bgm_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/BgmButton
-@onready var sfx_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/SfxButton
-@onready var haptic_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/HapticButton
-@onready var privacy_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/PrivacyPolicyButton
-@onready var privacy_options_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/PrivacyOptionsButton
-@onready var del_save_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DeleteSaveButton
-@onready var debug_buttons: VBoxContainer = $CenterContainer/OptionsPanel/VBoxContainer/DebugButtons
-@onready var unlock_all_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DebugButtons/UnlockAllButton
-@onready var del_custom_btn: Button = $CenterContainer/OptionsPanel/VBoxContainer/DebugButtons/DeleteCustomButton
+@onready var lang_label: Label = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/LanguageContainer/LanguageLabel
+@onready var prev_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/LanguageContainer/PrevLangButton
+@onready var next_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/LanguageContainer/NextLangButton
+@onready var bg_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/BackgroundButton
+@onready var bgm_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/BgmButton
+@onready var sfx_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/SfxButton
+@onready var haptic_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/HapticButton
+@onready var achievements_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/AchievementsButton
+@onready var cloud_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/CloudSaveButton
+@onready var privacy_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/PrivacyPolicyButton
+@onready var privacy_options_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/PrivacyOptionsButton
+@onready var del_save_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/DeleteSaveButton
+@onready var debug_buttons: VBoxContainer = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/DebugButtons
+@onready var unlock_all_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/DebugButtons/UnlockAllButton
+@onready var del_custom_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/DebugButtons/DeleteCustomButton
 @onready var close_btn: Button = $CloseButtonHost/CloseOptionsButton
-@onready var status_label: Label = $CenterContainer/OptionsPanel/VBoxContainer/StatusLabel
+@onready var status_label: Label = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/StatusLabel
 @onready var _options_center: Control = $CenterContainer
 @onready var _screen_header_host: Control = $ScreenHeaderHost
 @onready var _close_button_host: Control = $CloseButtonHost
@@ -63,6 +65,10 @@ func _ready() -> void:
 		sfx_btn.pressed.connect(_on_toggle_sfx)
 	if haptic_btn:
 		haptic_btn.pressed.connect(_on_toggle_haptic)
+	if achievements_btn:
+		achievements_btn.pressed.connect(_on_achievements_pressed)
+	if cloud_btn:
+		cloud_btn.pressed.connect(_on_cloud_pressed)
 	if privacy_btn:
 		privacy_btn.pressed.connect(_on_privacy_policy_pressed)
 	if privacy_options_btn:
@@ -83,6 +89,7 @@ func _ready() -> void:
 	_update_bgm_label()
 	_update_sfx_label()
 	_update_haptic_label()
+	_update_cloud_button()
 	_fit_option_buttons()
 	_style_close_button()
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
@@ -115,6 +122,7 @@ func show_menu(from_main_menu: bool = false) -> void:
 	_update_bgm_label()
 	_update_sfx_label()
 	_update_haptic_label()
+	_update_cloud_button()
 	_fit_option_buttons()
 	if status_label:
 		status_label.text = ""
@@ -129,6 +137,8 @@ func show_menu(from_main_menu: bool = false) -> void:
 ## Closes any confirm dialog, hides this overlay, and notifies the caller.
 func hide_menu() -> void:
 	_hide_confirm()
+	if AchievementManager and AchievementManager.is_list_open():
+		AchievementManager.hide_list()
 	visible = false
 	back_requested.emit()
 
@@ -137,6 +147,9 @@ func hide_menu() -> void:
 func handle_system_back() -> bool:
 	if not visible:
 		return false
+	if AchievementManager and AchievementManager.is_list_open():
+		AchievementManager.hide_list()
+		return true
 	if _confirm_blocker and _confirm_blocker.visible:
 		_hide_confirm()
 		return true
@@ -263,7 +276,7 @@ func _fit_option_buttons() -> void:
 		HudLayout._bind_header_translation_key(title_label, "UI_OPTIONS")
 		HudLayout.apply_screen_header_style(title_label)
 	_bind_option_button_keys()
-	for btn in [del_save_btn, bg_btn, bgm_btn, sfx_btn, haptic_btn, privacy_btn, privacy_options_btn, del_custom_btn, unlock_all_btn]:
+	for btn in [del_save_btn, bg_btn, bgm_btn, sfx_btn, haptic_btn, achievements_btn, cloud_btn, privacy_btn, privacy_options_btn, del_custom_btn, unlock_all_btn]:
 		_apply_option_button(btn)
 	_style_close_button()
 	if prev_btn:
@@ -289,6 +302,11 @@ func _bind_option_button_keys() -> void:
 		del_save_btn.text = "UI_RESET_PROGRESS"
 		del_save_btn.set_meta("_tr_key", "UI_RESET_PROGRESS")
 		del_save_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
+	if achievements_btn:
+		achievements_btn.text = "UI_ACHIEVEMENTS"
+		achievements_btn.set_meta("_tr_key", "UI_ACHIEVEMENTS")
+		achievements_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
+	_update_cloud_button()
 
 # Applies the gray-dark tile style to a single option button and sizes it so its
 # translated text fits on one line with standard padding. Toggle rows skip text override since
@@ -366,6 +384,8 @@ func _is_plain_text_option_button(button: Button) -> bool:
 		or button == del_save_btn
 		or button == del_custom_btn
 		or button == unlock_all_btn
+		or button == achievements_btn
+		or button == cloud_btn
 	)
 
 # Returns the display text for an option button, preferring the ToggleCaptionHost
@@ -541,6 +561,7 @@ func _on_language_changed() -> void:
 	_update_bgm_label()
 	_update_sfx_label()
 	_update_haptic_label()
+	_update_cloud_button()
 	_fit_option_buttons()
 
 # Cycles to the previous language in the LANGUAGES array (wraps around).
@@ -557,6 +578,7 @@ func _on_prev_lang() -> void:
 	_update_bgm_label()
 	_update_sfx_label()
 	_update_haptic_label()
+	_update_cloud_button()
 	_fit_option_buttons()
 
 # Cycles to the next language in the LANGUAGES array (wraps around).
@@ -572,6 +594,7 @@ func _on_next_lang() -> void:
 	_update_bgm_label()
 	_update_sfx_label()
 	_update_haptic_label()
+	_update_cloud_button()
 	_fit_option_buttons()
 
 # Toggle handlers: flip the saved setting and refresh the button caption immediately.
@@ -593,6 +616,49 @@ func _on_toggle_sfx() -> void:
 func _on_toggle_haptic() -> void:
 	SaveManager.set_haptic_enabled(not SaveManager.haptic_enabled)
 	_update_haptic_label()
+
+
+# Opens the achievements overlay on top of options; chrome returns when it closes.
+func _on_achievements_pressed() -> void:
+	_set_options_chrome_visible(false)
+	if AchievementManager:
+		AchievementManager.show_list(_on_achievements_closed)
+	else:
+		_set_options_chrome_visible(true)
+
+
+## Restores options chrome after the achievements list closes.
+func _on_achievements_closed() -> void:
+	if visible:
+		_set_options_chrome_visible(true)
+
+
+# Sign-in / sync. Disabled on the desktop stub with a Play Games needed caption.
+func _on_cloud_pressed() -> void:
+	if CloudSaveManager == null or CloudSaveManager.is_stub():
+		_update_cloud_button()
+		return
+	if not CloudSaveManager.is_signed_in:
+		CloudSaveManager.sign_in()
+	else:
+		CloudSaveManager.sync_now()
+	_update_cloud_button()
+
+
+# Greys out the cloud row when Play Games is missing; otherwise SIGN IN / SYNC.
+func _update_cloud_button() -> void:
+	if not cloud_btn:
+		return
+	var stub := CloudSaveManager == null or CloudSaveManager.is_stub()
+	var key := "UI_CLOUD_PLAY_GAMES_NEEDED"
+	if not stub:
+		var signed_in := CloudSaveManager.is_signed_in
+		key = "UI_CLOUD_SYNC" if signed_in else "UI_CLOUD_SIGN_IN"
+	cloud_btn.disabled = stub
+	cloud_btn.text = key
+	cloud_btn.set_meta("_tr_key", key)
+	cloud_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
+	cloud_btn.modulate = Color(0.55, 0.55, 0.55, 1.0) if stub else Color.WHITE
 
 # Opens the privacy policy URL via AdsManager (which knows the canonical URL),
 # or falls back to OS.shell_open if AdsManager is unavailable (editor/desktop).

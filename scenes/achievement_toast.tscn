@@ -1,0 +1,56 @@
+[gd_scene load_steps=2 format=3 uid="uid://cachtoastscene01"]
+
+[ext_resource type="Script" path="res://scripts/achievement_toast.gd" id="1_script"]
+
+[node name="AchievementToast" type="CanvasLayer"]
+layer = 110
+process_mode = 3
+visible = false
+script = ExtResource("1_script")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel" type="Panel" parent="Root"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -360.0
+offset_top = 24.0
+offset_right = 360.0
+offset_bottom = 244.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="Root/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="Root/Panel/VBox"]
+layout_mode = 2
+text = "ACH_UNLOCKED"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="NameLabel" type="Label" parent="Root/Panel/VBox"]
+layout_mode = 2
+text = "ACH_FIRST_CLEAR_NAME"
+horizontal_alignment = 1
+autowrap_mode = 3
