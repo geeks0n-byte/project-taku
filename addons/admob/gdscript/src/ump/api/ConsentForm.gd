@@ -18,7 +18,7 @@ func _init(UID: int):
 var _on_consent_form_dismissed_callback
 
 
-func show(on_consent_form_dismissed := func(form_error: FormError): pass) -> void:
+func show(on_consent_form_dismissed := func(_form_error: FormError): pass) -> void:
 	if _plugin:
 		self._on_consent_form_dismissed_callback = on_consent_form_dismissed
 		UserMessagingPlatform.active_consent_form = self

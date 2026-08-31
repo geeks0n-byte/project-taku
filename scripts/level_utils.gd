@@ -17,6 +17,7 @@ static func is_shape_only_layout(layout: Dictionary) -> bool:
 static func layout_has_preset_tiles(layout: Dictionary) -> bool:
 	return not is_shape_only_layout(layout)
 
+# Same as layout_has_preset_tiles, reading the layout off a LevelData resource.
 static func level_has_preset_tiles(level: LevelData) -> bool:
 	if level == null:
 		return false
@@ -190,6 +191,7 @@ static func layout_with_shifters_for_solve(layout: Dictionary, shifter_pairs: Ar
 	return solve_layout
 
 # Returns the first found solution layout, or an empty dict if the puzzle is unsolvable.
+# Delegates to PuzzleSolver so board/hint code does not poke generator privates.
 static func solve_reference(
 	layout: Dictionary,
 	empty_cells: Array,
@@ -198,14 +200,11 @@ static func solve_reference(
 	tiles: Array,
 	constraints: Array
 ) -> Dictionary:
-	var test_layout = layout.duplicate()
-	var test_empty = empty_cells.duplicate()
-	if PuzzleGenerator._solve(test_layout, test_empty, width, height, tiles, constraints, {"count": 0}):
-		return test_layout
-	return {}
+	return PuzzleSolver.solve_reference(layout, empty_cells, width, height, tiles, constraints)
 
 # Counts all valid solutions up to the solver's internal cap.
 # Pass an existing tracker dict as `iter` to chain multiple calls (e.g. batched counting).
+# Delegates to PuzzleSolver so uniqueness checks share one public façade.
 static func count_solutions(
 	layout: Dictionary,
 	empty_cells: Array,
@@ -215,13 +214,8 @@ static func count_solutions(
 	constraints: Array,
 	iter: Variant = null
 ) -> int:
-	var test_layout = layout.duplicate()
-	var test_empty = empty_cells.duplicate()
-	var tracker: Dictionary = iter if typeof(iter) == TYPE_DICTIONARY else {"count": 0}
-	if not tracker.has("count"):
-		tracker["count"] = 0
-	return PuzzleGenerator._count_solutions(
-		test_layout, test_empty, width, height, tiles, constraints, tracker
+	return PuzzleSolver.count_solutions(
+		layout, empty_cells, width, height, tiles, constraints, iter
 	)
 
 # Extracts a list of EMPTY-state coordinates from a layout dictionary.

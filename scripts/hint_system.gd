@@ -2,6 +2,8 @@ class_name HintSystem
 extends RefCounted
 
 # Stateless utility class for selecting and counting constraint hints.
+# Option-count scoring goes through PuzzleSolver.prepare_ctx / option_count
+# so this file never pokes PuzzleGenerator solver privates.
 # A "hint" is a pair of adjacent cells with a known relationship (equals or
 # not_equals) derived from the solved reference board. Hints are surfaced to
 # the player as visual link overlays on the active board.
@@ -131,9 +133,9 @@ static func _pick_progress_hint(
 	var before := {}
 	var stuck := {}
 	if not empty_cells.is_empty():
-		var base_ctx := PuzzleGenerator._prepare_solver_ctx(layout, size.x, size.y, active_constraints)
+		var base_ctx := PuzzleSolver.prepare_ctx(layout, size.x, size.y, active_constraints)
 		for coord in empty_cells:
-			var n := PuzzleGenerator._fast_option_count(base_ctx, coord.y * size.x + coord.x, tiles, true)
+			var n := PuzzleSolver.option_count(base_ctx, coord, tiles, true)
 			before[coord] = n
 			if n > 1:
 				stuck[coord] = true
@@ -163,6 +165,9 @@ static func _pick_progress_hint(
 	return _pick_by_priority(board_cells, active_constraints, solved_reference, usable, prefer_hidden_pool)
 
 
+# Tile values the option counter may try when scoring an open-pair hint.
+# Shifters are mobility, not a colour the player would place, so they are
+# skipped. Falls back to yellow/blue/joker when the level list is empty.
 static func _hint_tiles(available_tiles: Array) -> Array:
 	var tiles: Array = []
 	for tile in available_tiles:
@@ -180,6 +185,9 @@ static func _hint_tiles(available_tiles: Array) -> Array:
 	return tiles
 
 
+# Scores one open-pair candidate by how much it shrinks remaining options on
+# empty cells. Naked singles (2+ options -> 1) score highest; contradictions
+# (options -> 0) are heavily penalized. Touching a stuck cell is a small bonus.
 static func _score_hint_candidate(
 	candidate: Dictionary,
 	layout: Dictionary,
@@ -194,10 +202,10 @@ static func _score_hint_candidate(
 		return 0
 	var trial: Array = active_constraints.duplicate()
 	trial.append(candidate)
-	var ctx := PuzzleGenerator._prepare_solver_ctx(layout, size.x, size.y, trial)
+	var ctx := PuzzleSolver.prepare_ctx(layout, size.x, size.y, trial)
 	var score := 0
 	for coord in empty_cells:
-		var after := PuzzleGenerator._fast_option_count(ctx, coord.y * size.x + coord.x, tiles, true)
+		var after := PuzzleSolver.option_count(ctx, coord, tiles, true)
 		var bcnt := int(before.get(coord, 0))
 		if after < bcnt:
 			score += (bcnt - after) * 10

@@ -1320,7 +1320,7 @@ func check_server_health() -> void:
 		if real_pid <= 0:
 			print(
 				"MCP | server spawn never published a pid-file within %ds; "
-				% int(_host.SERVER_COLD_START_WATCH_MS / 1000)
+				% int(_host.SERVER_COLD_START_WATCH_MS / 1000.0)
 				+ "no longer watching it. If the editor stays disconnected, "
 				+ "check the Godot output log for the server's own errors."
 			)

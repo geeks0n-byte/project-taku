@@ -40,6 +40,7 @@ var _error_bridge_coords: Array = []
 # When true, cells are configured for play (locked tiles, no editor chrome).
 var is_playtesting: bool = false
 
+## Creates grid and constraint drawers; grid sits above cells in edit mode.
 func _ready():
 	# Edit mode: grid above cells so opaque editor-empty tiles don't hide borders.
 	# Playtest switches this to -1 in set_playtest_input_mode (hold-to-clear).
@@ -194,6 +195,7 @@ func set_playtest_input_mode(enabled: bool) -> void:
 			)
 
 
+## Connects a pooled cell's playtest signals once (click, hold-clear, shifter).
 func _wire_playtest_cell_signals(cell: Node) -> void:
 	if cell == null:
 		return
@@ -205,16 +207,19 @@ func _wire_playtest_cell_signals(cell: Node) -> void:
 		cell.shifter_toggled.connect(_on_pool_shifter_toggled)
 
 
+## Forwards a playtest tap to LevelEditor; ignored while editing.
 func _on_pool_cell_clicked(coord: Vector2i) -> void:
 	if is_playtesting:
 		canvas_cell_played.emit(coord)
 
 
+## Forwards a playtest hold-clear; ignored while editing.
 func _on_pool_cell_hold_cleared(coord: Vector2i) -> void:
 	if is_playtesting:
 		canvas_cell_hold_cleared.emit(coord)
 
 
+## Forwards a playtest shifter hop; ignored while editing.
 func _on_pool_shifter_toggled(coord: Vector2i) -> void:
 	if is_playtesting:
 		canvas_shifter_toggled.emit(coord)
@@ -268,12 +273,14 @@ func load_layout(new_width: int, new_height: int, layout_data: Dictionary, shift
 
 	trigger_redraw()
 
+## Clears cell highlights and error-bridge overlays.
 func clear_highlights():
 	BoardRenderer.clear_highlights(board_cells)
 	_error_bridge_coords.clear()
 	if focus_bridge_drawer:
 		focus_bridge_drawer.queue_redraw()
 
+## Rebuilds the error-bridge coord list from cells currently in a validation error.
 func refresh_error_bridges() -> void:
 	_error_bridge_coords.clear()
 	for coord in board_cells:
@@ -283,6 +290,7 @@ func refresh_error_bridges() -> void:
 	if focus_bridge_drawer:
 		focus_bridge_drawer.queue_redraw()
 
+## True when every playable cell is filled.
 func is_board_full() -> bool:
 	return BoardRenderer.is_board_full(board_cells)
 
@@ -296,6 +304,7 @@ func _draw_constraints():
 		constraint_drawer, board_cells, loaded_constraint_pairs, GameConstants.CELL_SIZE
 	)
 
+## Playtest-only: draws error bridges over the canvas.
 func _draw_highlight_bridges() -> void:
 	if not is_playtesting:
 		return

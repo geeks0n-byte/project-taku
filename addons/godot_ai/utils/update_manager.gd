@@ -760,7 +760,7 @@ func _wait_for_prewarm_before_install() -> bool:
 		## watch stays alive until the pid-file appears (#896).
 		print(
 			"MCP | self-update: package pre-warm still running after %ds; "
-			% int(PREWARM_WAIT_BUDGET_MS / 1000)
+			% int(PREWARM_WAIT_BUDGET_MS / 1000.0)
 			+ "installing anyway, the new server may start cold"
 		)
 		_prewarm_pid = -1

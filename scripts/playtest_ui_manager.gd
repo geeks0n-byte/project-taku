@@ -1,5 +1,7 @@
 class_name PlaytestUIManager
 extends Node2D
+## Playtest HUD, how-to-play overlay, and victory dialog for the level editor.
+## Mirrors UIManager chrome so Giga can edit layout in level_editor.tscn.
 
 signal test_mode_exited            ## Player pressed Exit; editor should end playtest mode.
 signal playtest_reset_requested    ## Player pressed Reset; board should be restored to start.
@@ -26,6 +28,7 @@ signal resume_from_tutorial_requested  ## Player closed the How-To-Play overlay;
 @onready var legacy_victory_panel: Panel = $"../EditorUI/PlaytestVictoryPanel"
 @onready var how_to_play_container: Control = $"../HowToPlayLayer/CenterContainer"
 @onready var how_to_play_panel: Control = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel"
+@onready var _htp_header: Label = $"../HowToPlayLayer/CenterContainer/HowToPlayPageHeader"
 @onready var how_to_play_nav: HBoxContainer = $"../HowToPlayLayer/CenterContainer/NavRow"
 @onready var rules_label: RichTextLabel = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel/RulesLabel"
 @onready var tutorial_back_button: Button = $"../HowToPlayLayer/CenterContainer/BackButton"
@@ -44,22 +47,15 @@ signal resume_from_tutorial_requested  ## Player closed the How-To-Play overlay;
 
 var _test_label_breathe_tween: Tween       # Looping alpha tween on the "TEST MODE" label.
 var _htp_page: int = 0                     # Current zero-based How-To-Play page index.
-var _htp_header: Label                     # Page header label injected by HudLayout.
 var _hint_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED  # -1 = unlimited; 0 = ad required.
 var _hint_forced_disabled: bool = false    # True while the board is solved or overlay is open.
 var _button_style_source: Button           # Reference button whose StyleBoxes are copied to end-screen buttons.
 const _ICON_RESET: Texture2D = preload("res://resources/icons/icon_reset.svg")
 
 # Hold-to-repeat undo/redo (same timing as main-game HUD).
-const _HOLD_INITIAL_DELAY := 0.4
-const _HOLD_REPEAT_START := 0.3
-const _HOLD_REPEAT_MIN := 0.05
-const _HOLD_REPEAT_ACCEL := 0.82
-var _hold_undo_active: bool = false
-var _hold_redo_active: bool = false
-var _hold_repeat_elapsed: float = 0.0
-var _hold_repeat_interval: float = 0.0
+var _hold_repeat := HoldRepeat.new()
 
+# Wires playtest HUD, HTP overlay, and end-layer; listens for locale / resize.
 func _ready() -> void:
 	_button_style_source = exit_button if exit_button else reset_button
 	_setup_end_layer()
@@ -77,9 +73,11 @@ func _ready() -> void:
 	if not get_viewport().size_changed.is_connected(_on_safe_area_viewport_resized):
 		get_viewport().size_changed.connect(_on_safe_area_viewport_resized)
 
+# Viewport resized: recompute HUD offsets (notch / nav-bar / landscape).
 func _on_safe_area_viewport_resized() -> void:
 	_apply_top_bar_buttons()
 
+# Rebuilds playtest + HTP fonts after SaveManager.language_changed.
 func _on_language_changed() -> void:
 	_apply_top_bar_buttons()
 	HudLayout.clear_how_to_play_nav_lock(how_to_play_container)
@@ -96,19 +94,21 @@ func _on_language_changed() -> void:
 	if _victory_panel and _victory_panel.visible:
 		_style_end_buttons()
 
+# Styles HTP prev/next/close. Page header is authored in level_editor.tscn.
 func _layout_how_to_play() -> void:
 	for btn in [htp_prev_button, htp_next_button]:
 		HudLayout.apply_nav_button(btn)
 	if tutorial_back_button:
 		HudLayout.style_top_bar_close_button(tutorial_back_button)
-	_htp_header = HudLayout.ensure_how_to_play_page_header(how_to_play_container)
 
+# HTP body uses the locale font (not Press Start) so ka/uk rules stay readable.
 func _setup_how_to_play_font() -> void:
 	if not rules_label:
 		return
 	rules_label.set_meta("_use_default_font", true)
 	HudLayout.apply_locale_font_to_control(rules_label)
 
+# Sizes playtest top-bar clusters, counters, and safe-area padding.
 func _apply_top_bar_buttons() -> void:
 	HudLayout.apply_top_bar_button_cluster(top_bar_row.get_node_or_null("LeftButtons") as HBoxContainer)
 	HudLayout.apply_top_bar_button_cluster(top_bar_row.get_node_or_null("RightButtons") as HBoxContainer)
@@ -129,6 +129,7 @@ func _apply_top_bar_buttons() -> void:
 		top_bar_row.custom_minimum_size.y = float(GameConstants.HUD_BUTTON_HEIGHT)
 	_start_test_mode_label_breathe()
 
+# Playtest reset always uses the restart icon (never the random-board icon).
 func _apply_reset_button_icon() -> void:
 	if not reset_button:
 		return
@@ -150,6 +151,7 @@ func _start_test_mode_label_breathe() -> void:
 	_test_label_breathe_tween.tween_property(test_mode_label, "modulate:a", 0.4, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	_test_label_breathe_tween.tween_property(test_mode_label, "modulate:a", 1.0, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
+# Connects playtest HUD buttons and HTP nav once at ready.
 func _connect_signals() -> void:
 	if exit_button:
 		exit_button.pressed.connect(func(): test_mode_exited.emit())
@@ -183,64 +185,57 @@ func _connect_signals() -> void:
 	if _return_button and not _return_button.pressed.is_connected(_on_return_pressed):
 		_return_button.pressed.connect(_on_return_pressed)
 
+# Starts hold-to-repeat undo (same timing as the main-game HUD).
 func _on_undo_button_down() -> void:
-	_hold_undo_active = true
-	_hold_redo_active = false
-	_hold_repeat_elapsed = 0.0
-	_hold_repeat_interval = _HOLD_REPEAT_START
+	_hold_repeat.start_undo()
 	set_process(true)
 	if UiSfx and undo_button:
 		UiSfx.suppress_next_pressed_click(undo_button)
 		UiSfx.play_click()
 
 
+# Stops hold-to-repeat undo when the button is released.
 func _on_undo_button_up() -> void:
-	_hold_undo_active = false
+	_hold_repeat.stop_undo()
 	if UiSfx and undo_button:
 		UiSfx.clear_pressed_click_suppress(undo_button)
-	if not _hold_redo_active:
+	if not _hold_repeat.is_active():
 		set_process(false)
 
 
+# Starts hold-to-repeat redo (same timing as the main-game HUD).
 func _on_redo_button_down() -> void:
-	_hold_redo_active = true
-	_hold_undo_active = false
-	_hold_repeat_elapsed = 0.0
-	_hold_repeat_interval = _HOLD_REPEAT_START
+	_hold_repeat.start_redo()
 	set_process(true)
 	if UiSfx and redo_button:
 		UiSfx.suppress_next_pressed_click(redo_button)
 		UiSfx.play_click()
 
 
+# Stops hold-to-repeat redo when the button is released.
 func _on_redo_button_up() -> void:
-	_hold_redo_active = false
+	_hold_repeat.stop_redo()
 	if UiSfx and redo_button:
 		UiSfx.clear_pressed_click_suppress(redo_button)
-	if not _hold_undo_active:
+	if not _hold_repeat.is_active():
 		set_process(false)
 
 
+# Drives hold-to-repeat undo/redo. Stops if the button becomes disabled.
 func _process(delta: float) -> void:
-	if not _hold_undo_active and not _hold_redo_active:
+	if not _hold_repeat.is_active():
 		set_process(false)
 		return
-	_hold_repeat_elapsed += delta
-	if _hold_repeat_elapsed < _HOLD_INITIAL_DELAY:
+	if not _hold_repeat.tick(delta):
 		return
-	var time_since_start := _hold_repeat_elapsed - _HOLD_INITIAL_DELAY
-	if time_since_start < _hold_repeat_interval:
-		return
-	_hold_repeat_elapsed = _HOLD_INITIAL_DELAY
-	_hold_repeat_interval = maxf(_hold_repeat_interval * _HOLD_REPEAT_ACCEL, _HOLD_REPEAT_MIN)
-	if _hold_undo_active:
+	if _hold_repeat.is_undo():
 		if undo_button and undo_button.disabled:
 			_on_undo_button_up()
 			return
 		if UiSfx:
 			UiSfx.play_click()
 		playtest_undo_requested.emit()
-	elif _hold_redo_active:
+	elif _hold_repeat.is_redo():
 		if redo_button and redo_button.disabled:
 			_on_redo_button_up()
 			return
@@ -249,12 +244,15 @@ func _process(delta: float) -> void:
 		playtest_redo_requested.emit()
 
 
+# Victory "Try Again": hide overlay and ask the editor to reset the board.
 func _on_try_again_pressed() -> void:
 	playtest_reset_requested.emit()
 
+# Victory "Return": leave playtest and restore the editor HUD.
 func _on_return_pressed() -> void:
 	test_mode_exited.emit()
 
+# End-layer starts hidden; victory opts in when the board is solved.
 func _setup_end_layer() -> void:
 	if _center:
 		_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -263,11 +261,13 @@ func _setup_end_layer() -> void:
 	_style_end_buttons()
 	hide_end_overlays()
 
+# Pixel-fonts the victory action buttons (Latin captions stay Press Start).
 func _style_end_buttons() -> void:
 	_style_end_button(_try_again_button, HudLayout.english("UI_TRY_AGAIN"))
 	_style_end_button(_return_button, HudLayout.english("RETURN"))
 
 ## Panel chrome + Press Start caption for Latin/digits/symbols (incl. ka/uk English chrome).
+# One victory button: raster caption, then grow to the translated text width.
 func _style_end_button(btn: Button, display: String) -> void:
 	if btn == null:
 		return
@@ -290,6 +290,7 @@ func _style_end_button(btn: Button, display: String) -> void:
 ## Calculates and applies offsets for all children of the victory panel based on how
 ## many star-goal rows the result contains and whether a board preview is shown.
 ## Heights follow title/results/preview/buttons so long copy keeps top/bottom margin.
+# Sizes and stacks playtest victory header, stars, preview, and buttons.
 func _layout_victory_panel(star_result: Dictionary) -> void:
 	if not _victory_panel or not _victory_results_host:
 		return
@@ -415,6 +416,7 @@ func update_dynamic_playtest_layout(board_y: float, board_height: float) -> void
 	if status_label:
 		HudLayout.position_status_below_board(status_label, board_y, board_height)
 
+# Enables undo/redo only when the playtest stack has something to apply.
 func update_playtest_undo_redo_buttons(can_undo: bool, can_redo: bool) -> void:
 	if undo_button:
 		undo_button.disabled = not can_undo
@@ -423,6 +425,7 @@ func update_playtest_undo_redo_buttons(can_undo: bool, can_redo: bool) -> void:
 		redo_button.disabled = not can_redo
 		HudLayout.refresh_button_icon_modulate(redo_button)
 
+# Shows the playtest victory dialog with stars and an optional board preview.
 func show_victory_overlay(stats: Dictionary) -> void:
 	_set_playtest_buttons_disabled(true)
 	set_playtest_chrome_visible(false)
@@ -458,10 +461,12 @@ func show_victory_overlay(stats: Dictionary) -> void:
 		_victory_panel.visible = true
 	_style_end_buttons()
 
+# Preview TextureRect is authored in level_editor.tscn; no runtime spawn.
 func _ensure_victory_preview() -> void:
 	if _victory_preview and is_instance_valid(_victory_preview):
 		return
 
+# Hides victory/end chrome and re-enables playtest HUD buttons.
 func hide_end_overlays() -> void:
 	if _end_layer:
 		_end_layer.visible = false
@@ -474,20 +479,22 @@ func hide_end_overlays() -> void:
 		legacy_victory_panel.visible = false
 	_set_playtest_buttons_disabled(false)
 
+# Alias used by the editor controller; same as hide_end_overlays.
 func hide_victory_overlay() -> void:
 	hide_end_overlays()
 
+# HTP page navigation handlers (bounded to valid page range).
 func _on_htp_prev_pressed() -> void:
 	_htp_page = maxi(_htp_page - 1, 0)
 	_refresh_how_to_play_text()
 
+# Advances HTP one page, clamped to PAGE_COUNT-1.
 func _on_htp_next_pressed() -> void:
 	_htp_page = mini(_htp_page + 1, HowToPlayContent.PAGE_COUNT - 1)
 	_refresh_how_to_play_text()
 
+# Refreshes HTP header, body, and prev/next visibility for the current page.
 func _refresh_how_to_play_text() -> void:
-	if _htp_header == null and how_to_play_container:
-		_htp_header = HudLayout.ensure_how_to_play_page_header(how_to_play_container)
 	if _htp_header:
 		HudLayout._bind_header_translation_key(
 			_htp_header, HowToPlayContent.get_page_title_key(_htp_page)
@@ -510,6 +517,7 @@ func _refresh_how_to_play_text() -> void:
 		HudLayout.refresh_button_icon_modulate(htp_next_button)
 	call_deferred("_layout_how_to_play_stack")
 
+# Applies final panel/nav placement after rules_label measured its content height.
 func _layout_how_to_play_stack() -> void:
 	HudLayout.layout_how_to_play_stack(
 		how_to_play_container,
@@ -519,6 +527,7 @@ func _layout_how_to_play_stack() -> void:
 		_htp_page == 0
 	)
 
+# Opens the HTP overlay from page 0 and disables playtest HUD controls.
 func show_how_to_play() -> void:
 	_htp_page = 0
 	HudLayout.clear_how_to_play_nav_lock(how_to_play_container)
@@ -527,6 +536,7 @@ func show_how_to_play() -> void:
 		how_to_play_container.visible = true
 	_set_playtest_buttons_disabled(true)
 
+# Shows or hides HUD + counters + status without tearing down playtest mode.
 func set_playtest_chrome_visible(should_show: bool) -> void:
 	if playtest_hud_container:
 		playtest_hud_container.visible = should_show
@@ -551,6 +561,7 @@ func update_playtest_hud(elapsed_seconds: int, moves: int, _editor_time_limit: i
 			GameConstants.TILE_SHIFTER, moves, target, GameConstants.HUD_COUNTER_SHIFTER, tr("MOVES")
 		)
 
+# Updates the playtest joker ratio counter (current / required).
 func update_playtest_joker_counter(current: int, required: int) -> void:
 	if not jokers_label:
 		return

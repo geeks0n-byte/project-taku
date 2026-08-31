@@ -43,6 +43,7 @@ static func max_ui_content_width(extra_margin: float = UI_SAFE_SIDE_MARGIN) -> f
 		window_w = float(ProjectSettings.get_setting("display/window/size/viewport_width", 1080))
 	return maxf(240.0, window_w - extra_margin * 2.0)
 
+## Clamps a generic UI width between the dialog minimum and the viewport content max.
 static func clamp_ui_width(width: float, extra_margin: float = UI_SAFE_SIDE_MARGIN) -> float:
 	var max_w := max_ui_content_width(extra_margin)
 	var min_w := minf(UI_MIN_DIALOG_WIDTH, max_w)
@@ -472,19 +473,13 @@ static func apply_end_screen_header_style(label: Label, base_size: int = 48) -> 
 	label.add_theme_color_override("font_color", GameConstants.SCREEN_HEADER_COLOR)
 	apply_safe_outline(label, 8)
 
-# Finds the named header label inside a how-to-play host container without crashing
-# if the node doesn't exist (returns null instead).
-static func ensure_how_to_play_page_header(host: Control) -> Label:
-	if host == null:
-		return null
-	return host.get_node_or_null("HowToPlayPageHeader") as Label
-
 ## Size the rules panel to its text. PREV/NEXT stay at a fixed Y locked from the
 ## first layout after the lock is cleared (callers clear on open at page 0).
 static func clear_how_to_play_nav_lock(host: Control) -> void:
 	if host and host.has_meta("_htp_nav_top"):
 		host.remove_meta("_htp_nav_top")
 
+## Sizes the HTP rules panel and locks PREV/NEXT at a stable Y after the first layout.
 static func layout_how_to_play_stack(
 	host: Control,
 	panel: Control,
@@ -828,15 +823,19 @@ static func _in_force_pixel_subtree(node: Node) -> bool:
 static func mark_force_pixel_subtree(root: Node) -> void:
 	HudFonts.mark_force_pixel_subtree(root)
 
+## Nested counter: treat UI as Press Start until a matching end_force_pixel_font.
 static func begin_force_pixel_font() -> void:
 	HudFonts.begin_force_pixel_font()
 
+## Pops one begin_force_pixel_font nesting level.
 static func end_force_pixel_font() -> void:
 	HudFonts.end_force_pixel_font()
 
+## Press Start 2P (or engine fallback) via HudFonts.
 static func pixel_font() -> Font:
 	return HudFonts.pixel_font()
 
+## Same face as pixel_font — alias kept for older call sites.
 static func pixel_font_clean() -> Font:
 	return HudFonts.pixel_font_clean()
 
@@ -1297,9 +1296,11 @@ static func _apply_forced_pixel_font(node: Node) -> void:
 # eligible control. Skips pixel-outline overlay parts to avoid infinite recursion.
 static var _locale_font_tree_depth: int = 0
 
+## True while apply_locale_fonts_to_tree is walking the tree (re-entrancy guard).
 static func is_applying_locale_fonts() -> bool:
 	return _locale_font_tree_depth > 0
 
+## Walks a subtree and applies locale-correct fonts; depth-capped to avoid hangs.
 static func apply_locale_fonts_to_tree(root: Node) -> void:
 	if root == null or not is_instance_valid(root):
 		return
@@ -1715,6 +1716,7 @@ static func compute_tile_button_single_line_size(
 	var text_w := HudDialogs.measure_text_max_line_width(font, display, font_size)
 	return Vector2(maxf(min_width, text_w + h_pad), maxf(min_height, line_h + v_pad))
 
+## Sizes a tile button for a single unwrapped caption line.
 static func apply_tile_button_single_line_size(
 	button: Button,
 	display: String,
@@ -1735,6 +1737,7 @@ static func apply_tile_button_single_line_size(
 		display, font, font_size, min_width, min_height, h_pad, v_pad
 	)
 
+## Sizes a tile button, wrapping only when the caption exceeds the prefer-wrap width.
 static func apply_tile_button_size(
 	button: Button,
 	display: String,
@@ -2148,6 +2151,7 @@ static func fit_dialog_panel(
 ) -> float:
 	return HudDialogs.fit_vbox_dialog_panel(panel, width, HudDialogs.DIALOG_EDGE_INSET, HudDialogs.DIALOG_EXTRA_PAD_V, min_height)
 
+## Sizes the continue-run dialog; forwards to HudDialogs.
 static func fit_session_resume_panel(
 	panel: Panel, prompt: Label, buttons: Control, width: float = 820.0
 ) -> void:

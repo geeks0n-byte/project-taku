@@ -15,6 +15,7 @@ var levels: Array[LevelData] = []
 @onready var pause_menu = $PauseMenuLayer/PauseMenu
 @onready var options_menu = $OptionsMenu
 @onready var hud_layer = $HUDLayer
+@onready var _loading_overlay: LoadingOverlay = $LoadingOverlay
 
 # Time limit in seconds for 3-star completion; 0 means untimed (tutorial levels).
 var star_time_limit: int = 0
@@ -31,8 +32,9 @@ var current_level_index: int = 0
 var solved_solution_reference: Dictionary = {}
 # Constraint pairs not shown to the player that can be revealed as hints.
 var hidden_reference_constraints: Array = []
-# When true, hints are drawn from hidden_reference_constraints instead of explicit ones.
-var prefer_hidden_hints: bool = false
+# When true, hints come only from hidden_reference_constraints (designed pool).
+# Unique and non-unique boards both use this: never invent adjacent pairs outside the pool.
+var prefer_hidden_hints: bool = true
 var required_jokers: int = 0
 var hints_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED
 var hints_used: int = 0
@@ -41,7 +43,6 @@ var game_undo := UndoStack.new()
 var _is_recording_action: bool = false
 # True while a fullscreen ad is visible so the timer stays paused.
 var _timer_paused_for_ad: bool = false
-var _loading_overlay: LoadingOverlay
 # Prevents input and state changes while async board generation is in progress.
 var _is_generating_board: bool = false
 var tutorial_director: TutorialDirector
@@ -123,8 +124,6 @@ func _ready():
 			AdsManager.fullscreen_ad_started.connect(_on_fullscreen_ad_started)
 		if not AdsManager.fullscreen_ad_finished.is_connected(_on_fullscreen_ad_finished):
 			AdsManager.fullscreen_ad_finished.connect(_on_fullscreen_ad_finished)
-	_loading_overlay = LoadingOverlay.new()
-	add_child(_loading_overlay)
 	tutorial_director = TutorialDirector.new()
 	tutorial_director.name = "TutorialDirector"
 	add_child(tutorial_director)
@@ -143,6 +142,7 @@ func _ready():
 		get_viewport().size_changed.connect(_on_viewport_resized)
 	_begin_level_entry()
 
+## Recenters the live board vertically when the viewport size changes.
 func _on_viewport_resized() -> void:
 	if board_manager == null or board_manager.board_cells.is_empty():
 		return
@@ -378,7 +378,10 @@ func generate_board():
 	var is_unique_solution: bool = true
 	if current_level_resource is LevelData:
 		is_unique_solution = current_level_resource.is_unique_solution
-	prefer_hidden_hints = not is_unique_solution
+	# Unique boards must stay inside the generator's designed hidden_hints pool
+	# (same prefer_hidden path as non-unique). Inventing adjacent solved pairs
+	# outside that pool was leaking links the minimiser had kept visible-only.
+	prefer_hidden_hints = true
 	var dims := LevelUtils.get_dimensions_from_level(current_level_resource)
 
 	_challenges_disabled = _is_campaign_tutorial(current_level_resource)
@@ -567,12 +570,14 @@ func _start_tutorial_if_needed(tiles_list: Array) -> void:
 	tutorial_director.start(script_id, tiles_list)
 	tutorial_director.refresh_tool_gates()
 
+## Restores undo/redo and re-runs validation after the tutorial script ends.
 func _on_tutorial_finished() -> void:
 	if not is_game_active or is_paused:
 		return
 	ui_manager.update_undo_redo_buttons(game_undo.can_undo(), game_undo.can_redo())
 	_run_validation_pass()
 
+## Restores undo/redo and the hint button when the tutorial unlocks HUD tools.
 func _on_tutorial_tools_unlocked() -> void:
 	if not is_game_active or is_paused:
 		return
@@ -653,6 +658,7 @@ func _on_undo_requested():
 	ui_manager.update_undo_redo_buttons(game_undo.can_undo(), game_undo.can_redo())
 	_autosave_session()
 
+## Applies the next redo snapshot unless the tutorial consumed or blocked redo.
 func _on_redo_requested():
 	if tutorial_director and tutorial_director.consume_hud_action("redo"):
 		return
@@ -664,6 +670,7 @@ func _on_redo_requested():
 	ui_manager.update_undo_redo_buttons(game_undo.can_undo(), game_undo.can_redo())
 	_autosave_session()
 
+## Pushes the current / required joker counts to the HUD counter.
 func _update_joker_count():
 	ui_manager.update_joker_counter(
 		LevelUtils.count_jokers_on_board(board_manager.board_cells),
@@ -718,11 +725,18 @@ func _apply_hint() -> void:
 			board_manager.active_constraint_pairs,
 			tiles_list
 		)
-	if hidden_reference_constraints.is_empty() and not solved_solution_reference.is_empty():
+	# Prefer-hidden boards must not invent a fresh adjacent-pair pool mid-run once
+	# the designed hidden_hints are exhausted — that would reintroduce links the
+	# generator intentionally kept out of the hint pool (unique minimisation).
+	if (
+		hidden_reference_constraints.is_empty()
+		and not prefer_hidden_hints
+		and not solved_solution_reference.is_empty()
+	):
 		var dims := LevelUtils.get_dimensions_from_cells(board_manager.board_cells)
 		hidden_reference_constraints = HintSystem.hidden_hints_from_solved(
 			solved_solution_reference,
-			board_manager.active_constraint_pairs if not prefer_hidden_hints else [],
+			board_manager.active_constraint_pairs,
 			dims.x,
 			dims.y
 		)
@@ -1122,6 +1136,7 @@ func _on_session_restart() -> void:
 	_reset_confirm_return_to_pause = false
 	ui_manager.show_reset_confirm()
 
+## Clears the saved session, maybe shows an interstitial, then rebuilds the board.
 func _execute_session_restart() -> void:
 	SaveManager.clear_session()
 	var is_tutorial := (
@@ -1137,10 +1152,12 @@ func _execute_session_restart() -> void:
 			return
 	_finish_session_restart()
 
+## Shows board/HUD again and generates a fresh layout after restart.
 func _finish_session_restart() -> void:
 	_set_board_and_hud_visible(true)
 	generate_board()
 
+## Leaves the run and returns to the main menu.
 func _on_session_back() -> void:
 	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")
 
@@ -1237,7 +1254,8 @@ func restore_session() -> void:
 	required_jokers = 0 if _challenges_disabled else int(data.get("required_jokers", 0))
 	required_shifter_moves = 0 if _challenges_disabled else int(data.get("required_shifter_moves", 0))
 	_has_shifters = bool(data.get("has_shifters", false))
-	prefer_hidden_hints = bool(data.get("prefer_hidden_hints", false))
+	# Coerce to pool-only policy (older saves may still store false for unique).
+	prefer_hidden_hints = true
 	if bool(data.get("has_hints_remaining", false)):
 		hints_remaining = int(data.get("hints_remaining", GameConstants.HINT_LIMIT_UNLIMITED))
 	else:

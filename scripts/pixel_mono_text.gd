@@ -7,6 +7,7 @@ var font_size: int = 64
 var font_color: Color = Color.WHITE
 var font: Font
 
+## Ignores mouse hits and listens for ancestor transforms so the glyph stays centered.
 func _ready() -> void:
 	# This node is purely decorative; it should never block pointer events.
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -22,12 +23,14 @@ func set_mono_text(p_text: String, p_font: Font, p_size: int, p_color: Color = C
 	font_color = p_color
 	queue_redraw()
 
+## Redraws when this control is resized (transform changes also notify).
 func _notification(what: int) -> void:
 	# Also fires for NOTIFICATION_TRANSFORM_CHANGED (enabled via set_notify_transform)
 	# so the label redraws when an ancestor moves or scales it.
 	if what == NOTIFICATION_RESIZED:
 		queue_redraw()
 
+## Centers the string with natural glyph advances rather than a fixed cell width.
 func _draw() -> void:
 	if font == null or text.is_empty() or font_size <= 0:
 		return

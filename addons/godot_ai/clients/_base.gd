@@ -394,12 +394,12 @@ func _resolve_ordered_config_path_candidates(templates: Variant) -> Dictionary:
 		# anything currently visible through read-through by naming the first
 		# later existing candidate as a one-time seed source.
 		if template.contains("*"):
-			var seed := _first_existing_later_candidate(ordered_templates, index + 1)
-			if not str(seed.get("error", "")).is_empty():
+			var seed_info := _first_existing_later_candidate(ordered_templates, index + 1)
+			if not str(seed_info.get("error", "")).is_empty():
 				_clear_config_path_warning()
-				return {"path": "", "error": seed["error"]}
+				return {"path": "", "error": seed_info["error"]}
 			_clear_config_path_warning()
-			return {"path": path, "error": "", "seed_path": seed.get("path", "")}
+			return {"path": path, "error": "", "seed_path": seed_info.get("path", "")}
 		if fallback_create_path.is_empty():
 			fallback_create_path = path
 	_clear_config_path_warning()
@@ -407,7 +407,7 @@ func _resolve_ordered_config_path_candidates(templates: Variant) -> Dictionary:
 
 
 ## Find a readable seed for a newly-created authoritative wildcard target.
-## An unresolved later root is an error, not an absent seed: writing without
+## An unresolved later root is an error, not an absent seed_info: writing without
 ## inspecting it could silently discard configuration visible through the
 ## package's read-through fallback.
 func _first_existing_later_candidate(templates: Array, start_index: int) -> Dictionary:
@@ -499,8 +499,8 @@ func is_installed() -> bool:
 		# VS Code/Cursor extension, #463) still counts as installed if its
 		# fallback config file already exists.
 		if has_json_fallback():
-			var cfg := resolved_config_path()
-			return not cfg.is_empty() and FileAccess.file_exists(cfg)
+			var fallback_cfg := resolved_config_path()
+			return not fallback_cfg.is_empty() and FileAccess.file_exists(fallback_cfg)
 		return false
 	for p in detect_paths:
 		for resolved in McpPathTemplate.expand_path_candidates(p):

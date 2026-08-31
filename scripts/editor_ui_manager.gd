@@ -1,5 +1,6 @@
 class_name EditorUIManager
 extends Node2D
+## Editor HUD, control panel, and increment/decrement hold-repeat.
 
 # Emitted when the active paint brush changes; state_id matches TileState values
 # (-2 = Wall, -1 = Erase, 0..2 = Yellow/Blue/Joker, 3 = Shifter link tool).
@@ -68,6 +69,7 @@ const MAX_GRID_HEIGHT: int = 8
 @onready var overwrite_panel: Panel = $"../EditorUI/OverwriteBlocker/CenterContainer/Panel"
 @onready var confirm_button: Button = $"../EditorUI/OverwriteBlocker/CenterContainer/Panel/VBoxContainer/ButtonRow/ConfirmButton"
 @onready var cancel_button: Button = $"../EditorUI/OverwriteBlocker/CenterContainer/Panel/VBoxContainer/ButtonRow/CancelButton"
+@onready var _hold_timer: Timer = $HoldTimer
 
 var editor_width: int = 3
 var editor_height: int = 3
@@ -85,7 +87,8 @@ const HOLD_REPEAT_INTERVAL := 0.08
 var _hold_button: Button = null
 var _hold_target: String = ""
 var _hold_amount: int = 0
-var _hold_timer: Timer = null
+# Hold-to-repeat for editor undo/redo (matches main-game HUD timing).
+var _hold_repeat := HoldRepeat.new()
 
 # Initialises the entire editor UI for a given starting grid size. Connects all
 # button signals, applies layout/style helpers, and defers a couple of calls that
@@ -96,7 +99,8 @@ func setup_ui(grid_width: int, grid_height: int) -> void:
 	if editor_mode_label:
 		editor_mode_label.text = HudLayout.format_mode_label("EDIT_MODE", true)
 	_apply_top_bar_buttons()
-	_ensure_hold_timer()
+	if _hold_timer and not _hold_timer.timeout.is_connected(_on_hold_timer_timeout):
+		_hold_timer.timeout.connect(_on_hold_timer_timeout)
 	_update_number_labels()
 	_connect_ui_signals()
 	_refresh_toggle_masks()
@@ -118,9 +122,11 @@ func setup_ui(grid_width: int, grid_height: int) -> void:
 	if control_panel and not control_panel.resized.is_connected(_cap_wide_editor_rows):
 		control_panel.resized.connect(_cap_wide_editor_rows)
 
+# Viewport resized: recompute HUD offsets (notch / nav-bar / landscape).
 func _on_safe_area_viewport_resized() -> void:
 	_apply_top_bar_buttons()
 
+# Re-applies Press Start to editor chrome after a locale font walk.
 func _refresh_editor_pixel_fonts() -> void:
 	EditorUiPolicy.refresh_editor_pixel_fonts(get_node_or_null("../EditorUI"))
 	_apply_default_font_to_link_buttons()
@@ -185,15 +191,6 @@ func _apply_star_time_label() -> void:
 		return
 	title.text = "TIME:"
 	title.tooltip_text = "Star time: beat this to earn the time star. Infinity = time star always awarded."
-
-# Lazily creates the one-shot Timer used by the press-and-hold repeat system.
-func _ensure_hold_timer() -> void:
-	if _hold_timer:
-		return
-	_hold_timer = Timer.new()
-	_hold_timer.one_shot = true
-	add_child(_hold_timer)
-	_hold_timer.timeout.connect(_on_hold_timer_timeout)
 
 # Connects button_down/button_up/mouse_exited to the hold-repeat system for a
 # single increment/decrement button. "target" identifies which value to change
@@ -355,9 +352,11 @@ func set_allowed_tiles(tiles: Array) -> void:
 	if allow_joker:
 		allow_joker.button_pressed = (2 in tiles)
 
+# Star-time threshold in seconds (0 = infinity / always awarded).
 func get_time_limit() -> int:
 	return editor_time_limit
 
+# Clamps the star-time threshold to >= 0 and refreshes the time label.
 func set_time_limit(val: int) -> void:
 	editor_time_limit = max(0, val)
 	_update_number_labels()
@@ -466,9 +465,11 @@ func _refresh_difficulty_button() -> void:
 				difficulty_button, true, GameConstants.TOGGLE_MASK_AMBER
 			)
 
+# Current PuzzleGenerator.Difficulty used by Random.
 func get_generation_difficulty() -> int:
 	return editor_difficulty
 
+# Clamps and stores difficulty, then refreshes the DIFF button.
 func set_generation_difficulty(difficulty: int) -> void:
 	editor_difficulty = clampi(
 		difficulty, PuzzleGenerator.Difficulty.EASY, PuzzleGenerator.Difficulty.HARD
@@ -563,6 +564,7 @@ func update_status(msg: String, text_color: Color = Color.WHITE, should_translat
 	else:
 		status_label.text = "[center]" + HudLayout.break_after_sentences(msg) + "[/center]"
 
+# Repositions the status label under the control panel after a board resize.
 func update_dynamic_editor_layout(_board_y: float, _board_height: float) -> void:
 	if status_label and control_panel:
 		HudLayout.position_editor_status_below_panel(control_panel, status_label)
@@ -578,100 +580,86 @@ func toggle_editor_visibility(is_playtesting: bool) -> void:
 	if status_label:
 		status_label.visible = not is_playtesting
 
+# Custom-slot number currently shown on the LVL selector.
 func get_level_number() -> int:
 	return editor_level
 
+# True when the unique-solution toggle is pressed.
 func is_unique_solution_required() -> bool:
 	if unique_solution_toggle:
 		return unique_solution_toggle.button_pressed
 	return false
 
+# Sets the unique-solution toggle and refreshes its mask.
 func set_unique_solution_required(is_required: bool) -> void:
 	if unique_solution_toggle:
 		unique_solution_toggle.button_pressed = is_required
 		_refresh_toggle_masks()
 
+# Sets the keep-walls toggle and refreshes its mask.
 func set_keep_walls_requested(keep: bool) -> void:
 	if keep_walls_toggle:
 		keep_walls_toggle.button_pressed = keep
 		_refresh_toggle_masks()
 
+# True when keep-walls is pressed; defaults to true if the node is missing.
 func is_keep_walls_requested() -> bool:
 	if keep_walls_toggle:
 		return keep_walls_toggle.button_pressed
 	return true
 
-# Hold-to-repeat for editor undo/redo (matches main-game HUD timing).
-const _UNDO_HOLD_INITIAL_DELAY := 0.4
-const _UNDO_HOLD_REPEAT_START := 0.3
-const _UNDO_HOLD_REPEAT_MIN := 0.05
-const _UNDO_HOLD_REPEAT_ACCEL := 0.82
-var _hold_undo_active: bool = false
-var _hold_redo_active: bool = false
-var _hold_undo_elapsed: float = 0.0
-var _hold_undo_interval: float = 0.0
-
-
+# Starts hold-to-repeat undo. First undo still comes from pressed; guarantee
+# click on down (pressed SFX can be skipped if the stack empties mid-press).
 func _on_editor_undo_button_down() -> void:
-	_hold_undo_active = true
-	_hold_redo_active = false
-	_hold_undo_elapsed = 0.0
-	_hold_undo_interval = _UNDO_HOLD_REPEAT_START
+	_hold_repeat.start_undo()
 	set_process(true)
-	# First undo still comes from pressed; guarantee click on down (pressed SFX
-	# can be skipped if the stack empties and disables the button mid-press).
 	if UiSfx and editor_undo_button:
 		UiSfx.suppress_next_pressed_click(editor_undo_button)
 		UiSfx.play_click()
 
 
+# Stops hold-to-repeat undo when the button is released.
 func _on_editor_undo_button_up() -> void:
-	_hold_undo_active = false
+	_hold_repeat.stop_undo()
 	if UiSfx and editor_undo_button:
 		UiSfx.clear_pressed_click_suppress(editor_undo_button)
-	if not _hold_redo_active:
+	if not _hold_repeat.is_active():
 		set_process(false)
 
 
+# Starts hold-to-repeat redo (same timing as the main-game HUD).
 func _on_editor_redo_button_down() -> void:
-	_hold_redo_active = true
-	_hold_undo_active = false
-	_hold_undo_elapsed = 0.0
-	_hold_undo_interval = _UNDO_HOLD_REPEAT_START
+	_hold_repeat.start_redo()
 	set_process(true)
 	if UiSfx and editor_redo_button:
 		UiSfx.suppress_next_pressed_click(editor_redo_button)
 		UiSfx.play_click()
 
 
+# Stops hold-to-repeat redo when the button is released.
 func _on_editor_redo_button_up() -> void:
-	_hold_redo_active = false
+	_hold_repeat.stop_redo()
 	if UiSfx and editor_redo_button:
 		UiSfx.clear_pressed_click_suppress(editor_redo_button)
-	if not _hold_undo_active:
+	if not _hold_repeat.is_active():
 		set_process(false)
 
 
+# Drives hold-to-repeat undo/redo. Stops if the button becomes disabled.
 func _process(delta: float) -> void:
-	if not _hold_undo_active and not _hold_redo_active:
+	if not _hold_repeat.is_active():
 		set_process(false)
 		return
-	_hold_undo_elapsed += delta
-	if _hold_undo_elapsed < _UNDO_HOLD_INITIAL_DELAY:
+	if not _hold_repeat.tick(delta):
 		return
-	var time_since_start := _hold_undo_elapsed - _UNDO_HOLD_INITIAL_DELAY
-	if time_since_start < _hold_undo_interval:
-		return
-	_hold_undo_elapsed = _UNDO_HOLD_INITIAL_DELAY
-	_hold_undo_interval = maxf(_hold_undo_interval * _UNDO_HOLD_REPEAT_ACCEL, _UNDO_HOLD_REPEAT_MIN)
-	if _hold_undo_active:
+	if _hold_repeat.is_undo():
 		if editor_undo_button and editor_undo_button.disabled:
 			_on_editor_undo_button_up()
 			return
 		if UiSfx:
 			UiSfx.play_click()
 		editor_undo_requested.emit()
-	elif _hold_redo_active:
+	elif _hold_repeat.is_redo():
 		if editor_redo_button and editor_redo_button.disabled:
 			_on_editor_redo_button_up()
 			return
@@ -717,6 +705,7 @@ func show_overwrite_warning() -> void:
 	overwrite_blocker.visible = true
 
 
+# Hides the overwrite confirmation blocker.
 func _hide_overwrite_warning() -> void:
 	if overwrite_blocker:
 		overwrite_blocker.visible = false

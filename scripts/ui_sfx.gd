@@ -1,4 +1,5 @@
 extends Node
+## Autoload for UI clicks, haptics, and synthesized title-screen FX.
 
 # Prefer the authored click; synthesize only if the asset is missing.
 const CLICK_STREAM_PATH := "res://resources/audio/ui_click.wav"
@@ -11,6 +12,7 @@ var _letter_stream: AudioStreamWAV
 var _tile_pop_stream: AudioStreamWAV
 var _slide_stream: AudioStreamWAV
 
+## Always-process click player plus pooled FX voices so SFX still play while paused.
 func _ready() -> void:
 	# PROCESS_MODE_ALWAYS so clicks play even while the game is paused.
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -37,9 +39,11 @@ func _ready() -> void:
 		get_tree().node_added.connect(_on_node_added)
 	call_deferred("_hook_existing", get_tree().root)
 
+## True unless the player turned SFX off in options.
 func _sfx_on() -> bool:
 	return SaveManager == null or SaveManager.sfx_enabled
 
+## Plays a short stream on the next pooled voice (round-robin).
 func _play_fx(stream: AudioStream, volume_db: float, pitch: float = 1.0) -> void:
 	if not _sfx_on() or stream == null or _fx_voices.is_empty():
 		return
@@ -51,17 +55,20 @@ func _play_fx(stream: AudioStream, volume_db: float, pitch: float = 1.0) -> void
 	voice.pitch_scale = pitch
 	voice.play()
 
+## Title intro glyph tick; pitch and haptic climb with the letter index.
 func play_title_letter(index: int) -> void:
 	# Climb a little with each glyph so SPACEBLOX feels like a scale, not a metronome.
 	var pitch := 0.92 + float(index) * 0.045
 	_vibrate(8 + mini(index, 6), 0.12 + float(index) * 0.015)
 	_play_fx(_letter_stream, -10.0, pitch)
 
+## Title tile pop; pitch and haptic climb with the tile index.
 func play_title_tile_pop(index: int) -> void:
 	var pitch := 0.94 + float(index) * 0.08
 	_vibrate(28 + index * 4, 0.32 + float(index) * 0.06)
 	_play_fx(_tile_pop_stream, -7.0, pitch)
 
+## Title slide whoosh plus a longer haptic.
 func play_title_slide() -> void:
 	_vibrate(120, 0.38)
 	_play_fx(_slide_stream, -12.0, 1.0)
@@ -140,6 +147,7 @@ func clear_pressed_click_suppress(button: BaseButton) -> void:
 	if button and button.has_meta("_ui_sfx_suppress_once"):
 		button.set_meta("_ui_sfx_suppress_once", false)
 
+## Auto-click for hooked buttons, unless a one-shot suppress meta is set.
 func _on_hooked_pressed(button: BaseButton) -> void:
 	if button != null and bool(button.get_meta("_ui_sfx_suppress_once", false)):
 		button.set_meta("_ui_sfx_suppress_once", false)
@@ -174,6 +182,7 @@ func _load_wav_pcm16_mono(path: String) -> AudioStreamWAV:
 	stream.data = pcm
 	return stream
 
+## Wraps mono PCM16 bytes as an AudioStreamWAV.
 func _pcm16_stream(data: PackedByteArray, sample_rate: int) -> AudioStreamWAV:
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
@@ -182,6 +191,7 @@ func _pcm16_stream(data: PackedByteArray, sample_rate: int) -> AudioStreamWAV:
 	stream.data = data
 	return stream
 
+## Procedural short blip used when letter glyphs appear.
 func _make_title_letter() -> AudioStreamWAV:
 	var sample_rate := 22050
 	var sample_count := int(sample_rate * 0.055)
@@ -194,6 +204,7 @@ func _make_title_letter() -> AudioStreamWAV:
 		data.encode_s16(i * 2, clampi(int(sample * 32767.0), -32768, 32767))
 	return _pcm16_stream(data, sample_rate)
 
+## Procedural thump+tick used when title tiles pop in.
 func _make_title_tile_pop() -> AudioStreamWAV:
 	var sample_rate := 22050
 	var sample_count := int(sample_rate * 0.14)
@@ -207,6 +218,7 @@ func _make_title_tile_pop() -> AudioStreamWAV:
 		data.encode_s16(i * 2, clampi(int(sample * 32767.0), -32768, 32767))
 	return _pcm16_stream(data, sample_rate)
 
+## Procedural noise sweep used for the title slide.
 func _make_title_slide() -> AudioStreamWAV:
 	var sample_rate := 22050
 	var duration := 0.52

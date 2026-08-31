@@ -20,10 +20,10 @@ func _init():
 func load(
 	ad_unit_id: String,
 	ad_request: AdRequest,
-	rewarded_ad_load_callback := RewardedAdLoadCallback.new()
+	p_rewarded_ad_load_callback := RewardedAdLoadCallback.new()
 ) -> void:
 	if _plugin:
-		self.rewarded_ad_load_callback = rewarded_ad_load_callback
+		self.rewarded_ad_load_callback = p_rewarded_ad_load_callback
 		safe_connect(_plugin, "on_rewarded_ad_loaded", _on_rewarded_ad_loaded, CONNECT_DEFERRED)
 		safe_connect(
 			_plugin,

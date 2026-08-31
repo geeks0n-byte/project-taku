@@ -135,12 +135,12 @@ const BREAK_FRAME_SCRAPE_DELAYS_SEC: Array[float] = [0.5, 2.0]
 
 
 
-func _init(log_buffer: McpLogBuffer = null, game_log_buffer: McpGameLogBuffer = null, editor_log_buffer: McpEditorLogBuffer = null, surfaced_error_tracker = null, vision_routing: VisionRoutingScript = null) -> void:
+func _init(log_buffer: McpLogBuffer = null, game_log_buffer: McpGameLogBuffer = null, editor_log_buffer: McpEditorLogBuffer = null, surfaced_error_tracker = null, p_vision_routing: VisionRoutingScript = null) -> void:
 	_log_buffer = log_buffer
 	_game_log_buffer = game_log_buffer
 	_editor_log_buffer = editor_log_buffer
 	_surfaced_error_tracker = surfaced_error_tracker
-	self.vision_routing = vision_routing
+	self.vision_routing = p_vision_routing
 
 
 func _has_capture(prefix: String) -> bool:

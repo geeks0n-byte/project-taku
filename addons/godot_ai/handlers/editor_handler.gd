@@ -303,8 +303,8 @@ func _get_all_logs(count: int, offset: int, include_details: bool) -> Dictionary
 		current_run_id = run_id
 		dropped = _game_log_buffer.dropped_count()
 		var run_page := _game_log_buffer.get_run_page(run_id, 0, McpGameLogBuffer.MAX_LINES)
-		for entry in run_page.get("entries", []):
-			combined.append(entry)
+		for game_entry in run_page.get("entries", []):
+			combined.append(game_entry)
 	var stop := mini(combined.size(), offset + count)
 	var page: Array[Dictionary] = []
 	for i in range(mini(offset, combined.size()), stop):

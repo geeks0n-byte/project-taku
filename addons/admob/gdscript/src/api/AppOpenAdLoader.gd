@@ -16,10 +16,10 @@ func _init():
 func load(
 	ad_unit_id: String,
 	ad_request: AdRequest,
-	app_open_ad_load_callback := AppOpenAdLoadCallback.new()
+	p_app_open_ad_load_callback := AppOpenAdLoadCallback.new()
 ) -> void:
 	if _plugin:
-		self.app_open_ad_load_callback = app_open_ad_load_callback
+		self.app_open_ad_load_callback = p_app_open_ad_load_callback
 		safe_connect(_plugin, "on_app_open_ad_loaded", _on_app_open_ad_loaded, CONNECT_DEFERRED)
 		safe_connect(
 			_plugin,

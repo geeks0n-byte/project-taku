@@ -9,9 +9,9 @@ extends AdError
 var response_info: ResponseInfo
 
 
-func _init(response_info: ResponseInfo, code: int, domain: String, message: String, cause: AdError):
-	super._init(code, domain, message, cause)
-	self.response_info = response_info
+func _init(p_response_info: ResponseInfo, p_code: int, p_domain: String, p_message: String, p_cause: AdError):
+	super._init(p_code, p_domain, p_message, p_cause)
+	self.response_info = p_response_info
 
 
 static func create(load_ad_error_dictionary: Dictionary) -> AdError:

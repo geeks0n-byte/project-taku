@@ -23,10 +23,10 @@ static func manage_visibility(editor_plugin: EditorPlugin = null) -> void:
 			file_system_modified = true
 	else:
 		if not FileAccess.file_exists(csharp_gdignore_path):
-			var file := FileAccess.open(csharp_gdignore_path, FileAccess.WRITE)
-			if file:
-				file.store_string("")
-				file.close()
+			var ignore_file := FileAccess.open(csharp_gdignore_path, FileAccess.WRITE)
+			if ignore_file:
+				ignore_file.store_string("")
+				ignore_file.close()
 				file_system_modified = true
 
 	if file_system_modified and editor_plugin:

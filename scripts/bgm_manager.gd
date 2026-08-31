@@ -7,6 +7,7 @@ const BGM_PATH := "res://resources/audio/bgm.mp3"
 
 var _player: AudioStreamPlayer
 
+## Builds the looping BGM player and applies the saved enabled flag once SaveManager is ready.
 func _ready() -> void:
 	# Keep processing even when the game is paused (e.g. on pause-menu screens).
 	process_mode = Node.PROCESS_MODE_ALWAYS

@@ -109,9 +109,9 @@ static func pick_lan_address(addresses: PackedStringArray) -> Dictionary:
 			chosen = addr
 			break
 	if chosen.is_empty():
-		for addr in candidates:
-			if addr.contains("."):
-				chosen = addr
+		for public_addr in candidates:
+			if public_addr.contains("."):
+				chosen = public_addr
 				break
 	if chosen.is_empty():
 		chosen = candidates[0]

@@ -1,7 +1,7 @@
-# Runs an in-editor playable simulation of the current custom board without
-# leaving the editor scene. Handles playtest HUD, validation, hints, timer, and undo.
 class_name EditorPlaytestController
 extends Node
+## Runs an in-editor playable simulation of the current custom board without
+## leaving the editor scene. Handles playtest HUD, validation, hints, timer, and undo.
 
 # Scene collaborators injected by setup().
 var canvas_manager: EditorCanvasManager
@@ -22,20 +22,18 @@ var playtest_shifter_moves: int = 0
 var hints_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED
 var hints_used: int = 0
 
-var _timer: Timer
+# 1-second playtest clock. Authored on this node in level_editor.tscn.
+@onready var _timer: Timer = $PlaytestTimer
 var _undo_stack := UndoStack.new()
 
-# Injects dependencies and creates the 1-second timer used by playtest clock.
+# Injects scene collaborators and wires the authored 1-second playtest clock.
 func setup(canvas: EditorCanvasManager, playtest_ui: PlaytestUIManager, editor: EditorUIManager) -> void:
 	canvas_manager = canvas
 	pt_ui = playtest_ui
 	editor_ui = editor
 	_undo_stack.max_size = 0
-
-	_timer = Timer.new()
-	_timer.wait_time = 1.0
-	_timer.timeout.connect(_on_timer_timeout)
-	add_child(_timer)
+	if _timer and not _timer.timeout.is_connected(_on_timer_timeout):
+		_timer.timeout.connect(_on_timer_timeout)
 
 # Switches from edit mode to playtest mode, captures a snapshot for restore,
 # computes hint reference/hidden pool, and starts timer+validation.
@@ -240,6 +238,7 @@ func handle_shifter_toggled(coord: Vector2i) -> void:
 	_after_player_board_change()
 
 
+# Records HUD, joker count, validation, and undo after a player-driven board change.
 func _after_player_board_change() -> void:
 	_update_hud()
 	_update_joker_count()
@@ -260,6 +259,7 @@ func undo() -> void:
 	_apply_snapshot(_undo_stack.undo())
 	pt_ui.update_playtest_undo_redo_buttons(_undo_stack.can_undo(), _undo_stack.can_redo())
 
+# Re-applies the snapshot that undo stepped back from.
 func redo() -> void:
 	if not is_active or not _undo_stack.can_redo():
 		return
@@ -273,31 +273,18 @@ func request_hint() -> void:
 	if hints_remaining == 0:
 		_refresh_hint_button()
 		return
+	# Always restrict picks to playtest_hint_pool. Unique boards keep visible
+	# constraints (prefer_hidden_hints false for setup) but must not invent
+	# adjacent solved pairs outside the designed hidden pool.
 	var result = HintController.reveal_hint(
 		canvas_manager.board_cells,
 		canvas_manager.loaded_constraint_pairs,
 		solved_solution_reference,
 		playtest_hint_pool,
 		editor_ui.get_allowed_tiles(),
-		prefer_hidden_hints
+		true
 	)
 	solved_solution_reference = result["solved_reference"]
-	if playtest_hint_pool.is_empty() and not solved_solution_reference.is_empty():
-		playtest_hint_pool = HintSystem.hidden_hints_from_solved(
-			solved_solution_reference,
-			canvas_manager.loaded_constraint_pairs if not prefer_hidden_hints else [],
-			canvas_manager.grid_width,
-			canvas_manager.grid_height
-		)
-		if result["hint"] == null:
-			result = HintController.reveal_hint(
-				canvas_manager.board_cells,
-				canvas_manager.loaded_constraint_pairs,
-				solved_solution_reference,
-				playtest_hint_pool,
-				editor_ui.get_allowed_tiles(),
-				prefer_hidden_hints
-			)
 	var hint = result["hint"]
 	if hint != null:
 		canvas_manager.loaded_constraint_pairs.append(hint)
@@ -323,9 +310,10 @@ func _can_use_hint() -> bool:
 		solved_solution_reference,
 		playtest_hint_pool,
 		Vector2i(canvas_manager.grid_width, canvas_manager.grid_height),
-		prefer_hidden_hints
+		true
 	)
 
+# Syncs remaining-hint count and disabled state on the playtest hint button.
 func _refresh_hint_button() -> void:
 	pt_ui.set_playtest_hint_remaining(hints_remaining)
 	pt_ui.set_playtest_hint_button_disabled(not _can_use_hint())
@@ -334,6 +322,7 @@ func _refresh_hint_button() -> void:
 func pause_timer() -> void:
 	_timer.stop()
 
+# Restarts the playtest clock after pause overlays close, then refreshes HUD buttons.
 func resume_timer() -> void:
 	if is_active:
 		_timer.start()

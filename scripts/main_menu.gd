@@ -1,4 +1,5 @@
 extends Control
+## Main menu: boot intro, campaign/tutorial entry, how-to-play, options, and credits.
 
 @export var show_debug_tools: bool = false
 
@@ -27,26 +28,27 @@ const _FX_COMET_3 := preload("res://resources/background/fx_comet_3.svg")
 const _DEBUG_BTN_SIZE := Vector2(96, 96)
 
 @onready var options_menu = $UILayer/OptionsMenu
-@onready var overlay_blocker = $UILayer/OverlayBlocker
-@onready var credits_panel = $UILayer/OverlayBlocker/CreditsPanel
-@onready var credits_version_label: Label = $UILayer/OverlayBlocker/CreditsPanel/VersionLabel
-@onready var close_credits_btn = $UILayer/OverlayBlocker/CloseCreditsButton
-@onready var _htp_host: Control = $UILayer/HowToPlayHost
-@onready var _htp_panel: Control = $UILayer/HowToPlayHost/HowToPlayPanel
-@onready var _htp_nav: HBoxContainer = $UILayer/HowToPlayHost/NavRow
-@onready var _htp_rules: RichTextLabel = $UILayer/HowToPlayHost/HowToPlayPanel/RulesLabel
-@onready var _htp_prev: Button = $UILayer/HowToPlayHost/NavRow/PrevSlot/PrevButton
-@onready var _htp_close: Button = $UILayer/HowToPlayHost/CloseButton
-@onready var _htp_next: Button = $UILayer/HowToPlayHost/NavRow/NextSlot/NextButton
-@onready var _tutorial_intro_blocker: ColorRect = $UILayer/TutorialIntroBlocker
+@onready var overlay_blocker = $OverlayLayer/OverlayBlocker
+@onready var credits_panel = $OverlayLayer/OverlayBlocker/CreditsPanel
+@onready var credits_version_label: Label = $OverlayLayer/OverlayBlocker/CreditsPanel/VersionLabel
+@onready var close_credits_btn = $OverlayLayer/OverlayBlocker/CloseCreditsButton
+@onready var _htp_host: Control = $OverlayLayer/HowToPlayHost
+@onready var _htp_header: Label = $OverlayLayer/HowToPlayHost/HowToPlayPageHeader
+@onready var _htp_panel: Control = $OverlayLayer/HowToPlayHost/HowToPlayPanel
+@onready var _htp_nav: HBoxContainer = $OverlayLayer/HowToPlayHost/NavRow
+@onready var _htp_rules: RichTextLabel = $OverlayLayer/HowToPlayHost/HowToPlayPanel/RulesLabel
+@onready var _htp_prev: Button = $OverlayLayer/HowToPlayHost/NavRow/PrevSlot/PrevButton
+@onready var _htp_close: Button = $OverlayLayer/HowToPlayHost/CloseButton
+@onready var _htp_next: Button = $OverlayLayer/HowToPlayHost/NavRow/NextSlot/NextButton
+@onready var _tutorial_intro_blocker: ColorRect = $OverlayLayer/TutorialIntroBlocker
 @onready var _tutorial_intro_label: Label = (
-	$UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/PromptLabel
+	$OverlayLayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/PromptLabel
 )
 @onready var _tutorial_intro_yes: Button = (
-	$UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/YesButton
+	$OverlayLayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/YesButton
 )
 @onready var _tutorial_intro_no: Button = (
-	$UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/NoButton
+	$OverlayLayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/NoButton
 )
 
 const TITLE_FONT_SIZE := 96
@@ -74,7 +76,6 @@ const TITLE_CLUSTER_REST_TOP := 0.0
 const TITLE_GLYPH_MID := 320.0
 const TITLE_TILE_PIVOT := Vector2(14, 14)
 
-var _htp_header: Label
 var _htp_page: int = 0
 var _boot_intro_active: bool = false
 var _boot_intro_tween: Tween
@@ -94,6 +95,7 @@ var _version_hold_active: bool = false
 var _version_hold_elapsed: float = 0.0
 const _VERSION_HOLD_SEC := 3.0
 
+# Wires menu buttons, overlays, ads, and optionally starts the boot intro.
 func _ready() -> void:
 	_apply_debug_tools_visibility()
 	_apply_editor_button_label()
@@ -155,10 +157,12 @@ func _ready() -> void:
 			_prepare_boot_intro()
 			call_deferred("_play_boot_intro")
 
+# Skips leftover intro animation and restores inherited process mode.
 func _ensure_menu_ui_visible() -> void:
 	_complete_boot_intro()
 	process_mode = Node.PROCESS_MODE_INHERIT
 
+# True for left-click or touch down (intro skip).
 func _is_primary_pointer_press(event: InputEvent) -> bool:
 	if event is InputEventMouseButton:
 		var mouse := event as InputEventMouseButton
@@ -167,6 +171,7 @@ func _is_primary_pointer_press(event: InputEvent) -> bool:
 		return (event as InputEventScreenTouch).pressed
 	return false
 
+# True for left-click or touch up (intro skip).
 func _is_primary_pointer_release(event: InputEvent) -> bool:
 	if event is InputEventMouseButton:
 		var mouse := event as InputEventMouseButton
@@ -175,6 +180,7 @@ func _is_primary_pointer_release(event: InputEvent) -> bool:
 		return not (event as InputEventScreenTouch).pressed
 	return false
 
+# Ignores menu buttons during the boot intro so they cannot be pressed early.
 func _set_boot_menu_input_enabled(enabled: bool) -> void:
 	var filter := Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
 	for btn in [start_btn, tutorial_btn, levels_btn, how_to_play_btn, options_btn, credits_btn, editor_btn]:
@@ -184,6 +190,7 @@ func _set_boot_menu_input_enabled(enabled: bool) -> void:
 		if btn:
 			btn.mouse_filter = filter
 
+# Skip-intro tap: eat the press/release so it does not hit a menu button.
 func _input(event: InputEvent) -> void:
 	if _eat_intro_pointer:
 		get_viewport().set_input_as_handled()
@@ -203,6 +210,7 @@ func _input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 	_ensure_menu_ui_visible()
 
+# Android back: close overlays first, then quit.
 func _notification(what: int) -> void:
 	if what != NOTIFICATION_WM_GO_BACK_REQUEST:
 		return
@@ -228,10 +236,12 @@ func _notification(what: int) -> void:
 		return
 	GlobalGameManager.quit_app()
 
+# Disables space-background foreground FX when leaving the menu.
 func _exit_tree() -> void:
 	if SpaceBackground and SpaceBackground.has_method("set_foreground_events_enabled"):
 		SpaceBackground.set_foreground_events_enabled(false)
 
+# Menu chrome faded in after the title intro (center column + debug bar).
 func _button_fade_targets() -> Array[CanvasItem]:
 	var nodes: Array[CanvasItem] = []
 	var center := menu_center as CanvasItem
@@ -242,14 +252,17 @@ func _button_fade_targets() -> Array[CanvasItem]:
 		nodes.append(bar)
 	return nodes
 
+# Sets modulate.a on every boot-intro fade target.
 func _set_button_ui_alpha(alpha: float) -> void:
 	for node in _button_fade_targets():
 		if node:
 			node.modulate.a = alpha
 
+# Authored TAKU title label inside TitleCluster.
 func _title_label() -> Label:
 	return get_node_or_null("TitleLayer/TitleHost/TitleCluster/TitleLabel") as Label
 
+# Letter-tile controls that pop in after the typewriter.
 func _title_tiles() -> Array[CanvasItem]:
 	var tiles: Array[CanvasItem] = []
 	var host := get_node_or_null("TitleLayer/TitleHost/TitleCluster/TitleTileHost") as Control
@@ -260,12 +273,15 @@ func _title_tiles() -> Array[CanvasItem]:
 			tiles.append(child)
 	return tiles
 
+# TitleLabel + tiles host, slid from centre to rest.
 func _title_cluster() -> Control:
 	return get_node_or_null("TitleLayer/TitleHost/TitleCluster") as Control
 
+# Cluster offset_top that vertically centres the title glyphs.
 func _title_intro_center_top() -> float:
 	return get_viewport_rect().size.y * 0.5 - TITLE_GLYPH_MID
 
+# Sets TitleCluster top/bottom offsets for intro vs rest.
 func _place_title_cluster(top: float) -> void:
 	var cluster := _title_cluster()
 	if cluster == null:
@@ -273,6 +289,7 @@ func _place_title_cluster(top: float) -> void:
 	cluster.offset_top = top
 	cluster.offset_bottom = top + TITLE_CLUSTER_HEIGHT
 
+# Stores rest scale/offsets, then scales tiles to zero for the pop-in.
 func _prepare_title_tile_pops() -> void:
 	for tile in _title_tiles():
 		var ctrl := tile as Control
@@ -301,6 +318,7 @@ func _prepare_title_tile_pops() -> void:
 		ctrl.scale = Vector2.ZERO
 		ctrl.modulate.a = 1.0
 
+# Restores authored tile scale and offsets after intro or skip.
 func _restore_title_tile_pops() -> void:
 	for tile in _title_tiles():
 		var ctrl := tile as Control
@@ -320,6 +338,7 @@ func _restore_title_tile_pops() -> void:
 			ctrl.offset_right = rest.z
 			ctrl.offset_bottom = rest.w
 
+# Hides buttons, zeros title letters, and parks the cluster at centre.
 func _prepare_boot_intro() -> void:
 	var title := _title_label()
 	if title:
@@ -333,6 +352,7 @@ func _prepare_boot_intro() -> void:
 	_set_button_ui_alpha(0.0)
 	_set_boot_menu_input_enabled(false)
 
+# Left-aligns the title at the settled glyph origin so typing matches rest.
 func _layout_title_for_typewriter(title: Label) -> void:
 	# Measure in the settled (centered, 24px-inset) rect, then left-align at that
 	# same glyph origin so typing matches the title after the intro.
@@ -356,6 +376,7 @@ func _layout_title_for_typewriter(title: Label) -> void:
 	title.offset_top = 240.0
 	title.offset_bottom = 400.0
 
+# Restores centred, fully-visible title layout from main_menu.tscn.
 func _restore_title_layout(title: Label) -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -367,6 +388,7 @@ func _restore_title_layout(title: Label) -> void:
 	title.offset_bottom = 400.0
 	title.visible_characters = -1
 
+# Typewriter, tile pops, slide-up, then fade in menu buttons.
 func _play_boot_intro() -> void:
 	var title := _title_label()
 	if title:
@@ -417,6 +439,7 @@ func _play_boot_intro() -> void:
 		_boot_intro_failsafe = failsafe
 		failsafe.timeout.connect(_ensure_menu_ui_visible)
 
+# Shows the next typewriter letter and plays its SFX.
 func _reveal_title_letter(count: int) -> void:
 	var title := _title_label()
 	if is_instance_valid(title):
@@ -424,10 +447,12 @@ func _reveal_title_letter(count: int) -> void:
 	if UiSfx:
 		UiSfx.play_title_letter(count - 1)
 
+# Tile-pop click used by the intro tween.
 func _play_title_tile_pop_sfx(index: int) -> void:
 	if UiSfx:
 		UiSfx.play_title_tile_pop(index)
 
+# Restores centred title layout as the cluster slides to rest.
 func _on_title_slide_start() -> void:
 	var title := _title_label()
 	if is_instance_valid(title):
@@ -435,6 +460,7 @@ func _on_title_slide_start() -> void:
 	if UiSfx:
 		UiSfx.play_title_slide()
 
+# Fades in the menu column after the title has settled.
 func _fade_buttons_after_title() -> void:
 	var buttons := _button_fade_targets()
 	if buttons.is_empty():
@@ -451,6 +477,7 @@ func _fade_buttons_after_title() -> void:
 		_button_fade_tween.tween_property(node, "modulate:a", 1.0, MENU_FADE_IN).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	_button_fade_tween.chain().tween_callback(_complete_boot_intro)
 
+# Kills intro tweens and snaps title/buttons to their rest state.
 func _complete_boot_intro() -> void:
 	if _boot_intro_failsafe:
 		if _boot_intro_failsafe.timeout.is_connected(_ensure_menu_ui_visible):
@@ -476,6 +503,7 @@ func _complete_boot_intro() -> void:
 	if not _eat_intro_pointer:
 		_set_boot_menu_input_enabled(true)
 
+# Keeps title + UI on layer 0 so space FX can draw above the wordmark.
 func _setup_title_under_fx() -> void:
 	var ui_layer := $UILayer as CanvasLayer
 	if ui_layer:
@@ -488,25 +516,13 @@ func _setup_title_under_fx() -> void:
 	if title:
 		_style_title_label(title)
 
+# OverlayLayer is authored in main_menu.tscn at layer 5 so HTP/credits sit above FX.
 func _ensure_overlays_above_fx() -> void:
-	var ui_layer := $UILayer as CanvasLayer
-	if ui_layer == null:
-		return
 	var overlay_layer := get_node_or_null("OverlayLayer") as CanvasLayer
-	if overlay_layer == null:
-		overlay_layer = CanvasLayer.new()
-		overlay_layer.name = "OverlayLayer"
+	if overlay_layer:
 		overlay_layer.layer = 5
-		add_child(overlay_layer)
-	for node_name in ["OverlayBlocker", "HowToPlayHost", "TutorialIntroBlocker"]:
-		var node := ui_layer.get_node_or_null(node_name) as Node
-		if node == null:
-			continue
-		if node.get_parent() == overlay_layer:
-			continue
-		ui_layer.remove_child(node)
-		overlay_layer.add_child(node)
 
+# Brands the TAKU title as a screen header (Press Start / locale).
 func _style_title_label(title: Label) -> void:
 	title.set_meta("_brand_title", true)
 	title.set_meta("_screen_header", true)
@@ -514,10 +530,12 @@ func _style_title_label(title: Label) -> void:
 	title.set_meta("_screen_header_outline", TITLE_OUTLINE)
 	HudLayout.apply_screen_header_style(title)
 
+# Styles the credits close control as a top-bar X.
 func _mount_credits_close_button() -> void:
 	if close_credits_btn:
 		HudLayout.style_top_bar_close_button(close_credits_btn)
 
+# Rebuilds menu fonts, HTP copy, and safe-area after a locale switch.
 func _on_language_changed() -> void:
 	_refresh_start_button_label()
 	_fit_menu_buttons()
@@ -530,9 +548,11 @@ func _on_language_changed() -> void:
 	if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
 		_show_tutorial_intro_prompt()
 
+# Viewport resized: recompute menu + debug-bar safe-area padding.
 func _on_safe_area_viewport_resized() -> void:
 	_apply_safe_area_layout()
 
+# Pads the menu column and debug bar away from notches / nav bars.
 func _apply_safe_area_layout() -> void:
 	HudLayout.apply_content_edge_safe_area(menu_center)
 	if debug_bar:
@@ -542,6 +562,7 @@ func _apply_safe_area_layout() -> void:
 		debug_bar.offset_right = -24.0 - SafeInsets.right()
 		debug_bar.offset_bottom = top + 96.0
 
+# PLAY vs RESUME depending on whether a session autosave exists.
 func _refresh_start_button_label() -> void:
 	if not start_btn:
 		return
@@ -551,6 +572,7 @@ func _refresh_start_button_label() -> void:
 		start_btn.text = "UI_PLAY"
 	start_btn.set_meta("_tr_key", start_btn.text)
 
+# Profile reset: refresh PLAY/RESUME and re-show consent if needed.
 func _on_save_deleted() -> void:
 	_refresh_start_button_label()
 	_fit_menu_buttons()
@@ -558,6 +580,7 @@ func _on_save_deleted() -> void:
 	# (not only after a later main-menu reload via Level Select).
 	_show_privacy_consent_if_needed(true)
 
+# Sizes/fonts menu buttons, title, debug bar, and credits text.
 func _fit_menu_buttons() -> void:
 	for btn in [start_btn, tutorial_btn, levels_btn, how_to_play_btn, options_btn, credits_btn, editor_btn]:
 		_apply_main_menu_button(btn)
@@ -571,6 +594,7 @@ func _fit_menu_buttons() -> void:
 	if credits_text_node:
 		_apply_credits_fonts(credits_text_node)
 
+# Flat menu row: Press Start for Latin, locale font otherwise.
 func _apply_main_menu_button(button: Button) -> void:
 	if not button:
 		return
@@ -610,6 +634,7 @@ func _apply_main_menu_button(button: Button) -> void:
 		button.add_theme_font_size_override("font_size", HudLayout.body_font_size(font_size))
 		HudLayout.apply_safe_outline(button, MENU_BTN_OUTLINE)
 
+# Icon-only debug FX buttons along the top bar.
 func _fit_debug_bar_buttons() -> void:
 	_setup_debug_fx_button(debug_star_btn, [_FX_STAR])
 	_setup_debug_fx_button(debug_asteroid_btn, [_FX_AST_1])
@@ -617,6 +642,7 @@ func _fit_debug_bar_buttons() -> void:
 	_setup_debug_fx_button(debug_comet_btn, [_FX_COMET_1])
 	_setup_debug_fx_button(debug_comet_shower_btn, [_FX_COMET_1, _FX_COMET_2, _FX_COMET_3])
 
+# Builds nearest-neighbour icon(s) inside a debug FX button.
 func _setup_debug_fx_button(button: Button, textures: Array) -> void:
 	if button == null:
 		return
@@ -670,6 +696,7 @@ func _setup_debug_fx_button(button: Button, textures: Array) -> void:
 		icon.size = Vector2(icon_px, icon_px)
 		host.add_child(icon)
 
+# Shows/hides the title layer and centre button column.
 func _set_main_menu_chrome_visible(should_show: bool) -> void:
 	if menu_center:
 		menu_center.visible = should_show
@@ -677,6 +704,7 @@ func _set_main_menu_chrome_visible(should_show: bool) -> void:
 	if title_layer:
 		title_layer.visible = should_show
 
+# Locale-aware credits BBCode sizes; Press Start for Latin names.
 func _apply_credits_fonts(credits_text_node: RichTextLabel) -> void:
 	if not credits_text_node:
 		return
@@ -731,9 +759,11 @@ func _apply_credits_fonts(credits_text_node: RichTextLabel) -> void:
 # uk credits: full Latin author name in Press Start (no Georgian script to localize).
 const CREDITS_NICKNAME := "\"gix0n\""
 
+# NBSP so author first/last names stay on one line.
 func _credits_author_single_line(text: String) -> String:
 	return text.replace(" ", "\u00a0")
 
+# ka credits: wrap only the gix0n nickname in Press Start.
 func _wrap_credits_nickname_pixel_font(text: String, pixel_sz: int) -> String:
 	if not text.contains(CREDITS_NICKNAME):
 		return text
@@ -742,17 +772,20 @@ func _wrap_credits_nickname_pixel_font(text: String, pixel_sz: int) -> String:
 	]
 	return text.replace(CREDITS_NICKNAME, pixel)
 
+# uk credits: wrap the full Latin author name in Press Start.
 func _wrap_credits_full_name_pixel_font(text: String, pixel_sz: int) -> String:
 	return "[font=%s][font_size=%d]%s[/font_size][/font]" % [
 		HudLayout.PIXEL_FONT_PATH, pixel_sz, text
 	]
 
+# Picks nickname vs full-name Press Start wrap from locale.
 func _wrap_credits_author_name_display(author: String, pixel_sz: int) -> String:
 	var single_line := _credits_author_single_line(author)
 	if HudFonts.locale_code() == "ka":
 		return _wrap_credits_nickname_pixel_font(single_line, pixel_sz)
 	return _wrap_credits_full_name_pixel_font(single_line, pixel_sz)
 
+# Replaces the translated author run with mixed-font BBCode.
 func _wrap_credits_author_pixel_font(bbcode: String, body_sz: int, pixel_sz: int) -> String:
 	var author := String(TranslationServer.translate("SPLASH_AUTHOR"))
 	var author_display := _wrap_credits_author_name_display(author, pixel_sz)
@@ -778,6 +811,7 @@ func _wrap_credits_author_pixel_font(bbcode: String, body_sz: int, pixel_sz: int
 			return normalized.replace(name_plain, name_mixed)
 	return bbcode
 
+# ASCII-safe project version for the credits label.
 func _app_version_string() -> String:
 	var version := String(ProjectSettings.get_setting("application/config/version", "1.0.0"))
 	# Guard against mangled/non-ASCII version strings from export tooling.
@@ -799,6 +833,7 @@ func _app_version_string() -> String:
 		cleaned = "1.0.0"
 	return cleaned
 
+# Draws vX.Y.Z [DEV] and wires the hold-to-unlock input.
 func _refresh_credits_version() -> void:
 	if not credits_version_label:
 		return
@@ -855,6 +890,7 @@ func _toggle_dev_mode() -> void:
 		tw.tween_property(credits_version_label, "modulate", target_color, 0.15)
 		tw.tween_property(credits_version_label, "modulate", Color.WHITE, 0.4)
 
+# Sets the Editor row translation key.
 func _apply_editor_button_label() -> void:
 	if not editor_btn:
 		return
@@ -866,6 +902,7 @@ func _apply_editor_button_label() -> void:
 func _is_debug_enabled() -> bool:
 	return show_debug_tools or (SaveManager != null and SaveManager.dev_mode_enabled)
 
+# Shows Editor + debug bar when export flag or session dev mode is on.
 func _apply_debug_tools_visibility() -> void:
 	var enabled := _is_debug_enabled()
 	GlobalGameManager.debug_tools_enabled = enabled
@@ -874,10 +911,12 @@ func _apply_debug_tools_visibility() -> void:
 	if debug_bar:
 		debug_bar.visible = enabled
 
+# Debug bar only when both requested and debug tools are enabled.
 func _set_debug_bar_visible(should_show: bool) -> void:
 	if debug_bar:
 		debug_bar.visible = _is_debug_enabled() and should_show
 
+# Tutorial row: skip the intro prompt and launch the first incomplete lesson.
 func _on_tutorial_pressed() -> void:
 	_apply_debug_tools_visibility()
 	if SaveManager:
@@ -885,6 +924,7 @@ func _on_tutorial_pressed() -> void:
 	_ensure_easy_unlocked()
 	_launch_tutorial()
 
+# PLAY/RESUME: tutorial prompt if unanswered, else start the campaign.
 func _on_start_pressed() -> void:
 	_apply_debug_tools_visibility()
 	_ensure_easy_unlocked()
@@ -893,15 +933,18 @@ func _on_start_pressed() -> void:
 		return
 	_start_game()
 
+# Loads the main puzzle scene.
 func _start_game() -> void:
 	GlobalGameManager.go_to_scene("res://scenes/main.tscn")
 
+# Selects the first incomplete tutorial level, then starts the game.
 func _launch_tutorial() -> void:
 	var tutorial := TutorialScripts.first_incomplete_level()
 	if tutorial:
 		GlobalGameManager.selected_level_resource = tutorial
 	_start_game()
 
+# First LevelData in a campaign directory, or null.
 func _first_level_in_dir(dir_path: String) -> LevelData:
 	var paths := LevelUtils.scan_directory(dir_path)
 	LevelUtils.sort_level_paths(paths)
@@ -911,6 +954,7 @@ func _first_level_in_dir(dir_path: String) -> LevelData:
 			return resource
 	return null
 
+# Styles HTP chrome. Page header is authored in main_menu.tscn.
 func _setup_how_to_play_overlay() -> void:
 	if _htp_host:
 		_htp_host.visible = false
@@ -923,12 +967,10 @@ func _setup_how_to_play_overlay() -> void:
 		HudLayout.apply_nav_button(btn)
 	if _htp_close:
 		HudLayout.style_top_bar_close_button(_htp_close)
-	_htp_header = HudLayout.ensure_how_to_play_page_header(_htp_host)
 	_refresh_how_to_play_text()
 
+# Header, body, and prev/next visibility for the current HTP page.
 func _refresh_how_to_play_text() -> void:
-	if _htp_header == null and _htp_host:
-		_htp_header = HudLayout.ensure_how_to_play_page_header(_htp_host)
 	if _htp_header:
 		HudLayout._bind_header_translation_key(
 			_htp_header, HowToPlayContent.get_page_title_key(_htp_page)
@@ -947,19 +989,23 @@ func _refresh_how_to_play_text() -> void:
 		HudLayout.style_top_bar_close_button(_htp_close)
 	call_deferred("_layout_how_to_play_stack")
 
+# Places HTP panel + nav after the rules label has measured.
 func _layout_how_to_play_stack() -> void:
 	HudLayout.layout_how_to_play_stack(
 		_htp_host, _htp_panel, _htp_rules, _htp_nav, _htp_page == 0
 	)
 
+# Previous HTP page, clamped at 0.
 func _on_htp_prev() -> void:
 	_htp_page = maxi(_htp_page - 1, 0)
 	_refresh_how_to_play_text()
 
+# Next HTP page, clamped at PAGE_COUNT-1.
 func _on_htp_next() -> void:
 	_htp_page = mini(_htp_page + 1, HowToPlayContent.PAGE_COUNT - 1)
 	_refresh_how_to_play_text()
 
+# Closes HTP and restores menu chrome.
 func _on_htp_close() -> void:
 	if _htp_host:
 		_htp_host.visible = false
@@ -968,6 +1014,7 @@ func _on_htp_close() -> void:
 
 const _CONSENT_POPUP_SCENE := preload("res://scenes/consent_popup.tscn")
 
+# True until the player has accepted the privacy popup.
 func _needs_privacy_consent() -> bool:
 	return SaveManager != null and not SaveManager.privacy_accepted
 
@@ -1033,6 +1080,7 @@ func _on_consent_accepted() -> void:
 	_set_main_menu_chrome_visible(true)
 	_apply_debug_tools_visibility()
 
+# Styles the first-play tutorial prompt (no dimmer; chrome hides instead).
 func _setup_tutorial_intro_panel() -> void:
 	if _tutorial_intro_blocker:
 		_tutorial_intro_blocker.visible = false
@@ -1055,6 +1103,7 @@ func _setup_tutorial_intro_panel() -> void:
 	_copy_menu_button_styles(_tutorial_intro_yes)
 	_copy_menu_button_styles(_tutorial_intro_no)
 
+# Copies PLAY/Options StyleBoxes onto a dialog button.
 func _copy_menu_button_styles(target: Button) -> void:
 	var source: Button = start_btn if start_btn else options_btn
 	if not source or not target:
@@ -1066,6 +1115,7 @@ func _copy_menu_button_styles(target: Button) -> void:
 	target.add_theme_color_override("font_outline_color", Color.BLACK)
 	HudLayout.apply_safe_outline(target, GameConstants.MENU_TEXT_OUTLINE)
 
+# First-play Yes/No: hide chrome and show the tutorial intro dialog.
 func _show_tutorial_intro_prompt() -> void:
 	_set_main_menu_chrome_visible(false)
 	_set_debug_bar_visible(false)
@@ -1088,18 +1138,21 @@ func _show_tutorial_intro_prompt() -> void:
 		_tutorial_intro_blocker.visible = true
 		_tutorial_intro_blocker.move_to_front()
 
+# Hides the tutorial intro dialog and restores menu chrome.
 func _hide_tutorial_intro_prompt() -> void:
 	if _tutorial_intro_blocker:
 		_tutorial_intro_blocker.visible = false
 	_set_main_menu_chrome_visible(true)
 	_set_debug_bar_visible(true)
 
+# Starts the tutorial from the intro prompt.
 func _on_tutorial_intro_yes() -> void:
 	_hide_tutorial_intro_prompt()
 	SaveManager.set_tutorial_intro_answered(true)
 	_ensure_easy_unlocked()
 	_launch_tutorial()
 
+# Declines tutorial and starts Easy campaign instead.
 func _on_tutorial_intro_no() -> void:
 	_hide_tutorial_intro_prompt()
 	SaveManager.set_tutorial_intro_answered(true)
@@ -1109,16 +1162,19 @@ func _on_tutorial_intro_no() -> void:
 		GlobalGameManager.selected_level_resource = easy
 	_start_game()
 
+# Unlocks campaign level 1 so PLAY cannot land on a locked slot.
 func _ensure_easy_unlocked() -> void:
 	if SaveManager == null:
 		return
 	SaveManager.unlock_level(LevelUtils.first_campaign_level_number())
 
+# Opens level select.
 func _on_levels_pressed() -> void:
 	_apply_debug_tools_visibility()
 	_ensure_easy_unlocked()
 	GlobalGameManager.go_to_scene("res://scenes/level_select.tscn")
 
+# Hides menu chrome and opens HTP at page 0.
 func _on_how_to_play_pressed() -> void:
 	_set_main_menu_chrome_visible(false)
 	_set_debug_bar_visible(false)
@@ -1129,12 +1185,14 @@ func _on_how_to_play_pressed() -> void:
 		_htp_host.visible = true
 		_htp_host.move_to_front()
 
+# Hides menu chrome and shows the options overlay.
 func _on_options_pressed() -> void:
 	_set_main_menu_chrome_visible(false)
 	_set_debug_bar_visible(false)
 	if options_menu:
 		options_menu.show_menu(true)
 
+# Restores menu after Options; may re-show consent after a profile reset.
 func _on_options_back() -> void:
 	_set_main_menu_chrome_visible(true)
 	_set_debug_bar_visible(true)
@@ -1142,6 +1200,7 @@ func _on_options_back() -> void:
 	_fit_menu_buttons()
 	_show_privacy_consent_if_needed(false)
 
+# Hides menu chrome and shows credits.
 func _on_credits_pressed() -> void:
 	_set_main_menu_chrome_visible(false)
 	_set_debug_bar_visible(false)
@@ -1155,6 +1214,7 @@ func _on_credits_pressed() -> void:
 	if close_credits_btn:
 		HudLayout.style_top_bar_close_button(close_credits_btn)
 
+# Closes credits and refreshes debug visibility (dev mode may have toggled).
 func _on_close_credits() -> void:
 	if overlay_blocker: overlay_blocker.visible = false
 	if credits_panel: credits_panel.visible = false
@@ -1165,25 +1225,31 @@ func _on_close_credits() -> void:
 	_apply_debug_tools_visibility()
 	_fit_menu_buttons()
 
+# Opens the level editor.
 func _on_editor_pressed() -> void:
 	GlobalGameManager.go_to_scene("res://scenes/level_editor.tscn")
 
+# Debug: spawn a shooting star.
 func _on_debug_star_pressed() -> void:
 	if SpaceBackground:
 		SpaceBackground.debug_spawn_shooting_star()
 
+# Debug: spawn a comet.
 func _on_debug_comet_pressed() -> void:
 	if SpaceBackground:
 		SpaceBackground.debug_spawn_comet()
 
+# Debug: spawn an asteroid.
 func _on_debug_asteroid_pressed() -> void:
 	if SpaceBackground:
 		SpaceBackground.debug_spawn_asteroid()
 
+# Debug: spawn an asteroid cloud.
 func _on_debug_asteroid_cloud_pressed() -> void:
 	if SpaceBackground:
 		SpaceBackground.debug_spawn_asteroid_cloud()
 
+# Debug: spawn a meteor shower.
 func _on_debug_comet_shower_pressed() -> void:
 	if SpaceBackground:
 		SpaceBackground.debug_spawn_meteor_shower()

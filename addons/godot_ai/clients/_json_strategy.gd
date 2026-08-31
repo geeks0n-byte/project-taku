@@ -339,8 +339,8 @@ static func verify_entry(
 				return false
 		var env = entry.get("env", null)
 		if env is Dictionary:
-			for key in client.command_env_legacy_keys:
-				if env.has(String(key)):
+			for env_key in client.command_env_legacy_keys:
+				if env.has(String(env_key)):
 					return false
 		if client.command_shape == McpClient.CommandShape.COMMAND_ARRAY:
 			if not _arrays_equal(entry.get("command", null), _launch_argv(launch)):

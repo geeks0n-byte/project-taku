@@ -19,9 +19,9 @@ var value: int
 var offset := Vector2i(Values.CUSTOM, Values.CUSTOM)
 
 
-func _init(value: int, offset := Vector2i(Values.CUSTOM, Values.CUSTOM)) -> void:
-	self.value = value
-	self.offset = offset
+func _init(p_value: int, p_offset := Vector2i(Values.CUSTOM, Values.CUSTOM)) -> void:
+	self.value = p_value
+	self.offset = p_offset
 
 
 static func custom(x: int, y: int) -> AdPosition:

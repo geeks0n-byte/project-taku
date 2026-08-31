@@ -33,6 +33,7 @@ static var _pixel_font_with_fallback: Font
 static var _default_ui_font: Font
 static var _force_pixel_depth: int = 0
 
+## Two-letter locale from TranslationServer (en, ka, uk, ...).
 static func locale_code() -> String:
 	return TranslationServer.get_locale().substr(0, 2)
 
@@ -41,16 +42,19 @@ static func is_scalable_script_locale(locale: String = "") -> bool:
 	var code := locale if not locale.is_empty() else locale_code()
 	return SCALABLE_SCRIPT_LOCALES.has(code)
 
+## True for Press Start locales, or while begin_force_pixel_font is nested.
 static func uses_pixel_font() -> bool:
 	if _force_pixel_depth > 0:
 		return true
 	return not is_scalable_script_locale()
 
+## True when this node sits under a force-pixel subtree or the locale is pixel.
 static func control_uses_pixel_font(control: Node = null) -> bool:
 	if control != null and _in_force_pixel_subtree(control):
 		return true
 	return uses_pixel_font()
 
+## Walks parents for the _force_pixel_subtree meta set on editor/playtest roots.
 static func _in_force_pixel_subtree(node: Node) -> bool:
 	var n := node
 	while n != null:
@@ -64,12 +68,15 @@ static func mark_force_pixel_subtree(root: Node) -> void:
 	if root:
 		root.set_meta("_force_pixel_subtree", true)
 
+## Increments the nested Press Start force counter.
 static func begin_force_pixel_font() -> void:
 	_force_pixel_depth += 1
 
+## Decrements the nested Press Start force counter (not below zero).
 static func end_force_pixel_font() -> void:
 	_force_pixel_depth = maxi(0, _force_pixel_depth - 1)
 
+## Loads Press Start 2P once; returns the cached Font resource.
 static func _load_press_start_font() -> Font:
 	if PIXEL_FONT != null:
 		return PIXEL_FONT
@@ -79,11 +86,13 @@ static func _load_press_start_font() -> Font:
 			return loaded
 	return ThemeDB.fallback_font
 
+## Press Start 2P, or ThemeDB.fallback_font if the file is missing.
 static func pixel_font() -> Font:
 	if _pixel_font_with_fallback == null:
 		_pixel_font_with_fallback = _load_press_start_font()
 	return _pixel_font_with_fallback if _pixel_font_with_fallback else ThemeDB.fallback_font
 
+## Same face as pixel_font — alias kept for older call sites.
 static func pixel_font_clean() -> Font:
 	return pixel_font()
 
@@ -102,6 +111,7 @@ static func default_font() -> Font:
 	_default_ui_font = base
 	return _default_ui_font
 
+## Loads a Font from res://, preferring the imported resource then a raw FontFile.
 static func _load_font_file(path: String) -> Font:
 	if path.is_empty() or not FileAccess.file_exists(path):
 		return null
@@ -116,12 +126,15 @@ static func _load_font_file(path: String) -> Font:
 		return null
 	return font
 
+## No-op kept so call sites that flushed a former raster cache still compile.
 static func clear_pixel_text_cache() -> void:
 	pass
 
+## Press Start for pixel locales; Noto default otherwise.
 static func ui_font() -> Font:
 	return pixel_font() if uses_pixel_font() else default_font()
 
+## True for ka/uk (and any other scalable-script locale).
 static func prefer_default_font() -> bool:
 	return not uses_pixel_font()
 
@@ -146,6 +159,7 @@ static func char_needs_scalable_font(c: String) -> bool:
 		return _is_cyrillic_letter_code(code)
 	return false
 
+## True for Unicode Cyrillic letter codepoints used by mixed-font ka/uk splitting.
 static func _is_cyrillic_letter_code(code: int) -> bool:
 	if code >= 0x0410 and code <= 0x044F:
 		return true

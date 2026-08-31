@@ -1,4 +1,5 @@
 extends Node
+## Autoload for progression.cfg: unlocks, settings, locale fonts, and in-progress sessions.
 
 const SAVE_PATH = "user://progression.cfg"
 const SAVE_FORMAT_VERSION := 2
@@ -24,6 +25,7 @@ var level_star_bits: Dictionary = {}
 var session_data: Dictionary = {}
 var ads_wins_since_interstitial: int = 0
 
+## Loads save data, applies background mode, and walks new text controls for locale fonts.
 func _ready() -> void:
 	_sync_translations_from_csv()
 	_verify_translation_hygiene()
@@ -33,6 +35,7 @@ func _ready() -> void:
 		get_tree().node_added.connect(_on_tree_node_added)
 	call_deferred("apply_locale_fonts")
 
+## Editor-only: rebuilds Translation objects from translations.csv so CSV edits apply without reimport.
 func _sync_translations_from_csv() -> void:
 	# Exported builds use imported .translation from Project Settings.
 	# Reading translations.csv only works reliably in the editor; on device the
@@ -117,6 +120,7 @@ func _verify_translation_hygiene() -> void:
 	if empty_cells > 0:
 		push_warning("translations.csv: %d empty cell(s) across %d keys — fill before shipping" % [empty_cells, rows])
 
+## Level number of the first easy campaign puzzle (unlock floor for new saves).
 func get_campaign_start_unlock() -> int:
 	var easy_paths := LevelUtils.scan_directory(GameConstants.CAMPAIGN_EASY_DIR)
 	LevelUtils.sort_level_paths(easy_paths)
@@ -126,12 +130,14 @@ func get_campaign_start_unlock() -> int:
 			return int(resource.level_number)
 	return 1
 
+## Raises max_unlocked_level if it sits below the campaign start.
 func _ensure_campaign_start_unlock() -> void:
 	var start := get_campaign_start_unlock()
 	if max_unlocked_level < start:
 		max_unlocked_level = start
 		save_progress()
 
+## Reads progression.cfg, migrates older formats, or seeds a new save from the system language.
 func load_progress() -> void:
 	var config = ConfigFile.new()
 	var err = config.load(SAVE_PATH)
@@ -184,6 +190,7 @@ func _migrate_save(config: ConfigFile, from_version: int) -> void:
 	const Migration := preload("res://scripts/save_migration.gd")
 	Migration.migrate_config(config, from_version)
 
+## Maps OS locale to a supported language code; falls back to en.
 func _detect_system_language() -> String:
 	var lang := OS.get_locale_language().to_lower()
 	if SUPPORTED_LANGUAGES.has(lang):
@@ -195,6 +202,7 @@ func _detect_system_language() -> String:
 			return code
 	return "en"
 
+## Writes progression.cfg. Session section is erased when session_data is empty. Dev mode is never saved.
 func save_progress() -> void:
 	var config = ConfigFile.new()
 	config.set_value("Meta", "version", SAVE_FORMAT_VERSION)
@@ -217,19 +225,23 @@ func save_progress() -> void:
 		config.set_value("Session", "data", session_data)
 	config.save(SAVE_PATH)
 
+## Counts a win/restart toward the next interstitial.
 func record_ad_win() -> void:
 	ads_wins_since_interstitial += 1
 	save_progress()
 
+## True when wins-since-last-ad has reached the current every-N threshold.
 func should_show_interstitial(every_n: int) -> bool:
 	return every_n > 0 and ads_wins_since_interstitial >= every_n
 
+## Resets the interstitial win counter after an ad is shown.
 func consume_interstitial_wins() -> void:
 	ads_wins_since_interstitial = 0
 	save_progress()
 
 var _locale_fonts_deferred: bool = false
 
+## Persists locale, emits language_changed, then defers a single font walk.
 func set_language(lang_code: String) -> void:
 	current_language = lang_code
 	TranslationServer.set_locale(lang_code)
@@ -239,21 +251,25 @@ func set_language(lang_code: String) -> void:
 	language_changed.emit()
 	request_locale_fonts()
 
+## Coalesces locale font walks onto the next idle frame.
 func request_locale_fonts() -> void:
 	if _locale_fonts_deferred:
 		return
 	_locale_fonts_deferred = true
 	call_deferred("_apply_locale_fonts_deferred")
 
+## Clears the coalesce flag and walks the tree for locale fonts.
 func _apply_locale_fonts_deferred() -> void:
 	_locale_fonts_deferred = false
 	apply_locale_fonts()
 
+## Applies locale fonts from the scene-tree root.
 func apply_locale_fonts() -> void:
 	var tree := get_tree()
 	if tree and tree.root:
 		HudLayout.apply_locale_fonts_to_tree(tree.root)
 
+## Fonts a newly added text control unless a tree walk is already in progress.
 func _on_tree_node_added(node: Node) -> void:
 	if node == null or not is_instance_valid(node):
 		return
@@ -271,21 +287,25 @@ func _on_tree_node_added(node: Node) -> void:
 	# Direct apply — call_deferred(String, Node) hits Godot's Object→Object bug.
 	HudLayout.apply_locale_font_to_control(node)
 
+## Persists the static-backdrop option and applies it to SpaceBackground.
 func set_background_static(is_static: bool) -> void:
 	background_static = is_static
 	save_progress()
 	_apply_background_mode()
 
+## Persists BGM and tells BgmManager to start or stop.
 func set_bgm_enabled(enabled: bool) -> void:
 	bgm_enabled = enabled
 	save_progress()
 	if BgmManager and BgmManager.has_method("apply_enabled"):
 		BgmManager.apply_enabled()
 
+## Persists the SFX toggle.
 func set_sfx_enabled(enabled: bool) -> void:
 	sfx_enabled = enabled
 	save_progress()
 
+## Persists the haptic toggle.
 func set_haptic_enabled(enabled: bool) -> void:
 	haptic_enabled = enabled
 	save_progress()
@@ -301,15 +321,18 @@ func toggle_dev_mode() -> bool:
 	dev_mode_enabled = not dev_mode_enabled
 	return dev_mode_enabled
 
+## Pushes background_static to SpaceBackground when that autoload exists.
 func _apply_background_mode() -> void:
 	if SpaceBackground and SpaceBackground.has_method("set_static_mode"):
 		SpaceBackground.set_static_mode(background_static)
 
+## Raises max_unlocked_level when this number is new, then saves.
 func unlock_level(level_num: int) -> void:
 	if level_num > max_unlocked_level:
 		max_unlocked_level = level_num
 		save_progress()
 
+## Debug: unlocks through the highest campaign level number.
 func unlock_all_levels() -> void:
 	var highest := get_campaign_start_unlock()
 	for path in LevelUtils.scan_campaign_levels():
@@ -320,9 +343,11 @@ func unlock_all_levels() -> void:
 		max_unlocked_level = highest
 		save_progress()
 
+## True when this campaign number is at or below max_unlocked_level.
 func is_level_unlocked(level_num: int) -> bool:
 	return level_num <= max_unlocked_level
 
+## Saved star bits for a level; completion bit is implied once a later level is unlocked.
 func get_level_star_bits(level_num: int) -> int:
 	var bits := int(level_star_bits.get(str(level_num), 0))
 	# Cleared levels always count the completion star (bit 4 / legacy moves bit).
@@ -330,6 +355,7 @@ func get_level_star_bits(level_num: int) -> int:
 		bits |= LevelStars.BIT_COMPLETE
 	return bits
 
+## OR-merges new star bits into the save and returns the combined mask.
 func record_level_stars(level_num: int, bits: int) -> int:
 	var key := str(level_num)
 	var merged := get_level_star_bits(level_num) | bits
@@ -337,29 +363,35 @@ func record_level_stars(level_num: int, bits: int) -> int:
 	save_progress()
 	return merged
 
+## True when an in-progress run is stored (non-empty level_path).
 func has_session() -> bool:
 	return not session_data.is_empty() and str(session_data.get("level_path", "")) != ""
 
+## True when the stored session belongs to this LevelData resource.
 func has_session_for(level: LevelData) -> bool:
 	if level == null or not has_session():
 		return false
 	return str(session_data.get("level_path", "")) == level.resource_path
 
+## Deserializes the stored session, or {} when none exists.
 func load_session() -> Dictionary:
 	if not has_session():
 		return {}
 	return _deserialize_session(session_data)
 
+## Serializes an in-progress run into progression.cfg.
 func save_session(data: Dictionary) -> void:
 	session_data = _serialize_session(data)
 	save_progress()
 
+## Drops the stored run if one exists.
 func clear_session() -> void:
 	if session_data.is_empty():
 		return
 	session_data = {}
 	save_progress()
 
+## Resets progression, stars, session, tutorial, and privacy; language/audio prefs stay.
 func delete_save_file() -> void:
 	max_unlocked_level = get_campaign_start_unlock()
 	level_star_bits.clear()
@@ -372,14 +404,17 @@ func delete_save_file() -> void:
 		DirAccess.remove_absolute(SAVE_PATH)
 	save_progress()
 
+## Remembers whether the first-run tutorial prompt was answered.
 func set_tutorial_intro_answered(answered: bool = true) -> void:
 	tutorial_intro_answered = answered
 	save_progress()
 
+## True when this tutorial script id is in the completed list.
 func is_tutorial_script_complete(script_id: String) -> bool:
 	var id := String(script_id).strip_edges()
 	return not id.is_empty() and completed_tutorial_scripts.has(id)
 
+## Appends a tutorial script id once and saves.
 func mark_tutorial_script_complete(script_id: String) -> void:
 	var id := String(script_id).strip_edges()
 	if id.is_empty() or completed_tutorial_scripts.has(id):
@@ -387,18 +422,22 @@ func mark_tutorial_script_complete(script_id: String) -> void:
 	completed_tutorial_scripts.append(id)
 	save_progress()
 
+## Vector2i as "x,y" for ConfigFile-friendly dictionary keys.
 static func _coord_key(v: Vector2i) -> String:
 	return "%d,%d" % [v.x, v.y]
 
+## Parses "x,y" back to Vector2i (ZERO if malformed).
 static func _parse_coord_key(s: String) -> Vector2i:
 	var parts := str(s).split(",")
 	if parts.size() < 2:
 		return Vector2i.ZERO
 	return Vector2i(int(parts[0]), int(parts[1]))
 
+## Vector2i as a two-int array for JSON/ConfigFile.
 static func _serialize_vec(v: Vector2i) -> Array:
 	return [v.x, v.y]
 
+## Vector2i from a stored array or Vector2i; ZERO if unknown.
 static func _deserialize_vec(val: Variant) -> Vector2i:
 	if typeof(val) == TYPE_VECTOR2I:
 		return val
@@ -406,6 +445,7 @@ static func _deserialize_vec(val: Variant) -> Vector2i:
 		return Vector2i(int(val[0]), int(val[1]))
 	return Vector2i.ZERO
 
+## Dictionary keys as "x,y" strings.
 static func _serialize_coord_dict(src: Dictionary) -> Dictionary:
 	var out := {}
 	for key in src:
@@ -413,12 +453,14 @@ static func _serialize_coord_dict(src: Dictionary) -> Dictionary:
 		out[k] = src[key]
 	return out
 
+## Dictionary keys back to Vector2i.
 static func _deserialize_coord_dict(src: Dictionary) -> Dictionary:
 	var out := {}
 	for key in src:
 		out[_parse_coord_key(str(key))] = src[key]
 	return out
 
+## Shifter/constraint pair arrays with Vector2i fields turned into arrays.
 static func _serialize_pairs(pairs: Array) -> Array:
 	var out: Array = []
 	for pair in pairs:
@@ -434,6 +476,7 @@ static func _serialize_pairs(pairs: Array) -> Array:
 		out.append(d)
 	return out
 
+## Pair arrays with Vector2i fields restored.
 static func _deserialize_pairs(pairs: Array) -> Array:
 	var out: Array = []
 	for pair in pairs:
@@ -451,6 +494,7 @@ static func _deserialize_pairs(pairs: Array) -> Array:
 		out.append(d)
 	return out
 
+## Cell snapshot dict: coord keys as strings, nested dictionaries copied.
 static func _serialize_cells(cells: Dictionary) -> Dictionary:
 	var out := {}
 	for key in cells:
@@ -466,6 +510,7 @@ static func _serialize_cells(cells: Dictionary) -> Dictionary:
 		}
 	return out
 
+## Cell snapshot dict with Vector2i keys restored.
 static func _deserialize_cells(cells: Dictionary) -> Dictionary:
 	var out := {}
 	for key in cells:
@@ -478,6 +523,7 @@ static func _deserialize_cells(cells: Dictionary) -> Dictionary:
 		}
 	return out
 
+## In-progress run as a ConfigFile-safe dictionary.
 static func _serialize_session(data: Dictionary) -> Dictionary:
 	return {
 		"level_path": str(data.get("level_path", "")),
@@ -502,6 +548,7 @@ static func _serialize_session(data: Dictionary) -> Dictionary:
 		"undo_history": _serialize_undo_history(data.get("undo_history", {})),
 	}
 
+## In-progress run with Vector2i board data restored.
 static func _deserialize_session(data: Dictionary) -> Dictionary:
 	return {
 		"level_path": str(data.get("level_path", "")),
@@ -527,6 +574,7 @@ static func _deserialize_session(data: Dictionary) -> Dictionary:
 		"undo_history": _deserialize_undo_history(data.get("undo_history", {})),
 	}
 
+## UndoStack export with each snapshot serialized.
 static func _serialize_undo_history(history: Dictionary) -> Dictionary:
 	if history.is_empty():
 		return {}
@@ -536,6 +584,7 @@ static func _serialize_undo_history(history: Dictionary) -> Dictionary:
 		"redo": _serialize_snapshot_list(history.get("redo", [])),
 	}
 
+## UndoStack export with each snapshot restored.
 static func _deserialize_undo_history(history: Dictionary) -> Dictionary:
 	if history.is_empty():
 		return {}
@@ -545,6 +594,7 @@ static func _deserialize_undo_history(history: Dictionary) -> Dictionary:
 		"redo": _deserialize_snapshot_list(history.get("redo", [])),
 	}
 
+## Maps serialize over an array of game snapshots.
 static func _serialize_snapshot_list(snaps: Array) -> Array:
 	var out: Array = []
 	for snap in snaps:
@@ -552,6 +602,7 @@ static func _serialize_snapshot_list(snaps: Array) -> Array:
 			out.append(_serialize_game_snapshot(snap))
 	return out
 
+## Maps deserialize over an array of game snapshots.
 static func _deserialize_snapshot_list(snaps: Array) -> Array:
 	var out: Array = []
 	for snap in snaps:
@@ -559,12 +610,14 @@ static func _deserialize_snapshot_list(snaps: Array) -> Array:
 			out.append(_deserialize_game_snapshot(snap))
 	return out
 
+## One undo snapshot: move count plus serialized cells.
 static func _serialize_game_snapshot(snap: Dictionary) -> Dictionary:
 	return {
 		"moves": int(snap.get("moves", 0)),
 		"cells": _serialize_cells(snap.get("cells", {})),
 	}
 
+## One undo snapshot with cells restored.
 static func _deserialize_game_snapshot(snap: Dictionary) -> Dictionary:
 	return {
 		"moves": int(snap.get("moves", 0)),

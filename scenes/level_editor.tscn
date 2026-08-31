@@ -11,6 +11,8 @@
 [ext_resource type="Texture2D" uid="uid://2oyf1pe6n184" path="res://resources/tiles/tile_shifter.svg" id="8_2rodj"]
 [ext_resource type="FontFile" uid="uid://ckwxng7tlmws7" path="res://resources/fonts/PressStart2P-vaV7.ttf" id="font_ps2p"]
 [ext_resource type="Script" uid="uid://8ei7vk8jguhe" path="res://scripts/playtest_ui_manager.gd" id="pt_ui_mgr"]
+[ext_resource type="Script" uid="uid://h7c7u0ps5a3a" path="res://scripts/editor_playtest_controller.gd" id="playtest_ctrl"]
+[ext_resource type="PackedScene" path="res://scenes/loading_overlay.tscn" id="loading_overlay"]
 [ext_resource type="Texture2D" uid="uid://b6rkjjf7g5to4" path="res://resources/icons/icon_ad.svg" id="tex_ad"]
 [ext_resource type="Texture2D" uid="uid://d2ql5f4tsvnk8" path="res://resources/buttons/button_tile_gray_dark.svg" id="tex_btn_bg"]
 [ext_resource type="Texture2D" uid="uid://c0nty0okk7axl" path="res://resources/icons/icon_clear.svg" id="tex_clear"]
@@ -88,8 +90,19 @@ script = ExtResource("1_5u7ie")
 [node name="EditorUIManager" type="Node2D" parent="." unique_id=2105132823]
 script = ExtResource("3_eovuc")
 
+[node name="HoldTimer" type="Timer" parent="EditorUIManager" unique_id=1847392016]
+one_shot = true
+
 [node name="PlaytestUIManager" type="Node2D" parent="." unique_id=379590268]
 script = ExtResource("pt_ui_mgr")
+
+[node name="EditorPlaytestController" type="Node" parent="." unique_id=2105132900]
+script = ExtResource("playtest_ctrl")
+
+[node name="PlaytestTimer" type="Timer" parent="EditorPlaytestController" unique_id=2105132901]
+wait_time = 1.0
+
+[node name="LoadingOverlay" parent="." unique_id=742747990 instance=ExtResource("loading_overlay")]
 
 [node name="EditorUI" type="CanvasLayer" parent="." unique_id=495483212]
 
@@ -958,6 +971,7 @@ alignment = 1
 [node name="TimeTitleLabel" type="Label" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/TimeSelector" unique_id=297670096]
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
+mouse_filter = 0
 tooltip_text = "Star time: beat this to earn the time star. Infinity = no time star."
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -1581,6 +1595,7 @@ alignment = 1
 [node name="WarningLabel" type="Label" parent="EditorUI/OverwriteBlocker/CenterContainer/Panel/VBoxContainer" unique_id=1238171214]
 layout_mode = 2
 size_flags_vertical = 3
+custom_minimum_size = Vector2(568, 0)
 theme_override_colors/font_color = Color(1, 0.45, 0.45, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 0

@@ -6,6 +6,7 @@ extends SceneTree
 var _failed := 0
 var _passed := 0
 
+# Runs every smoke test, prints a summary, then quits with the failure count.
 func _init() -> void:
 	_test_star_bits()
 	_test_star_evaluate()
@@ -23,9 +24,12 @@ func _init() -> void:
 	_test_safe_insets()
 	_test_wide_ui_cap()
 	_test_hint_selection_policy()
+	_test_hint_unique_pool_only()
+	_test_hold_repeat()
 	print("logic_tests: %d passed, %d failed" % [_passed, _failed])
 	quit(1 if _failed > 0 else 0)
 
+# Records one assertion and prints PASS/FAIL.
 func _ok(cond: bool, name: String) -> void:
 	if cond:
 		_passed += 1
@@ -34,6 +38,7 @@ func _ok(cond: bool, name: String) -> void:
 		_failed += 1
 		printerr("  FAIL  ", name)
 
+# LevelStars bit counting.
 func _test_star_bits() -> void:
 	_ok(LevelStars.count_earned_bits(0) == 0, "stars: none")
 	_ok(
@@ -43,6 +48,7 @@ func _test_star_bits() -> void:
 	)
 	_ok(LevelStars.count_earned_bits(LevelStars.BIT_COMPLETE) == 1, "stars: clear only")
 
+# LevelStars.evaluate awards complete / no-hints / time bits.
 func _test_star_evaluate() -> void:
 	var all_ok := LevelStars.evaluate(10, 30, 0, 0, 0, false, true)
 	_ok(int(all_ok.get("bits", 0)) == (LevelStars.BIT_COMPLETE | LevelStars.BIT_NO_HINTS | LevelStars.BIT_TIME), "evaluate: all stars")
@@ -51,6 +57,7 @@ func _test_star_evaluate() -> void:
 	var untimed := LevelStars.evaluate(999, 0, 0, 0, 0, false, true)
 	_ok((int(untimed.get("bits", 0)) & LevelStars.BIT_TIME) != 0, "evaluate: infinite time still awards time star")
 
+# Builds a w*h layout dict via fill(x, y).
 func _grid(w: int, h: int, fill: Callable) -> Dictionary:
 	var layout := {}
 	for y in h:
@@ -58,6 +65,7 @@ func _grid(w: int, h: int, fill: Callable) -> Dictionary:
 			layout[Vector2i(x, y)] = fill.call(x, y)
 	return layout
 
+# 2x2 checkerboard is a legal balanced board.
 func _test_validator_balanced_grid() -> void:
 	# 2x2 checkerboard: each row/col has 1 yellow + 1 blue.
 	var layout := _grid(2, 2, func(x: int, y: int) -> int:
@@ -66,6 +74,7 @@ func _test_validator_balanced_grid() -> void:
 	var result := PuzzleValidator.validate_layout_states(layout, 2, 2, [], [])
 	_ok(bool(result.get("valid", false)), "validator: 2x2 checkerboard valid")
 
+# Three identical colours in a row is illegal.
 func _test_validator_three_in_a_row() -> void:
 	# 4-wide row of three yellows then blue — illegal three-in-a-row.
 	var layout := {
@@ -86,6 +95,7 @@ func _test_validator_three_in_a_row() -> void:
 	var result := PuzzleValidator.validate_layout_states(layout, 4, 4, [], [])
 	_ok(not bool(result.get("valid", true)), "validator: three-in-a-row invalid")
 
+# Unbalanced colour counts are illegal.
 func _test_validator_unequal_colors() -> void:
 	# All yellow on 2x2 — rows/cols cannot be balanced.
 	var layout := _grid(2, 2, func(_x: int, _y: int) -> int:
@@ -94,6 +104,7 @@ func _test_validator_unequal_colors() -> void:
 	var result := PuzzleValidator.validate_layout_states(layout, 2, 2, [], [])
 	_ok(not bool(result.get("valid", true)), "validator: unequal colors invalid")
 
+# Equals link between opposite colours is illegal.
 func _test_validator_equals_constraint() -> void:
 	# Checkerboard is fine alone, but equals link between (0,0) and (1,0) conflicts.
 	var layout := _grid(2, 2, func(x: int, y: int) -> int:
@@ -103,6 +114,7 @@ func _test_validator_equals_constraint() -> void:
 	var result := PuzzleValidator.validate_layout_states(layout, 2, 2, pairs, [])
 	_ok(not bool(result.get("valid", true)), "validator: equals conflict invalid")
 
+# A filled legal 2x2 has exactly one solution.
 func _test_solver_trivial_unique() -> void:
 	var layout := _grid(2, 2, func(x: int, y: int) -> int:
 		return GameConstants.TileState.YELLOW if (x + y) % 2 == 0 else GameConstants.TileState.BLUE
@@ -111,6 +123,7 @@ func _test_solver_trivial_unique() -> void:
 	var count := int(result.get("solution_count", -1))
 	_ok(count == 1, "solver: filled 2x2 has 1 solution (got %d)" % count)
 
+# An empty 2x2 is not unique.
 func _test_solver_empty_not_unique() -> void:
 	# Fully empty 2x2 has multiple balanced colorings.
 	var layout := _grid(2, 2, func(_x: int, _y: int) -> int:
@@ -121,6 +134,7 @@ func _test_solver_empty_not_unique() -> void:
 	var count := int(result.get("solution_count", 0))
 	_ok(count > 1 or not bool(result.get("unique", true)), "solver: empty 2x2 is not unique (count=%d)" % count)
 
+# Equals forces the remaining empty cell.
 func _test_solver_equals_forces_match() -> void:
 	# Prefill three cells of a checkerboard; equals links the empty cell to a blue.
 	var layout := {
@@ -140,6 +154,7 @@ func _test_solver_equals_forces_match() -> void:
 		"solver: equals-forced cell is blue"
 	)
 
+# Easy generator returns a layout without crashing.
 func _test_generator_smoke_easy() -> void:
 	seed(42)
 	var tiles := [
@@ -170,6 +185,7 @@ func _test_generator_smoke_easy() -> void:
 		"generator: shifter actives are unique"
 	)
 
+# Shifter pairs cannot share an active cell.
 func _test_shifter_shared_cell_unique_active() -> void:
 	var a := Vector2i(0, 0)
 	var b := Vector2i(1, 0)
@@ -216,6 +232,7 @@ func _test_shifter_shared_cell_unique_active() -> void:
 	_ok(PuzzleGenerator._assign_distinct_actives(triangle), "shifters: triangle can uniquify")
 	_ok(not LevelUtils.shifter_pairs_share_active_cell(triangle), "shifters: triangle actives unique")
 
+# en uses Press Start; ka/uk use the default font.
 func _test_font_locale_policy() -> void:
 	TranslationServer.set_locale("en")
 	_ok(HudFonts.uses_pixel_font(), "fonts: en uses pixel")
@@ -225,6 +242,7 @@ func _test_font_locale_policy() -> void:
 	_ok(not HudFonts.uses_pixel_font(), "fonts: uk uses default")
 	TranslationServer.set_locale("en")
 
+# v1 star-bit keys stringify during migration.
 func _test_save_migration_v1_to_v2() -> void:
 	const Migration := preload("res://scripts/save_migration.gd")
 	var cfg := ConfigFile.new()
@@ -238,6 +256,7 @@ func _test_save_migration_v1_to_v2() -> void:
 	_ok(bits.has("2") and int(bits["2"]) == 4, "migrate: key 2 stringified")
 	_ok(int(Migration.FORMAT_VERSION) >= 2, "migrate: format version is 2+")
 
+# Component-wise Vector4 approx assertion.
 func _approx4(got: Vector4, expected: Vector4, name: String) -> void:
 	_ok(
 		is_equal_approx(got.x, expected.x)
@@ -247,6 +266,7 @@ func _approx4(got: Vector4, expected: Vector4, name: String) -> void:
 		name
 	)
 
+# SafeInsets.margins_from converts a safe rect into layout margins.
 func _test_safe_insets() -> void:
 	var none := SafeInsets.margins_from(
 		Rect2(0, 0, 1080, 1920), Vector2(1080, 1920), Vector2.ZERO, Vector2(1080, 1920)
@@ -275,6 +295,7 @@ func _test_safe_insets() -> void:
 	)
 	_ok(SafeInsets.extra_top(4.0) >= 0.0, "safe: extra_top is non-negative")
 
+# extra_side_inset_for_cap and phone-width constants.
 func _test_wide_ui_cap() -> void:
 	_ok(is_equal_approx(HudLayout.extra_side_inset_for_cap(1032.0, 1032.0), 0.0), "wide-cap: phone width is no-op")
 	_ok(is_equal_approx(HudLayout.extra_side_inset_for_cap(1031.0, 1032.0), 0.0), "wide-cap: slightly narrow is no-op")
@@ -296,10 +317,12 @@ func _test_wide_ui_cap() -> void:
 	var wide_tile := Vector2(1920.0, 1920.0) * pad
 	_ok(not is_equal_approx(maxf(wide_tile.x / 1080.0, wide_tile.y / 1920.0), 1.35), "bg-scale: wider base would zoom")
 
+# Minimal cell dict for hint-policy tests.
 func _mock_cell(state: int, locked: bool = false) -> Dictionary:
 	return {"state": state, "is_locked": locked}
 
 
+# Hints prefer mistakes and skip already-correct pairs.
 func _test_hint_selection_policy() -> void:
 	var y := GameConstants.TileState.YELLOW
 	var b := GameConstants.TileState.BLUE
@@ -362,3 +385,116 @@ func _test_hint_selection_policy() -> void:
 		HintSystem.pick_hint(board, [], solved, [], Vector2i(4, 2), false, tiles) == null,
 		"hint: pick is null when nothing would advance the player"
 	)
+
+# Unique / prefer_hidden_pool: picks must stay inside the designed hidden pool.
+# Inventing an adjacent solved pair outside that pool is the unique-level bug.
+func _test_hint_unique_pool_only() -> void:
+	var y := GameConstants.TileState.YELLOW
+	var b := GameConstants.TileState.BLUE
+	var e := GameConstants.TileState.EMPTY
+	var tiles := [y, b]
+	var board := {
+		Vector2i(0, 0): _mock_cell(y, true),
+		Vector2i(1, 0): _mock_cell(e),
+		Vector2i(2, 0): _mock_cell(e),
+		Vector2i(3, 0): _mock_cell(b, true),
+		Vector2i(0, 1): _mock_cell(b, true),
+		Vector2i(1, 1): _mock_cell(e),
+		Vector2i(2, 1): _mock_cell(e),
+		Vector2i(3, 1): _mock_cell(y, true),
+	}
+	var solved := {
+		Vector2i(0, 0): y, Vector2i(1, 0): b, Vector2i(2, 0): y, Vector2i(3, 0): b,
+		Vector2i(0, 1): b, Vector2i(1, 1): y, Vector2i(2, 1): b, Vector2i(3, 1): y,
+	}
+	# Designed pool is a single open pair; many other adjacent solved pairs exist.
+	var pool: Array = [{"a": Vector2i(1, 0), "b": Vector2i(2, 0), "type": "not_equals"}]
+	var pick: Variant = HintSystem.pick_hint(board, [], solved, pool, Vector2i(4, 2), true, tiles)
+	_ok(pick != null, "unique-pool: finds a hint from the designed pool")
+	if pick != null:
+		var key := HintSystem._pair_key(pick["a"], pick["b"])
+		_ok(key == HintSystem._pair_key(Vector2i(1, 0), Vector2i(2, 0)), "unique-pool: pick is the only pool member")
+		_ok(str(pick["type"]) == "not_equals", "unique-pool: preserves pool relationship")
+
+	# Wrong-fill preference (both filled) still applies, but only among pool members.
+	board[Vector2i(1, 0)] = _mock_cell(y, false)  # wrong (solved is blue)
+	board[Vector2i(2, 0)] = _mock_cell(y, false)  # correct yellow; pair both filled
+	var filled_pool: Array = [
+		{"a": Vector2i(2, 1), "b": Vector2i(3, 1), "type": "not_equals"},
+		{"a": Vector2i(1, 0), "b": Vector2i(2, 0), "type": "not_equals"},
+	]
+	var pick_wrong: Variant = HintSystem.pick_hint(
+		board, [], solved, filled_pool, Vector2i(4, 2), true, tiles
+	)
+	_ok(pick_wrong != null, "unique-pool: still finds a hint with a wrong cell")
+	if pick_wrong != null:
+		var wkey := HintSystem._pair_key(pick_wrong["a"], pick_wrong["b"])
+		_ok(
+			wkey == HintSystem._pair_key(Vector2i(1, 0), Vector2i(2, 0)),
+			"unique-pool: prefers wrong-fill within the pool"
+		)
+		_ok(
+			HintSystem._involves_wrong_cell(board, solved, pick_wrong),
+			"unique-pool: chosen pool member involves the wrong cell"
+		)
+
+	# Empty designed pool + prefer_hidden must not invent adjacent pairs.
+	board[Vector2i(1, 0)] = _mock_cell(e)
+	_ok(
+		HintSystem.pick_hint(board, [], solved, [], Vector2i(4, 2), true, tiles) == null,
+		"unique-pool: empty pool does not invent outside links"
+	)
+	_ok(
+		HintSystem.count_usable_hints(board, [], solved, [], Vector2i(4, 2), true) == 0,
+		"unique-pool: empty pool usable count is zero"
+	)
+
+	# Non-prefer path can still invent (legacy / open invent) — sanity contrast.
+	_ok(
+		HintSystem.pick_hint(board, [], solved, [], Vector2i(4, 2), false, tiles) != null,
+		"unique-pool: invent path still works when prefer_hidden is false"
+	)
+
+
+## HoldRepeat: idle, delay, first fire, acceleration, stop_undo vs redo isolation.
+func _test_hold_repeat() -> void:
+	var h := HoldRepeat.new()
+	_ok(not h.is_active(), "hold: idle is inactive")
+	_ok(not h.is_undo() and not h.is_redo(), "hold: idle is neither side")
+	_ok(not h.tick(1.0), "hold: idle tick does not fire")
+
+	h.start_undo()
+	_ok(h.is_active() and h.is_undo() and not h.is_redo(), "hold: start_undo")
+	_ok(not h.tick(HoldRepeat.INITIAL_DELAY), "hold: at delay, interval not elapsed")
+	_ok(not h.tick(HoldRepeat.REPEAT_START - 0.001), "hold: just before first repeat")
+	_ok(h.tick(0.002), "hold: first undo repeat fires")
+	_ok(not h.tick(h.interval - 0.001), "hold: waits accelerated interval")
+	_ok(h.tick(0.002), "hold: second undo repeat fires")
+
+	h.stop_undo()
+	_ok(not h.is_active(), "hold: stop_undo clears undo")
+	_ok(not h.tick(1.0), "hold: stopped undo does not fire")
+
+	h.start_redo()
+	h.start_undo()
+	_ok(h.is_undo() and not h.is_redo(), "hold: start_undo replaces redo")
+	h.stop_redo()
+	_ok(h.is_undo(), "hold: stop_redo leaves undo")
+	h.stop_undo()
+
+	h.start_redo()
+	_ok(h.is_redo() and not h.is_undo(), "hold: start_redo")
+	h.stop_undo()
+	_ok(h.is_redo(), "hold: stop_undo leaves redo")
+	_ok(not h.tick(HoldRepeat.INITIAL_DELAY), "hold: redo at delay, interval not elapsed")
+	_ok(not h.tick(HoldRepeat.REPEAT_START - 0.001), "hold: redo just before first repeat")
+	_ok(h.tick(0.002), "hold: redo fires after delay+start")
+	h.stop_redo()
+	_ok(not h.is_active(), "hold: stop_redo clears redo")
+
+	h.start_undo()
+	for _i in 40:
+		h.tick(10.0)
+	_ok(h.interval >= HoldRepeat.REPEAT_MIN, "hold: interval never below REPEAT_MIN")
+	_ok(is_equal_approx(h.interval, HoldRepeat.REPEAT_MIN), "hold: interval floors at REPEAT_MIN")
+

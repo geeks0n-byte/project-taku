@@ -1,5 +1,6 @@
 class_name GameConstants
 extends RefCounted
+## Shared enums, HUD sizes, asset paths, and tile-class helpers used across scenes.
 
 enum TileState {
 	WALL = -2,
@@ -29,6 +30,16 @@ const HINT_LIMIT_MEDIUM := 3
 const HINT_LIMIT_HARD := 5
 const HINT_LIMIT_UNLIMITED := -1
 const HINTS_FROM_REWARDED_AD := 3
+
+# Interstitial cadence (session-only; see AdsManager).
+# First interstitial waits for both a min win count and a min session age so
+# short hop-in sessions are not ad-dense. After the first shown ad, every_n
+# still grows by 1; short sessions also keep an extra gap until they age out.
+const INTERSTITIAL_START_EVERY_N := 3
+const INTERSTITIAL_MIN_WINS_BEFORE_FIRST := 4
+const INTERSTITIAL_MIN_SESSION_SEC := 90.0
+const INTERSTITIAL_SHORT_SESSION_SEC := 180.0
+const INTERSTITIAL_SHORT_SESSION_EXTRA_GAP := 1
 
 const HUD_BUTTON_WIDTH := 140
 const HUD_BUTTON_HEIGHT := 140
@@ -146,15 +157,19 @@ const CAMPAIGN_MEDIUM_DIR := "res://levels/medium/"
 const CAMPAIGN_HARD_DIR := "res://levels/hard/"
 const DEV_LEVELS_DIR := "user://levels/"
 
+## True for yellow/blue — the two colours that must stay balanced.
 static func is_basic_tile(state: int) -> bool:
 	return state == TileState.YELLOW or state == TileState.BLUE
 
+## True for any tile the solver may place (colours, joker, shifter).
 static func is_solvable_tile(state: int) -> bool:
 	return state in [TileState.YELLOW, TileState.BLUE, TileState.JOKER, TileState.SHIFTER]
 
+## True for tiles the hint system may reveal (same set as solvable).
 static func is_hintable_tile(state: int) -> bool:
 	return is_solvable_tile(state)
 
+## Starting hint quota for a generated puzzle; hard gets more, easy gets fewer.
 static func hint_limit_for_difficulty(difficulty: int) -> int:
 	match difficulty:
 		PuzzleGenerator.Difficulty.EASY:

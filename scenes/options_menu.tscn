@@ -300,7 +300,7 @@ autowrap_mode = 3
 text = "UI_DELETE_CUSTOM"
 
 [node name="StatusLabel" type="Label" parent="CenterContainer/OptionsPanel/VBoxContainer"]
-custom_minimum_size = Vector2(0, 100)
+custom_minimum_size = Vector2(620, 100)
 layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 0
@@ -393,6 +393,7 @@ alignment = 1
 [node name="PromptLabel" type="Label" parent="ConfirmBlocker/CenterContainer/Panel/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+custom_minimum_size = Vector2(568, 0)
 theme_override_colors/font_color = Color(1, 0.45, 0.45, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 0

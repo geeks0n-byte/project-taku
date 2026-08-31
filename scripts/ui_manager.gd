@@ -1,8 +1,8 @@
-# Owns all HUD controls, overlay panels, and the how-to-play pages.
-# Emits signals so main.gd can respond to player actions without UIManager
-# knowing about game logic.
 class_name UIManager
 extends Control
+## Owns all HUD controls, overlay panels, and the how-to-play pages.
+## Emits signals so main.gd can respond to player actions without UIManager
+## knowing about game logic.
 
 # Fired by top-bar button presses — main.gd connects and responds to each.
 signal pause_requested
@@ -44,6 +44,7 @@ signal locale_refresh_requested
 @onready var win_label: Label = $"../EndLayer/CenterContainer/VictoryPanel/WinLabel"
 @onready var how_to_play_container: Control = $"../HowToPlayLayer/CenterContainer"
 @onready var how_to_play_panel: Control = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel"
+@onready var _htp_header: Label = $"../HowToPlayLayer/CenterContainer/HowToPlayPageHeader"
 @onready var how_to_play_nav: HBoxContainer = $"../HowToPlayLayer/CenterContainer/NavRow"
 @onready var tutorial_back_button: Button = $"../HowToPlayLayer/CenterContainer/BackButton"
 @onready var htp_prev_button: Button = $"../HowToPlayLayer/CenterContainer/NavRow/PrevSlot/PrevButton"
@@ -59,6 +60,10 @@ signal locale_refresh_requested
 @onready var victory_preview: TextureRect = $"../EndLayer/CenterContainer/VictoryPanel/VictoryBoardPreview"
 @onready var resume_panel: Panel = $"../EndLayer/CenterContainer/SessionResumePanel"
 @onready var resume_prompt_label: Label = $"../EndLayer/CenterContainer/SessionResumePanel/PromptLabel"
+@onready var resume_buttons: VBoxContainer = $"../EndLayer/CenterContainer/SessionResumePanel/Buttons"
+@onready var resume_continue_btn: Button = $"../EndLayer/CenterContainer/SessionResumePanel/Buttons/ContinueButton"
+@onready var resume_restart_btn: Button = $"../EndLayer/CenterContainer/SessionResumePanel/Buttons/RestartButton"
+@onready var resume_back_btn: Button = $"../EndLayer/CenterContainer/SessionResumePanel/Buttons/BackButton"
 @onready var reset_confirm_panel: Panel = $"../EndLayer/CenterContainer/ResetConfirmPanel"
 @onready var reset_confirm_label: Label = $"../EndLayer/CenterContainer/ResetConfirmPanel/VBoxContainer/PromptLabel"
 @onready var reset_confirm_yes: Button = $"../EndLayer/CenterContainer/ResetConfirmPanel/VBoxContainer/HBoxContainer/YesButton"
@@ -71,8 +76,8 @@ var _victory_is_custom: bool = false
 var _victory_is_tutorial: bool = false
 var _victory_star_result: Dictionary = {}
 # Current how-to-play page index (0-based, clamped to HowToPlayContent.PAGE_COUNT-1).
+# Page title lives on HowToPlayPageHeader in main.tscn (not created in script).
 var _htp_page: int = 0
-var _htp_header: Label
 # When true, all HUD buttons except the highlighted one are disabled (tutorial mode).
 var _tutorial_tools_locked: bool = false
 # Name of the single HUD button that remains active during a tutorial step.
@@ -100,18 +105,10 @@ var _move_count: int = 0
 var _move_required: int = -1
 var _last_timer_text: String = ""
 
-# Hold-to-repeat undo/redo: starts after _HOLD_INITIAL_DELAY then accelerates
-# each repeat until it reaches _HOLD_REPEAT_MIN interval.
-var _hold_undo_active: bool = false
-var _hold_redo_active: bool = false
-var _hold_repeat_elapsed: float = 0.0
-var _hold_repeat_interval: float = 0.0
-const _HOLD_INITIAL_DELAY := 0.4
-const _HOLD_REPEAT_START := 0.3
-const _HOLD_REPEAT_MIN := 0.05
-# Multiplied to _hold_repeat_interval each repeat so actions speed up when held.
-const _HOLD_REPEAT_ACCEL := 0.82
+# Hold-to-repeat undo/redo (same timing as playtest and editor HUD).
+var _hold_repeat := HoldRepeat.new()
 
+# Styles HTP chrome, wires HUD buttons, and listens for locale changes.
 func _ready() -> void:
 	set_process(false)
 	_layout_how_to_play()
@@ -123,13 +120,12 @@ func _ready() -> void:
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
 
-# Styles the how-to-play nav buttons and locates the page header label in the container.
+# Styles the how-to-play nav buttons and close control. Page header is authored in main.tscn.
 func _layout_how_to_play() -> void:
 	for btn in [htp_prev_button, htp_next_button]:
 		HudLayout.apply_nav_button(btn)
 	if tutorial_back_button:
 		HudLayout.style_top_bar_close_button(tutorial_back_button)
-	_htp_header = HudLayout.ensure_how_to_play_page_header(how_to_play_container)
 
 # Rebuilds all locale-sensitive UI after SaveManager.language_changed fires.
 # Re-asserts Press Start on digit-only widgets because the font walk resets them.
@@ -156,6 +152,7 @@ func _on_language_changed() -> void:
 	if victory_panel and victory_panel.visible:
 		_refresh_victory_locale()
 
+# HTP body uses the locale font (not Press Start) so ka/uk rules stay readable.
 func _setup_how_to_play_font() -> void:
 	if not rules_label:
 		return
@@ -175,6 +172,7 @@ func setup_ui(_show_debug_tools: bool, _cell_size: float) -> void:
 		HudLayout.apply_status_font(status_label, GameConstants.HUD_STATUS_FONT_SIZE)
 	call_deferred("_apply_top_bar_buttons")
 
+# Re-applies top-bar safe-area padding when the viewport size changes.
 func _ensure_safe_area_resize_hook() -> void:
 	if not is_inside_tree():
 		return
@@ -182,6 +180,7 @@ func _ensure_safe_area_resize_hook() -> void:
 	if viewport and not viewport.size_changed.is_connected(_on_safe_area_viewport_resized):
 		viewport.size_changed.connect(_on_safe_area_viewport_resized)
 
+# Viewport resized: recompute HUD offsets (notch / nav-bar / landscape).
 func _on_safe_area_viewport_resized() -> void:
 	_apply_top_bar_buttons()
 
@@ -240,9 +239,6 @@ func _connect_signals() -> void:
 		reset_confirm_yes.pressed.connect(_on_reset_confirm_yes)
 	if reset_confirm_no and not reset_confirm_no.pressed.is_connected(_on_reset_confirm_no):
 		reset_confirm_no.pressed.connect(_on_reset_confirm_no)
-	var resume_continue_btn := resume_panel.get_node_or_null("Buttons/ContinueButton") as Button if resume_panel else null
-	var resume_restart_btn := resume_panel.get_node_or_null("Buttons/RestartButton") as Button if resume_panel else null
-	var resume_back_btn := resume_panel.get_node_or_null("Buttons/BackButton") as Button if resume_panel else null
 	if resume_continue_btn and not resume_continue_btn.pressed.is_connected(_on_session_continue_pressed):
 		resume_continue_btn.pressed.connect(_on_session_continue_pressed)
 	if resume_restart_btn and not resume_restart_btn.pressed.is_connected(_on_session_restart_pressed):
@@ -254,27 +250,29 @@ func _connect_signals() -> void:
 func _on_pause_requested() -> void:
 	pause_requested.emit()
 
+# Forwards Reset to main.gd.
 func _on_reset_requested() -> void:
 	reset_requested.emit()
 
+# Forwards How-To-Play to main.gd.
 func _on_how_to_play_requested() -> void:
 	how_to_play_requested.emit()
 
+# Forwards Hint to main.gd.
 func _on_hint_requested() -> void:
 	hint_requested.emit()
 
+# Forwards the first Undo (pressed) to main.gd.
 func _on_undo_requested() -> void:
 	undo_requested.emit()
 
+# Forwards the first Redo (pressed) to main.gd.
 func _on_redo_requested() -> void:
 	redo_requested.emit()
 
-# Starts the hold-to-repeat timer when the undo button is pressed and held.
+# Starts hold-to-repeat undo when the button is pressed and held.
 func _on_undo_button_down() -> void:
-	_hold_undo_active = true
-	_hold_redo_active = false
-	_hold_repeat_elapsed = 0.0
-	_hold_repeat_interval = _HOLD_REPEAT_START
+	_hold_repeat.start_undo()
 	set_process(true)
 	if UiSfx and undo_button:
 		UiSfx.suppress_next_pressed_click(undo_button)
@@ -282,18 +280,15 @@ func _on_undo_button_down() -> void:
 
 # Stops hold-to-repeat for undo when the user releases the button.
 func _on_undo_button_up() -> void:
-	_hold_undo_active = false
+	_hold_repeat.stop_undo()
 	if UiSfx and undo_button:
 		UiSfx.clear_pressed_click_suppress(undo_button)
-	if not _hold_redo_active:
+	if not _hold_repeat.is_active():
 		set_process(false)
 
-# Starts the hold-to-repeat timer when the redo button is pressed and held.
+# Starts hold-to-repeat redo when the button is pressed and held.
 func _on_redo_button_down() -> void:
-	_hold_redo_active = true
-	_hold_undo_active = false
-	_hold_repeat_elapsed = 0.0
-	_hold_repeat_interval = _HOLD_REPEAT_START
+	_hold_repeat.start_redo()
 	set_process(true)
 	if UiSfx and redo_button:
 		UiSfx.suppress_next_pressed_click(redo_button)
@@ -301,32 +296,25 @@ func _on_redo_button_down() -> void:
 
 # Stops hold-to-repeat for redo when the user releases the button.
 func _on_redo_button_up() -> void:
-	_hold_redo_active = false
+	_hold_repeat.stop_redo()
 	if UiSfx and redo_button:
 		UiSfx.clear_pressed_click_suppress(redo_button)
-	if not _hold_undo_active:
+	if not _hold_repeat.is_active():
 		set_process(false)
 
 # Drives hold-to-repeat undo/redo. Waits for the initial delay, then emits
 # the action each time the accelerating interval elapses.
 func _process(delta: float) -> void:
-	if not _hold_undo_active and not _hold_redo_active:
+	if not _hold_repeat.is_active():
 		set_process(false)
 		return
-	_hold_repeat_elapsed += delta
-	if _hold_repeat_elapsed < _HOLD_INITIAL_DELAY:
+	if not _hold_repeat.tick(delta):
 		return
-	var time_since_start := _hold_repeat_elapsed - _HOLD_INITIAL_DELAY
-	# Check if next repeat is due.
-	if time_since_start < _hold_repeat_interval:
-		return
-	_hold_repeat_elapsed = _HOLD_INITIAL_DELAY + 0.0
-	_hold_repeat_interval = maxf(_hold_repeat_interval * _HOLD_REPEAT_ACCEL, _HOLD_REPEAT_MIN)
-	if _hold_undo_active:
+	if _hold_repeat.is_undo():
 		if UiSfx:
 			UiSfx.play_click()
 		undo_requested.emit()
-	elif _hold_redo_active:
+	elif _hold_repeat.is_redo():
 		if UiSfx:
 			UiSfx.play_click()
 		redo_requested.emit()
@@ -341,9 +329,11 @@ func _on_tutorial_back_pressed() -> void:
 func _on_victory_next_pressed() -> void:
 	next_level_requested.emit()
 
+# Victory Play Again: ask main.gd to restart this level.
 func _on_play_again_pressed() -> void:
 	play_again_requested.emit()
 
+# Victory Main Menu: leave the puzzle scene.
 func _on_main_menu_pressed() -> void:
 	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")
 
@@ -404,6 +394,7 @@ func update_move_counter(moves: int, required: int = -1) -> void:
 		GameConstants.TILE_SHIFTER, moves, target, GameConstants.HUD_COUNTER_SHIFTER, tr("MOVES")
 	)
 
+# Shows/hides the move-counter slot (parent preferred so spacing collapses).
 func set_move_counter_visibility(visible_state: bool) -> void:
 	var slot := move_counter_label.get_parent() as Control if move_counter_label else null
 	if slot:
@@ -477,6 +468,7 @@ func set_reset_mode_restart(is_restart: bool) -> void:
 	_reset_is_restart = is_restart
 	_apply_reset_button_icon()
 
+# Applies the restart vs random texture chosen by set_reset_mode_restart.
 func _apply_reset_button_icon() -> void:
 	_set_reset_button_texture(_ICON_RESET if _reset_is_restart else _ICON_RANDOM)
 
@@ -571,12 +563,14 @@ func set_hud_buttons_disabled(is_disabled: bool) -> void:
 	else:
 		_refresh_hint_button_visual()
 
+# Writes the already-formatted clock string into the timer raster label.
 func update_timer(formatted_time: String) -> void:
 	if not timer_label:
 		return
 	_last_timer_text = formatted_time
 	HudLayout.set_timer_raster_text(timer_label, formatted_time)
 
+# Shows/hides the timer slot (parent preferred so spacing collapses).
 func set_timer_visibility(visible_state: bool) -> void:
 	var slot := timer_label.get_parent() as Control if timer_label else null
 	if slot:
@@ -625,10 +619,12 @@ func show_status_errors(errors: Array) -> void:
 	_status_error_keys = errors.duplicate()
 	_refresh_status_label()
 
+# Shows or hides the board-status RichTextLabel under the grid.
 func set_status_visible(should_show: bool) -> void:
 	if status_label:
 		status_label.visible = should_show
 
+# Shows or hides the top HUD bar and the counter row together.
 func set_top_bar_visible(should_show: bool) -> void:
 	if top_margin:
 		top_margin.visible = should_show
@@ -727,6 +723,7 @@ func _on_reset_confirm_yes() -> void:
 	hide_reset_confirm()
 	reset_confirmed.emit()
 
+# Reset dialog No: close the confirm panel without resetting.
 func _on_reset_confirm_no() -> void:
 	hide_reset_confirm()
 	reset_cancelled.emit()
@@ -757,32 +754,29 @@ func show_session_resume_prompt() -> void:
 			"line_spacing", 4 if HudLayout.prefer_default_font() else 8
 		)
 	if resume_panel:
-		var continue_btn := resume_panel.get_node_or_null("Buttons/ContinueButton") as Button
-		var restart_btn := resume_panel.get_node_or_null("Buttons/RestartButton") as Button
-		var back_btn := resume_panel.get_node_or_null("Buttons/BackButton") as Button
 		var resume_btns: Array = []
-		if continue_btn:
-			_style_resume_button(continue_btn, tr("UI_CONTINUE"))
-			resume_btns.append(continue_btn)
-		if restart_btn:
+		if resume_continue_btn:
+			_style_resume_button(resume_continue_btn, tr("UI_CONTINUE"))
+			resume_btns.append(resume_continue_btn)
+		if resume_restart_btn:
 			_style_resume_button(
-				restart_btn,
+				resume_restart_btn,
 				tr("UI_RESTART" if _reset_is_restart else "UI_NEW_LAYOUT")
 			)
-			resume_btns.append(restart_btn)
-		if back_btn:
-			_style_resume_button(back_btn, tr("UI_BACK"))
-			resume_btns.append(back_btn)
+			resume_btns.append(resume_restart_btn)
+		if resume_back_btn:
+			_style_resume_button(resume_back_btn, tr("UI_BACK"))
+			resume_btns.append(resume_back_btn)
 		HudLayout.equalize_button_group_widths(resume_btns, 260.0, 110.0)
 	if victory_panel:
 		victory_panel.visible = false
 	if resume_panel:
 		resume_panel.add_theme_stylebox_override("panel", _make_end_screen_panel_style())
-		var buttons := resume_panel.get_node_or_null("Buttons") as Control
-		HudLayout.fit_session_resume_panel(resume_panel, resume_prompt_label, buttons, 820.0)
+		HudLayout.fit_session_resume_panel(resume_panel, resume_prompt_label, resume_buttons, 820.0)
 		resume_panel.visible = true
 	set_hud_buttons_disabled(true)
 
+# Hides the session-resume panel and drops the dimmer unless victory is up.
 func hide_session_resume_prompt() -> void:
 	if resume_panel:
 		resume_panel.visible = false
@@ -795,14 +789,17 @@ func _on_session_continue_pressed() -> void:
 	hide_session_resume_prompt()
 	session_continue_requested.emit()
 
+# Session resume Restart / New Layout.
 func _on_session_restart_pressed() -> void:
 	hide_session_resume_prompt()
 	session_restart_requested.emit()
 
+# Session resume Back: leave without loading the autosave.
 func _on_session_back_pressed() -> void:
 	hide_session_resume_prompt()
 	session_back_requested.emit()
 
+# Shared dark panel StyleBox for victory / resume / reset dialogs.
 func _make_end_screen_panel_style() -> StyleBoxFlat:
 	return HudLayout.make_dialog_panel_style()
 
@@ -826,6 +823,7 @@ func _on_htp_prev_pressed() -> void:
 	_htp_page = maxi(_htp_page - 1, 0)
 	_refresh_how_to_play_text()
 
+# Advances HTP one page, clamped to PAGE_COUNT-1.
 func _on_htp_next_pressed() -> void:
 	_htp_page = mini(_htp_page + 1, HowToPlayContent.PAGE_COUNT - 1)
 	_refresh_how_to_play_text()
@@ -834,8 +832,6 @@ func _on_htp_next_pressed() -> void:
 # and prev/next button visibility. Defers layout to the next frame so the
 # RichTextLabel has a chance to measure its content height.
 func _refresh_how_to_play_text() -> void:
-	if _htp_header == null and how_to_play_container:
-		_htp_header = HudLayout.ensure_how_to_play_page_header(how_to_play_container)
 	if _htp_header:
 		HudLayout._bind_header_translation_key(
 			_htp_header, HowToPlayContent.get_page_title_key(_htp_page)
@@ -961,6 +957,7 @@ func _refresh_victory_locale() -> void:
 # Returns the "All levels completed" string with exclamation marks and the
 # Spanish inverted exclamation mark stripped, so it can be combined with YOU_WIN
 # without double punctuation in any locale.
+# "ALL LEVELS COMPLETED" with a trailing newline for the victory header stack.
 func _all_levels_completed_text() -> String:
 	var text := String(tr("ALL_COMPLETED")).strip_edges()
 	while text.ends_with("!") or text.ends_with("！"):
@@ -970,12 +967,14 @@ func _all_levels_completed_text() -> String:
 	return text
 
 # Keeps overlay centre container transparent to input; dimmer panels handle blocking.
+# End-layer starts hidden; dialogs (victory / reset / resume) opt in when shown.
 func _setup_end_layer() -> void:
 	if end_center:
 		end_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 # Shows or hides the full-screen dimmer behind overlay panels.
 # Blocks mouse input when visible so clicks don't pass through to the board.
+# Shows or hides the dimmer behind end-of-run dialogs.
 func _set_end_dimmer_visible(should_show: bool) -> void:
 	if end_dimmer:
 		end_dimmer.visible = should_show
@@ -984,6 +983,7 @@ func _set_end_dimmer_visible(should_show: bool) -> void:
 		)
 
 # Applies panel frame and title geometry for the victory overlay.
+# Panel chrome + button fonts for the victory dialog (locale-sensitive).
 func _style_victory_chrome() -> void:
 	if victory_panel and victory_panel is Panel:
 		(victory_panel as Panel).add_theme_stylebox_override("panel", _make_end_screen_panel_style())
@@ -1000,6 +1000,7 @@ func _style_victory_chrome() -> void:
 
 # Moves victory-screen action buttons to the top of the panel's draw order so they
 # render above the results host and preview frame.
+# Lifts victory action buttons so they sit above the board preview.
 func _raise_victory_buttons() -> void:
 	if victory_panel == null:
 		return
@@ -1011,6 +1012,7 @@ func _raise_victory_buttons() -> void:
 		victory_panel.move_child(main_menu_button, -1)
 
 # Shows/hides the solved-board preview texture and its decorative frame together.
+# Assigns the solved-board thumbnail, hiding the frame when there is no texture.
 func _set_victory_preview(texture: Texture2D) -> void:
 	if not victory_preview:
 		return
@@ -1022,6 +1024,7 @@ func _set_victory_preview(texture: Texture2D) -> void:
 		frame.visible = should_show
 
 # Delegates star goal row rendering to LevelStars.
+# Fills the star-results host under the victory header.
 func _populate_victory_results(star_result: Dictionary) -> void:
 	if not victory_results_host:
 		return
@@ -1032,6 +1035,7 @@ func _populate_victory_results(star_result: Dictionary) -> void:
 # Computes and applies absolute pixel positions for all victory panel elements:
 # results host, optional board preview, and the action buttons stacked below.
 # Panel height follows title/results/preview/buttons so long locales keep margins.
+# Sizes and stacks victory header, stars, preview, and action buttons.
 func _layout_victory_panel(star_result: Dictionary) -> void:
 	if not victory_panel:
 		return
@@ -1099,6 +1103,7 @@ func _layout_victory_panel(star_result: Dictionary) -> void:
 	victory_panel.custom_minimum_size = Vector2(panel_w, maxf(soft_min, height))
 
 # Positions a victory button at the given row below buttons_top, centred horizontally.
+# Anchors one victory action button on a vertical row below the preview.
 func _place_victory_button(button: Button, buttons_top: float, row: int) -> void:
 	if not button:
 		return

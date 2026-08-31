@@ -79,27 +79,27 @@ func _show_color_popup(current_color: Color, callback: Callable) -> void:
 func _on_main_bg_button_pressed() -> void:
 	_show_color_popup(
 		_main_bg_color,
-		func(color: Color) -> void:
-			_main_bg_color = color
-			_update_button_color(_main_bg_button, color)
+		func(_color: Color) -> void:
+			_main_bg_color = _color
+			_update_button_color(_main_bg_button, _color)
 	)
 
 
 func _on_cta_bg_button_pressed() -> void:
 	_show_color_popup(
 		_cta_bg_color,
-		func(color: Color) -> void:
-			_cta_bg_color = color
-			_update_button_color(_cta_bg_button, color)
+		func(_color: Color) -> void:
+			_cta_bg_color = _color
+			_update_button_color(_cta_bg_button, _color)
 	)
 
 
 func _on_cta_text_button_pressed() -> void:
 	_show_color_popup(
 		_cta_text_color,
-		func(color: Color) -> void:
-			_cta_text_color = color
-			_update_button_color(_cta_text_button, color)
+		func(_color: Color) -> void:
+			_cta_text_color = _color
+			_update_button_color(_cta_text_button, _color)
 	)
 
 
@@ -159,7 +159,7 @@ func _on_ad_load_finished(ad: NativeOverlayAd, error: LoadAdError) -> void:
 	_native_overlay_ad.ad_listener.on_ad_closed = _on_ad_closed
 	_native_overlay_ad.ad_listener.on_ad_impression = _on_ad_impression
 	_native_overlay_ad.ad_listener.on_ad_opened = _on_ad_opened
-	_native_overlay_ad.on_ad_paid = func(ad_value: AdValue) -> void:
+	_native_overlay_ad.on_ad_paid = func(_ad_value: AdValue) -> void:
 		var ad_source_name := "N/A"
 		var response_info := _native_overlay_ad.get_response_info() if _native_overlay_ad else null
 		if response_info:
@@ -169,9 +169,9 @@ func _on_ad_load_finished(ad: NativeOverlayAd, error: LoadAdError) -> void:
 			(
 				"Ad paid: %f %s (precision: %d, source: %s)"
 				% [
-					ad_value.value_micros / 1000000.0,
-					ad_value.currency_code,
-					ad_value.precision,
+					_ad_value.value_micros / 1000000.0,
+					_ad_value.currency_code,
+					_ad_value.precision,
 					ad_source_name
 				]
 			)

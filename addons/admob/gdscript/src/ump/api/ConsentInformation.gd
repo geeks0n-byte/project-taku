@@ -42,7 +42,7 @@ var _on_consent_info_updated_failure_callback
 func update(
 	consent_request: ConsentRequestParameters,
 	on_consent_info_updated_success := func(): pass,
-	on_consent_info_updated_failure := func(form_error: FormError): pass,
+	on_consent_info_updated_failure := func(_form_error: FormError): pass,
 ) -> void:
 	if _plugin:
 		self._on_consent_info_updated_success_callback = on_consent_info_updated_success

@@ -1,5 +1,6 @@
 class_name PuzzleGenerator
 extends RefCounted
+## Builds unique Taku puzzles: place tiles, shifters, and constraints, then verify solvability.
 
 # Sentinel returned by _count_solutions when the iteration budget is exhausted
 # before the solver could determine the true count.
@@ -794,6 +795,7 @@ static func _prepare_solver_ctx(layout: Dictionary, w: int, h: int, constraints:
 	}
 
 
+## Materializes a coord→state dictionary from the fast solver's flat grid.
 static func _layout_from_ctx(ctx: Dictionary) -> Dictionary:
 	var layout := {}
 	var w: int = int(ctx.w)
@@ -805,6 +807,7 @@ static func _layout_from_ctx(ctx: Dictionary) -> Dictionary:
 	return layout
 
 
+## Writes the fast solver grid back into an existing layout dictionary.
 static func _copy_ctx_to_layout(ctx: Dictionary, layout: Dictionary) -> void:
 	var w: int = int(ctx.w)
 	var h: int = int(ctx.h)
@@ -814,6 +817,7 @@ static func _copy_ctx_to_layout(ctx: Dictionary, layout: Dictionary) -> void:
 			layout[Vector2i(x, y)] = int(grid[y * w + x])
 
 
+## Converts empty Vector2i cells to flat indices (y * width + x).
 static func _empties_to_indices(empty_cells: Array, w: int) -> Array:
 	var idxs: Array = []
 	idxs.resize(empty_cells.size())
@@ -823,16 +827,18 @@ static func _empties_to_indices(empty_cells: Array, w: int) -> Array:
 	return idxs
 
 
+## Adds delta to a per-row/col count array stored on the fast-solver context.
 static func _ctx_add(ctx: Dictionary, key: String, i: int, delta: int) -> void:
 	var arr: Array = ctx[key]
 	arr[i] = int(arr[i]) + delta
 	ctx[key] = arr
 
 
+## Writes a tile into the flat grid and updates row/col occupancy counts.
 static func _place_fast(ctx: Dictionary, idx: int, val: int) -> void:
 	var w: int = int(ctx.w)
 	var x: int = idx % w
-	var y: int = int(idx / w)
+	var y: int = int(idx / float(w))
 	var grid: Array = ctx.grid
 	grid[idx] = val
 	ctx.grid = grid
@@ -852,10 +858,11 @@ static func _place_fast(ctx: Dictionary, idx: int, val: int) -> void:
 		_ctx_add(ctx, "col_s", x, 1)
 
 
+## Clears a flat-grid cell and rolls back the occupancy counts.
 static func _unplace_fast(ctx: Dictionary, idx: int) -> void:
 	var w: int = int(ctx.w)
 	var x: int = idx % w
-	var y: int = int(idx / w)
+	var y: int = int(idx / float(w))
 	var grid: Array = ctx.grid
 	var val: int = int(grid[idx])
 	grid[idx] = GameConstants.TileState.EMPTY
@@ -876,6 +883,7 @@ static func _unplace_fast(ctx: Dictionary, idx: int) -> void:
 		_ctx_add(ctx, "col_s", x, -1)
 
 
+## How many allowed values still fit this empty index (optional shifter skip).
 static func _fast_option_count(ctx: Dictionary, idx: int, allowed: Array, skip_shifter: bool) -> int:
 	var options := 0
 	for val in allowed:
@@ -893,7 +901,7 @@ static func _fast_valid(ctx: Dictionary, idx: int, val: int) -> bool:
 	var w: int = int(ctx.w)
 	var h: int = int(ctx.h)
 	var x: int = idx % w
-	var y: int = int(idx / w)
+	var y: int = int(idx / float(w))
 	var grid: Array = ctx.grid
 
 	for sx in range(maxi(0, x - 2), mini(w - 2, x + 1)):
@@ -979,6 +987,7 @@ static func _fast_valid(ctx: Dictionary, idx: int, val: int) -> bool:
 	return true
 
 
+## Minimum-remaining-values pick among empty indices for the fast solver.
 static func _pick_mrv_fast(ctx: Dictionary, empty_cells: Array, allowed: Array) -> Dictionary:
 	var best_idx := -1
 	var min_opts := 999
@@ -1003,6 +1012,7 @@ static func _pick_mrv_fast(ctx: Dictionary, empty_cells: Array, allowed: Array) 
 	return {"idx": best_idx, "vals": best_valid_vals}
 
 
+## Counts solutions on the flat grid until two are found or the budget expires.
 static func _count_solutions_fast(ctx: Dictionary, empty_cells: Array, allowed: Array, iter: Dictionary) -> int:
 	if empty_cells.size() == 0:
 		if not iter.has("solution"):
@@ -1038,6 +1048,7 @@ static func _count_solutions_fast(ctx: Dictionary, empty_cells: Array, allowed: 
 	return total_sols
 
 
+## Finds one solution on the flat grid; false when the iteration budget is hit.
 static func _solve_fast(ctx: Dictionary, empty_cells: Array, allowed: Array, iter: Dictionary) -> bool:
 	if empty_cells.size() == 0:
 		return true
@@ -1065,12 +1076,14 @@ static func _solve_fast(ctx: Dictionary, empty_cells: Array, allowed: Array, ite
 	return false
 
 
+## True when a shifter pair already uses these two cells (order-insensitive).
 static func _pair_already_exists(shifters: Array, a: Vector2i, b: Vector2i) -> bool:
 	for p in shifters:
 		if (p.a == a and p.b == b) or (p.a == b and p.b == a):
 			return true
 	return false
 
+## Random unused endpoint for a new shifter, or null if both are taken.
 static func _pick_unused_active(a: Vector2i, b: Vector2i, used_actives: Dictionary) -> Variant:
 	var first: Vector2i = a if randi() % 2 == 0 else b
 	var second: Vector2i = b if first == a else a
@@ -1085,6 +1098,7 @@ static func _pick_unused_active(a: Vector2i, b: Vector2i, used_actives: Dictiona
 static func _assign_distinct_actives(shifters: Array) -> bool:
 	return _assign_distinct_actives_at(shifters, 0, {})
 
+## Backtracking pass so each shifter's active cell is unique.
 static func _assign_distinct_actives_at(shifters: Array, index: int, used: Dictionary) -> bool:
 	if index >= shifters.size():
 		return true

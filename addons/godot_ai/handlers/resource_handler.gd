@@ -312,9 +312,9 @@ static func _apply_resource_properties(res: Resource, properties: Dictionary, de
 	for key in properties.keys():
 		if not prop_types.has(key):
 			var valid: Array[String] = []
-			for prop in res.get_property_list():
-				if prop.get("usage", 0) & PROPERTY_USAGE_EDITOR:
-					valid.append(prop.name)
+			for editor_prop in res.get_property_list():
+				if editor_prop.get("usage", 0) & PROPERTY_USAGE_EDITOR:
+					valid.append(editor_prop.name)
 			valid.sort()
 			# Name the script's class_name (e.g. MyTestResource) rather than the
 			# native base (Resource) so the hint names the type the agent created,

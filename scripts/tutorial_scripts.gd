@@ -8,6 +8,7 @@ extends RefCounted
 const ICON_SIZE := 44
 const LOCK_ICON_SIZE := 56
 
+## Basename of a level path without extension (e.g. levels/tutorials/level_1.tres → level_1).
 static func script_id_from_path(path: String) -> String:
 	var p := path.strip_edges()
 	if p.is_empty():
@@ -17,9 +18,11 @@ static func script_id_from_path(path: String) -> String:
 		return ""
 	return base.get_basename()
 
+## True when steps_for returns a non-empty sequence for this id.
 static func has_script(script_id: String) -> bool:
 	return not steps_for(script_id).is_empty()
 
+## Ordered TutorialDirector steps for a script id; unknown ids return [].
 static func steps_for(script_id: String) -> Array:
 	match script_id:
 		"level_1":
@@ -45,6 +48,7 @@ static func first_incomplete_level() -> LevelData:
 			return resource
 	return fallback
 
+## [img] tag for a tutorial token; lock uses a cropped region, others square.
 static func icon_bbcode(token: String, size: int = -1) -> String:
 	var path := _icon_path(token)
 	if path.is_empty():
@@ -56,6 +60,7 @@ static func icon_bbcode(token: String, size: int = -1) -> String:
 		return "[img height=%d region=36,36,56,64]%s[/img]" % [icon_size, path]
 	return "[img=%dx%d]%s[/img]" % [icon_size, icon_size, path]
 
+## Texture path for a tutorial icon token, or empty when unknown.
 static func _icon_path(token: String) -> String:
 	match token:
 		"lock":  return GameConstants.TILE_LOCK

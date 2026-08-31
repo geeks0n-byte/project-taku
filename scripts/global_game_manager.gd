@@ -1,4 +1,5 @@
 extends Node
+## Autoload for scene changes, system-back debounce, focus/keyboard, and store screenshots.
 
 # Set by the level-select screen so main.gd knows which level to load directly,
 # bypassing the normal "highest unlocked" logic.
@@ -15,10 +16,12 @@ var _back_guard_until_msec: int = 0
 var _scene_guard_until_msec: int = 0
 var _screenshot_busy: bool = false
 
+## Always-process so back-button and focus handling still run while the tree is paused.
 func _ready() -> void:
 	# Always process so back-button and focus events work even when the tree is paused.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
+## On focus in/out: hide the IME keyboard, unpin banners, and keep the tree unpaused.
 func _notification(what: int) -> void:
 	match what:
 		NOTIFICATION_APPLICATION_FOCUS_IN, NOTIFICATION_WM_WINDOW_FOCUS_IN, NOTIFICATION_APPLICATION_RESUMED:
@@ -32,6 +35,7 @@ func _notification(what: int) -> void:
 		NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_WINDOW_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED:
 			_unpause_tree()
 
+## Clears SceneTree.paused so boot tweens and incoming scenes are not stuck.
 func _unpause_tree() -> void:
 	var tree := get_tree()
 	if tree:

@@ -65,7 +65,7 @@ func _on_progress_timer_timeout() -> void:
 	var downloaded_bytes = _http_request.get_downloaded_bytes()
 
 	if body_size > 0:
-		var percent = int(downloaded_bytes * 100 / body_size)
+		var percent = int(downloaded_bytes * 100 / float(body_size))
 		print("Download percent: " + str(percent) + "%")
 		download_progress.emit(percent)
 

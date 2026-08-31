@@ -78,6 +78,7 @@ var _cached_bake_texture: Texture2D = null
 var _bg_seed: int = 0
 var _bg_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
+## Seeds the backdrop RNG, builds parallax layers, and follows viewport resizes.
 func _ready() -> void:
 	# layer = -2 so the entire parallax background renders behind all game UI layers.
 	layer = -2
@@ -102,6 +103,7 @@ func set_foreground_events_enabled(enabled: bool) -> void:
 	if not enabled:
 		_clear_foreground_fx()
 
+## Cached static composite used when animated FX are turned off.
 func _get_baked_texture() -> Texture2D:
 	if _cached_bake_texture == null:
 		_cached_bake_texture = _bake_static_texture()
@@ -330,6 +332,7 @@ func set_static_mode(is_static: bool) -> void:
 		_hide_static_composite()
 		_restart_timer("event")
 
+## Stops spawn timers and frees or pools live shooting-star / comet / asteroid nodes.
 func _stop_events_and_fx() -> void:
 	for key in event_timers:
 		var t: Timer = event_timers[key]["timer"]
@@ -370,9 +373,11 @@ func _present_baked_composite() -> void:
 	_static_rect.visible = true
 	_apply_phone_scale_cover(_static_rect, _cover_size())
 
+## Swaps animated layers for the baked composite (performance / options toggle).
 func _show_static_composite() -> void:
 	_present_baked_composite()
 
+## Hides the baked composite and shows the live parallax layers again.
 func _hide_static_composite() -> void:
 	if _static_rect:
 		_static_rect.visible = false
@@ -447,6 +452,7 @@ func _start_twinkle_on_mid_layers() -> void:
 	_twinkle_tween.tween_property(layer_stars_mid, "modulate:a", 1.0, 3.0)
 	_twinkle_tween.parallel().tween_property(layer_accents, "modulate:a", 1.0, 3.0)
 
+## Stacks void, dust, stars, accents, sparklers, and dynamic FX hosts.
 func _build_background_layers() -> void:
 	_parallax_layer_nodes.clear()
 	var view_size := _cover_size()
@@ -560,6 +566,7 @@ func _apply_phone_scale_cover(rect: TextureRect, view_size: Vector2) -> void:
 	rect.size = view_size / phone_scale
 	rect.position = (viewport_size - view_size) * 0.5
 
+## Retiles/covers every backdrop layer for the new viewport size.
 func _on_viewport_size_changed() -> void:
 	var view_size := _cover_size()
 	for child in get_children():
@@ -622,6 +629,7 @@ func _build_parallax_layer(tex: Texture2D, speed_scale: Vector2, view_size: Vect
 	add_child(p_layer)
 	return p_layer
 
+## Nearest-filter TextureRect sized to cover the viewport at the phone layer scale.
 func _create_pixel_rect(tex: Texture2D, view_size: Vector2 = Vector2.ZERO) -> TextureRect:
 	if view_size == Vector2.ZERO:
 		view_size = _cover_size()
@@ -683,6 +691,7 @@ func debug_spawn_shooting_star() -> void:
 	var target := _fg_stars if _use_foreground_layer() else dyn_layer_stars
 	_spawn_entity(tex_shooting_star, target, Vector2(64, 64), 0.8, 1.5, "star")
 
+## Runtime comet spawn (name is historical); uses foreground layer when enabled.
 func debug_spawn_comet() -> void:
 	var target := _fg_comets if _use_foreground_layer() else dyn_layer_comets
 	_spawn_entity(sf_comet_anim, target, Vector2(128, 64), 10.0, 20.0, "comet")
@@ -839,11 +848,13 @@ func _spawn_debug_asteroid_standard_motion(
 		rb.get_parent().remove_child(rb)
 	target_layer.add_child(rb)
 
+## Spawns a small burst of asteroids.
 func debug_spawn_asteroid_cloud() -> void:
 	var spawn_count := randi_range(3, 6)
 	for i in range(spawn_count):
 		debug_spawn_asteroid()
 
+## Starts the staggered multi-comet shower.
 func debug_spawn_meteor_shower() -> void:
 	_trigger_meteor_shower()
 
@@ -858,6 +869,7 @@ func _trigger_meteor_shower() -> void:
 		t.tween_interval(delay)
 		t.tween_callback(_spawn_shower_comet.bind(use_fg))
 
+## One comet in a shower; no-op if this node left the tree mid-stagger.
 func _spawn_shower_comet(use_fg: bool) -> void:
 	if not is_inside_tree():
 		return

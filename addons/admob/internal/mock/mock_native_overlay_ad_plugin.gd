@@ -187,9 +187,9 @@ func _update_ui_position(uid: int) -> void:
 		template_id = "small"
 
 	if template_id == "small":
-		height_dp = 90 if height_dp <= 0 else min(height_dp, 90)
+		height_dp = 90 if height_dp <= 0 else mini(height_dp, 90)
 	else:
-		height_dp = 250 if height_dp <= 0 else min(height_dp, 250)
+		height_dp = 250 if height_dp <= 0 else mini(height_dp, 250)
 
 	var width_in_viewport: float
 	if width_dp <= 0:
@@ -610,8 +610,8 @@ func _update_ui_position(uid: int) -> void:
 	var scaled_size := ui.size
 	match ad["position"]:
 		-1: # CUSTOM
-			var x: float = ad["custom_position"].get("x", 0.0) * scale_factor_x if ad["custom_position"] != null else 0.0
-			var y: float = ad["custom_position"].get("y", 0.0) * scale_factor_y if ad["custom_position"] != null else 0.0
+			var x: float = float(ad["custom_position"].get("x", 0.0)) * scale_factor_x if ad["custom_position"] != null else 0.0
+			var y: float = float(ad["custom_position"].get("y", 0.0)) * scale_factor_y if ad["custom_position"] != null else 0.0
 			ui.position = Vector2(x, y)
 		0: # TOP
 			ui.position = Vector2((viewport_size.x - scaled_size.x) / 2.0, 0)

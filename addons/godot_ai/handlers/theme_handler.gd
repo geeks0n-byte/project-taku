@@ -350,9 +350,9 @@ func _apply_sides(sb: StyleBoxFlat, sides_dict: Variant, dict_name: String,
 	# Apply `all` first, then override with side-specific keys.
 	if sides_dict.has("all"):
 		var all_val: Variant = sides_dict.all
-		for s in side_names:
+		for side in side_names:
 			var v: Variant = int(all_val) if value_type == TYPE_INT else float(all_val)
-			sb.set(prop_prefix + s, v)
+			sb.set(prop_prefix + side, v)
 	for s in side_names:
 		if sides_dict.has(s):
 			var v2: Variant = int(sides_dict[s]) if value_type == TYPE_INT else float(sides_dict[s])

@@ -1,9 +1,13 @@
 class_name PuzzleSolver
 extends RefCounted
 
-# High-level façade that answers "is this puzzle solvable / unique?" while
+# Public solver façade. Answers "is this puzzle solvable / unique?" while
 # accounting for shifter mobility: each shifter pair can be in one of two
-# positions, so the solver must test all 2^N configurations.
+# positions, so the analyser must test all 2^N configurations.
+#
+# Also the public door for the fast option-count context used by hints, and
+# for count/solve used by LevelUtils. Callers should not poke PuzzleGenerator
+# privates (_prepare_solver_ctx, _fast_option_count, _count_solutions, _solve).
 
 const SOLUTIONS_UNKNOWN := PuzzleGenerator.SOLUTIONS_UNKNOWN
 # Shared iteration budget across all shifter configurations in one analysis call.
@@ -69,6 +73,69 @@ static func analyze_level(level: LevelData, require_unique: bool = true) -> Dict
 		require_unique
 	)
 
+# Builds the opaque fast-solver context used by option_count. Callers should
+# treat the dict as a black box and only pass it back into option_count.
+static func prepare_ctx(
+	layout: Dictionary,
+	width: int,
+	height: int,
+	constraints: Array
+) -> Dictionary:
+	return PuzzleGenerator._prepare_solver_ctx(layout, width, height, constraints)
+
+# Legal tile count at coord on a prepared ctx. Early-exits at 2 because
+# callers only need 0 / 1 / many. skip_shifter matches hint scoring (shifters
+# are mobility, not a colour the player would place on an empty cell).
+static func option_count(
+	ctx: Dictionary,
+	coord: Vector2i,
+	tiles: Array,
+	skip_shifter: bool = true
+) -> int:
+	if ctx.is_empty():
+		return 0
+	var w := int(ctx.get("w", 0))
+	if w <= 0:
+		return 0
+	return PuzzleGenerator._fast_option_count(ctx, coord.y * w + coord.x, tiles, skip_shifter)
+
+# Counts solutions up to the solver cap (usually 2). Pass an existing tracker
+# dict as iter to share a budget across shifter configs. Duplicates layout so
+# the fast search cannot leak placements back to the caller.
+static func count_solutions(
+	layout: Dictionary,
+	empty_cells: Array,
+	width: int,
+	height: int,
+	tiles: Array,
+	constraints: Array,
+	iter: Variant = null
+) -> int:
+	var test_layout = layout.duplicate()
+	var test_empty = empty_cells.duplicate()
+	var tracker: Dictionary = iter if typeof(iter) == TYPE_DICTIONARY else {"count": 0}
+	if not tracker.has("count"):
+		tracker["count"] = 0
+	return PuzzleGenerator._count_solutions(
+		test_layout, test_empty, width, height, tiles, constraints, tracker
+	)
+
+# Returns the first found solution layout, or {} if unsolvable / budget hit.
+# Copies the input so the caller's layout is left unchanged.
+static func solve_reference(
+	layout: Dictionary,
+	empty_cells: Array,
+	width: int,
+	height: int,
+	tiles: Array,
+	constraints: Array
+) -> Dictionary:
+	var test_layout = layout.duplicate()
+	var test_empty = empty_cells.duplicate()
+	if PuzzleGenerator._solve(test_layout, test_empty, width, height, tiles, constraints, {"count": 0}):
+		return test_layout
+	return {}
+
 # Core analysis loop. Iterates over every combination of shifter positions
 # (2^N configs via bitmask), runs the solution counter for each, and
 # accumulates the total. A shared iteration budget prevents runaway search.
@@ -128,7 +195,7 @@ static func _analyze_with_shifter_mobility(
 				configured[other] = GameConstants.TileState.EMPTY
 
 		var empties := LevelUtils.empty_cells_from_layout(configured)
-		var branch := LevelUtils.count_solutions(
+		var branch := PuzzleSolver.count_solutions(
 			configured, empties, width, height, tiles, constraints, shared_iter
 		)
 		if branch == SOLUTIONS_UNKNOWN:
@@ -161,7 +228,7 @@ static func _analyze_prepared(
 	constraints: Array,
 	shared_iter: Dictionary
 ) -> Dictionary:
-	var count := LevelUtils.count_solutions(
+	var count := PuzzleSolver.count_solutions(
 		layout, empty_cells, width, height, tiles, constraints, shared_iter
 	)
 	if count == SOLUTIONS_UNKNOWN:
@@ -170,7 +237,7 @@ static func _analyze_prepared(
 	if count >= 1 and shared_iter.has("solution"):
 		solution = shared_iter["solution"]
 	elif count >= 1:
-		solution = LevelUtils.solve_reference(
+		solution = PuzzleSolver.solve_reference(
 			layout, empty_cells, width, height, tiles, constraints
 		)
 	return _result(count, solution, false)

@@ -1,8 +1,8 @@
 extends Node
+## Autoload wrapping AdMob banners, interstitials, rewarded ads, and UMP privacy forms.
 
-# Interstitial ads are first shown after this many level-win/restart events in a session.
-# Each shown ad increments the threshold by 1, spacing them out over time.
-const INTERSTITIAL_START_EVERY_N := 3
+# Interstitial cadence knobs live on GameConstants so short-session policy is
+# tunable in one place. Rewarded/hint ads are unchanged and ignore this cadence.
 
 # AdMob test unit IDs — safe to ship; they never charge real money.
 const TEST_BANNER_UNIT_ID := "ca-app-pub-3940256099942544/6300978111"
@@ -42,9 +42,13 @@ var _interstitial: InterstitialAd = null
 var _loading_interstitial: bool = false
 # Called after the interstitial is dismissed (e.g. go-to-next-level callback).
 var _pending_after_ad: Callable = Callable()
-## Session-only interstitial cadence: first at 3 events, then +1 after each shown ad.
+## Session-only interstitial cadence: first after min wins + min session age,
+## then every_n (starts at INTERSTITIAL_START_EVERY_N, +1 after each shown ad).
+## Short sessions keep an extra gap until INTERSTITIAL_SHORT_SESSION_SEC.
 var _interstitial_progress: int = 0
-var _interstitial_every_n: int = INTERSTITIAL_START_EVERY_N
+var _interstitial_every_n: int = GameConstants.INTERSTITIAL_START_EVERY_N
+var _interstitial_wins: int = 0
+var _session_started_msec: int = 0
 
 var _rewarded: RewardedInterstitialAd = null
 # Kept as a member to prevent GC between load request and callback.
@@ -68,8 +72,10 @@ const REWARDED_LOAD_TIMEOUT_SEC := 25.0
 const FOCUS_BANNER_SETTLE_TRIES := 5
 const FOCUS_BANNER_SETTLE_SEC := 0.2
 
+## Detects AdMob support, builds retry timers, and defers consent/start until the tree is ready.
 func _ready() -> void:
 	_ads_supported = _detect_ads_support()
+	_session_started_msec = Time.get_ticks_msec()
 	_focus_banner_settle_timer = _make_timer(_on_banner_focus_settle)
 	_banner_retry_timer = _make_timer(_on_banner_retry_timeout)
 	_rewarded_retry_timer = _make_timer(_on_rewarded_retry_timeout)
@@ -78,6 +84,7 @@ func _ready() -> void:
 	call_deferred("ensure_started")
 	call_deferred("_connect_safe_area_resize")
 
+## Re-pins the banner when the root viewport size changes (IME / rotation).
 func _connect_safe_area_resize() -> void:
 	var tree := get_tree()
 	if tree == null or tree.root == null:
@@ -85,6 +92,7 @@ func _connect_safe_area_resize() -> void:
 	if not tree.root.size_changed.is_connected(_on_root_resized):
 		tree.root.size_changed.connect(_on_root_resized)
 
+## Re-anchors a visible banner after a viewport resize.
 func _on_root_resized() -> void:
 	if _banner_wanted_visible:
 		_pin_banner_bottom()
@@ -117,6 +125,7 @@ func _detect_ads_support() -> bool:
 		return false
 	return ClassDB.class_exists("PoingGodotAdMob") or Engine.has_singleton("PoingGodotAdMob")
 
+## True when this build can talk to AdMob (Android + plugin present).
 func is_ads_available() -> bool:
 	return _ads_supported
 
@@ -187,13 +196,16 @@ func _use_test_units() -> bool:
 func _banner_unit_id() -> String:
 	return TEST_BANNER_UNIT_ID if _use_test_units() else PROD_BANNER_UNIT_ID
 
+## Test interstitial unit in debug/editor; production unit in release.
 func _interstitial_unit_id() -> String:
 	return TEST_INTERSTITIAL_UNIT_ID if _use_test_units() else PROD_INTERSTITIAL_UNIT_ID
 
+## Test rewarded-interstitial unit in debug/editor; production unit in release.
 func _rewarded_unit_id() -> String:
 	return TEST_REWARDED_UNIT_ID if _use_test_units() else PROD_REWARDED_UNIT_ID
 
 
+## On app focus-in, dismisses the IME and re-settles the banner once the node is ready.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
 		# Focus can arrive while this autoload is still entering the tree.
@@ -218,6 +230,7 @@ func _on_app_focus_in() -> void:
 			_ensure_banner_loaded()
 	warm_rewarded_hint()
 
+## Releases GUI focus and hides the virtual keyboard so banners stay at the true bottom.
 func _dismiss_soft_keyboard() -> void:
 	var tree := get_tree()
 	if tree and tree.root:
@@ -227,10 +240,12 @@ func _dismiss_soft_keyboard() -> void:
 	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
 		DisplayServer.virtual_keyboard_hide()
 
+## Starts the post-focus banner settle ticks from zero.
 func _schedule_banner_focus_settle() -> void:
 	_focus_banner_settle_ticks = 0
 	_start_banner_focus_settle_timer()
 
+## Defers until this autoload is in the tree, then starts the settle timer.
 func _start_banner_focus_settle_timer() -> void:
 	if not is_inside_tree():
 		return
@@ -292,6 +307,7 @@ func _pin_banner_bottom() -> void:
 		return
 	_banner.set_position(_banner_safe_bottom_position())
 
+## Bottom AdPosition, raised by the nav-bar / home-indicator inset when needed.
 func _banner_safe_bottom_position() -> AdPosition:
 	var bottom := int(round(SafeInsets.screen_margins().w))
 	if bottom <= 0:
@@ -311,6 +327,7 @@ func _show_banner_pinned() -> void:
 	_banner.show()
 	call_deferred("_pin_banner_bottom")
 
+## Creates/loads the banner if missing; shows it when already loaded and wanted.
 func _ensure_banner_loaded() -> void:
 	if not _initialized:
 		return
@@ -343,6 +360,7 @@ func _ensure_banner_loaded() -> void:
 	_banner.load_ad(AdRequest.new())
 	_banner.hide()
 
+## One-shot retry when a wanted banner failed to load.
 func _schedule_banner_retry() -> void:
 	if not _banner_wanted_visible or _banner_retry_timer == null:
 		return
@@ -350,11 +368,13 @@ func _schedule_banner_retry() -> void:
 		return
 	_banner_retry_timer.start(BANNER_RETRY_SEC)
 
+## Retries banner load if it is still wanted and not loaded.
 func _on_banner_retry_timeout() -> void:
 	if not _banner_wanted_visible or _banner_loaded:
 		return
 	_ensure_banner_loaded()
 
+## Destroys the native banner object and clears load flags.
 func _destroy_banner() -> void:
 	if _banner:
 		_banner.destroy()
@@ -364,6 +384,7 @@ func _destroy_banner() -> void:
 	if _banner_retry_timer:
 		_banner_retry_timer.stop()
 
+## Re-pins the banner after a fullscreen ad or privacy form closes.
 func _reanchor_banner_after_fullscreen() -> void:
 	if not _banner_wanted_visible:
 		return
@@ -433,16 +454,30 @@ func _record_interstitial_progress(is_tutorial: bool) -> void:
 	if is_tutorial:
 		return
 	_interstitial_progress += 1
+	_interstitial_wins += 1
 
-# Shows an interstitial if the cadence threshold is met and one is loaded.
+# Shows an interstitial if the softened cadence threshold is met and one is loaded.
 # Calls on_done immediately if no ad is shown, so the game can continue normally.
-# Threshold grows by 1 after each shown ad to spread them out over the session.
+# Soft-session policy (does not affect rewarded/hint ads):
+#   - First interstitial needs INTERSTITIAL_MIN_WINS_BEFORE_FIRST non-tutorial
+#     wins/restarts AND INTERSTITIAL_MIN_SESSION_SEC of session age.
+#   - After each shown ad, every_n grows by 1; while session age is still under
+#     INTERSTITIAL_SHORT_SESSION_SEC, an extra gap is applied so quick sessions
+#     stay sparse without removing ads entirely.
 func show_interstitial_if_ready(on_done: Callable = Callable()) -> void:
 	if not _ads_supported or not _initialized:
 		if on_done.is_valid():
 			on_done.call()
 		return
-	var due := _interstitial_every_n > 0 and _interstitial_progress >= _interstitial_every_n
+	var session_sec := _session_age_sec()
+	var first_gate_ok := (
+		_interstitial_wins >= GameConstants.INTERSTITIAL_MIN_WINS_BEFORE_FIRST
+		and session_sec >= GameConstants.INTERSTITIAL_MIN_SESSION_SEC
+	)
+	var needed := _interstitial_every_n
+	if session_sec < GameConstants.INTERSTITIAL_SHORT_SESSION_SEC:
+		needed += GameConstants.INTERSTITIAL_SHORT_SESSION_EXTRA_GAP
+	var due := first_gate_ok and needed > 0 and _interstitial_progress >= needed
 	if not due or _interstitial == null:
 		if on_done.is_valid():
 			on_done.call()
@@ -454,6 +489,13 @@ func show_interstitial_if_ready(on_done: Callable = Callable()) -> void:
 	_interstitial_every_n += 1
 	_notify_fullscreen_started()
 	_interstitial.show()
+
+
+func _session_age_sec() -> float:
+	if _session_started_msec <= 0:
+		_session_started_msec = Time.get_ticks_msec()
+		return 0.0
+	return float(Time.get_ticks_msec() - _session_started_msec) / 1000.0
 
 
 # Returns true if a rewarded ad could ever be shown (used to show/hide the hint ad button).
@@ -488,6 +530,7 @@ func warm_rewarded_hint() -> void:
 func _rewarded_native_available() -> bool:
 	return Engine.has_singleton("PoingGodotAdMobRewardedInterstitialAd")
 
+## Starts a rewarded-interstitial load when none is in flight.
 func _load_rewarded() -> void:
 	if not _initialized or _loading_rewarded or _rewarded != null:
 		return
@@ -529,6 +572,7 @@ func _stop_rewarded_load_watchdog() -> void:
 	if _rewarded_load_watchdog and not _rewarded_load_watchdog.is_stopped():
 		_rewarded_load_watchdog.stop()
 
+## Resets a hung rewarded load and schedules another attempt.
 func _on_rewarded_load_timeout() -> void:
 	if not _loading_rewarded:
 		return
@@ -537,6 +581,7 @@ func _on_rewarded_load_timeout() -> void:
 	_rewarded_loader = null
 	_schedule_rewarded_retry()
 
+## Wires fullscreen show/dismiss callbacks on the loaded rewarded ad.
 func _bind_rewarded_callbacks() -> void:
 	if _rewarded == null:
 		return
@@ -631,6 +676,7 @@ func show_rewarded_for_hint(on_rewarded: Callable = Callable()) -> bool:
 	_rewarded.show(reward_listener)
 	return true
 
+## Debug path: grants the reward immediately while still bracketing fullscreen signals.
 func _invoke_rewarded_mock(on_rewarded: Callable) -> void:
 	# Debug mock is instant — still bracket so timer pause logic stays consistent.
 	_notify_fullscreen_started()
@@ -659,6 +705,7 @@ func get_privacy_options_state() -> int:
 		return PRIVACY_OPTIONS_STATE_NOT_REQUIRED
 	return PRIVACY_OPTIONS_STATE_LOADING
 
+## Opens the UMP privacy options form when the platform says it is ready.
 func show_privacy_options_form(on_done: Callable = Callable()) -> bool:
 	if get_privacy_options_state() != PRIVACY_OPTIONS_STATE_READY:
 		return false
@@ -669,6 +716,7 @@ func show_privacy_options_form(on_done: Callable = Callable()) -> bool:
 	)
 	return true
 
+## Opens the canonical privacy-policy URL in the device browser.
 func open_privacy_policy() -> void:
 	OS.shell_open(PRIVACY_POLICY_URL)
 

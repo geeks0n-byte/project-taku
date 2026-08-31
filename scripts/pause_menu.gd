@@ -30,6 +30,7 @@ const PAUSE_TITLE_FONT_SIZE := GameConstants.SCREEN_HEADER_FONT_SIZE + 2
 # The restart button label changes depending on game mode (restart vs new layout).
 var _restart_label_key: String = "UI_NEW_LAYOUT"
 
+## Wires pause buttons and language refresh, then styles the header and rows.
 func _ready() -> void:
 	if resume_btn:
 		resume_btn.pressed.connect(_on_resume)
@@ -50,6 +51,7 @@ func _ready() -> void:
 	call_deferred("_style_header")
 	call_deferred("_fit_menu_buttons")
 
+## Applies the shared screen-header style to the PAUSED title.
 func _style_header() -> void:
 	if not title_label:
 		return
@@ -57,6 +59,7 @@ func _style_header() -> void:
 	HudLayout._bind_header_translation_key(title_label, "PAUSED")
 	HudLayout.apply_screen_header_style(title_label)
 
+## Pause buttons that are currently shown (debug auto-win may be hidden).
 func _visible_menu_buttons() -> Array[Button]:
 	var buttons: Array[Button] = []
 	for btn in [resume_btn, restart_btn, level_select_btn, settings_btn, quit_btn, auto_win_btn]:
@@ -64,6 +67,7 @@ func _visible_menu_buttons() -> Array[Button]:
 			buttons.append(btn)
 	return buttons
 
+## Row height that fits the visible buttons into the host, clamped to min/max.
 func _menu_row_height() -> float:
 	var buttons := _visible_menu_buttons()
 	var count := buttons.size()
@@ -78,6 +82,7 @@ func _menu_row_height() -> float:
 		return MENU_BTN_ROW_H
 	return maxf(MENU_BTN_ROW_H_MIN, floor(row_h))
 
+## Safe-area, captions, and per-button tile styling for the current locale.
 func _fit_menu_buttons() -> void:
 	HudLayout.apply_content_edge_safe_area(_btn_host)
 	if _btn_vbox:
@@ -121,6 +126,7 @@ func _style_auto_win_button(row_h: float = MENU_BTN_ROW_H) -> void:
 	auto_win_btn.mouse_filter = Control.MOUSE_FILTER_STOP
 	auto_win_btn.mouse_default_cursor_shape = Control.CURSOR_ARROW
 
+## Flat tile-caption styling for one pause row (no leftover pause icons).
 func _apply_pause_button(button: Button, row_h: float = MENU_BTN_ROW_H) -> void:
 	if not button or not button.visible:
 		return
@@ -155,11 +161,13 @@ func _apply_pause_button(button: Button, row_h: float = MENU_BTN_ROW_H) -> void:
 		button.add_theme_font_size_override("font_size", HudLayout.body_font_size(MENU_BTN_FONT))
 		HudLayout.apply_safe_outline(button, GameConstants.MENU_TEXT_OUTLINE)
 
+## Removes a leftover PauseIcon child if a button still has one.
 func _clear_pause_icon(button: Button) -> void:
 	var host := button.get_node_or_null("PauseIcon") as TextureRect
 	if host:
 		host.queue_free()
 
+## Swaps Restart vs New Layout copy and restyles that row.
 func set_restart_label_key(key: String) -> void:
 	_restart_label_key = key if not key.is_empty() else "UI_NEW_LAYOUT"
 	if restart_btn:
@@ -167,33 +175,42 @@ func set_restart_label_key(key: String) -> void:
 		restart_btn.set_meta("_tr_key", _restart_label_key)
 		_apply_pause_button(restart_btn, _menu_row_height())
 
+## Refits rows and reapplies locale fonts after a language change.
 func _on_language_changed() -> void:
 	_fit_menu_buttons()
 	HudLayout.apply_locale_fonts_to_tree(self)
 
+## Shows or hides Auto-Win, then refits the remaining rows.
 func set_debug_tools_visible(visible_state: bool) -> void:
 	if auto_win_btn:
 		auto_win_btn.visible = visible_state
 	_fit_menu_buttons()
 
+## Refits button rows when this control is resized.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		call_deferred("_fit_menu_buttons")
 
+## Forwards Resume to the game scene.
 func _on_resume() -> void:
 	resume_pressed.emit()
 
+## Forwards Restart / New Layout to the game scene.
 func _on_restart() -> void:
 	restart_pressed.emit()
 
+## Forwards Settings to the game scene.
 func _on_settings() -> void:
 	settings_pressed.emit()
 
+## Forwards Level Select to the game scene.
 func _on_level_select() -> void:
 	level_select_pressed.emit()
 
+## Forwards debug Auto-Win to the game scene.
 func _on_auto_win() -> void:
 	auto_win_pressed.emit()
 
+## Forwards Main Menu / quit to the game scene.
 func _on_quit() -> void:
 	quit_pressed.emit()

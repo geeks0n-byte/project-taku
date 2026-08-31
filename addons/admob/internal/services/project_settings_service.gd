@@ -112,7 +112,7 @@ static func _cleanup_obsolete_settings(active_names: Array[String]) -> bool:
 	return modified
 
 
-static func _add_setting(setting_name: String, type: int, default_value, order: int) -> bool:
+static func _add_setting(setting_name: String, p_type: int, default_value, order: int) -> bool:
 	var is_new := false
 	if not ProjectSettings.has_setting(setting_name):
 		ProjectSettings.set_setting(setting_name, default_value)
@@ -121,7 +121,7 @@ static func _add_setting(setting_name: String, type: int, default_value, order: 
 	ProjectSettings.set_initial_value(setting_name, default_value)
 	var info := {
 		"name": setting_name,
-		"type": type,
+		"type": p_type,
 	}
 	ProjectSettings.add_property_info(info)
 	ProjectSettings.set_as_basic(setting_name, true)

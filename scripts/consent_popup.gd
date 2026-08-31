@@ -1,4 +1,5 @@
 extends ColorRect
+## First-launch privacy consent overlay; ACCEPT unblocks the main menu.
 
 # Emitted when the player taps ACCEPT. main_menu.gd listens to this
 # to save privacy_accepted and reveal the main menu UI.
@@ -15,6 +16,7 @@ const _TILE_TEX := preload("res://resources/buttons/button_tile_gray_dark.svg")
 @onready var _read_btn: Button = $Outer/Content/ReadPolicyButton
 @onready var _accept_btn: Button = $Outer/Content/AcceptButton
 
+## Wires buttons, locale refresh, and viewport resize so the panel stays fitted.
 func _ready() -> void:
 	_read_btn.pressed.connect(_on_read_policy)
 	_accept_btn.pressed.connect(_on_accepted)
@@ -24,6 +26,7 @@ func _ready() -> void:
 	if not get_viewport().size_changed.is_connected(_on_viewport_resized):
 		get_viewport().size_changed.connect(_on_viewport_resized)
 
+## Refits the content column when the overlay is visible.
 func _on_viewport_resized() -> void:
 	if visible:
 		call_deferred("_fit_layout")
@@ -34,6 +37,7 @@ func refresh_locale() -> void:
 	_apply_locale_texts()
 	call_deferred("_fit_layout")
 
+## Writes translated title/body/buttons and applies popup fonts.
 func _apply_locale_texts() -> void:
 	if _title:
 		_title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
@@ -56,6 +60,7 @@ func _apply_locale_texts() -> void:
 		_accept_btn.text = tr("UI_CONSENT_ACCEPT")
 		HudLayout.apply_tile_button(_accept_btn, _TILE_TEX)
 
+## Sizes the content column to the dialog width used by other popups.
 func _fit_layout() -> void:
 	var content := get_node_or_null("Outer/Content") as Control
 	if content == null:

@@ -1,14 +1,13 @@
 extends Node2D
-
-# Root controller for the level editor scene.
-# Coordinates the EditorUIManager, PlaytestUIManager, EditorCanvasManager, and
-# EditorPlaytestController — acting as the bridge between all editor subsystems.
+## Root controller for the level editor scene.
+## Coordinates the EditorUIManager, PlaytestUIManager, EditorCanvasManager, and
+## EditorPlaytestController — acting as the bridge between all editor subsystems.
 
 @onready var editor_ui: EditorUIManager = $EditorUIManager
 @onready var pt_ui: PlaytestUIManager = $PlaytestUIManager
 @onready var canvas_manager: EditorCanvasManager = $EditorUI/EditorCanvasManager
-
-var playtest_controller: EditorPlaytestController
+@onready var playtest_controller: EditorPlaytestController = $EditorPlaytestController
+@onready var _loading_overlay: LoadingOverlay = $LoadingOverlay
 
 # Currently selected tile type/brush tool. Determines what is painted on cell click/drag.
 var current_brush_state: int = GameConstants.TileState.EMPTY
@@ -23,22 +22,18 @@ var editor_undo := UndoStack.new()
 var _is_painting: bool = false
 # Tracks the last cell painted during a drag to avoid repainting the same cell each motion event.
 var _last_painted_coord: Vector2i = Vector2i(-9999, -9999)
-var _loading_overlay: LoadingOverlay
 # Prevents stacking multiple async generation requests if the user clicks rapidly.
 var _is_generating: bool = false
 
+## Runs before child _ready — mark English-only editor chrome for Press Start.
 func _enter_tree() -> void:
-	# Runs before child _ready — mark English-only editor chrome for Press Start.
 	EditorUiPolicy.mark_editor_pixel_roots(self)
 
+## Wires playtest, editor UI, and the blank canvas. Loading overlay is authored in the scene.
 func _ready():
 	if AdsManager:
 		AdsManager.hide_menu_banner()
-	_loading_overlay = LoadingOverlay.new()
-	add_child(_loading_overlay)
 	_apply_background_for_mode(false)
-	playtest_controller = EditorPlaytestController.new()
-	add_child(playtest_controller)
 	playtest_controller.setup(canvas_manager, pt_ui, editor_ui)
 
 	_bind_signals()
@@ -108,6 +103,7 @@ func _coord_from_global(global_pos: Vector2) -> Vector2i:
 	var local := canvas_manager.to_local(global_pos)
 	return Vector2i(floori(local.x / float(GameConstants.CELL_SIZE)), floori(local.y / float(GameConstants.CELL_SIZE)))
 
+## Drag-paint the cell under the cursor; link brushes never paint this way.
 func _try_paint_at_mouse() -> void:
 	if _is_link_brush():
 		return
@@ -131,6 +127,7 @@ func _recenter_editor_layout(width: int, height: int) -> void:
 	editor_ui.update_dynamic_editor_layout(centered_board_y, board_pixel_height)
 	pt_ui.update_dynamic_playtest_layout(centered_board_y, board_pixel_height)
 
+## Connects editor UI, canvas, and playtest controller signals to this root.
 func _bind_signals():
 	editor_ui.brush_changed.connect(_on_brush_changed)
 	editor_ui.save_requested.connect(_on_save_level)
@@ -215,24 +212,28 @@ func _record_editor_change():
 	editor_undo.record(snap)
 	editor_ui.update_editor_undo_redo_buttons(editor_undo.can_undo(), editor_undo.can_redo())
 
+## Restores the previous editor snapshot when the stack allows it.
 func _on_editor_undo_requested():
 	if not editor_undo.can_undo():
 		return
 	_apply_editor_snapshot(editor_undo.undo())
 	editor_ui.update_editor_undo_redo_buttons(editor_undo.can_undo(), editor_undo.can_redo())
 
+## Re-applies the next editor snapshot when the stack allows it.
 func _on_editor_redo_requested():
 	if not editor_undo.can_redo():
 		return
 	_apply_editor_snapshot(editor_undo.redo())
 	editor_ui.update_editor_undo_redo_buttons(editor_undo.can_undo(), editor_undo.can_redo())
 
+## Refreshes the joker counter after the allowed-tile picker changes.
 func _on_allowed_tiles_changed():
 	if playtest_controller.is_active:
 		return
 	editor_ui.update_status("", Color.WHITE)
 	_update_editor_joker_counter_display()
 
+## Generates a random unique puzzle on a worker thread with the loading overlay.
 func _on_random_board_requested():
 	if playtest_controller.is_active:
 		return
@@ -278,6 +279,7 @@ func _on_random_board_requested():
 	_update_editor_joker_counter_display()
 	_record_editor_change()
 
+## Rebuilds a blank canvas at the new size and recenters the editor.
 func _on_grid_size_changed(new_width: int, new_height: int):
 	if playtest_controller.is_active:
 		return
@@ -290,6 +292,7 @@ func _on_grid_size_changed(new_width: int, new_height: int):
 	editor_undo.reset(_create_editor_snapshot())
 	editor_ui.update_editor_undo_redo_buttons(false, false)
 
+## Switches the paint brush and aborts an in-progress link selection.
 func _on_brush_changed(state_id: int, _brush_name: String):
 	if playtest_controller.is_active:
 		return
@@ -303,6 +306,7 @@ func _on_brush_changed(state_id: int, _brush_name: String):
 	current_brush_state = state_id
 	link_first_selection = null
 
+## Edit-mode click: link brush or paint; playtest ignores the interceptor.
 func _on_canvas_cell_clicked(coord: Vector2i):
 	if playtest_controller.is_active:
 		# Playtest uses Cell press/release + hold-clear; interceptor is ignored.
@@ -317,6 +321,7 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 		if _apply_paint_brush(coord, true):
 			_update_editor_joker_counter_display()
 
+## Two-click shifter/equals/not-equals pairing, with undo recorded on complete.
 func _handle_link_brush_click(coord: Vector2i) -> void:
 	var cell = canvas_manager.board_cells[coord]
 	if link_first_selection == null:
@@ -351,6 +356,7 @@ func _handle_link_brush_click(coord: Vector2i) -> void:
 			canvas_manager.board_cells[first_coord].update_visuals()
 			editor_ui.update_status("ERR_CELLS_NOT_ADJACENT", Color.WHITE)
 
+## Paints one cell with the current brush; optionally records undo.
 func _apply_paint_brush(coord: Vector2i, record_undo: bool) -> bool:
 	if _is_link_brush():
 		return false
@@ -444,6 +450,7 @@ func _execute_pair_link_creation(coord_a: Vector2i, coord_b: Vector2i):
 		_recalculate_cell_pair_state(c)
 	canvas_manager.trigger_redraw()
 
+## Drops shifter and constraint pairs that touch this coord and refreshes those cells.
 func _remove_pair_by_coord(coord: Vector2i):
 	var changed_cells: Array = []
 	for i in range(canvas_manager.loaded_shifter_pairs.size() - 1, -1, -1):
@@ -513,6 +520,7 @@ func _remove_constraint_by_coord(coord: Vector2i):
 			canvas_manager.loaded_constraint_pairs.remove_at(i)
 	canvas_manager.trigger_redraw()
 
+## Clears tiles (optionally keeping walls) and resets pair/joker editor state.
 func _on_clear_board():
 	if playtest_controller.is_active:
 		return
@@ -554,6 +562,7 @@ func _apply_background_for_mode(is_playtest: bool) -> void:
 	if SpaceBackground:
 		SpaceBackground.visible = is_playtest
 
+## Hides editor chrome and starts playtest on the current canvas.
 func _on_test_mode_entered():
 	_apply_background_for_mode(true)
 	link_first_selection = null
@@ -579,6 +588,7 @@ func _on_resume_from_playtest_tutorial():
 	pt_ui.set_playtest_chrome_visible(true)
 	playtest_controller.resume_timer()
 
+## Restores editor chrome after playtest and refreshes the joker counter.
 func _on_test_mode_exited():
 	playtest_controller.exit()
 	link_first_selection = null
@@ -587,6 +597,7 @@ func _on_test_mode_exited():
 	editor_ui.toggle_editor_visibility(false)
 	_update_editor_joker_counter_display()
 
+## Saves to user://, or shows overwrite warning if that level number exists.
 func _on_save_level():
 	if playtest_controller.is_active:
 		return
@@ -661,6 +672,7 @@ func _accept_save_analysis(analysis: Dictionary) -> bool:
 		return false
 	return true
 
+## Loads user://level_N.tres for the number in the editor field.
 func _on_load_level():
 	if playtest_controller.is_active:
 		return
@@ -695,6 +707,7 @@ func _on_load_level():
 	_rebuild_editor_hidden_hints()
 	_record_editor_change()
 
+## Returns to the main menu unless a generation/load overlay is busy.
 func _on_main_menu():
 	if _is_generating or (_loading_overlay and _loading_overlay.is_busy()):
 		return
@@ -702,6 +715,7 @@ func _on_main_menu():
 		SpaceBackground.visible = true
 	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")
 
+## Hardware back leaves the editor the same way as Main Menu.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		if GlobalGameManager and GlobalGameManager.consume_system_back():

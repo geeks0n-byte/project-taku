@@ -723,8 +723,8 @@ func _cleanup_legacy_logger_scripts() -> void:
 		"res://addons/godot_ai/runtime/loggers",
 		"res://addons/godot_ai/testing/loggers",
 	]
-	for res_path in legacy_dirs:
-		var absolute := ProjectSettings.globalize_path(res_path)
+	for res_dir in legacy_dirs:
+		var absolute := ProjectSettings.globalize_path(res_dir)
 		if DirAccess.dir_exists_absolute(absolute):
 			_remove_dir_recursive_absolute(absolute)
 
@@ -734,14 +734,14 @@ static func _remove_dir_recursive_absolute(path: String) -> void:
 	if dir == null:
 		return
 	dir.list_dir_begin()
-	var name := dir.get_next()
-	while not name.is_empty():
-		var child := path.path_join(name)
+	var entry_name := dir.get_next()
+	while not entry_name.is_empty():
+		var child := path.path_join(entry_name)
 		if dir.current_is_dir():
 			_remove_dir_recursive_absolute(child)
 		else:
 			DirAccess.remove_absolute(child)
-		name = dir.get_next()
+		entry_name = dir.get_next()
 	dir.list_dir_end()
 	DirAccess.remove_absolute(path)
 
@@ -846,13 +846,13 @@ func _startup_trace_count(counter: String, amount: int = 1) -> void:
 	_startup_trace_mutex.unlock()
 
 
-func _startup_trace_phase(name: String) -> void:
+func _startup_trace_phase(phase_name: String) -> void:
 	if not _startup_trace_enabled:
 		return
 	var now := Time.get_ticks_msec()
 	print(
 		"MCP startup trace | phase=%s delta_ms=%d total_ms=%d"
-		% [name, now - _startup_trace_last_ms, now - _startup_trace_start_ms]
+		% [phase_name, now - _startup_trace_last_ms, now - _startup_trace_start_ms]
 	)
 	_startup_trace_last_ms = now
 
@@ -2051,17 +2051,17 @@ func _kill_processes_and_windows_spawn_children(pids: Array[int], verify_brand: 
 			if not unique.has(child_pid):
 				unique.append(child_pid)
 	var killed: Array[int] = []
-	for pid in unique:
+	for target_pid in unique:
 		if OS.get_name() == "Windows":
 			var output: Array = []
-			var exit_code := OS.execute("taskkill", ["/PID", str(pid), "/T", "/F"], output, true)
-			if exit_code == 0 or not _pid_alive(pid):
-				killed.append(pid)
+			var exit_code := OS.execute("taskkill", ["/PID", str(target_pid), "/T", "/F"], output, true)
+			if exit_code == 0 or not _pid_alive(target_pid):
+				killed.append(target_pid)
 		else:
 			## Mirror the Windows branch: only report the PID as killed if
 			## the kill succeeded or the process is verifiably gone.
-			if OS.kill(pid) == OK or not _pid_alive(pid):
-				killed.append(pid)
+			if OS.kill(target_pid) == OK or not _pid_alive(target_pid):
+				killed.append(target_pid)
 	return killed
 
 

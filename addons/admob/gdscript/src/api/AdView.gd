@@ -13,17 +13,17 @@ var ad_size: AdSize
 var ad_position: AdPosition
 
 
-func _init(ad_unit_id: String, ad_size: AdSize, ad_position: AdPosition) -> void:
-	self.ad_unit_id = ad_unit_id
-	self.ad_size = ad_size
-	self.ad_position = ad_position
+func _init(p_ad_unit_id: String, p_ad_size: AdSize, p_ad_position: AdPosition) -> void:
+	self.ad_unit_id = p_ad_unit_id
+	self.ad_size = p_ad_size
+	self.ad_position = p_ad_position
 
 	if _plugin:
 		var ad_view_dictionary := {
-			"ad_unit_id": ad_unit_id,
-			"ad_position": ad_position.value,
-			"custom_position": {"x": ad_position.offset.x, "y": ad_position.offset.y},
-			"ad_size": {"width": ad_size.width, "height": ad_size.height}
+			"ad_unit_id": p_ad_unit_id,
+			"ad_position": p_ad_position.value,
+			"custom_position": {"x": p_ad_position.offset.x, "y": p_ad_position.offset.y},
+			"ad_size": {"width": p_ad_size.width, "height": p_ad_size.height}
 		}
 
 		_uid = _plugin.create(ad_view_dictionary)
@@ -63,13 +63,13 @@ func show() -> void:
 		_plugin.show(_uid)
 
 
-func set_position(ad_position: AdPosition) -> void:
-	self.ad_position = ad_position
+func set_position(p_ad_position: AdPosition) -> void:
+	self.ad_position = p_ad_position
 	if _plugin:
-		if ad_position.value == AdPosition.Values.CUSTOM:
-			_plugin.update_custom_position(_uid, ad_position.offset.x, ad_position.offset.y)
+		if p_ad_position.value == AdPosition.Values.CUSTOM:
+			_plugin.update_custom_position(_uid, p_ad_position.offset.x, p_ad_position.offset.y)
 		else:
-			_plugin.update_position(_uid, ad_position.value)
+			_plugin.update_position(_uid, p_ad_position.value)
 
 
 func get_width() -> int:

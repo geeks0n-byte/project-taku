@@ -49,6 +49,7 @@ var _show_debug_options: bool = false
 # English scene authorship: title bottom at 412, options content starts at 500.
 const _OPTIONS_BELOW_TITLE_GAP := 88.0
 
+## Wires option buttons, confirm dialog, and safe-area resize, then applies initial labels.
 func _ready() -> void:
 	if prev_btn:
 		prev_btn.pressed.connect(_on_prev_lang)
@@ -89,6 +90,7 @@ func _ready() -> void:
 	if not get_viewport().size_changed.is_connected(_on_safe_area_viewport_resized):
 		get_viewport().size_changed.connect(_on_safe_area_viewport_resized)
 
+## Relayouts content and the close button while the menu is visible.
 func _on_safe_area_viewport_resized() -> void:
 	if visible:
 		_layout_content_below_title()
@@ -124,6 +126,7 @@ func show_menu(from_main_menu: bool = false) -> void:
 		_close_button_host.move_to_front()
 	call_deferred("_layout_content_below_title")
 
+## Closes any confirm dialog, hides this overlay, and notifies the caller.
 func hide_menu() -> void:
 	_hide_confirm()
 	visible = false
@@ -385,6 +388,7 @@ func _option_button_display_text(button: Button) -> String:
 		return String(TranslationServer.translate(raw))
 	return raw
 
+## True when a status string looks like an i18n key or ALL-CAPS token.
 func _is_message_key(text: String) -> bool:
 	return HudLayout._is_i18n_key(text) or (
 		not text.is_empty() and text == text.to_upper() and text[0] >= "A" and text[0] <= "Z"
@@ -508,16 +512,19 @@ func _update_background_label() -> void:
 	var key := "UI_BG_STATIC" if SaveManager.background_static else "UI_BG_DYNAMIC"
 	_set_toggle_button_caption(bg_btn, tr(key))
 
+## Caption for the BGM toggle from the saved enabled flag.
 func _update_bgm_label() -> void:
 	if not bgm_btn:
 		return
 	_set_toggle_button_caption(bgm_btn, tr("UI_BGM_ON" if SaveManager.bgm_enabled else "UI_BGM_OFF"))
 
+## Caption for the SFX toggle from the saved enabled flag.
 func _update_sfx_label() -> void:
 	if not sfx_btn:
 		return
 	_set_toggle_button_caption(sfx_btn, tr("UI_SFX_ON" if SaveManager.sfx_enabled else "UI_SFX_OFF"))
 
+## Caption for the haptic toggle from the saved enabled flag.
 func _update_haptic_label() -> void:
 	if not haptic_btn:
 		return
@@ -525,6 +532,7 @@ func _update_haptic_label() -> void:
 		haptic_btn, tr("UI_HAPTIC_ON" if SaveManager.haptic_enabled else "UI_HAPTIC_OFF")
 	)
 
+## Refreshes toggle captions and button sizes for the new locale.
 func _on_language_changed() -> void:
 	if not visible:
 		return
@@ -571,14 +579,17 @@ func _on_toggle_background() -> void:
 	SaveManager.set_background_static(not SaveManager.background_static)
 	_update_background_label()
 
+## Flips BGM and updates the button caption.
 func _on_toggle_bgm() -> void:
 	SaveManager.set_bgm_enabled(not SaveManager.bgm_enabled)
 	_update_bgm_label()
 
+## Flips SFX and updates the button caption.
 func _on_toggle_sfx() -> void:
 	SaveManager.set_sfx_enabled(not SaveManager.sfx_enabled)
 	_update_sfx_label()
 
+## Flips haptics and updates the button caption.
 func _on_toggle_haptic() -> void:
 	SaveManager.set_haptic_enabled(not SaveManager.haptic_enabled)
 	_update_haptic_label()
@@ -628,6 +639,7 @@ func _setup_confirm_panel() -> void:
 	_copy_button_styles(_confirm_no_btn)
 	_refresh_confirm_texts()
 
+## Shows or hides header/close/center chrome (hidden while a confirm dialog is up).
 func _set_options_chrome_visible(should_show: bool) -> void:
 	if _options_center:
 		_options_center.visible = should_show
@@ -697,6 +709,7 @@ func _show_confirm(action: ConfirmAction, message: String) -> void:
 		_confirm_blocker.color = Color(0, 0, 0, 0)
 		_confirm_blocker.visible = true
 
+## Dismisses the destructive-action confirm overlay and restores chrome.
 func _hide_confirm() -> void:
 	_pending_confirm = ConfirmAction.NONE
 	if _confirm_blocker:
@@ -715,9 +728,11 @@ func _on_confirm_yes() -> void:
 		ConfirmAction.UNLOCK_ALL:
 			_do_unlock_all()
 
+## Confirm dialog for wiping campaign progress.
 func _on_delete_save_pressed() -> void:
 	_show_confirm(ConfirmAction.RESET_PROGRESS, tr("CONFIRM_RESET_PROGRESS"))
 
+## Confirm dialog for deleting custom levels.
 func _on_delete_custom_pressed() -> void:
 	_show_confirm(ConfirmAction.DELETE_CUSTOM, tr("CONFIRM_DELETE_CUSTOM"))
 
@@ -725,6 +740,7 @@ func _on_delete_custom_pressed() -> void:
 func _on_unlock_all_pressed() -> void:
 	_show_confirm(ConfirmAction.UNLOCK_ALL, tr("CONFIRM_UNLOCK_ALL"))
 
+## Debug: unlocks every campaign level and shows a green status.
 func _do_unlock_all() -> void:
 	SaveManager.unlock_all_levels()
 	_show_status_message(tr("UNLOCK_ALL_DONE"), Color(0.45, 1.0, 0.45))
@@ -750,6 +766,7 @@ func _do_delete_custom() -> void:
 			dir.list_dir_end()
 	_show_status_message(tr("CUSTOM_DELETED"), Color(1.0, 0.35, 0.35))
 
+## Writes a coloured status line with the locale-correct pixel/default font.
 func _show_status_message(msg: String, color: Color) -> void:
 	if not status_label:
 		return

@@ -76,6 +76,7 @@ static func format_time_limit_detail(
 static func format_time_goal_detail(elapsed_sec: int, time_limit: int) -> String:
 	return "%s / %s" % [format_clock(elapsed_sec), format_time_limit_detail(time_limit)]
 
+## True when the time detail is a Press Start [img] infinity glyph.
 static func _time_detail_uses_infinity_icon(detail: String) -> bool:
 	return HudFonts.uses_pixel_font() and detail.contains("[img")
 
@@ -142,6 +143,7 @@ static func evaluate(
 		"elapsed_sec": elapsed_sec,
 	}
 
+## Translated goal title, or English when playtest victory forces it.
 static func _goal_title(key: String, force_english: bool) -> String:
 	if force_english:
 		return HudLayout.english(key)
@@ -206,6 +208,7 @@ static func measure_requirements_min_width(level: LevelData, earned_bits: int = 
 		max_w = maxf(max_w, _measure_star_row_min_width(g, font, font_size))
 	return max_w
 
+## Minimum width of one star row: icon + title + optional detail.
 static func _measure_star_row_min_width(goal: Dictionary, font: Font, font_size: int) -> float:
 	var title := str(goal.get("title", ""))
 	var detail := str(goal.get("detail", "")).strip_edges()
@@ -216,6 +219,7 @@ static func _measure_star_row_min_width(goal: Dictionary, font: Font, font_size:
 	var detail_gap := 16.0 if detail_w > 0.0 else 0.0
 	return icon_w + row_sep + title_w + detail_gap + detail_w + 12.0
 
+## Detail column width; infinity [img] uses the results icon size.
 static func _measure_goal_detail_width(
 	detail_text: String, font: Font, font_size: int
 ) -> float:
