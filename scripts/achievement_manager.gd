@@ -3,6 +3,7 @@ extends Node
 
 signal unlocked(id: String)
 signal list_closed
+signal unseen_count_changed(count: int)
 
 const _TOAST_SCENE := preload("res://scenes/achievement_toast.tscn")
 const _LIST_SCENE := preload("res://scenes/achievements_list.tscn")
@@ -30,6 +31,7 @@ func _backfill_from_save() -> void:
 	if SaveManager == null:
 		return
 	_sync_no_hint_counter_from_stars()
+	_sync_on_time_counter_from_stars()
 	var newly := _apply_state(false)
 	if not newly.is_empty():
 		SaveManager.save_progress()
@@ -37,62 +39,170 @@ func _backfill_from_save() -> void:
 
 ## Raises no_hint_clears to the count of campaign levels that already have the no-hint star.
 func _sync_no_hint_counter_from_stars() -> void:
-	var counted := 0
-	var bits: Dictionary = SaveManager.level_star_bits
-	for key in bits:
-		if (int(bits[key]) & LevelStars.BIT_NO_HINTS) != 0:
-			counted += 1
+	var counted := _count_star_bit(LevelStars.BIT_NO_HINTS)
 	if counted > SaveManager.no_hint_clears:
 		SaveManager.no_hint_clears = counted
 
 
-## Records a campaign (or skipped) clear from main.gd's win path. Returns newly unlocked ids.
+## Raises on_time_clears to the count of campaign levels that already have the time star.
+func _sync_on_time_counter_from_stars() -> void:
+	var counted := _count_star_bit(LevelStars.BIT_TIME)
+	if counted > SaveManager.on_time_clears:
+		SaveManager.on_time_clears = counted
+
+
+## Counts unique saved levels whose star mask includes `bit`.
+func _count_star_bit(bit: int) -> int:
+	var counted := 0
+	var bits: Dictionary = SaveManager.level_star_bits
+	for key in bits:
+		if (int(bits[key]) & bit) != 0:
+			counted += 1
+	return counted
+
+
+## Records a campaign clear from main.gd's win path. Returns newly unlocked ids.
+## Replays never count — counters sync from unique star bits / max_unlocked. Skips tutorial/custom.
 func record_level_clear(
 	level: LevelData,
-	hints_used: int,
+	_hints_used: int,
 	_difficulty: int,
 	is_tutorial: bool,
-	is_custom: bool
+	is_custom: bool,
+	star_bits: int = 0,
+	challenges_enabled: bool = false,
+	run_used_undo: bool = false,
+	pause_seconds: float = 0.0
 ) -> Array:
 	if is_custom or is_tutorial or level == null:
 		return []
 	if SaveManager == null:
 		return []
-	# Campaign clear: first_clear and set completion use max_unlocked_level already updated.
-	if hints_used <= 0:
-		SaveManager.no_hint_clears += 1
-	var newly := _apply_state(true)
-	if not newly.is_empty() or hints_used <= 0:
-		SaveManager.save_progress()
+	_sync_no_hint_counter_from_stars()
+	_sync_on_time_counter_from_stars()
+	var event_flags := {}
+	if challenges_enabled and LevelStars.count_earned_bits(star_bits) >= 3:
+		event_flags[AchievementCatalog.ID_THREE_STAR_DEBUT] = true
+	if not run_used_undo:
+		event_flags[AchievementCatalog.ID_UNDO_NOTHING] = true
+	if pause_seconds >= AchievementCatalog.PAUSE_THINKER_SEC:
+		event_flags[AchievementCatalog.ID_PAUSE_THINKER] = true
+	var newly := _apply_state(true, 0.0, event_flags)
+	SaveManager.save_progress()
 	return newly
 
 
+## Lifetime shifter slide counter (purple_rain).
+func notify_shifter_slide() -> void:
+	if SaveManager == null or OS.has_feature("headless"):
+		return
+	SaveManager.shifter_slides += 1
+	_apply_state(false)
+
+
+## Rules overlay opened (rules_reader).
+func notify_rules_opened() -> void:
+	if SaveManager == null or OS.has_feature("headless"):
+		return
+	SaveManager.rules_opens += 1
+	_apply_state(false)
+
+
+## Rewarded ad watched for hints (ad_friend).
+func notify_rewarded_ad_watched() -> void:
+	grant(AchievementCatalog.ID_AD_FRIEND)
+
+
+## One-shot grant: toast, persist, emit. Idempotent — a second call is a no-op.
+## Event achievements (im_blue, shall_not_pass, dev_mode) use this instead of collect_unlocks.
+func grant(id: String) -> bool:
+	if SaveManager == null:
+		return false
+	var now := int(Time.get_unix_time_from_system())
+	if not AchievementCatalog.apply_grant(SaveManager.achievements_unlocked, id, now):
+		return false
+	if not OS.has_feature("headless"):
+		SaveManager.save_progress()
+	unlocked.emit(id)
+	_notify_unseen_changed()
+	_show_toast(id)
+	_refresh_open_list()
+	return true
+
+
+## Grants im_blue when every player-fillable cell is BLUE (shifters/locked starters ignored).
+func check_all_blue(cells: Dictionary) -> bool:
+	if cells.is_empty() or is_unlocked(AchievementCatalog.ID_IM_BLUE):
+		return false
+	if not AchievementCatalog.board_is_all_blue(cells):
+		return false
+	return grant(AchievementCatalog.ID_IM_BLUE)
+
+
+## Grants yellow_submarine when every player-fillable cell is YELLOW.
+func check_all_yellow(cells: Dictionary) -> bool:
+	if cells.is_empty() or is_unlocked(AchievementCatalog.ID_YELLOW_SUBMARINE):
+		return false
+	if not AchievementCatalog.board_is_all_yellow(cells):
+		return false
+	return grant(AchievementCatalog.ID_YELLOW_SUBMARINE)
+
+
+## Grants shall_not_pass when a shifter hop is blocked by another shifter.
+func notify_invalid_move(message: String) -> bool:
+	if str(message) != "ERR_SHIFTER_BLOCKED":
+		return false
+	return grant(AchievementCatalog.ID_SHALL_NOT_PASS)
+
+
 ## Builds the current progress snapshot and grants any missing ids.
-func _apply_state(show_toast: bool) -> Array:
+func _apply_state(
+	show_toast: bool,
+	toast_delay_sec: float = 0.0,
+	event_flags: Dictionary = {}
+) -> Array:
 	var already: Dictionary = SaveManager.achievements_unlocked
 	var state := {
 		"campaign_clears": _campaign_clear_count(),
 		"hard_clears": 1 if _has_cleared_any_in_dir(GameConstants.CAMPAIGN_HARD_DIR) else 0,
 		"no_hint_clears": SaveManager.no_hint_clears,
+		"on_time_clears": SaveManager.on_time_clears,
+		"shifter_slides": SaveManager.shifter_slides,
+		"rules_opens": SaveManager.rules_opens,
 		"easy_complete": _folder_complete(GameConstants.CAMPAIGN_EASY_DIR),
 		"medium_complete": _folder_complete(GameConstants.CAMPAIGN_MEDIUM_DIR),
 		"hard_complete": _folder_complete(GameConstants.CAMPAIGN_HARD_DIR),
 	}
+	for key in event_flags:
+		state[str(key)] = event_flags[key]
 	var newly: Array = AchievementCatalog.collect_unlocks(state, already)
 	if newly.is_empty():
 		return []
 	var now := int(Time.get_unix_time_from_system())
+	var granted: Array = []
 	for id in newly:
-		SaveManager.achievements_unlocked[str(id)] = now
-		unlocked.emit(str(id))
+		var sid := str(id)
+		if not AchievementCatalog.apply_grant(already, sid, now):
+			continue
+		granted.append(sid)
+		unlocked.emit(sid)
 		if show_toast:
-			_show_toast(str(id))
+			_show_toast(sid, toast_delay_sec)
+	if granted.is_empty():
+		return []
+	if show_toast:
+		_notify_unseen_changed()
+	_refresh_open_list()
+	return granted
+
+
+## Reloads the overlay grid when it is already on screen.
+func _refresh_open_list() -> void:
 	if _list and is_instance_valid(_list) and _list.visible and _list.has_method("refresh"):
 		_list.refresh()
-	return newly
 
 
-## Campaign puzzles cleared: max_unlocked above the first easy number.
+## Campaign puzzles cleared: max_unlocked above the first easy number (unique, caps at folder size).
 func _campaign_clear_count() -> int:
 	var first := AchievementCatalog.first_level_number_in_dir(GameConstants.CAMPAIGN_EASY_DIR)
 	if first <= 0:
@@ -133,7 +243,12 @@ func reset_local() -> void:
 	if SaveManager == null:
 		return
 	SaveManager.achievements_unlocked.clear()
+	SaveManager.achievements_seen.clear()
 	SaveManager.no_hint_clears = 0
+	SaveManager.campaign_wins = 0
+	SaveManager.on_time_clears = 0
+	SaveManager.shifter_slides = 0
+	SaveManager.rules_opens = 0
 
 
 ## Opens the achievements overlay. `on_close` is invoked after the player backs out.
@@ -142,6 +257,9 @@ func show_list(on_close: Callable = Callable()) -> void:
 	_ensure_list()
 	if _list == null:
 		return
+	if SaveManager:
+		SaveManager.mark_achievements_seen()
+	_notify_unseen_changed()
 	if _list.has_method("refresh"):
 		_list.refresh()
 	_list.visible = true
@@ -164,13 +282,29 @@ func is_list_open() -> bool:
 	return _list != null and is_instance_valid(_list) and _list.visible
 
 
+## Count of unlocks the player has not opened the achievements list since earning.
+func unseen_count() -> int:
+	if SaveManager == null:
+		return 0
+	return SaveManager.unseen_achievement_count()
+
+
+## Re-emits the menu badge count (e.g. after a profile wipe).
+func notify_unseen_changed() -> void:
+	_notify_unseen_changed()
+
+
+func _notify_unseen_changed() -> void:
+	unseen_count_changed.emit(unseen_count())
+
+
 ## Queues a toast unless running headless (logic tests).
-func _show_toast(id: String) -> void:
+func _show_toast(id: String, delay_sec: float = 0.0) -> void:
 	if OS.has_feature("headless"):
 		return
 	_ensure_toast()
 	if _toast and _toast.has_method("enqueue"):
-		_toast.enqueue(id)
+		_toast.enqueue(id, maxf(0.0, delay_sec))
 
 
 func _ensure_toast() -> void:

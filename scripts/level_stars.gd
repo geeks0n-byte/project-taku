@@ -101,7 +101,7 @@ static func evaluate(
 	goals.append({
 		"id": "complete",
 		"earned": true,
-		"title": _goal_title("STAR_COMPLETE", force_english),
+		"title": _goal_title("UI_STAR_COMPLETE", force_english),
 		"detail": "",
 	})
 
@@ -113,7 +113,7 @@ static func evaluate(
 		"id": "no_hints",
 		"earned": no_hints_earned,
 		"title": _goal_title(
-			"STAR_HINTS" if no_hints_earned else "STAR_HINTS_USED", force_english
+			"UI_STAR_HINTS" if no_hints_earned else "UI_STAR_HINTS_USED", force_english
 		),
 		"detail": "",
 	})
@@ -125,7 +125,7 @@ static func evaluate(
 	goals.append({
 		"id": "time",
 		"earned": time_earned,
-		"title": _goal_title("STAR_TIME", force_english),
+		"title": _goal_title("UI_STAR_TIME", force_english),
 		"detail": format_time_goal_detail(elapsed_sec, time_limit),
 		"detail_bbcode": time_limit <= 0 and HudFonts.uses_pixel_font(),
 	})
@@ -169,19 +169,19 @@ static func build_requirements(level: LevelData, earned_bits: int = 0) -> Dictio
 	goals.append({
 		"id": "complete",
 		"earned": (bits & BIT_COMPLETE) != 0,
-		"title": TranslationServer.translate("STAR_COMPLETE"),
+		"title": TranslationServer.translate("UI_STAR_COMPLETE"),
 		"detail": "",
 	})
 	goals.append({
 		"id": "no_hints",
 		"earned": (bits & BIT_NO_HINTS) != 0,
-		"title": TranslationServer.translate("STAR_HINTS"),
+		"title": TranslationServer.translate("UI_STAR_HINTS"),
 		"detail": "",
 	})
 	goals.append({
 		"id": "time",
 		"earned": (bits & BIT_TIME) != 0,
-		"title": TranslationServer.translate("STAR_TIME"),
+		"title": TranslationServer.translate("UI_STAR_TIME"),
 		"detail": format_time_limit_detail(time_limit),
 		"detail_bbcode": time_limit <= 0 and HudFonts.uses_pixel_font(),
 	})

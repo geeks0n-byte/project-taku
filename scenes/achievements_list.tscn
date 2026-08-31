@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://cachlistscene01"]
+[gd_scene format=3 uid="uid://c8m2124onp0uq"]
 
 [ext_resource type="Script" path="res://scripts/achievements_list.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://cn061ew22eo3d" path="res://resources/icons/icon_close.svg" id="2_close"]
@@ -8,15 +8,6 @@ layer = 22
 process_mode = 3
 visible = false
 script = ExtResource("1_script")
-
-[node name="Dim" type="ColorRect" parent="."]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 0
-color = Color(0, 0, 0, 0.35)
 
 [node name="ScreenHeaderHost" type="Control" parent="."]
 anchors_preset = 15
@@ -40,30 +31,83 @@ text = "UI_ACHIEVEMENTS"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="ListHost" type="Control" parent="."]
+[node name="ListHost" type="VBoxContainer" parent="."]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 24.0
 offset_top = 460.0
 offset_right = -24.0
-offset_bottom = -200.0
+offset_bottom = -120.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 8
 
-[node name="ScrollContainer" type="ScrollContainer" parent="ListHost"]
+[node name="GridHost" type="Control" parent="ListHost"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+mouse_filter = 2
+
+[node name="Grid" type="GridContainer" parent="ListHost/GridHost"]
+layout_mode = 0
+offset_right = 984.0
+offset_bottom = 400.0
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 24
+theme_override_constants/v_separation = 24
+columns = 2
+
+[node name="PageNavGap" type="Control" parent="ListHost"]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+mouse_filter = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+
+[node name="PageNav" type="HBoxContainer" parent="ListHost"]
+custom_minimum_size = Vector2(0, 114)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="PrevSlot" type="Control" parent="ListHost/PageNav"]
+custom_minimum_size = Vector2(108, 114)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="PrevButton" type="Button" parent="ListHost/PageNav/PrevSlot"]
+custom_minimum_size = Vector2(108, 114)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-horizontal_scroll_mode = 0
 
-[node name="Rows" type="VBoxContainer" parent="ListHost/ScrollContainer"]
+[node name="MidSpacer" type="Control" parent="ListHost/PageNav"]
+custom_minimum_size = Vector2(48, 0)
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 18
+size_flags_horizontal = 4
+mouse_filter = 2
+
+[node name="NextSlot" type="Control" parent="ListHost/PageNav"]
+custom_minimum_size = Vector2(108, 114)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="NextButton" type="Button" parent="ListHost/PageNav/NextSlot"]
+custom_minimum_size = Vector2(108, 114)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="CloseButtonHost" type="Control" parent="."]
 anchors_preset = 15

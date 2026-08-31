@@ -369,7 +369,7 @@ func update_joker_counter(current: int, required: int) -> void:
 	_joker_required = required
 	HudLayout.prepare_counter_label(joker_counter_label)
 	joker_counter_label.text = HudLayout.format_icon_ratio_counter(
-		GameConstants.TILE_GREEN, current, required, GameConstants.HUD_COUNTER_GREEN, tr("COUNTER_GREEN")
+		GameConstants.TILE_GREEN, current, required, GameConstants.HUD_COUNTER_GREEN, tr("UI_COUNTER_GREEN")
 	)
 
 # Shows or hides the joker counter slot (parent node) and re-aligns the counter row.
@@ -391,7 +391,7 @@ func update_move_counter(moves: int, required: int = -1) -> void:
 	HudLayout.prepare_counter_label(move_counter_label)
 	var target := required if required >= 0 else moves
 	move_counter_label.text = HudLayout.format_icon_ratio_counter(
-		GameConstants.TILE_SHIFTER, moves, target, GameConstants.HUD_COUNTER_SHIFTER, tr("MOVES")
+		GameConstants.TILE_SHIFTER, moves, target, GameConstants.HUD_COUNTER_SHIFTER, tr("UI_MOVES")
 	)
 
 # Shows/hides the move-counter slot (parent preferred so spacing collapses).
@@ -604,9 +604,9 @@ func display_level(num: int, is_custom: bool = false, is_tutorial: bool = false)
 	level_label.modulate = Color.WHITE
 	var prefix: String
 	if is_custom:
-		prefix = String(tr("DEV"))
+		prefix = String(tr("UI_DEV"))
 	else:
-		prefix = String(tr("LVL"))
+		prefix = String(tr("UI_LVL"))
 	HudLayout.apply_level_label(level_label, prefix, num)
 
 # Clears any error state and shows the default "fill empty cells" prompt.
@@ -679,7 +679,7 @@ func show_reset_confirm() -> void:
 		end_dimmer.color = Color(0, 0, 0, 0)
 	_set_end_dimmer_visible(true)
 	if reset_confirm_label:
-		reset_confirm_label.text = tr("CONFIRM_RESTART_LEVEL" if _reset_is_restart else "CONFIRM_NEW_PUZZLE")
+		reset_confirm_label.text = tr("UI_CONFIRM_RESTART_LEVEL" if _reset_is_restart else "UI_CONFIRM_NEW_PUZZLE")
 		HudLayout.apply_popup_label(reset_confirm_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
 	if reset_confirm_yes:
 		reset_confirm_yes.text = tr("UI_YES")
@@ -745,7 +745,7 @@ func show_session_resume_prompt() -> void:
 			prompt_w = maxi(200, int(resume_panel.custom_minimum_size.x) - 96)
 		HudLayout.apply_raster_pixel_label(
 			resume_prompt_label,
-			HudLayout._popup_prompt_with_title_gap(tr("SESSION_RESUME_PROMPT")),
+			HudLayout._popup_prompt_with_title_gap(tr("UI_SESSION_RESUME_PROMPT")),
 			GameConstants.UI_BODY_FONT_SIZE_LARGE,
 			Color(1, 0.84, 0, 1),
 			prompt_w
@@ -861,7 +861,8 @@ func _layout_how_to_play_stack() -> void:
 		how_to_play_panel,
 		rules_label,
 		how_to_play_nav,
-		_htp_page == 0
+		_htp_page == 0,
+		true
 	)
 
 # Opens the HTP overlay from page 0 and disables in-game HUD controls.
@@ -906,13 +907,13 @@ func show_victory(
 func _refresh_victory_locale() -> void:
 	if win_label:
 		if _is_last_level_completed:
-			win_label.text = _all_levels_completed_text() + "\n" + tr("YOU_WIN")
+			win_label.text = _all_levels_completed_text() + "\n" + tr("UI_YOU_WIN")
 		elif _victory_is_custom:
-			win_label.text = (tr("CUSTOM_COMPLETED") % _victory_display_num) + "\n" + tr("COMPLETED")
+			win_label.text = (tr("UI_CUSTOM_COMPLETED") % _victory_display_num) + "\n" + tr("UI_COMPLETED")
 		elif _victory_is_tutorial:
-			win_label.text = tr("TUTORIAL") + "\n" + tr("COMPLETED")
+			win_label.text = tr("TUTORIAL") + "\n" + tr("UI_COMPLETED")
 		else:
-			win_label.text = (tr("LEVEL_COMPLETED") % _victory_display_num) + "\n" + tr("COMPLETED")
+			win_label.text = (tr("UI_LEVEL_COMPLETED") % _victory_display_num) + "\n" + tr("UI_COMPLETED")
 		HudLayout.apply_end_screen_header_style(win_label, 48)
 		win_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		win_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -920,15 +921,15 @@ func _refresh_victory_locale() -> void:
 	if victory_restart_label:
 		victory_restart_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		HudLayout.apply_raster_pixel_label(
-			victory_restart_label, tr("NEXT_LEVEL"), GameConstants.UI_BTN_PANEL_FONT, Color.WHITE
+			victory_restart_label, tr("UI_NEXT_LEVEL"), GameConstants.UI_BTN_PANEL_FONT, Color.WHITE
 		)
 	elif restart_button:
-		restart_button.text = tr("NEXT_LEVEL")
+		restart_button.text = tr("UI_NEXT_LEVEL")
 	if restart_button:
 		restart_button.visible = not _is_last_level_completed
 		if victory_restart_label == null:
 			HudLayout.apply_raster_pixel_button(
-				restart_button, tr("NEXT_LEVEL"), GameConstants.UI_BTN_PANEL_FONT
+				restart_button, tr("UI_NEXT_LEVEL"), GameConstants.UI_BTN_PANEL_FONT
 			)
 			HudLayout.grow_panel_button_to_text(restart_button)
 		else:
@@ -936,7 +937,7 @@ func _refresh_victory_locale() -> void:
 	if play_again_label:
 		play_again_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		HudLayout.apply_raster_pixel_label(
-			play_again_label, tr("PLAY_AGAIN"), GameConstants.UI_BTN_PANEL_FONT, Color.WHITE
+			play_again_label, tr("UI_PLAY_AGAIN"), GameConstants.UI_BTN_PANEL_FONT, Color.WHITE
 		)
 	if play_again_button:
 		play_again_button.visible = true
@@ -955,11 +956,11 @@ func _refresh_victory_locale() -> void:
 		_layout_victory_panel(_victory_star_result)
 
 # Returns the "All levels completed" string with exclamation marks and the
-# Spanish inverted exclamation mark stripped, so it can be combined with YOU_WIN
+# Spanish inverted exclamation mark stripped, so it can be combined with UI_YOU_WIN
 # without double punctuation in any locale.
-# "ALL LEVELS COMPLETED" with a trailing newline for the victory header stack.
+# "ALL LEVELS UI_COMPLETED" with a trailing newline for the victory header stack.
 func _all_levels_completed_text() -> String:
-	var text := String(tr("ALL_COMPLETED")).strip_edges()
+	var text := String(tr("UI_ALL_COMPLETED")).strip_edges()
 	while text.ends_with("!") or text.ends_with("！"):
 		text = text.substr(0, text.length() - 1).strip_edges()
 	if text.begins_with("¡"):

@@ -4,9 +4,9 @@
 # Blank line ends a string block. Use a single blank line inside text if needed.
 # Files in this folder are for editing only; the game reads translations.csv.
 
-# Section: How To Play overlay pages
+# Section: How To Play overlay
 
-[HTP_TITLE]
+[UI_HTP_TITLE]
 HOW TO PLAY
 
 [HTP_GOAL_TAP]
@@ -15,10 +15,10 @@ Tap %s empty cells to place %s [color=#ffeb3b]Yellow[/color], %s [color=#2196f3]
 [HTP_GOAL_WIN]
 Fill every %s empty cell without breaking any rules.
 
-[HTP_CORE_TITLE]
+[UI_HTP_CORE_TITLE]
 CORE RULES
 
-[HTP_EXAMPLES_TITLE]
+[UI_HTP_EXAMPLES_TITLE]
 EXAMPLES
 
 [HTP_EXAMPLE_INVALID]
@@ -42,10 +42,10 @@ Rule of Two: never place three %s [color=#ffeb3b]Yellow[/color] or %s [color=#21
 [HTP_EXAMPLE_VALID_MIX]
 (Valid)
 
-[HTP_GREEN_TITLE]
+[UI_HTP_GREEN_TITLE]
 GREEN TILES
 
-[HTP_PURPLE_TITLE]
+[UI_HTP_PURPLE_TITLE]
 PURPLE TILES
 
 [HTP_GREEN_TILES_DESC]
@@ -69,10 +69,10 @@ Equal Balance ignores %s [color=#4caf50]Green[/color] — only %s [color=#ffeb3b
 [HTP_GREEN_EXAMPLE_VALID]
 (Valid mix)
 
-[HTP_SPECIALS_TITLE]
+[UI_HTP_SPECIALS_TITLE]
 SPECIAL RULES
 
-[HTP_LINKS_TITLE]
+[UI_HTP_LINKS_TITLE]
 LOCKS & LINKS
 
 [HTP_SHIFTER_TILES_DESC]
@@ -96,7 +96,7 @@ Tiles with a lock icon are fixed and cannot be changed.
 [HTP_NOT_EQUALS_RULE]
 [b]×[/b] between two cells means they must be [i]different[/i] colors.
 
-[HTP_STARS_TITLE]
+[UI_HTP_STARS_TITLE]
 STARS
 
 [HTP_STARS_INTRO]
@@ -131,3 +131,4 @@ Moves:
 
 [HTP_STARS_MOVES_DESC]
 Make no more %s [color=#9c27b0]Purple[/color] hops than that star allows.
+

@@ -11,6 +11,7 @@ var _fx_voice_i: int = 0
 var _letter_stream: AudioStreamWAV
 var _tile_pop_stream: AudioStreamWAV
 var _slide_stream: AudioStreamWAV
+var _unlock_stream: AudioStreamWAV
 
 ## Always-process click player plus pooled FX voices so SFX still play while paused.
 func _ready() -> void:
@@ -34,6 +35,7 @@ func _ready() -> void:
 	_letter_stream = _make_title_letter()
 	_tile_pop_stream = _make_title_tile_pop()
 	_slide_stream = _make_title_slide()
+	_unlock_stream = _make_achievement_unlock()
 	# Hook every button that already exists in the tree, then watch for new ones.
 	if not get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.connect(_on_node_added)
@@ -72,6 +74,13 @@ func play_title_tile_pop(index: int) -> void:
 func play_title_slide() -> void:
 	_vibrate(120, 0.38)
 	_play_fx(_slide_stream, -12.0, 1.0)
+
+
+## Bright unlock chime for achievement toasts.
+func play_achievement_unlock() -> void:
+	_vibrate(36, 0.42)
+	_play_fx(_unlock_stream, -5.0, 1.0)
+
 
 # Plays the click sound and a light haptic. Called automatically for every button press.
 func play_click() -> void:
@@ -156,12 +165,12 @@ func _on_hooked_pressed(button: BaseButton) -> void:
 
 # Loads the authored click WAV. Falls back to a procedural tone if missing.
 func _load_or_make_click() -> AudioStream:
-	# ResourceLoader only sees imported assets; FileAccess works before first import.
+	# Exported Android builds keep the imported .sample, not the raw .wav on disk.
+	if ResourceLoader.exists(CLICK_STREAM_PATH):
+		var imported := load(CLICK_STREAM_PATH) as AudioStream
+		if imported:
+			return imported
 	if FileAccess.file_exists(CLICK_STREAM_PATH):
-		if ResourceLoader.exists(CLICK_STREAM_PATH):
-			var imported := load(CLICK_STREAM_PATH) as AudioStream
-			if imported:
-				return imported
 		var from_file := _load_wav_pcm16_mono(CLICK_STREAM_PATH)
 		if from_file:
 			return from_file
@@ -217,6 +226,23 @@ func _make_title_tile_pop() -> AudioStreamWAV:
 		var sample := (thump + tick) * 0.42
 		data.encode_s16(i * 2, clampi(int(sample * 32767.0), -32768, 32767))
 	return _pcm16_stream(data, sample_rate)
+
+
+## Procedural ascending chime for achievement unlock toasts.
+func _make_achievement_unlock() -> AudioStreamWAV:
+	var sample_rate := 22050
+	var sample_count := int(sample_rate * 0.28)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	for i in sample_count:
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 9.0)
+		var hz := lerpf(660.0, 1320.0, clampf(t / 0.18, 0.0, 1.0))
+		var sample := sin(t * TAU * hz) * env * 0.38
+		sample += sin(t * TAU * hz * 2.0) * env * 0.12
+		data.encode_s16(i * 2, clampi(int(sample * 32767.0), -32768, 32767))
+	return _pcm16_stream(data, sample_rate)
+
 
 ## Procedural noise sweep used for the title slide.
 func _make_title_slide() -> AudioStreamWAV:

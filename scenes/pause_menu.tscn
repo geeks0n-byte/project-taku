@@ -53,7 +53,7 @@ offset_right = -24.0
 offset_bottom = 412.0
 grow_horizontal = 2
 mouse_filter = 2
-text = "PAUSED"
+text = "UI_PAUSED"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -72,15 +72,15 @@ layout_mode = 2
 size_flags_horizontal = 4
 text = "UI_LEVEL_SELECT"
 
-[node name="SettingsButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=265163748]
-layout_mode = 2
-size_flags_horizontal = 4
-text = "UI_OPTIONS"
-
 [node name="AchievementsButton" type="Button" parent="CenterContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
 text = "UI_ACHIEVEMENTS"
+
+[node name="SettingsButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=265163748]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "UI_OPTIONS"
 
 [node name="QuitButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=389499878]
 layout_mode = 2

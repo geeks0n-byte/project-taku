@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- AD FRIEND -->
+  <rect x="10" y="14" width="44" height="30" fill="#1a1a1a"/>
+  <rect x="12" y="16" width="40" height="26" fill="#1d2b53"/>
+  <rect x="14" y="18" width="36" height="20" fill="#29adff"/>
+  <polygon points="28,24 28,34 38,29" fill="#ffec27"/>
+  <rect x="12" y="46" width="40" height="4" fill="#83769c"/>
+  <rect x="20" y="50" width="24" height="3" fill="#83769c"/>
+</svg>

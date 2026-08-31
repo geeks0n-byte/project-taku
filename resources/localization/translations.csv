@@ -1,9 +1,9 @@
 keys,en,es,de,fr,pl,ka,uk
-SPLASH_CREATED_BY,Created by,Creado por,Erstellt von,Créé par,Stworzone przez,შექმნა,Створено
-SPLASH_AUTHOR,"Giga ""gix0n"" Sichinava","Giga ""gix0n"" Sichinava","Giga ""gix0n"" Sichinava","Giga ""gix0n"" Sichinava","Giga ""gix0n"" Sichinava","გიგა ""gix0n"" სიჭინავა","Giga ""gix0n"" Sichinava"
+UI_SPLASH_CREATED_BY,Created by,Creado por,Erstellt von,Créé par,Stworzone przez,შექმნა,Створено
+UI_SPLASH_AUTHOR,"Giga ""gix0n"" Sichinava","Giga ""gix0n"" Sichinava","Giga ""gix0n"" Sichinava","Giga ""gix0n"" Sichinava","Giga ""gix0n"" Sichinava","გიგა ""gix0n"" სიჭინავა","Giga ""gix0n"" Sichinava"
 UI_PLAY,PLAY,JUGAR,SPIELEN,JOUER,GRAJ,თამაში,ГРАТИ
 UI_CONTINUE,CONTINUE,CONTINUAR,WEITER,CONTINUER,KONTYNUUJ,გაგრძელება,ПРОДОВЖИТИ
-SESSION_RESUME_PROMPT,"SAVE PROGRESS FOUND
+UI_SESSION_RESUME_PROMPT,"SAVE PROGRESS FOUND
 
 Continue or start a new puzzle?","PROGRESO GUARDADO
 
@@ -22,6 +22,7 @@ TUTORIAL_INTRO_PROMPT,Play the tutorial first?,¿Jugar el tutorial primero?,Zuer
 UI_BACK,BACK,ATRÁS,ZURÜCK,RETOUR,WSTECZ,უკან,НАЗАД
 UI_LEVELS,LEVELS,NIVELES,LEVEL,NIVEAUX,POZIOMY,დონეები,РІВНІ
 UI_HOW_TO_PLAY,HOW TO PLAY,CÓMO JUGAR,ANLEITUNG,COMMENT JOUER,JAK GRAĆ,როგორ ვითამაშოთ,ЯК ГРАТИ
+UI_TUTORIAL,TUTORIAL,TUTORIAL,TUTORIAL,TUTORIEL,SAMOUCZEK,გაკვეთილი,НАВЧАННЯ
 UI_OPTIONS,OPTIONS,OPCIONES,OPTIONEN,OPTIONS,OPCJE,პარამეტრები,НАЛАШТУВАННЯ
 UI_CREDITS,CREDITS,CRÉDITOS,CREDITS,CRÉDITS,TWÓRCY,ტიტრები,ТИТРИ
 UI_EDITOR,EDITOR,EDITOR,EDITOR,ÉDITEUR,EDYTOR,რედაქტორი,РЕДАКТОР
@@ -41,7 +42,7 @@ UI_SAVE,SAVE,GUARDAR,SPEICHERN,SAUVEGARDER,ZAPISZ,შენახვა,ЗБЕР
 UI_LOAD,LOAD,CARGAR,LADEN,CHARGER,WCZYTAJ,ჩატვირთვა,ЗАВАНТАЖИТИ
 UI_LOADING,LOADING,CARGANDO,LADEN,CHARGEMENT,ŁADOWANIE,იტვირთება,ЗАВАНТАЖЕННЯ
 UI_RESET_PROGRESS,RESET PROFILE,RESTABLECER PERFIL,PROFIL ZURÜCKSETZEN,RÉINITIALISER LE PROFIL,ZRESETUJ PROFIL,პროფილის განულება,СКИНУТИ ПРОФІЛЬ
-CONFIRM_RESET_PROGRESS,"RESET PROFILE?
+UI_CONFIRM_RESET_PROGRESS,"RESET PROFILE?
 
 This will erase progress and the privacy-policy agreement.","¿RESTABLECER PERFIL?
 
@@ -56,7 +57,7 @@ To usunie postęp i zgodę na politykę prywatności.","გსურთ პრ�
 ეს წაშლის პროგრესს და კონფიდენციალურობის პოლიტიკის შეთანხმებას.","СКИНУТИ ПРОФІЛЬ?
 
 Це зітре прогрес і згоду з політикою конфіденційності."
-CONFIRM_NEW_PUZZLE,"NEW PUZZLE?
+UI_CONFIRM_NEW_PUZZLE,"NEW PUZZLE?
 
 Current progress will be lost.","¿NUEVO PUZLE?
 
@@ -71,7 +72,7 @@ Bieżący postęp zostanie utracony.","ახალი თავსატეხ�
 მიმდინარე პროგრესი დაიკარგება.","НОВА ГОЛОВОЛОМКА?
 
 Поточний прогрес буде втрачено."
-CONFIRM_RESTART_LEVEL,"RESTART LEVEL?
+UI_CONFIRM_RESTART_LEVEL,"RESTART LEVEL?
 
 Current progress will be lost.","¿REINICIAR NIVEL?
 
@@ -86,9 +87,11 @@ Bieżący postęp zostanie utracony.","დონის თავიდან დ
 მიმდინარე პროგრესი დაიკარგება.","ПЕРЕЗАПУСТИТИ РІВЕНЬ?
 
 Поточний прогрес буде втрачено."
-CONFIRM_DELETE_CUSTOM,DELETE ALL CUSTOM LEVELS FROM THIS DEVICE?,¿BORRAR TODOS LOS NIVELES PERSONALIZADOS DE ESTE DISPOSITIVO?,ALLE BENUTZERDEFINIERTEN LEVEL VON DIESEM GERÄT LÖSCHEN?,SUPPRIMER TOUS LES NIVEAUX PERSONNALISÉS DE CET APPAREIL ?,USUNĄĆ WSZYSTKIE WŁASNE POZIOMY Z TEGO URZĄDZENIA?,გსურთ ყველა საკუთარი დონის წაშლა ამ მოწყობილობიდან?,ВИДАЛИТИ ВСІ КОРИСТУВАЦЬКІ РІВНІ З ЦЬОГО ПРИСТРОЮ?
+UI_CONFIRM_DELETE_CUSTOM,DELETE ALL CUSTOM LEVELS FROM THIS DEVICE?,¿BORRAR TODOS LOS NIVELES PERSONALIZADOS DE ESTE DISPOSITIVO?,ALLE BENUTZERDEFINIERTEN LEVEL VON DIESEM GERÄT LÖSCHEN?,SUPPRIMER TOUS LES NIVEAUX PERSONNALISÉS DE CET APPAREIL ?,USUNĄĆ WSZYSTKIE WŁASNE POZIOMY Z TEGO URZĄDZENIA?,გსურთ ყველა საკუთარი დონის წაშლა ამ მოწყობილობიდან?,ВИДАЛИТИ ВСІ КОРИСТУВАЦЬКІ РІВНІ З ЦЬОГО ПРИСТРОЮ?
 UI_DELETE_CUSTOM,DELETE CUSTOM LEVELS,BORRAR NIVELES PERSONALIZADOS,BENUTZERDEFINIERTE LEVEL LÖSCHEN,SUPPRIMER NIVEAUX PERSONNALISÉS,USUŃ WŁASNE POZIOMY,საკუთარი დონეების წაშლა,ВИДАЛИТИ КОРИСТУВАЦЬКІ РІВНІ
 UI_UNLOCK_ALL_LEVELS,UNLOCK ALL LEVELS,DESBLOQUEAR TODOS LOS NIVELES,ALLE LEVEL FREISCHALTEN,DÉBLOQUER TOUS LES NIVEAUX,ODBLOKUJ WSZYSTKIE POZIOMY,ყველა დონის განბლოკვა,ВІДБЛОКУВАТИ ВСІ РІВНІ
+UI_DEBUG_UNLOCK_ALL,UNLOCK ALL,DESBLOQ. TODO,ALLE FREI,DÉBLOQ. TOUT,ODBLOKUJ WSZYST.,ყველა,ВСІ РІВНІ
+UI_DEBUG_DEL_CUSTOM,DEL CUSTOM,BORRAR CUSTOM,CUSTOM LÖSCHEN,SUPPR. CUSTOM,USUŃ CUSTOM,წაშლა CUSTOM,ВИД. CUSTOM
 UI_BG_DYNAMIC,BACKGROUND: DYNAMIC,FONDO: DINÁMICO,HINTERGRUND: DYNAMISCH,FOND : DYNAMIQUE,TŁO: DYNAMICZNE,ფონი: დინამიკური,ФОН: ДИНАМІЧНИЙ
 UI_BG_STATIC,BACKGROUND: STATIC,FONDO: ESTÁTICO,HINTERGRUND: STATISCH,FOND : STATIQUE,TŁO: STATYCZNE,ფონი: სტატიკური,ФОН: СТАТИЧНИЙ
 UI_BGM_ON,MUSIC: ON,MÚSICA: SÍ,MUSIK: AN,MUSIQUE : OUI,MUZYKA: WŁ.,მუსიკა: ჩართ.,МУЗИКА: УВІМК.
@@ -108,10 +111,10 @@ UI_PRIVACY_OPTIONS_DONE,Privacy options closed.,Opciones de privacidad cerradas.
 UI_PRIVACY_OPTIONS_UNAVAILABLE,Privacy options are available on Android builds.,Las opciones de privacidad están disponibles en compilaciones Android.,Datenschutz-Optionen sind in Android-Builds verfügbar.,Les options de confidentialité sont disponibles sur les builds Android.,Opcje prywatności są dostępne w buildach Android.,კონფიდენციალურობის პარამეტრები ხელმისაწვდომია Android ვერსიაზე.,Параметри конфіденційності доступні в Android-збірках.
 UI_PRIVACY_OPTIONS_LOADING,Privacy options are still loading.,Las opciones de privacidad aún se están cargando.,Datenschutz-Optionen werden noch geladen.,Les options de confidentialité sont encore en chargement.,Opcje prywatności są jeszcze ładowane.,კონფიდენციალურობის პარამეტრები ჯერ კიდევ იტვირთება.,Параметри конфіденційності ще завантажуються.
 UI_PRIVACY_OPTIONS_NOT_REQUIRED,Privacy options are not required for your region right now.,Las opciones de privacidad no son necesarias para tu región en este momento.,Datenschutz-Optionen sind für deine Region derzeit nicht erforderlich.,Les options de confidentialité ne sont pas requises pour votre région pour le moment.,Opcje prywatności nie są teraz wymagane w twoim regionie.,კონფიდენციალურობის პარამეტრები ამჟამად თქვენს რეგიონში საჭირო არ არის.,Параметри конфіденційності зараз не потрібні для вашого регіону.
-SAVE_DELETED,SAVE DELETED! PROGRESS RESET.,¡PARTIDA BORRADA! PROGRESO RESTABLECIDO.,SPIELSTAND GELÖSCHT! FORTSCHRITT ZURÜCKGESETZT.,SAUVEGARDE SUPPRIMÉE ! PROGRESSION RÉINITIALISÉE.,ZAPIS USUNIĘTY! POSTĘP ZRESETOWANY.,შენახვა წაიშალა! პროგრესი განულდა.,ЗБЕРЕЖЕННЯ ВИДАЛЕНО! ПРОГРЕС СКИНУТО.
-CUSTOM_DELETED,ALL CUSTOM LEVELS DELETED FROM THIS DEVICE,TODOS LOS NIVELES PERSONALIZADOS BORRADOS DE ESTE DISPOSITIVO,ALLE BENUTZERDEFINIERTEN LEVEL VON DIESEM GERÄT GELÖSCHT,TOUS LES NIVEAUX PERSONNALISÉS ONT ÉTÉ SUPPRIMÉS DE CET APPAREIL,WSZYSTKIE WŁASNE POZIOMY USUNIĘTE Z TEGO URZĄDZENIA,ყველა საკუთარი დონე წაიშალა ამ მოწყობილობიდან,ВСІ КОРИСТУВАЦЬКІ РІВНІ ВИДАЛЕНО З ЦЬОГО ПРИСТРОЮ
-UNLOCK_ALL_DONE,ALL LEVELS UNLOCKED,TODOS LOS NIVELES DESBLOQUEADOS,ALLE LEVEL FREIGESCHALTET,TOUS LES NIVEAUX DÉBLOQUÉS,WSZYSTKIE POZIOMY ODBLOKOWANE,ყველა დონე განბლოკილია,УСІ РІВНІ ВІДБЛОКОВАНО
-CONFIRM_UNLOCK_ALL,UNLOCK ALL LEVELS?,¿DESBLOQUEAR TODOS LOS NIVELES?,ALLE LEVEL FREISCHALTEN?,DÉBLOQUER TOUS LES NIVEAUX ?,ODBLOKOWAĆ WSZYSTKIE POZIOMY?,გსურთ ყველა დონის განბლოკვა?,ВІДБЛОКУВАТИ ВСІ РІВНІ?
+UI_SAVE_DELETED,SAVE DELETED! PROGRESS RESET.,¡PARTIDA BORRADA! PROGRESO RESTABLECIDO.,SPIELSTAND GELÖSCHT! FORTSCHRITT ZURÜCKGESETZT.,SAUVEGARDE SUPPRIMÉE ! PROGRESSION RÉINITIALISÉE.,ZAPIS USUNIĘTY! POSTĘP ZRESETOWANY.,შენახვა წაიშალა! პროგრესი განულდა.,ЗБЕРЕЖЕННЯ ВИДАЛЕНО! ПРОГРЕС СКИНУТО.
+UI_CUSTOM_DELETED,ALL CUSTOM LEVELS DELETED FROM THIS DEVICE,TODOS LOS NIVELES PERSONALIZADOS BORRADOS DE ESTE DISPOSITIVO,ALLE BENUTZERDEFINIERTEN LEVEL VON DIESEM GERÄT GELÖSCHT,TOUS LES NIVEAUX PERSONNALISÉS ONT ÉTÉ SUPPRIMÉS DE CET APPAREIL,WSZYSTKIE WŁASNE POZIOMY USUNIĘTE Z TEGO URZĄDZENIA,ყველა საკუთარი დონე წაიშალა ამ მოწყობილობიდან,ВСІ КОРИСТУВАЦЬКІ РІВНІ ВИДАЛЕНО З ЦЬОГО ПРИСТРОЮ
+UI_UNLOCK_ALL_DONE,ALL LEVELS UNLOCKED,TODOS LOS NIVELES DESBLOQUEADOS,ALLE LEVEL FREIGESCHALTET,TOUS LES NIVEAUX DÉBLOQUÉS,WSZYSTKIE POZIOMY ODBLOKOWANE,ყველა დონე განბლოკილია,УСІ РІВНІ ВІДБЛОКОВАНО
+UI_CONFIRM_UNLOCK_ALL,UNLOCK ALL LEVELS?,¿DESBLOQUEAR TODOS LOS NIVELES?,ALLE LEVEL FREISCHALTEN?,DÉBLOQUER TOUS LES NIVEAUX ?,ODBLOKOWAĆ WSZYSTKIE POZIOMY?,გსურთ ყველა დონის განბლოკვა?,ВІДБЛОКУВАТИ ВСІ РІВНІ?
 UI_SELECT_LEVEL,SELECT LEVEL,SELECCIONAR NIVEL,LEVEL AUSWÄHLEN,CHOISIR LE NIVEAU,WYBIERZ POZIOM,დონის არჩევა,ВИБІР РІВНЯ
 UI_LEVEL_SELECT,LEVEL SELECT,ELEGIR NIVEL,LEVEL WÄHLEN,CHOISIR NIVEAU,WYBIERZ POZIOM,დონის არჩევა,ВИБРАТИ РІВЕНЬ
 UI_CORE,CORE,PRINCIPAL,HAUPT,PRINCIPAL,GŁÓWNE,მთავარი,ОСНОВНІ
@@ -120,25 +123,25 @@ DIFF_TUTORIALS,TUTORIAL,TUTORIAL,TUTORIAL,TUTORIEL,SAMOUCZEK,გაკვეთ�
 DIFF_EASY,EASY,FÁCIL,LEICHT,FACILE,ŁATWY,მარტივი,ЛЕГКИЙ
 DIFF_MEDIUM,MEDIUM,MEDIO,MITTEL,MOYEN,ŚREDNI,საშუალო,СЕРЕДНІЙ
 DIFF_HARD,HARD,DIFÍCIL,SCHWER,DIFFICILE,TRUDNY,რთული,ВАЖКИЙ
-CUSTOM_LVL,CUSTOM LVL,NIVEL PERSONALIZADO,EIGENER LVL,NIV PERSO,WŁASNY POZ.,საკ. დონე,КОР. РІВЕНЬ
-LEVEL,LEVEL,NIVEL,LEVEL,NIVEAU,POZIOM,დონე,РІВЕНЬ
-LOCKED,LOCKED,BLOQUEADO,GESPERRT,VERROUILLÉ,ZABLOKOWANE,დაბლოკილია,ЗАБЛОКОВАНО
-NO_PLAYABLE_LEVELS,NO PLAYABLE LEVELS FOUND!,¡NO SE ENCONTRARON NIVELES JUGABLES!,KEINE SPIELBAREN LEVEL GEFUNDEN!,AUCUN NIVEAU JOUABLE TROUVÉ !,BRAK POZIOMÓW DO GRY!,სათამაშო დონეები არ მოიძებნა!,ІГРОВІ РІВНІ НЕ ЗНАЙДЕНО!
-NO_CUSTOM_LEVELS,NO CUSTOM LEVELS FOUND,NO HAY NIVELES PERSONALIZADOS,KEINE BENUTZERDEFINIERTEN LEVEL,AUCUN NIVEAU PERSONNALISÉ,BRAK WŁASNYCH POZIOMÓW,საკუთარი დონეები არ მოიძებნა,КОРИСТУВАЦЬКІ РІВНІ НЕ ЗНАЙДЕНО
-TIME,TIME,TIEMPO,ZEIT,TEMPS,CZAS,დრო,ЧАС
-MOVES,MOVES,MOVIMIENTOS,ZÜGE,COUPS,RUCHY,სვლები,ХОДИ
-COUNTER_GREEN,GREEN,VERDE,GRÜN,VERT,ZIELONE,მწვანე,ЗЕЛЕНІ
-STAR_TIME,TIME:,TIEMPO:,ZEIT:,TEMPS :,CZAS:,დრო:,ЧАС:
-STAR_HINTS,NO HINTS USED,SIN PISTAS USADAS,KEINE TIPPS GENUTZT,AUCUN INDICE UTILISÉ,BEZ PODPOWIEDZI,მინიშნება არ გამოყენებულა,БЕЗ ВИКОРИСТАНИХ ПІДКАЗОК
-STAR_HINTS_USED,HINTS USED,PISTAS USADAS,TIPPS GENUTZT,INDICES UTILISÉS,UŻYTO PODPOWIEDZI,მინიშნება გამოყენებულია,ПІДКАЗКИ ВИКОРИСТАНО
-STAR_GREEN,NO HINTS USED,SIN PISTAS USADAS,KEINE TIPPS GENUTZT,AUCUN INDICE UTILISÉ,BEZ PODPOWIEDZI,მინიშნება არ გამოყენებულა,БЕЗ ВИКОРИСТАНИХ ПІДКАЗОК
-STAR_COMPLETE,SOLVED,RESUELTO,GELÖST,RÉSOLU,ROZWIĄZANE,ამოხსნილია,РОЗВ’ЯЗАНО
-STAR_MOVES,MOVES,MOVIMIENTOS,ZÜGE,COUPS,RUCHY,სვლები,ХОДИ
-STAR_NONE,No bonus goals for this level.,Sin objetivos extra en este nivel.,Keine Bonusziele für dieses Level.,Aucun objectif bonus pour ce niveau.,Brak celów dodatkowych dla tego poziomu.,ამ დონეს დამატებითი მიზნები არ აქვს.,Немає бонусних цілей для цього рівня.
-STAT_TIME_LEFT,TIME LEFT: %s,TIEMPO RESTANTE: %s,VERBLEIBENDE ZEIT: %s,TEMPS RESTANT : %s,POZOSTAŁY CZAS: %s,დარჩენილი დრო: %s,ЗАЛИШОК ЧАСУ: %s
-STAT_GREEN_TILES,GREEN TILES: %d/%d,FICHAS VERDES: %d/%d,GRÜNE FELDER: %d/%d,TUILES VERTES : %d/%d,ZIELONE PŁYTKI: %d/%d,მწვანე ფილები: %d/%d,ЗЕЛЕНІ ПЛИТКИ: %d/%d
-STAT_SHIFTER_MOVES,SHIFTER MOVES: %d/%d,MOVIMIENTOS DESLIZANTES: %d/%d,SCHIEBER-ZÜGE: %d/%d,COUPS DÉPLAÇABLES : %d/%d,RUCHY PRZESUWNYCH: %d/%d,გადამტანი სვლები: %d/%d,ЗСУВНІ ХОДИ: %d/%d
-TIMES_UP,TIME'S UP!,¡TIEMPO AGOTADO!,ZEIT ABGELAUFEN!,TEMPS ÉCOULÉ !,CZAS MINĄŁ!,დრო ამოიწურა!,ЧАС ВИЙШОВ!
+UI_CUSTOM_LVL,CUSTOM LVL,NIVEL PERSONALIZADO,EIGENER LVL,NIV PERSO,WŁASNY POZ.,საკ. დონე,КОР. РІВЕНЬ
+UI_LEVEL,LEVEL,NIVEL,LEVEL,NIVEAU,POZIOM,დონე,РІВЕНЬ
+UI_LOCKED,LOCKED,BLOQUEADO,GESPERRT,VERROUILLÉ,ZABLOKOWANE,დაბლოკილია,ЗАБЛОКОВАНО
+UI_NO_PLAYABLE_LEVELS,NO PLAYABLE LEVELS FOUND!,¡NO SE ENCONTRARON NIVELES JUGABLES!,KEINE SPIELBAREN LEVEL GEFUNDEN!,AUCUN NIVEAU JOUABLE TROUVÉ !,BRAK POZIOMÓW DO GRY!,სათამაშო დონეები არ მოიძებნა!,ІГРОВІ РІВНІ НЕ ЗНАЙДЕНО!
+UI_NO_CUSTOM_LEVELS,NO CUSTOM LEVELS FOUND,NO HAY NIVELES PERSONALIZADOS,KEINE BENUTZERDEFINIERTEN LEVEL,AUCUN NIVEAU PERSONNALISÉ,BRAK WŁASNYCH POZIOMÓW,საკუთარი დონეები არ მოიძებნა,КОРИСТУВАЦЬКІ РІВНІ НЕ ЗНАЙДЕНО
+UI_TIME,TIME,TIEMPO,ZEIT,TEMPS,CZAS,დრო,ЧАС
+UI_MOVES,MOVES,MOVIMIENTOS,ZÜGE,COUPS,RUCHY,სვლები,ХОДИ
+UI_COUNTER_GREEN,GREEN,VERDE,GRÜN,VERT,ZIELONE,მწვანე,ЗЕЛЕНІ
+UI_STAR_TIME,TIME:,TIEMPO:,ZEIT:,TEMPS :,CZAS:,დრო:,ЧАС:
+UI_STAR_HINTS,NO HINTS USED,SIN PISTAS USADAS,KEINE TIPPS GENUTZT,AUCUN INDICE UTILISÉ,BEZ PODPOWIEDZI,მინიშნება არ გამოყენებულა,БЕЗ ВИКОРИСТАНИХ ПІДКАЗОК
+UI_STAR_HINTS_USED,HINTS USED,PISTAS USADAS,TIPPS GENUTZT,INDICES UTILISÉS,UŻYTO PODPOWIEDZI,მინიშნება გამოყენებულია,ПІДКАЗКИ ВИКОРИСТАНО
+UI_STAR_GREEN,NO HINTS USED,SIN PISTAS USADAS,KEINE TIPPS GENUTZT,AUCUN INDICE UTILISÉ,BEZ PODPOWIEDZI,მინიშნება არ გამოყენებულა,БЕЗ ВИКОРИСТАНИХ ПІДКАЗОК
+UI_STAR_COMPLETE,SOLVED,RESUELTO,GELÖST,RÉSOLU,ROZWIĄZANE,ამოხსნილია,РОЗВ’ЯЗАНО
+UI_STAR_MOVES,MOVES,MOVIMIENTOS,ZÜGE,COUPS,RUCHY,სვლები,ХОДИ
+UI_STAR_NONE,No bonus goals for this level.,Sin objetivos extra en este nivel.,Keine Bonusziele für dieses Level.,Aucun objectif bonus pour ce niveau.,Brak celów dodatkowych dla tego poziomu.,ამ დონეს დამატებითი მიზნები არ აქვს.,Немає бонусних цілей для цього рівня.
+UI_STAT_TIME_LEFT,TIME LEFT: %s,TIEMPO RESTANTE: %s,VERBLEIBENDE ZEIT: %s,TEMPS RESTANT : %s,POZOSTAŁY CZAS: %s,დარჩენილი დრო: %s,ЗАЛИШОК ЧАСУ: %s
+UI_STAT_GREEN_TILES,GREEN TILES: %d/%d,FICHAS VERDES: %d/%d,GRÜNE FELDER: %d/%d,TUILES VERTES : %d/%d,ZIELONE PŁYTKI: %d/%d,მწვანე ფილები: %d/%d,ЗЕЛЕНІ ПЛИТКИ: %d/%d
+UI_STAT_SHIFTER_MOVES,SHIFTER MOVES: %d/%d,MOVIMIENTOS DESLIZANTES: %d/%d,SCHIEBER-ZÜGE: %d/%d,COUPS DÉPLAÇABLES : %d/%d,RUCHY PRZESUWNYCH: %d/%d,გადამტანი სვლები: %d/%d,ЗСУВНІ ХОДИ: %d/%d
+UI_TIMES_UP,TIME'S UP!,¡TIEMPO AGOTADO!,ZEIT ABGELAUFEN!,TEMPS ÉCOULÉ !,CZAS MINĄŁ!,დრო ამოიწურა!,ЧАС ВИЙШОВ!
 TUT1_WELCOME,Goal is to fill %s empty cells with %s [color=#FFD700]Yellow[/color] or %s [color=#4DA6FF]Blue[/color] to solve the puzzle.,El objetivo es rellenar las %s celdas vacías con %s [color=#FFD700]Amarillo[/color] o %s [color=#4DA6FF]Azul[/color] para resolver el puzle.,"Ziel ist es, %s leere Felder mit %s [color=#FFD700]Gelb[/color] oder %s [color=#4DA6FF]Blau[/color] zu füllen, um das Rätsel zu lösen.",Le but est de remplir les %s cases vides avec %s [color=#FFD700]Jaune[/color] ou %s [color=#4DA6FF]Bleu[/color] pour résoudre le puzzle.,"Celem jest wypełnienie %s pustych pól %s [color=#FFD700]Żółtym[/color] lub %s [color=#4DA6FF]Niebieskim[/color], aby rozwiązać zagadkę.","მიზანია %s ცარიელი უჯრების შევსება %s [color=#FFD700]ყვითელით[/color] ან %s [color=#4DA6FF]ლურჯით[/color], რათა ამოხსნათ თავსატეხი.","Мета — заповнити %s порожні клітинки %s [color=#FFD700]жовтим[/color] або %s [color=#4DA6FF]синім[/color], щоб розв’язати головоломку."
 TUT1_LOCKS,Tiles with the %s lock icon are fixed - you cannot change them.,Las fichas con el icono de candado %s están fijas: no puedes cambiarlas.,Felder mit dem %s Schloss-Symbol sind fixiert – du kannst sie nicht ändern.,Les tuiles avec l'icône de verrou %s sont fixes — vous ne pouvez pas les changer.,Płytki z ikoną kłódki %s są stałe — nie możesz ich zmieniać.,ფილები %s საკეტის ხატულით ფიქსირებულია — მათ ვერ შეცვლით.,Плитки з іконкою замка %s зафіксовані — їх не можна змінити.
 TUT1_CYCLE,Tap the highlighted empty cell to cycle: empty → %s [color=#FFD700]Yellow[/color] → %s [color=#4DA6FF]Blue[/color]. Stop on Blue.,Toca la celda vacía resaltada para alternar: vacío → %s [color=#FFD700]Amarillo[/color] → %s [color=#4DA6FF]Azul[/color]. Detente en Azul.,Tippe auf das markierte leere Feld zum Wechseln: leer → %s [color=#FFD700]Gelb[/color] → %s [color=#4DA6FF]Blau[/color]. Stoppe bei Blau.,Touchez la case vide surlignée pour alterner : vide → %s [color=#FFD700]Jaune[/color] → %s [color=#4DA6FF]Bleu[/color]. Arrêtez-vous sur Bleu.,"Dotknij pustego pola podświetlonego, aby przełączać: puste → %s [color=#FFD700]Żółty[/color] → %s [color=#4DA6FF]Niebieski[/color]. Zatrzymaj na Niebieskim.",შეეხეთ გამოკვეთილ ცარიელ უჯრას გადასართავად: ცარიელი → %s [color=#FFD700]ყვითელი[/color] → %s [color=#4DA6FF]ლურჯი[/color]. გაჩერდით ლურჯზე.,Натисніть підсвічену порожню клітинку для перемикання: порожньо → %s [color=#FFD700]жовтий[/color] → %s [color=#4DA6FF]синій[/color]. Зупиніться на синьому.
@@ -224,23 +227,23 @@ TUT6_HINT,%s Hint reveals a helpful = or × clue when you are stuck.,%s Pista re
 TUT6_UNDO,%s Undo takes back your last move.,%s Deshacer anula tu último movimiento.,%s Rückgängig macht deinen letzten Zug rückgängig.,%s Annuler revient sur votre dernier coup.,%s Cofnij cofa twój ostatni ruch.,%s გაუქმება უკან აბრუნებს ბოლო სვლას.,%s Скасувати повертає ваш останній хід.
 TUT6_REDO,%s Redo restores a move you undid.,%s Rehacer restaura un movimiento que deshiciste.,%s Wiederholen stellt einen rückgängig gemachten Zug wieder her.,%s Rétablir restaure un coup que vous avez annulé.,%s Ponów przywraca ruch który cofnąłeś.,%s გამეორება აღადგენს გაუქმებულ სვლას.,%s Повторити відновлює скасований хід.
 TUT6_COMPLETE,"Tools unlocked! Fix any mistakes and fill the remaining empties — Reset, Rules, Hint, Undo, and Redo are ready.","¡Herramientas desbloqueadas! Corrige errores y llena los vacíos restantes — Reiniciar, Reglas, Pista, Deshacer y Rehacer están listos.","Werkzeuge freigeschaltet! Korrigiere Fehler und fülle die restlichen leeren Felder — Reset, Regeln, Tipp, Rückgängig und Wiederholen sind bereit.","Outils débloqués ! Corrigez les erreurs et remplissez les cases vides — Réinitialiser, Règles, Indice, Annuler et Rétablir sont prêts.","Narzędzia odblokowane! Popraw błędy i wypełnij pozostałe puste pola — Reset, Zasady, Podpowiedź, Cofnij i Ponów są gotowe.","ხელსაწყოები გახსნილია! გაასწორეთ შეცდომები და შეავსეთ დარჩენილი ცარიელები — გადატვირთვა, წესები, მინიშნება, გაუქმება და გამეორება მზადაა.","Інструменти розблоковано! Виправте помилки й заповніть порожні клітинки — Скидання, Правила, Підказка, Скасувати та Повторити готові."
-USED,USED,USADO,BENUTZT,UTILISÉ,UŻYTO,გამოყენებული,ВИКОРИСТАНО
-LVL,LEVEL,NIVEL,LEVEL,NIVEAU,POZIOM,დონე,РІВЕНЬ
+UI_USED,USED,USADO,BENUTZT,UTILISÉ,UŻYTO,გამოყენებული,ВИКОРИСТАНО
+UI_LVL,LEVEL,NIVEL,LEVEL,NIVEAU,POZIOM,დონე,РІВЕНЬ
 TUTORIAL,TUTORIAL,TUTORIAL,TUTORIAL,TUTORIEL,SAMOUCZEK,გაკვეთილი,НАВЧАННЯ
-DEV,CUSTOM,PERSONALIZADO,EIGENES,PERSO,WŁASNY,საკუთარი,КОРИСТ.
-UNLIMITED,Unlimited,Ilimitado,Unbegrenzt,Illimité,Nielimitowany,შეუზღუდავი,Безліміт
-PAUSED,PAUSED,EN PAUSA,PAUSIERT,EN PAUSE,PAUZA,პაუზა,ПАУЗА
-PUZZLE_SOLVED,PUZZLE SOLVED!,¡PUZLE RESUELTO!,RÄTSEL GELÖST!,PUZZLE RÉSOLU !,ZAGADKA ROZWIĄZANA!,თავსატეხი ამოხსნილია!,ГОЛОВОЛОМКУ ВИРІШЕНО!
-ALL_COMPLETED,ALL LEVELS COMPLETED,TODOS LOS NIVELES COMPLETADOS,ALLE LEVEL ABGESCHLOSSEN,TOUS LES NIVEAUX TERMINÉS,WSZYSTKIE POZIOMY UKOŃCZONE,ყველა დონე დასრულებულია,ВСІ РІВНІ ПРОЙДЕНО
-YOU_WIN,YOU WIN!,¡TÚ GANAS!,DU GEWINNST!,VOUS AVEZ GAGNÉ !,WYGRAŁEŚ!,თქვენ მოიგეთ!,ВИ ПЕРЕМОГЛИ!
-CUSTOM_COMPLETED,CUSTOM %d,NIVEL PERSONALIZADO %d,LEVEL %d,NIVEAU PERSONNALISÉ %d,WŁASNY %d,საკუთარი %d,КОРИСТУВАЦЬКИЙ %d
-LEVEL_COMPLETED,LEVEL %d,NIVEL %d,LEVEL %d,NIVEAU %d,POZIOM %d,დონე %d,РІВЕНЬ %d
+UI_DEV,CUSTOM,PERSONALIZADO,EIGENES,PERSO,WŁASNY,საკუთარი,КОРИСТ.
+UI_UNLIMITED,Unlimited,Ilimitado,Unbegrenzt,Illimité,Nielimitowany,შეუზღუდავი,Безліміт
+UI_PAUSED,PAUSED,EN PAUSA,PAUSIERT,EN PAUSE,PAUZA,პაუზა,ПАУЗА
+UI_PUZZLE_SOLVED,PUZZLE SOLVED!,¡PUZLE RESUELTO!,RÄTSEL GELÖST!,PUZZLE RÉSOLU !,ZAGADKA ROZWIĄZANA!,თავსატეხი ამოხსნილია!,ГОЛОВОЛОМКУ ВИРІШЕНО!
+UI_ALL_COMPLETED,ALL LEVELS COMPLETED,TODOS LOS NIVELES COMPLETADOS,ALLE LEVEL ABGESCHLOSSEN,TOUS LES NIVEAUX TERMINÉS,WSZYSTKIE POZIOMY UKOŃCZONE,ყველა დონე დასრულებულია,ВСІ РІВНІ ПРОЙДЕНО
+UI_YOU_WIN,YOU WIN!,¡TÚ GANAS!,DU GEWINNST!,VOUS AVEZ GAGNÉ !,WYGRAŁEŚ!,თქვენ მოიგეთ!,ВИ ПЕРЕМОГЛИ!
+UI_CUSTOM_COMPLETED,CUSTOM %d,NIVEL PERSONALIZADO %d,LEVEL %d,NIVEAU PERSONNALISÉ %d,WŁASNY %d,საკუთარი %d,КОРИСТУВАЦЬКИЙ %d
+UI_LEVEL_COMPLETED,LEVEL %d,NIVEL %d,LEVEL %d,NIVEAU %d,POZIOM %d,დონე %d,РІВЕНЬ %d
 TUTORIAL_COMPLETED,TUTORIAL %d,TUTORIAL %d,TUTORIAL %d,TUTORIEL %d,SAMOUCZEK %d,გაკვეთილი %d,НАВЧАННЯ %d
-COMPLETED,COMPLETED,COMPLETADO,ABGESCHLOSSEN,TERMINÉ,UKOŃCZONY,დასრულებულია,ПРОЙДЕНО
-PLAY_AGAIN,PLAY AGAIN,JUGAR OTRA VEZ,NOCHMAL SPIELEN,REJOUER,ZAGRAJ PONOWNIE,თავიდან თამაში,ГРАТИ ЗНОВУ
-NEXT_LEVEL,NEXT LEVEL,SIGUIENTE NIVEL,NÄCHSTES LEVEL,NIVEAU SUIVANT,NASTĘPNY POZIOM,შემდეგი დონე,НАСТУПНИЙ РІВЕНЬ
-COMPLETION_TIME,COMPLETION TIME: %s,TIEMPO DE COMPLETADO: %s,ABSCHLUSSZEIT: %s,TEMPS DE RÉSOLUTION : %s,CZAS UKOŃCZENIA: %s,დასრულების დრო: %s,ЧАС ПРОХОДЖЕННЯ: %s
-TIMES_UP_UNSOLVED,TIME'S UP! The puzzle remains unsolved.,¡TIEMPO AGOTADO! El puzle sigue sin resolverse.,ZEIT ABGELAUFEN! Das Rätsel bleibt ungelöst.,TEMPS ÉCOULÉ ! Le puzzle reste non résolu.,CZAS MINĄŁ! Zagadka pozostała nierozwiązana.,დრო ამოიწურა! თავსატეხი ამოუხსნელია.,ЧАС ВИЙШОВ! Головоломка не вирішена.
+UI_COMPLETED,COMPLETED,COMPLETADO,ABGESCHLOSSEN,TERMINÉ,UKOŃCZONY,დასრულებულია,ПРОЙДЕНО
+UI_PLAY_AGAIN,PLAY AGAIN,JUGAR OTRA VEZ,NOCHMAL SPIELEN,REJOUER,ZAGRAJ PONOWNIE,თავიდან თამაში,ГРАТИ ЗНОВУ
+UI_NEXT_LEVEL,NEXT LEVEL,SIGUIENTE NIVEL,NÄCHSTES LEVEL,NIVEAU SUIVANT,NASTĘPNY POZIOM,შემდეგი დონე,НАСТУПНИЙ РІВЕНЬ
+UI_COMPLETION_TIME,COMPLETION TIME: %s,TIEMPO DE COMPLETADO: %s,ABSCHLUSSZEIT: %s,TEMPS DE RÉSOLUTION : %s,CZAS UKOŃCZENIA: %s,დასრულების დრო: %s,ЧАС ПРОХОДЖЕННЯ: %s
+UI_TIMES_UP_UNSOLVED,TIME'S UP! The puzzle remains unsolved.,¡TIEMPO AGOTADO! El puzle sigue sin resolverse.,ZEIT ABGELAUFEN! Das Rätsel bleibt ungelöst.,TEMPS ÉCOULÉ ! Le puzzle reste non résolu.,CZAS MINĄŁ! Zagadka pozostała nierozwiązana.,დრო ამოიწურა! თავსატეხი ამოუხსნელია.,ЧАС ВИЙШОВ! Головоломка не вирішена.
 MSG_FILL_EMPTY,Fill empty spaces.,Rellena los vacíos.,Leere Felder füllen.,Remplissez les cases vides.,Wypełnij puste pola.,შეავსეთ ცარიელი ადგილები.,Заповніть порожні клітинки.
 ERR_CONSTRAINT_EQUALS,Tiles linked by [outline_size=6][outline_color=black] = [/outline_color][/outline_size] must be the same color.,Las fichas unidas por [outline_size=6][outline_color=black] = [/outline_color][/outline_size] deben ser del mismo color.,Mit [outline_size=6][outline_color=black] = [/outline_color][/outline_size] verbundene Felder müssen dieselbe Farbe haben.,Les tuiles liées par [outline_size=6][outline_color=black] = [/outline_color][/outline_size] doivent être de la même couleur.,Płytki połączone [outline_size=6][outline_color=black] = [/outline_color][/outline_size] muszą mieć ten sam kolor.,ფილები რომლებიც [outline_size=6][outline_color=black] = [/outline_color][/outline_size]-ითაა დაკავშირებული ერთი ფერის უნდა იყოს.,Плитки з’єднані [outline_size=6][outline_color=black] = [/outline_color][/outline_size] мають бути одного кольору.
 ERR_CONSTRAINT_NOT_EQUALS,Tiles linked by [outline_size=6][outline_color=black] × [/outline_color][/outline_size] must be different colors.,Las fichas unidas por [outline_size=6][outline_color=black] × [/outline_color][/outline_size] deben ser de colores distintos.,Mit [outline_size=6][outline_color=black] × [/outline_color][/outline_size] verbundene Felder müssen unterschiedliche Farben haben.,Les tuiles liées par [outline_size=6][outline_color=black] × [/outline_color][/outline_size] doivent être de couleurs différentes.,Płytki połączone [outline_size=6][outline_color=black] × [/outline_color][/outline_size] muszą mieć różne kolory.,ფილები რომლებიც [outline_size=6][outline_color=black] × [/outline_color][/outline_size]-ითაა დაკავშირებული განსხვავებული ფერის უნდა იყოს.,Плитки з’єднані [outline_size=6][outline_color=black] × [/outline_color][/outline_size] мають бути різного кольору.
@@ -298,12 +301,12 @@ ERROR_AD_HINT_UNAVAILABLE,Ad not available right now. Try again in a moment.,Anu
 ERROR_AD_HINT_LOADING,Loading ad… it will play when ready.,Cargando anuncio… se reproducirá cuando esté listo.,"Werbung wird geladen… sie startet, sobald sie bereit ist.",Chargement de la pub… elle se lancera quand elle sera prête.,"Ładowanie reklamy… odtworzy się, gdy będzie gotowa.","რეკლამა იტვირთება… მზად რომ იქნება, ჩაირთვება.","Завантаження реклами… вона відтвориться, щойно буде готова."
 WARN_HINT_WATCH_AD,Out of hints. Watch an ad for 3 more hints.,Sin pistas. Mira un anuncio para 3 pistas más.,Keine Hinweise mehr. Sieh dir eine Werbung für 3 weitere Tipps an.,Plus d'indices. Regardez une pub pour 3 indices de plus.,Brak podpowiedzi. Obejrzyj reklamę po 3 kolejne.,მინიშნებები ამოგეწურათ. ნახეთ რეკლამა 3 დამატებითი მინიშნებისთვის.,Підказки закінчилися. Подивіться рекламу за 3 додаткові.
 MSG_HINTS_REWARDED,You earned 3 hints!,¡Ganaste 3 pistas!,Du hast 3 Tipps erhalten!,Vous avez gagné 3 indices !,Zdobyłeś 3 podpowiedzi!,მიიღეთ 3 მინიშნება!,Ви отримали 3 підказки!
-EDIT_MODE,EDIT MODE,MODO EDICIÓN,BEARBEITEN,MODE ÉDITION,TRYB EDYCJI,რედაქტირების რეჟიმი,РЕЖИМ РЕДАКТОРА
-TEST_MODE,TEST MODE,MODO PRUEBA,TESTMODUS,MODE TEST,TRYB TESTOWANIA,ტესტირების რეჟიმი,РЕЖИМ ТЕСТУ
-LOCK_WALLS,LOCK WALLS,BLOQUEAR MUROS,WÄNDE SPERREN,VERR. MURS,ZABLOKUJ ŚCIANY,კედლების ჩაკეტვა,ЗАФІКСУВАТИ СТІНИ
-UNIQUE_SOLVE,UNIQUE SOLVE,SOLUCIÓN ÚNICA,EINDEUTIGE LÖSUNG,SOLUTION UNIQUE,UNIKALNE ROZWIĄZANIE,უნიკალური ამოხსნა,УНІКАЛЬНЕ РІШЕННЯ
-ALLOW,ALLOW:,PERMITIR:,ERLAUBT:,AUTORISER :,DOZWOLONE:,დაშვებულია:,ДОСТУПНО:
-LEVEL_EXISTS_OVERWRITE,"LEVEL ALREADY EXISTS?
+UI_EDIT_MODE,EDIT MODE,MODO EDICIÓN,BEARBEITEN,MODE ÉDITION,TRYB EDYCJI,რედაქტირების რეჟიმი,РЕЖИМ РЕДАКТОРА
+UI_TEST_MODE,TEST MODE,MODO PRUEBA,TESTMODUS,MODE TEST,TRYB TESTOWANIA,ტესტირების რეჟიმი,РЕЖИМ ТЕСТУ
+UI_LOCK_WALLS,LOCK WALLS,BLOQUEAR MUROS,WÄNDE SPERREN,VERR. MURS,ZABLOKUJ ŚCIANY,კედლების ჩაკეტვა,ЗАФІКСУВАТИ СТІНИ
+UI_UNIQUE_SOLVE,UNIQUE SOLVE,SOLUCIÓN ÚNICA,EINDEUTIGE LÖSUNG,SOLUTION UNIQUE,UNIKALNE ROZWIĄZANIE,უნიკალური ამოხსნა,УНІКАЛЬНЕ РІШЕННЯ
+UI_ALLOW,ALLOW:,PERMITIR:,ERLAUBT:,AUTORISER :,DOZWOLONE:,დაშვებულია:,ДОСТУПНО:
+UI_LEVEL_EXISTS_OVERWRITE,"LEVEL ALREADY EXISTS?
 
 OVERWRITE?","¿EL NIVEL YA EXISTE?
 
@@ -318,8 +321,8 @@ NADPISAĆ?","დონე უკვე არსებობს?
 გსურთ გადაწერა?","РІВЕНЬ ВЖЕ ІСНУЄ?
 
 ПЕРЕЗАПИСАТИ?"
-LEVEL_SOLVABLE,LEVEL IS SOLVABLE!,¡EL NIVEL TIENE SOLUCIÓN!,LEVEL IST LÖSBAR!,LE NIVEAU EST RÉSOLUBLE !,POZIOM JEST MOŻLIWY DO ROZWIĄZANIA!,დონე ამოხსნადია!,РІВЕНЬ МОЖНА ПРОЙТИ!
-RETURN,RETURN,VOLVER,ZURÜCK,RETOUR,POWRÓT,დაბრუნება,ПОВЕРНУТИСЯ
+UI_LEVEL_SOLVABLE,LEVEL IS SOLVABLE!,¡EL NIVEL TIENE SOLUCIÓN!,LEVEL IST LÖSBAR!,LE NIVEAU EST RÉSOLUBLE !,POZIOM JEST MOŻLIWY DO ROZWIĄZANIA!,დონე ამოხსნადია!,РІВЕНЬ МОЖНА ПРОЙТИ!
+UI_RETURN,RETURN,VOLVER,ZURÜCK,RETOUR,POWRÓT,დაბრუნება,ПОВЕРНУТИСЯ
 Wall,Wall,Muro,Wand,Mur,Ściana,კედელი,Стіна
 Empty (Clear),Empty (Clear),Vacío (Borrar),Leer (Löschen),Vide (Effacer),Puste (Wyczyść),ცარიელი (წაშლა),Порожньо (Очистити)
 Yellow Tile,Yellow Tile,Ficha Amarilla,Gelbes Feld,Tuile Jaune,Żółta płytka,ყვითელი ფილა,Жовта плитка
@@ -357,11 +360,11 @@ CREDITS_TEXT,"[center]
 
 [font_size=34]Giga ""gix0n"" Sichinava[/font_size]
 [/center]"
-HTP_TITLE,HOW TO PLAY,CÓMO JUGAR,SPIELANLEITUNG,COMMENT JOUER,JAK GRAĆ,როგორ ვითამაშოთ,ЯК ГРАТИ
+UI_HTP_TITLE,HOW TO PLAY,CÓMO JUGAR,SPIELANLEITUNG,COMMENT JOUER,JAK GRAĆ,როგორ ვითამაშოთ,ЯК ГРАТИ
 HTP_GOAL_TAP,"Tap %s empty cells to place %s [color=#ffeb3b]Yellow[/color], %s [color=#2196f3]Blue[/color], and %s [color=#4caf50]Green[/color].","Toca %s celdas vacías para colocar %s [color=#ffeb3b]Amarillo[/color], %s [color=#2196f3]Azul[/color] y %s [color=#4caf50]Verde[/color].","Tippe %s leere Felder an, um %s [color=#ffeb3b]Gelb[/color], %s [color=#2196f3]Blau[/color] und %s [color=#4caf50]Grün[/color] zu setzen.","Touchez %s cases vides pour placer %s [color=#ffeb3b]Jaune[/color], %s [color=#2196f3]Bleu[/color] et %s [color=#4caf50]Vert[/color].","Dotykaj %s pustych pól, aby stawiać %s [color=#ffeb3b]żółte[/color], %s [color=#2196f3]niebieskie[/color] i %s [color=#4caf50]zielone[/color].","შეეხეთ %s ცარიელ უჯრებს, რათა დააყენოთ %s [color=#ffeb3b]ყვითელი[/color], %s [color=#2196f3]ლურჯი[/color] და %s [color=#4caf50]მწვანე[/color].","Натискайте %s порожні клітинки, щоб ставити %s [color=#ffeb3b]жовтий[/color], %s [color=#2196f3]синій[/color] і %s [color=#4caf50]зелений[/color]."
 HTP_GOAL_WIN,Fill every %s empty cell without breaking any rules.,Llena todas las %s celdas vacías sin romper ninguna regla.,"Fülle jedes %s leere Feld, ohne eine Regel zu brechen.",Remplissez chaque %s case vide sans enfreindre aucune règle.,"Wypełnij każde %s puste pole, nie łamiąc żadnej zasady.",შეავსეთ ყველა %s ცარიელი უჯრა წესების დარღვევის გარეშე.,"Заповніть усі %s порожні клітинки, не порушуючи жодного правила."
-HTP_CORE_TITLE,CORE RULES,REGLAS BÁSICAS,GRUNDREGELN,RÈGLES DE BASE,PODSTAWOWE ZASADY,ძირითადი წესები,ОСНОВНІ ПРАВИЛА
-HTP_EXAMPLES_TITLE,EXAMPLES,EJEMPLOS,BEISPIELE,EXEMPLES,PRZYKŁADY,მაგალითები,ПРИКЛАДИ
+UI_HTP_CORE_TITLE,CORE RULES,REGLAS BÁSICAS,GRUNDREGELN,RÈGLES DE BASE,PODSTAWOWE ZASADY,ძირითადი წესები,ОСНОВНІ ПРАВИЛА
+UI_HTP_EXAMPLES_TITLE,EXAMPLES,EJEMPLOS,BEISPIELE,EXEMPLES,PRZYKŁADY,მაგალითები,ПРИКЛАДИ
 HTP_EXAMPLE_INVALID,INVALID,INVÁLIDO,UNGÜLTIG,INVALIDE,BŁĘDNE,არასწორი,НЕПРАВИЛЬНО
 HTP_EXAMPLE_VALID,VALID,VÁLIDO,GÜLTIG,VALIDE,POPRAWNE,სწორი,ПРАВИЛЬНО
 HTP_EQUAL_BALANCE,Equal Balance: the same number of %s [color=#ffeb3b]Yellow[/color] and %s [color=#2196f3]Blue[/color] in each completed row or column.,Equilibrio: la misma cantidad de %s [color=#ffeb3b]Amarillo[/color] y %s [color=#2196f3]Azul[/color] en cada fila o columna completa.,Gleichgewicht: in jeder vollen Zeile oder Spalte gleich viele %s [color=#ffeb3b]Gelb[/color] und %s [color=#2196f3]Blau[/color].,Équilibre : autant de %s [color=#ffeb3b]Jaune[/color] que de %s [color=#2196f3]Bleu[/color] dans chaque ligne ou colonne complète.,Równy balans: tyle samo %s [color=#ffeb3b]żółtych[/color] i %s [color=#2196f3]niebieskich[/color] w każdym pełnym rzędzie lub kolumnie.,ბალანსი: ყოველ შევსებულ რიგსა თუ სვეტში თანაბარი რაოდენობის %s [color=#ffeb3b]ყვითელი[/color] და %s [color=#2196f3]ლურჯი[/color].,Баланс: однакова кількість %s [color=#ffeb3b]жовтого[/color] і %s [color=#2196f3]синього[/color] у кожному заповненому рядку або стовпці.
@@ -369,8 +372,8 @@ HTP_RULE_OF_TWO,Rule of Two: never place three %s [color=#ffeb3b]Yellow[/color] 
 HTP_EXAMPLE_THREE_YELLOWS,(Three [color=#ffeb3b]Yellows[/color]),(Tres [color=#ffeb3b]Amarillas[/color]),(Drei [color=#ffeb3b]Gelbe[/color]),(Trois [color=#ffeb3b]Jaunes[/color]),(Trzy [color=#ffeb3b]Żółte[/color]),(სამი [color=#ffeb3b]ყვითელი[/color]),(Три [color=#ffeb3b]Жовті[/color])
 HTP_EXAMPLE_THREE_BLUES,(Three [color=#2196f3]Blues[/color]),(Tres [color=#2196f3]Azules[/color]),(Drei [color=#2196f3]Blaue[/color]),(Trois [color=#2196f3]Bleues[/color]),(Trzy [color=#2196f3]Niebieskie[/color]),(სამი [color=#2196f3]ლურჯი[/color]),(Три [color=#2196f3]Сині[/color])
 HTP_EXAMPLE_VALID_MIX,(Valid),(Válido),(Gültig),(Valide),(Poprawne),(სწორი),(Правильно)
-HTP_GREEN_TITLE,GREEN TILES,FICHAS VERDES,GRÜNE FELDER,TUILES VERTES,ZIELONE PŁYTKI,მწვანე ფილები,ЗЕЛЕНІ ПЛИТКИ
-HTP_PURPLE_TITLE,PURPLE TILES,FICHAS MORADAS,LILA FELDER,TUILES VIOLETTES,FIOLETOWE PŁYTKI,იასამნისფერი ფილები,ФІОЛЕТОВІ ПЛИТКИ
+UI_HTP_GREEN_TITLE,GREEN TILES,FICHAS VERDES,GRÜNE FELDER,TUILES VERTES,ZIELONE PŁYTKI,მწვანე ფილები,ЗЕЛЕНІ ПЛИТКИ
+UI_HTP_PURPLE_TITLE,PURPLE TILES,FICHAS MORADAS,LILA FELDER,TUILES VIOLETTES,FIOLETOWE PŁYTKI,იასამნისფერი ფილები,ФІОЛЕТОВІ ПЛИТКИ
 HTP_GREEN_TILES_DESC,%s [color=#4caf50]Green[/color] counts as both %s [color=#ffeb3b]Yellow[/color] and %s [color=#2196f3]Blue[/color].,%s [color=#4caf50]Verde[/color] cuenta como %s [color=#ffeb3b]Amarillo[/color] y como %s [color=#2196f3]Azul[/color].,%s [color=#4caf50]Grün[/color] zählt sowohl als %s [color=#ffeb3b]Gelb[/color] als auch als %s [color=#2196f3]Blau[/color].,%s [color=#4caf50]Vert[/color] compte à la fois comme %s [color=#ffeb3b]Jaune[/color] et comme %s [color=#2196f3]Bleu[/color].,%s [color=#4caf50]Zielony[/color] liczy się jednocześnie jako %s [color=#ffeb3b]żółty[/color] i %s [color=#2196f3]niebieski[/color].,%s [color=#4caf50]მწვანე[/color] ერთდროულად ითვლება %s [color=#ffeb3b]ყვითლადაც[/color] და %s [color=#2196f3]ლურჯადაც[/color].,"%s [color=#4caf50]Зелений[/color] рахується і як %s [color=#ffeb3b]жовтий[/color], і як %s [color=#2196f3]синій[/color]."
 HTP_RULE_OF_ONE,Rule of One: at most one %s [color=#4caf50]Green[/color] per row or column. Equal Balance ignores Green.,Regla de Uno: como máximo un %s [color=#4caf50]Verde[/color] por fila o columna. El Equilibrio ignora el Verde.,Einer-Regel: höchstens ein %s [color=#4caf50]Grün[/color] pro Zeile oder Spalte. Das Gleichgewicht ignoriert Grün.,Règle d’Un : au maximum un %s [color=#4caf50]Vert[/color] par ligne ou colonne. L’Équilibre ignore le Vert.,Zasada Jednego: co najwyżej jeden %s [color=#4caf50]zielony[/color] na rząd lub kolumnę. Równy balans ignoruje zielony.,ერთიანის წესი: რიგში ან სვეტში მაქსიმუმ ერთი %s [color=#4caf50]მწვანე[/color]. ბალანსი მწვანეს არ ითვლის.,Правило одного: щонайбільше один %s [color=#4caf50]зелений[/color] у рядку або стовпці. Баланс ігнорує зелений.
 HTP_GREEN_BALANCE_NOTE,Equal Balance ignores %s [color=#4caf50]Green[/color] — only %s [color=#ffeb3b]Yellow[/color] and %s [color=#2196f3]Blue[/color] count.,El Equilibrio ignora %s [color=#4caf50]Verde[/color] — solo cuentan %s [color=#ffeb3b]Amarillo[/color] y %s [color=#2196f3]Azul[/color].,Das Gleichgewicht ignoriert %s [color=#4caf50]Grün[/color] — nur %s [color=#ffeb3b]Gelb[/color] und %s [color=#2196f3]Blau[/color] zählen.,L’Équilibre ignore le %s [color=#4caf50]Vert[/color] — seuls %s [color=#ffeb3b]Jaune[/color] et %s [color=#2196f3]Bleu[/color] comptent.,Równy balans ignoruje %s [color=#4caf50]Zielony[/color] — liczy się tylko %s [color=#ffeb3b]Żółty[/color] i %s [color=#2196f3]Niebieski[/color].,ბალანსი %s [color=#4caf50]მწვანეს[/color] არ ითვლის — მხოლოდ %s [color=#ffeb3b]ყვითელი[/color] და %s [color=#2196f3]ლურჯი[/color].,Баланс ігнорує %s [color=#4caf50]зелений[/color] — рахуються лише %s [color=#ffeb3b]жовтий[/color] і %s [color=#2196f3]синій[/color].
@@ -378,8 +381,8 @@ HTP_GREEN_EXAMPLE_INVALID_1,(Two [color=#2196f3]Blues[/color] + [color=#4caf50]G
 HTP_GREEN_EXAMPLE_INVALID_2,([color=#ffeb3b]Yellow[/color] + [color=#4caf50]Green[/color] + [color=#ffeb3b]Yellow[/color]),([color=#ffeb3b]Amarillo[/color] + [color=#4caf50]Verde[/color] + [color=#ffeb3b]Amarillo[/color]),([color=#ffeb3b]Gelb[/color] + [color=#4caf50]Grün[/color] + [color=#ffeb3b]Gelb[/color]),([color=#ffeb3b]Jaune[/color] + [color=#4caf50]Vert[/color] + [color=#ffeb3b]Jaune[/color]),([color=#ffeb3b]Żółty[/color] + [color=#4caf50]Zielony[/color] + [color=#ffeb3b]Żółty[/color]),([color=#ffeb3b]ყვითელი[/color] + [color=#4caf50]მწვანე[/color] + [color=#ffeb3b]ყვითელი[/color]),([color=#ffeb3b]Жовтий[/color] + [color=#4caf50]Зелений[/color] + [color=#ffeb3b]Жовтий[/color])
 HTP_EXAMPLE_TWO_GREENS,(Two [color=#4caf50]Greens[/color]),(Dos [color=#4caf50]Verdes[/color]),(Zwei [color=#4caf50]Grüne[/color]),(Deux [color=#4caf50]Verts[/color]),(Dwa [color=#4caf50]Zielone[/color]),(ორი [color=#4caf50]მწვანე[/color]),(Два [color=#4caf50]Зелені[/color])
 HTP_GREEN_EXAMPLE_VALID,(Valid mix),(Mezcla válida),(Gültige Mischung),(Mélange valide),(Poprawna kombinacja),(სწორი კომბინაცია),(Правильна комбінація)
-HTP_SPECIALS_TITLE,SPECIAL RULES,REGLAS ESPECIALES,SPEZIALREGELN,RÈGLES SPÉCIALES,SPECJALNE ZASADY,სპეციალური წესები,СПЕЦІАЛЬНІ ПРАВИЛА
-HTP_LINKS_TITLE,LOCKS & LINKS,CERRADURAS Y ENLACES,SCHLÖSSER & VERBINDUNGEN,VERROUS & LIENS,KŁÓDKI I POŁĄCZENIA,ჩაკეტილები და კავშირები,ЗАМКИ І ЗВ'ЯЗКИ
+UI_HTP_SPECIALS_TITLE,SPECIAL RULES,REGLAS ESPECIALES,SPEZIALREGELN,RÈGLES SPÉCIALES,SPECJALNE ZASADY,სპეციალური წესები,СПЕЦІАЛЬНІ ПРАВИЛА
+UI_HTP_LINKS_TITLE,LOCKS & LINKS,CERRADURAS Y ENLACES,SCHLÖSSER & VERBINDUNGEN,VERROUS & LIENS,KŁÓDKI I POŁĄCZENIA,ჩაკეტილები და კავშირები,ЗАМКИ І ЗВ'ЯЗКИ
 HTP_SHIFTER_TILES_DESC,%s [color=#9c27b0]Purple[/color] tiles hop between two linked cells. Tap one to slide it along the arrow.,Las fichas %s [color=#9c27b0]Moradas[/color] saltan entre dos celdas enlazadas. Toca una para deslizarla según la flecha.,"%s [color=#9c27b0]Lila[/color] Felder springen zwischen zwei verknüpften Zellen. Tippe eines an, um es entlang des Pfeils zu schieben.",Les tuiles %s [color=#9c27b0]Violettes[/color] sautent entre deux cases liées. Touchez-en une pour la faire glisser selon la flèche.,"Płytki %s [color=#9c27b0]Fioletowe[/color] przeskakują między dwoma połączonymi polami. Dotknij, aby przesunąć zgodnie ze strzałką.","%s [color=#9c27b0]იასამნისფერი[/color] ფილები ორ დაკავშირებულ უჯრას შორის ხტებიან. შეეხეთ ერთს, რომ ისრის მიმართულებით გადაიტანოთ.","%s [color=#9c27b0]Фіолетові[/color] плитки стрибають між двома зв’язаними клітинками. Натисніть, щоб зсунути за стрілкою."
 HTP_SHIFTER_BLOCK_NOTE,Another %s [color=#9c27b0]Purple[/color] on the destination blocks the hop — clear that path first.,Otra %s [color=#9c27b0]Morada[/color] en destino bloquea el salto — despeja ese camino primero.,Ein anderes %s [color=#9c27b0]lila[/color] Feld am Ziel blockiert den Sprung — räume den Weg zuerst frei.,Une autre tuile %s [color=#9c27b0]Violette[/color] sur la destination bloque le saut — libérez d’abord ce chemin.,Inna %s [color=#9c27b0]fioletowa[/color] na polu docelowym blokuje skok — najpierw odblokuj tę drogę.,დანიშნულ უჯრაზე სხვა %s [color=#9c27b0]იასამნისფერი[/color] ფილა ხტომას ბლოკავს — ჯერ ეს გზა გაათავისუფლეთ.,Інша %s [color=#9c27b0]фіолетова[/color] на цільовій клітинці блокує стрибок — спершу звільніть шлях.
 HTP_SHIFTER_BALANCE_NOTE,"Like %s [color=#4caf50]Green[/color], %s [color=#9c27b0]Purple[/color] fills a cell without counting toward Equal Balance.","Como %s [color=#4caf50]Verde[/color], %s [color=#9c27b0]Morado[/color] ocupa una celda sin contar para el Equilibrio.","Wie %s [color=#4caf50]Grün[/color] füllt %s [color=#9c27b0]Lila[/color] eine Zelle, ohne fürs Gleichgewicht zu zählen.","Comme le %s [color=#4caf50]Vert[/color], le %s [color=#9c27b0]Violet[/color] remplit une case sans compter pour l’Équilibre.","Tak jak %s [color=#4caf50]Zielony[/color], %s [color=#9c27b0]Fioletowy[/color] zajmuje pole, ale nie liczy się do balansu.","როგორც %s [color=#4caf50]მწვანე[/color], %s [color=#9c27b0]იასამნისფერი[/color] ავსებს უჯრას, მაგრამ ბალანსში არ ითვლება.","Як і %s [color=#4caf50]зелений[/color], %s [color=#9c27b0]фіолетовий[/color] заповнює клітинку, але не рахується для балансу."
@@ -387,12 +390,13 @@ HTP_LOCKS_LABEL,Locks:,Cerraduras:,Schlösser:,Verrous :,Kłódki:,ჩაკე�
 HTP_LOCKS_DESC,Tiles with a lock icon are fixed and cannot be changed.,Las fichas con icono de candado están fijas y no se pueden cambiar.,Felder mit Schloss-Symbol sind fixiert und können nicht geändert werden.,Les tuiles avec une icône de verrou sont fixes et ne peuvent pas être changées.,Płytki z ikoną kłódki są stałe i nie można ich zmienić.,საკეტის ხატულით ფილები ფიქსირებულია და ვერ შეიცვლება.,Плитки з іконкою замка зафіксовані й не змінюються.
 HTP_EQUALS_RULE,[b]=[/b] between two cells means they must be the [i]same[/i] color.,[b]=[/b] entre dos celdas significa que deben tener el color [i]igual[/i].,"[b]=[/b] zwischen zwei Feldern bedeutet, sie müssen die [i]gleiche[/i] Farbe haben.",[b]=[/b] entre deux cases signifie qu’elles doivent avoir la [i]même[/i] couleur.,"[b]=[/b] między dwoma polami oznacza, że muszą mieć [i]ten sam[/i] kolor.","ორ უჯრას შორის [b]=[/b] ნიშნავს, რომ ფერი [i]ერთნაირი[/i] უნდა იყოს.","[b]=[/b] між двома клітинками означає, що колір має бути [i]однаковий[/i]."
 HTP_NOT_EQUALS_RULE,[b]×[/b] between two cells means they must be [i]different[/i] colors.,[b]×[/b] entre dos celdas significa que deben tener colores [i]distintos[/i].,"[b]×[/b] zwischen zwei Feldern bedeutet, sie müssen [i]unterschiedliche[/i] Farben haben.",[b]×[/b] entre deux cases signifie qu’elles doivent avoir des couleurs [i]différentes[/i].,"[b]×[/b] między dwoma polami oznacza, że kolory muszą być [i]różne[/i].","ორ უჯრას შორის [b]×[/b] ნიშნავს, რომ ფერები [i]განსხვავებული[/i] უნდა იყოს.","[b]×[/b] між двома клітинками означає, що кольори мають бути [i]різні[/i]."
-HTP_STARS_TITLE,STARS,ESTRELLAS,STERNE,ÉTOILES,GWIAZDKI,ვარსკვლავები,ЗІРКИ
+UI_HTP_STARS_TITLE,STARS,ESTRELLAS,STERNE,ÉTOILES,GWIAZDKI,ვარსკვლავები,ЗІРКИ
 HTP_STARS_INTRO,"Earn up to three stars: solve the level, finish with no hints used, and beat the time limit.","Gana hasta tres estrellas: resuelve el nivel, sin pistas usadas, y dentro del límite de tiempo.","Verdiene bis zu drei Sterne: Level lösen, ohne Tipps, und innerhalb des Zeitlimits.","Gagnez jusqu’à trois étoiles : résoudre le niveau, sans indices utilisés, et dans la limite de temps.","Zdobądź do trzech gwiazdek: rozwiąż poziom, bez użytych podpowiedzi i w limicie czasu.","მოიპოვეთ სამამდე ვარსკვლავი: ამოხსენით დონე, მინიშნების გარეშე და დროის ლიმიტში.","Заробіть до трьох зірок: розв’яжіть рівень, без використаних підказок і в ліміті часу."
 HTP_STARS_COMPLETE_LABEL,Solved:,Resuelto:,Gelöst:,Résolu :,Rozwiązane:,ამოხსნილია:,Розв’язано:
 HTP_STARS_COMPLETE_DESC,Finish a valid board to earn the first star.,Completa un tablero válido para ganar la primera estrella.,"Schließe ein gültiges Brett ab, um den ersten Stern zu erhalten.",Terminez un plateau valide pour gagner la première étoile.,"Ukończ poprawną planszę, aby zdobyć pierwszą gwiazdkę.",დაასრულეთ სწორი დაფა პირველი ვარსკვლავისთვის.,"Завершіть правильну дошку, щоб отримати першу зірку."
 HTP_STARS_TIME_LABEL,Time:,Tiempo:,Zeit:,Temps :,Czas:,დრო:,Час:
 HTP_STARS_TIME_DESC,Finish within that star's time limit.,Termina dentro del límite de tiempo de esa estrella.,Schließe innerhalb des Zeitlimits dieses Sterns ab.,Terminez dans la limite de temps de cette étoile.,Ukończ w limicie czasu tej gwiazdki.,დაასრულეთ ამ ვარსკვლავის დროის ლიმიტში.,Завершіть у часовому ліміті цієї зірки.
+HTP_ACHIEVEMENTS_BLURB,"Earn achievements for campaign milestones, star goals, and secret feats. Check the main menu Achievements screen to track bronze, silver, and gold tiers.","Gana logros por hitos de campaña, metas de estrellas y proezas secretas. Revisa Logros en el menú principal para ver bronce, plata y oro.","Verdiene Erfolge für Kampagnen-Meilensteine, Sternziele und Geheimleistungen. Im Hauptmenü unter Erfolge siehst du Bronze-, Silber- und Gold-Stufen.","Gagnez des succès pour les jalons de campagne, les objectifs d’étoiles et les exploits secrets. Consultez Succès dans le menu principal pour suivre bronze, argent et or.","Zdobywaj osiągnięcia za kamienie milowe kampanii, cele gwiazdkowe i sekretne wyczyny. W menu głównym sprawdzaj Osiągnięcia — brąz, srebro i złoto.","მოიპოვეთ მიღწევები კამპანიის ეტაპების, ვარსკვლავის მიზნებისა და საიდუმლო ნაბიჯებისთვის. მთავარ მენიუში მიღწევებში ნახავთ ბრინჯაოს, ვერცხლს და ოქროს.","Заробляйте досягнення за етапи кампанії, цілі зірок і секретні подвиги. У головному меню відкрийте Досягнення — бронза, срібло й золото."
 HTP_STARS_HINTS_LABEL,No hints used:,Sin pistas usadas:,Keine Tipps genutzt:,Aucun indice utilisé :,Bez użytych podpowiedzi:,მინიშნება არ გამოყენებულა:,Без використаних підказок:
 HTP_STARS_HINTS_DESC,Finish without using any hints.,Termina sin usar ninguna pista.,Schließe ohne Hinweise ab.,Terminez sans utiliser aucun indice.,Ukończ bez żadnych podpowiedzi.,დაასრულეთ მინიშნებების გამოყენების გარეშე.,Завершіть без жодної підказки.
 HTP_STARS_GREEN_LABEL,No hints used:,Sin pistas usadas:,Keine Tipps genutzt:,Aucun indice utilisé :,Bez użytych podpowiedzi:,მინიშნება არ გამოყენებულა:,Без використаних підказок:
@@ -461,19 +465,57 @@ UI_ACHIEVEMENTS,ACHIEVEMENTS,LOGROS,ERFOLGE,SUCCÈS,OSIĄGNIĘCIA,მიღწ�
 UI_CLOUD_SIGN_IN,CLOUD SIGN IN,INICIAR SESIÓN NUBE,CLOUD-ANMELDUNG,CONNEXION NUAGE,LOGOWANIE DO CHMURY,ღრუბელში შესვლა,ВХІД У ХМАРУ
 UI_CLOUD_SYNC,SYNC CLOUD,SINCRONIZAR NUBE,CLOUD SYNC,SYNCHRO NUAGE,SYNCHRONIZUJ CHMURĘ,სინქრონიზაცია,СИНХРОНІЗАЦІЯ
 UI_CLOUD_PLAY_GAMES_NEEDED,PLAY GAMES NEEDED,SE NECESITA PLAY GAMES,PLAY GAMES ERFORDERLICH,PLAY GAMES REQUIS,WYMAGA PLAY GAMES,საჭიროა PLAY GAMES,ПОТРІБЕН PLAY GAMES
-ACH_UNLOCKED,ACHIEVEMENT UNLOCKED,LOGRO DESBLOQUEADO,ERFOLG FREIGESCHALTET,SUCCÈS DÉBLOQUÉ,ODBLOKOWANO OSIĄGNIĘCIE,მიღწევა გაიხსნა,ДОСЯГНЕННЯ ВІДКРИТО
+UI_CLOUD_SYNCING,SYNCING...,SINCRONIZANDO...,SYNCHRONISIERE...,SYNCHRONISATION...,SYNCHRONIZUJĘ...,სინქრონიზაცია...,СИНХРОНІЗАЦІЯ...
+UI_CLOUD_SYNC_OK,CLOUD SYNCED,NUBE SINCRONIZADA,CLOUD SYNCHRONISIERT,NUAGE SYNCHRONISÉ,CHMURA ZSYNCHRONIZOWANA,სინქრონიზებულია,ХМАРУ СИНХРОНІЗОВАНО
+UI_CLOUD_SYNC_FAIL,SYNC FAILED,ERROR DE SINCRONIZACIÓN,SYNC FEHLGESCHLAGEN,ÉCHEC SYNCHRO,BŁĄD SYNCHRONIZACJI,სინქრონიზაცია ვერ მოხდა,ПОМИЛКА СИНХРОНІЗАЦІЇ
+ACH_UNLOCKED,UNLOCKED,DESBLOQUEADO,FREIGESCHALTET,DÉBLOQUÉ,ODBLOKOWANO,გაიხსნა,ВІДКРИТО
 ACH_LOCKED,LOCKED,BLOQUEADO,GESPERRT,VERROUILLÉ,ZABLOKOWANE,დაბლოკილი,ЗАБЛОКОВАНО
+ACH_HIDDEN_NAME,???,???,???,???,???,???,???
 ACH_FIRST_CLEAR_NAME,FIRST CLEAR,PRIMERA VICTORIA,ERSTER SIEG,PREMIÈRE VICTOIRE,PIERWSZE UKOŃCZENIE,პირველი გავლა,ПЕРШЕ ПРОХОДЖЕННЯ
-ACH_FIRST_CLEAR_DESC,Clear your first campaign puzzle.,Completa tu primer puzle de campaña.,Löse dein erstes Kampagnen-Rätsel.,Terminez votre premier puzzle de campagne.,Ukończ pierwszą zagadkę kampanii.,გაიარეთ პირველი კამპანიის თავსატეხი.,Пройдіть першу головоломку кампанії.
+ACH_FIRST_CLEAR_DESC,Clear your first campaign puzzle,Completa tu primer puzle de campaña,Löse dein erstes Kampagnen-Rätsel,Terminez votre premier puzzle de campagne,Ukończ pierwszą zagadkę kampanii,გაიარეთ პირველი კამპანიის თავსატეხი,Пройдіть першу головоломку кампанії
 ACH_FIRST_HARD_NAME,HARD START,DIFICIL EMPIEZA,HART GESTARTET,DÉBUT DIFFICILE,TRUDNY START,რთული დასაწყისი,СКЛАДНИЙ СТАРТ
-ACH_FIRST_HARD_DESC,Clear a hard campaign puzzle.,Completa un puzle difícil de campaña.,Löse ein schweres Kampagnen-Rätsel.,Terminez un puzzle de campagne difficile.,Ukończ trudną zagadkę kampanii.,გაიარეთ რთული კამპანიის თავსატეხი.,Пройдіть складну головоломку кампанії.
-ACH_NO_HINT_CLEAR_NAME,NO HINTS,SIN PISTAS,OHNE HINWEIS,SANS INDICE,BEZ WSKAZÓWEK,მინიშნების გარეშე,БЕЗ ПІДКАЗОК
-ACH_NO_HINT_CLEAR_DESC,Clear a campaign puzzle without using hints.,Completa un puzle de campaña sin pistas.,Löse ein Kampagnen-Rätsel ohne Hinweise.,Terminez un puzzle de campagne sans indices.,Ukończ zagadkę kampanii bez wskazówek.,გაიარეთ კამპანიის თავსატეხი მინიშნების გარეშე.,Пройдіть головоломку кампанії без підказок.
-ACH_EASY_SET_NAME,EASY SET,SET FÁCIL,LEICHTES SET,SÉRIE FACILE,ZESTAW ŁATWY,მარტივი ნაკრები,ЛЕГКИЙ НАБІР
-ACH_EASY_SET_DESC,Clear every easy campaign puzzle.,Completa todos los puzles fáciles.,Löse alle leichten Kampagnen-Rätsel.,Terminez tous les puzzles faciles.,Ukończ wszystkie łatwe zagadki.,გაიარეთ ყველა მარტივი კამპანიის თავსატეხი.,Пройдіть усі легкі головоломки кампанії.
-ACH_MEDIUM_SET_NAME,MEDIUM SET,SET MEDIO,MITTLERES SET,SÉRIE MOYENNE,ZESTAW ŚREDNI,საშუალო ნაკრები,СЕРЕДНІЙ НАБІР
-ACH_MEDIUM_SET_DESC,Clear every medium campaign puzzle.,Completa todos los puzles medios.,Löse alle mittleren Kampagnen-Rätsel.,Terminez tous les puzzles moyens.,Ukończ wszystkie średnie zagadki.,გაიარეთ ყველა საშუალო კამპანიის თავსატეხი.,Пройдіть усі середні головоломки кампанії.
-ACH_HARD_SET_NAME,HARD SET,SET DIFÍCIL,SCHWERES SET,SÉRIE DIFFICILE,ZESTAW TRUDNY,რთული ნაკრები,СКЛАДНИЙ НАБІР
-ACH_HARD_SET_DESC,Clear every hard campaign puzzle.,Completa todos los puzles difíciles.,Löse alle schweren Kampagnen-Rätsel.,Terminez tous les puzzles difficiles.,Ukończ wszystkie trudne zagadki.,გაიარეთ ყველა რთული კამპანიის თავსატეხი.,Пройдіть усі складні головоломки кампанії.
-ACH_HINT_SAVER_NAME,HINT SAVER,AHORRA PISTAS,HINWEIS-SPARER,ÉCONOME EN INDICES,OSZCZĘDNY W WSKAZÓWKI,მინიშნების დამზოგავი,ЕКОНОМ НА ПІДКАЗКАХ
-ACH_HINT_SAVER_DESC,Clear 10 campaign puzzles without using hints.,Completa 10 puzles de campaña sin pistas.,Löse 10 Kampagnen-Rätsel ohne Hinweise.,Terminez 10 puzzles de campagne sans indices.,Ukończ 10 zagadek kampanii bez wskazówek.,გაიარეთ 10 კამპანიის თავსატეხი მინიშნების გარეშე.,Пройдіть 10 головоломок кампанії без підказок.
+ACH_FIRST_HARD_DESC,Clear a hard campaign puzzle,Completa un puzle difícil de campaña,Löse ein schweres Kampagnen-Rätsel,Terminez un puzzle de campagne difficile,Ukończ trudną zagadkę kampanii,გაიარეთ რთული კამპანიის თავსატეხი,Пройдіть складну головоломку кампанії
+ACH_NO_HINT_CLEAR_NAME,NO SPOILERS,SIN SPOILERS,KEINE SPOILER,PAS DE SPOILERS,BEZ SPOILERÓW,სპოილერების გარეშე,БЕЗ СПОЙЛЕРІВ
+ACH_NO_HINT_CLEAR_DESC,Clear unique campaign puzzles without hints,Completa puzles únicos de campaña sin pistas,Löse einzigartige Kampagnen-Rätsel ohne Hinweise,Terminez des puzzles uniques sans indices,Ukończ unikalne zagadki kampanii bez wskazówek,გაიარეთ უნიკალური კამპანიის თავსატეხები მინიშნების გარეშე,Проходьте унікальні головоломки кампанії без підказок
+ACH_EASY_SET_NAME,EASY DOES IT,FÁCIL Y LISTO,KINDERLEICHT,FACILE COMME BONJOUR,BUŁKA Z MASŁEM,მარტივად გავიდა,ЛЕГКО ТА ПРОСТО
+ACH_EASY_SET_DESC,Clear every easy campaign puzzle,Completa todos los puzles fáciles,Löse alle leichten Kampagnen-Rätsel,Terminez tous les puzzles faciles,Ukończ wszystkie łatwe zagadki,გაიარეთ ყველა მარტივი კამპანიის თავსატეხი,Пройдіть усі легкі головоломки кампанії
+ACH_MEDIUM_SET_NAME,MIDDLE MAN,EL DEL MEDIO,MITTLERER MANN,MILIEU DE GAMME,ŚREDNIAK,შუა რგოლი,СЕРЕДНЯ ЛЮДИНА
+ACH_MEDIUM_SET_DESC,Clear every medium campaign puzzle,Completa todos los puzles medios,Löse alle mittleren Kampagnen-Rätsel,Terminez tous les puzzles moyens,Ukończ wszystkie średnie zagadki,გაიარეთ ყველა საშუალო კამპანიის თავსატეხი,Пройдіть усі середні головоломки кампанії
+ACH_HARD_SET_NAME,HARD KNOCKS,GOLPES DUROS,HARTE SCHLÄGE,COUPS DURS,CIĘŻKIE UDERZENIA,მძიმე დარტყმები,ВАЖКІ УДАРИ
+ACH_HARD_SET_DESC,Clear every hard campaign puzzle,Completa todos los puzles difíciles,Löse alle schweren Kampagnen-Rätsel,Terminez tous les puzzles difficiles,Ukończ wszystkie trudne zagadki,გაიარეთ ყველა რთული კამპანიის თავსატეხი,Пройдіть усі складні головоломки кампанії
+ACH_HINT_SAVER_NAME,NO SPOILERS,SIN SPOILERS,KEINE SPOILER,PAS DE SPOILERS,BEZ SPOILERÓW,სპოილერების გარეშე,БЕЗ СПОЙЛЕРІВ
+ACH_HINT_SAVER_DESC,Clear unique campaign puzzles without hints,Completa puzles únicos de campaña sin pistas,Löse einzigartige Kampagnen-Rätsel ohne Hinweise,Terminez des puzzles uniques sans indices,Ukończ unikalne zagadki kampanii bez wskazówek,გაიარეთ უნიკალური კამპანიის თავსატეხები მინიშნების გარეშე,Проходьте унікальні головоломки кампанії без підказок
+ACH_CLEARS_BRONZE_NAME,ONE MORE LEVEL,UN NIVEL MÁS,NOCH EIN LEVEL,ENCORE UN NIVEAU,JESZCZE JEDEN POZIOM,კიდევ ერთი დონე,ЩЕ ОДИН РІВЕНЬ
+ACH_CLEARS_BRONZE_DESC,Keep clearing unique campaign puzzles,Sigue completando puzles únicos de campaña,Löse weiter einzigartige Kampagnen-Rätsel,Continuez les puzzles uniques de campagne,Kończ kolejne unikalne zagadki kampanii,გააგრძელეთ უნიკალური კამპანიის თავსატეხების გავლა,Продовжуйте проходити унікальні головоломки кампанії
+ACH_CLEARS_SILVER_NAME,ONE MORE LEVEL,UN NIVEL MÁS,NOCH EIN LEVEL,ENCORE UN NIVEAU,JESZCZE JEDEN POZIOM,კიდევ ერთი დონე,ЩЕ ОДИН РІВЕНЬ
+ACH_CLEARS_SILVER_DESC,Keep clearing unique campaign puzzles,Sigue completando puzles únicos de campaña,Löse weiter einzigartige Kampagnen-Rätsel,Continuez les puzzles uniques de campagne,Kończ kolejne unikalne zagadki kampanii,გააგრძელეთ უნიკალური კამპანიის თავსატეხების გავლა,Продовжуйте проходити унікальні головоломки кампанії
+ACH_CLEARS_GOLD_NAME,ONE MORE LEVEL,UN NIVEL MÁS,NOCH EIN LEVEL,ENCORE UN NIVEAU,JESZCZE JEDEN POZIOM,კიდევ ერთი დონე,ЩЕ ОДИН РІВЕНЬ
+ACH_CLEARS_GOLD_DESC,Keep clearing unique campaign puzzles,Sigue completando puzles únicos de campaña,Löse weiter einzigartige Kampagnen-Rätsel,Continuez les puzzles uniques de campagne,Kończ kolejne unikalne zagadki kampanii,გააგრძელეთ უნიკალური კამპანიის თავსატეხების გავლა,Продовжуйте проходити унікальні головоломки кампанії
+ACH_NO_HINT_GOLD_NAME,NO SPOILERS,SIN SPOILERS,KEINE SPOILER,PAS DE SPOILERS,BEZ SPOILERÓW,სპოილერების გარეშე,БЕЗ СПОЙЛЕРІВ
+ACH_NO_HINT_GOLD_DESC,Clear unique campaign puzzles without hints,Completa puzles únicos de campaña sin pistas,Löse einzigartige Kampagnen-Rätsel ohne Hinweise,Terminez des puzzles uniques sans indices,Ukończ unikalne zagadki kampanii bez wskazówek,გაიარეთ უნიკალური კამპანიის თავსატეხები მინიშნების გარეშე,Проходьте унікальні головоломки кампанії без підказок
+ACH_ON_TIME_BRONZE_NAME,TICK TOCK,TIC TAC,TICK TACK,TIC TAC,TYK-TAK,ტიკ-ტაკ,ТІК-ТАК
+ACH_ON_TIME_BRONZE_DESC,Clear unique campaign puzzles in time,Completa puzles únicos de campaña a tiempo,Löse einzigartige Kampagnen-Rätsel rechtzeitig,Terminez des puzzles uniques dans les temps,Ukończ unikalne zagadki kampanii na czas,გაიარეთ უნიკალური კამპანიის თავსატეხები დროში,Проходьте унікальні головоломки кампанії вчасно
+ACH_ON_TIME_SILVER_NAME,TICK TOCK,TIC TAC,TICK TACK,TIC TAC,TYK-TAK,ტიკ-ტაკ,ТІК-ТАК
+ACH_ON_TIME_SILVER_DESC,Clear unique campaign puzzles in time,Completa puzles únicos de campaña a tiempo,Löse einzigartige Kampagnen-Rätsel rechtzeitig,Terminez des puzzles uniques dans les temps,Ukończ unikalne zagadki kampanii na czas,გაიარეთ უნიკალური კამპანიის თავსატეხები დროში,Проходьте унікальні головоломки кампанії вчасно
+ACH_ON_TIME_GOLD_NAME,TICK TOCK,TIC TAC,TICK TACK,TIC TAC,TYK-TAK,ტიკ-ტაკ,ТІК-ТАК
+ACH_ON_TIME_GOLD_DESC,Clear unique campaign puzzles in time,Completa puzles únicos de campaña a tiempo,Löse einzigartige Kampagnen-Rätsel rechtzeitig,Terminez des puzzles uniques dans les temps,Ukończ unikalne zagadki kampanii na czas,გაიარეთ უნიკალური კამპანიის თავსატეხები დროში,Проходьте унікальні головоломки кампанії вчасно
+ACH_THREE_STAR_DEBUT_NAME,THREE STAR DEBUT,DEBUT DE TRES ESTRELLAS,DREI-STERNE-DEBÜT,DÉBUT TROIS ÉTOILES,DEBIUT TRZECH GWIAZD,სამი ვარსკვლავის დებიუტი,ДЕБЮТ ТРЬОХ ЗІРОК
+ACH_THREE_STAR_DEBUT_DESC,Earn all three stars on a campaign puzzle,Gana las tres estrellas en un puzle de campaña,Verdiene alle drei Sterne in einem Kampagnen-Rätsel,Gagnez les trois étoiles sur un puzzle de campagne,Zdobądź wszystkie trzy gwiazdy w zagadce kampanii,მოიპოვეთ სამივე ვარსკვლავი კამპანიის თავსატეხზე,Заробіть усі три зірки на головоломці кампанії
+ACH_UNDO_NOTHING_NAME,UNDO NOTHING,SIN DESHACER,KEIN RÜCKGÄNGIG,PAS D'ANNULATION,BEZ COFANIA,დაბრუნების გარეშე,БЕЗ СКАСУВАННЯ
+ACH_UNDO_NOTHING_DESC,Clear a campaign puzzle without using undo,Completa un puzle de campaña sin deshacer,Löse ein Kampagnen-Rätsel ohne Rückgängig,Terminez un puzzle de campagne sans annulation,Ukończ zagadkę kampanii bez cofania,გაიარეთ კამპანიის თავსატეხი დაბრუნების გარეშე,Пройдіть головоломку кампанії без скасування
+ACH_AD_FRIEND_NAME,AD FRIEND,AMIGO DEL ANUNCIO,WERBEFREUND,AMI DE LA PUB,PRZYJACIEL REKLAM,რекლამის მეგობარი,ДРУГ РЕКЛАМИ
+ACH_AD_FRIEND_DESC,Watch a rewarded ad for hints,Mira un anuncio con recompensa por pistas,Sieh dir eine belohnte Werbung für Hinweise an,Regardez une pub récompensée pour des indices,Obejrzyj reklamę z nagrodą za wskazówki,ნახეთ საჩუქრიანი რეკლამა მინიშნებებისთვის,Перегляньте рекламу з винагородою за підказки
+ACH_IM_BLUE_NAME,I'M BLUE,SOY AZUL,ICH BIN BLAU,JE SUIS BLEU,JESTEM NIEBIESKI,მე ლურჯი ვარ,Я СИНІЙ
+ACH_IM_BLUE_DESC,Fill every empty cell with blue,Rellena cada celda vacía con azul,Fülle jede leere Zelle mit Blau,Remplissez chaque case vide en bleu,Wypełnij każdą pustą komórkę na niebiesko,შეავსეთ ყველა ცარიელი უჯრა ლურჯით,Заповніть кожну порожню клітинку синім
+ACH_SHALL_NOT_PASS_NAME,YOU SHALL NOT PASS,NO PASARÁS,DU KOMMST NICHT VORBEI,TU NE PASSERAS PAS,NIE PRZEJDZIESZ,არ გაივლი,ТИ НЕ ПРОЙДЕШ
+ACH_SHALL_NOT_PASS_DESC,Try to hop a shifter that cannot move,Intenta saltar con un shifter que no puede moverse,Versuche einen Shifter zu springen der sich nicht bewegen kann,Essayez de sauter avec un shifter qui ne peut pas bouger,Spróbuj przeskoczyć shifterem który nie może się ruszyć,სცადეთ გადახტომა shifter-ით რომელიც ვერ მოძრაობს,Спробуйте стрибнути shifter-ом який не може рухатися
+ACH_RULES_READER_NAME,RULES READER,LECTOR DE REGLAS,REGELLESER,LECTEUR DES RÈGLES,CZYTELNIK ZASAD,წესების მკითხველი,ЧИТАЧ ПРАВИЛ
+ACH_RULES_READER_DESC,Open the rules ten times,Abre las reglas diez veces,Öffne die Regeln zehn Mal,Ouvrez les règles dix fois,Otwórz zasady dziesięć razy,გახსენით წესები ათჯერ,Відкрийте правила десять разів
+ACH_PURPLE_RAIN_NAME,PURPLE RAIN,LLUVIA MORADA,LILA REGEN,PLUIE VIOLETTE,FIOLETOWY DESZCZ,იისფერი წვიმა,ФІОЛЕТОВИЙ ДОЩ
+ACH_PURPLE_RAIN_DESC,Make 30 shifter slides,Haz 30 deslizamientos de shifter,Mache 30 Shifter-Rutschen,Effectuez 30 glissades de shifter,Wykonaj 30 przesunięć shiftera,გააკეთეთ 30 shifter-ის გადახვევა,Зробіть 30 ковзань shifter
+ACH_YELLOW_SUBMARINE_NAME,YELLOW SUBMARINE,SUBMARINO AMARILLO,GELBES U-BOOT,SOUS-MARIN JAUNE,ŻÓŁTA ŁÓDŹ PODWODNA,ყვითელი საზღვაო ქვედანი,ЖОВТИЙ ПІДВОДНИЙ ЧОВЕН
+ACH_YELLOW_SUBMARINE_DESC,Fill every empty cell with yellow,Rellena cada celda vacía con amarillo,Fülle jede leere Zelle mit Gelb,Remplissez chaque case vide en jaune,Wypełnij każdą pustą komórkę na żółto,შეავსეთ ყველა ცარიელი უჯრა ყვითლით,Заповніть кожну порожню клітинку жовтим
+ACH_PAUSE_THINKER_NAME,PAUSE THINKER,PENSADOR EN PAUSA,DENKPAUSE,PAUSE RÉFLEXION,MYŚLICIEL PAUZY,დაფიქრების паузა,ПАУЗА-ДУМАЧ
+ACH_PAUSE_THINKER_DESC,Pause for three minutes in one run and still win,Pausa tres minutos en una partida y gana trotzdem,Pausiere drei Minuten in einem Lauf und gewinne trotzdem,Mettez en pause trois minutes dans une partie et gagnez quand même,Zatrzymaj grę na trzy minuty w jednym podejściu i wygraj,დააპაუზეთ სამი წუთით ერთ გავლაში და მაინც გაიმარჯვეთ,Поставте на паузу на три хвилини за один прохід і все одно переможіть
+ACH_DEV_MODE_NAME,"HELLO, DEVELOPER","HOLA, DESARROLLADOR","HALLO, ENTWICKLER","BONJOUR, DÉVELOPPEUR","CZEŚĆ, DEWELOPERZE","გამარჯობა, დეველოპერო","ПРИВІТ, РОЗРОБНИКУ"
+ACH_DEV_MODE_DESC,Unlock dev mode from the credits screen,Activa el modo dev desde la pantalla de créditos,Aktiviere den Dev-Modus über den Credits-Bildschirm,Activez le mode dev depuis l'écran des crédits,Włącz tryb dev z ekranu napisów końcowych,ჩართეთ dev რეჟიმი credits ეკრანიდან,Увімкніть dev-режим з екрана credits

@@ -96,15 +96,12 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="OptionsPanel" type="Panel" parent="CenterContainer"]
-custom_minimum_size = Vector2(700, 1110)
 layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -350.0
-offset_right = 350.0
-offset_bottom = 1110.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
+grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
 
 [node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/OptionsPanel"]
@@ -119,11 +116,12 @@ offset_bottom = -16.0
 grow_horizontal = 2
 grow_vertical = 2
 horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
 
 [node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/OptionsPanel/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 30
+theme_override_constants/separation = 24
 alignment = 0
 
 [node name="LanguageContainer" type="HBoxContainer" parent="CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer"]
@@ -223,20 +221,6 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 autowrap_mode = 3
 text = "UI_HAPTIC_ON"
 
-[node name="AchievementsButton" type="Button" parent="CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer"]
-custom_minimum_size = Vector2(560, 100)
-layout_mode = 2
-size_flags_horizontal = 4
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 0
-theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 24
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-autowrap_mode = 3
-text = "UI_ACHIEVEMENTS"
-
 [node name="CloudSaveButton" type="Button" parent="CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer"]
 custom_minimum_size = Vector2(560, 100)
 layout_mode = 2
@@ -293,56 +277,6 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 autowrap_mode = 3
 text = "UI_RESET_PROGRESS"
 
-[node name="DebugButtons" type="VBoxContainer" parent="CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer"]
-visible = false
-layout_mode = 2
-size_flags_horizontal = 4
-theme_override_constants/separation = 10
-alignment = 1
-
-[node name="UnlockAllButton" type="Button" parent="CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/DebugButtons"]
-visible = false
-custom_minimum_size = Vector2(560, 100)
-layout_mode = 2
-size_flags_horizontal = 4
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 0
-theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 24
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-auto_translate_mode = 1
-autowrap_mode = 3
-text = "UI_UNLOCK_ALL_LEVELS"
-
-[node name="DeleteCustomButton" type="Button" parent="CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/DebugButtons"]
-visible = false
-custom_minimum_size = Vector2(560, 100)
-layout_mode = 2
-size_flags_horizontal = 4
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 0
-theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 24
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-auto_translate_mode = 1
-autowrap_mode = 3
-text = "UI_DELETE_CUSTOM"
-
-[node name="StatusLabel" type="Label" parent="CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer"]
-custom_minimum_size = Vector2(620, 100)
-layout_mode = 2
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 0
-theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 18
-horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 3
-
 [node name="CloseButtonHost" type="Control" parent="."]
 anchors_preset = 15
 anchor_right = 1.0
@@ -384,6 +318,64 @@ mouse_filter = 2
 texture = ExtResource("4_close")
 expand_mode = 1
 stretch_mode = 5
+
+[node name="DebugBarHost" type="VBoxContainer" parent="."]
+visible = false
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 16.0
+offset_right = -24.0
+offset_bottom = 88.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="DebugButtons" type="HBoxContainer" parent="DebugBarHost"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="UnlockAllButton" type="Button" parent="DebugBarHost/DebugButtons"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+auto_translate_mode = 1
+text = "UI_DEBUG_UNLOCK_ALL"
+
+[node name="DeleteCustomButton" type="Button" parent="DebugBarHost/DebugButtons"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+auto_translate_mode = 1
+text = "UI_DEBUG_DEL_CUSTOM"
+
+[node name="StatusLabel" type="Label" parent="DebugBarHost"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
 
 [node name="ConfirmBlocker" type="ColorRect" parent="."]
 visible = false

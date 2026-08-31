@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://cachtoastscene01"]
+[gd_scene format=3 uid="uid://bemvpo81r0h05"]
 
 [ext_resource type="Script" path="res://scripts/achievement_toast.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://xoo8wd3mi3vj" path="res://resources/icons/icon_star_on.svg" id="2_icon"]
 
 [node name="AchievementToast" type="CanvasLayer"]
 layer = 110
@@ -18,39 +19,71 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="Panel" type="Panel" parent="Root"]
+clip_contents = true
 layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -360.0
-offset_top = 24.0
-offset_right = 360.0
-offset_bottom = 244.0
-grow_horizontal = 2
+anchors_preset = 0
+offset_left = 616.0
+offset_top = 252.0
+offset_right = 1056.0
+offset_bottom = 364.0
+grow_horizontal = 0
+grow_vertical = 0
 mouse_filter = 2
 
-[node name="VBox" type="VBoxContainer" parent="Root/Panel"]
+[node name="HBox" type="HBoxContainer" parent="Root/Panel"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 24.0
-offset_top = 24.0
-offset_right = -24.0
-offset_bottom = -24.0
+offset_left = 16.0
+offset_top = 14.0
+offset_right = -16.0
+offset_bottom = -14.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 16
+mouse_filter = 2
+theme_override_constants/separation = 14
 alignment = 1
 
-[node name="TitleLabel" type="Label" parent="Root/Panel/VBox"]
+[node name="IconWrap" type="Control" parent="Root/Panel/HBox"]
+custom_minimum_size = Vector2(56, 56)
 layout_mode = 2
-text = "ACH_UNLOCKED"
-horizontal_alignment = 1
-autowrap_mode = 3
+size_flags_vertical = 4
+mouse_filter = 2
 
-[node name="NameLabel" type="Label" parent="Root/Panel/VBox"]
+[node name="Icon" type="TextureRect" parent="Root/Panel/HBox/IconWrap"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_icon")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TextColumn" type="VBoxContainer" parent="Root/Panel/HBox"]
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="SubtitleLabel" type="Label" parent="Root/Panel/HBox/TextColumn"]
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+text = "ACH_UNLOCKED"
+vertical_alignment = 1
+
+[node name="NameLabel" type="Label" parent="Root/Panel/HBox/TextColumn"]
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
 text = "ACH_FIRST_CLEAR_NAME"
-horizontal_alignment = 1
-autowrap_mode = 3
+vertical_alignment = 1
+text_overrun_behavior = 3

@@ -437,3 +437,4 @@ All lessons done — finish the board. Hold a filled cell to remove a tile if yo
 
 [TUTF_SHIFTER_BLOCK]
 %s [color=#C77DFF]Purple[/color] tiles cannot hop onto each other — another Purple on the destination blocks the move.
+

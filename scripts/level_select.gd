@@ -13,6 +13,7 @@ const LEVEL_GOALS_OVERLAY_Z := 30
 const LEVEL_GOALS_PANEL_WIDTH := 720.0
 const LEVEL_GOALS_TITLE_FONT := 36
 const LEVEL_GOALS_TITLE_COLOR := Color(1.0, 0.92, 0.55, 1.0)
+const _RESERVE_MENU_BANNER_NAV := true
 
 @onready var level_grid: GridContainer = $"UILayer/CenterContainer/VBoxContainer/LevelListHost/LevelGrid"
 @onready var back_button: Button = $"UILayer/CloseButtonHost/BackButton"
@@ -94,6 +95,7 @@ func _ready() -> void:
 	if custom_tab_button:
 		custom_tab_button.pressed.connect(func(): _switch_view(ViewMode.CUSTOM))
 	_configure_custom_tab()
+	_reparent_page_nav()
 	_layout_level_select()
 	# If the default tab is locked (e.g. only Easy is unlocked initially), fall back gracefully.
 	if not _is_category_unlocked(current_view):
@@ -105,12 +107,19 @@ func _ready() -> void:
 	_setup_level_goals_popup()
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
+	if SaveManager and not SaveManager.unseen_levels_changed.is_connected(_on_unseen_levels_changed):
+		SaveManager.unseen_levels_changed.connect(_on_unseen_levels_changed)
 	if not get_viewport().size_changed.is_connected(_on_viewport_resized):
 		get_viewport().size_changed.connect(_on_viewport_resized)
 
 ## Relays viewport changes into the phone-capped level-select layout.
 func _on_viewport_resized() -> void:
 	_layout_level_select()
+
+
+## Rebuilds level cards when a new-level badge is cleared.
+func _on_unseen_levels_changed(_count: int) -> void:
+	_refresh_page()
 
 ## Hardware back closes tutorial/goals popups first, then leaves the screen.
 func _notification(what: int) -> void:
@@ -181,20 +190,37 @@ func _layout_level_select() -> void:
 	if _title_label:
 		HudLayout._bind_header_translation_key(_title_label, "UI_SELECT_LEVEL")
 		HudLayout.apply_screen_header_style(_title_label)
-		const TITLE_AUTHORED_TOP := 160.0
-		const TITLE_AUTHORED_H := 152.0
-		var title_top := SafeInsets.padded_top(TITLE_AUTHORED_TOP)
+		var title_top := SafeInsets.padded_top(GameConstants.SCREEN_HEADER_TOP)
 		_title_label.offset_top = title_top
-		_title_label.offset_bottom = title_top + TITLE_AUTHORED_H
+		_title_label.offset_bottom = title_top + GameConstants.SCREEN_HEADER_HEIGHT
 		if content_vbox:
-			const VBOX_AUTHORED_TOP := 348.0
-			content_vbox.offset_top = VBOX_AUTHORED_TOP + (title_top - TITLE_AUTHORED_TOP)
-			content_vbox.offset_bottom = SafeInsets.padded_bottom_offset(-164.0)
+			const VBOX_AUTHORED_TOP := (
+				GameConstants.SCREEN_HEADER_TOP
+				+ GameConstants.SCREEN_HEADER_HEIGHT
+				+ GameConstants.SCREEN_CONTENT_GAP
+			)
+			content_vbox.offset_top = VBOX_AUTHORED_TOP + (title_top - GameConstants.SCREEN_HEADER_TOP)
+			content_vbox.offset_bottom = SafeInsets.padded_bottom_offset(
+				HudLayout.page_nav_content_bottom_offset(_RESERVE_MENU_BANNER_NAV)
+			)
 			content_vbox.offset_left = 24.0 + SafeInsets.left()
 			content_vbox.offset_right = -24.0 - SafeInsets.right()
 			HudLayout.cap_stretched_width(content_vbox, HudLayout.UI_PHONE_CONTENT_WIDTH)
+		if _page_nav and content_root:
+			HudLayout.pin_page_nav_row(_page_nav, content_root, _RESERVE_MENU_BANNER_NAV)
 	_connect_level_list_host()
 	_pin_level_list_to_top()
+
+
+## Moves PREV/NEXT out of the scroll column so they share the global pinned nav row.
+func _reparent_page_nav() -> void:
+	if _page_nav == null or content_root == null:
+		return
+	if _page_nav.get_parent() != content_root:
+		_page_nav.reparent(content_root)
+	var gap := content_vbox.get_node_or_null("PageNavGap") if content_vbox else null
+	if gap:
+		gap.queue_free()
 
 ## Wires the LevelListHost resize signal to keep layout pinned to the top, and
 ## sets the grid to 3 columns with consistent spacing.
@@ -424,9 +450,9 @@ func _refresh_page() -> void:
 		empty_state_label.visible = valid_level_count == 0
 		if empty_state_label.visible:
 			var empty_key := (
-				"NO_CUSTOM_LEVELS"
+				"UI_NO_CUSTOM_LEVELS"
 				if current_view == ViewMode.CUSTOM
-				else "NO_PLAYABLE_LEVELS"
+				else "UI_NO_PLAYABLE_LEVELS"
 			)
 			empty_state_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 			empty_state_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -608,13 +634,22 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 
 	btn.add_child(content)
 
+	if not locked and current_view != ViewMode.CUSTOM and SaveManager:
+		if SaveManager.is_level_unseen(level.level_number):
+			var badge := HudLayout.attach_notification_badge_corner(btn, btn.custom_minimum_size.y)
+			badge.visible = true
+
 ## Opens the level detail popup (star goals + play). Locked levels stay disabled.
 func _on_level_selected(resource: LevelData) -> void:
+	if SaveManager:
+		SaveManager.mark_level_seen(resource.level_number)
 	var earned_bits := SaveManager.get_level_star_bits(resource.level_number) if SaveManager else 0
 	_show_level_goals_popup(resource, earned_bits)
 
 ## Stores the chosen level and switches to the main gameplay scene.
 func _enter_gameplay(resource: LevelData) -> void:
+	if SaveManager:
+		SaveManager.mark_level_seen(resource.level_number)
 	GlobalGameManager.selected_level_resource = resource
 	GlobalGameManager.go_to_scene("res://scenes/main.tscn")
 
@@ -765,9 +800,9 @@ func _show_level_goals_popup(level: LevelData, earned_bits: int) -> void:
 		if current_view == ViewMode.CUSTOM
 		else str(int(LevelUtils.get_display_level_number(level)))
 	)
-	_level_goals_title.text = "%s %s" % [tr("LEVEL"), title_num]
+	_level_goals_title.text = "%s %s" % [tr("UI_LEVEL"), title_num]
 	HudLayout.apply_popup_title_with_number(
-		_level_goals_title, tr("LEVEL"), title_num, LEVEL_GOALS_TITLE_FONT, LEVEL_GOALS_TITLE_COLOR
+		_level_goals_title, tr("UI_LEVEL"), title_num, LEVEL_GOALS_TITLE_FONT, LEVEL_GOALS_TITLE_COLOR
 	)
 	if _level_goals_play:
 		_level_goals_play.text = tr("UI_PLAY")

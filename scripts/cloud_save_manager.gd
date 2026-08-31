@@ -3,38 +3,47 @@ extends Node
 ## otherwise a desktop stub writes user://cloud_snapshot.json and never crashes.
 
 signal signed_in_changed
+signal sync_started
 signal sync_finished(ok: bool, message: String)
 
 const SNAPSHOT_PATH := "user://cloud_snapshot.json"
 
-## Known plugin.cfg locations — do not ship a new addon from this scaffolding.
-const _PLUGIN_CFGS: PackedStringArray = [
-	"res://addons/godot-play-games-services/plugin.cfg",
-	"res://addons/GodotPlayGameServices/plugin.cfg",
-	"res://addons/play_games_services/plugin.cfg",
-	"res://addons/godot_play_games_services/plugin.cfg",
-]
-
 var is_signed_in: bool = false
+var is_syncing: bool = false
 var last_error: String = ""
 var _plugin_kind: String = ""
+var _sync_local_payload: Dictionary = {}
+
 
 ## Detects Play Games once. Desktop / missing plugin stays on the local stub.
 func _ready() -> void:
-	_plugin_kind = "plugin" if CloudSaveLogic.play_games_plugin_present() else ""
+	_plugin_kind = "plugin" if CloudSaveLogic.play_games_plugin_installed() else ""
+	var pgs := _play_games()
+	if pgs != null:
+		if pgs.has_signal("sign_in_finished") and not pgs.sign_in_finished.is_connected(_on_play_games_sign_in_finished):
+			pgs.sign_in_finished.connect(_on_play_games_sign_in_finished)
+		if pgs.has_signal("snapshot_load_finished") and not pgs.snapshot_load_finished.is_connected(_on_snapshot_load_finished):
+			pgs.snapshot_load_finished.connect(_on_snapshot_load_finished)
+		if pgs.has_signal("snapshot_save_finished") and not pgs.snapshot_save_finished.is_connected(_on_snapshot_save_finished):
+			pgs.snapshot_save_finished.connect(_on_snapshot_save_finished)
+		if pgs.get("is_signed_in") != null:
+			is_signed_in = bool(pgs.get("is_signed_in"))
 
 
-## True when a Play Games plugin or engine singleton is available.
+## True when the Play Games addon is installed in the project.
 func is_play_games_available() -> bool:
 	return not _plugin_kind.is_empty()
 
 
-## True when this session uses the local JSON stub (desktop / no plugin).
+## True when this session uses the local JSON stub (desktop / no Android runtime).
 func is_stub() -> bool:
-	return not is_play_games_available()
+	var pgs := _play_games()
+	if pgs != null and pgs.has_method("is_runtime_available"):
+		return not bool(pgs.call("is_runtime_available"))
+	return not CloudSaveLogic.play_games_runtime_available()
 
 
-## Attempts sign-in. Stub always fails so the Options row stays disabled.
+## Attempts sign-in. On Android this is async; listen for [signal signed_in_changed].
 func sign_in() -> bool:
 	last_error = ""
 	if is_stub():
@@ -42,7 +51,15 @@ func sign_in() -> bool:
 		is_signed_in = false
 		signed_in_changed.emit()
 		return false
-	# Plugin path: keep a no-op hook so a future addon can replace this block.
+	var pgs := _play_games()
+	if pgs != null:
+		if bool(pgs.get("is_signed_in")):
+			is_signed_in = true
+			signed_in_changed.emit()
+			return true
+		if pgs.has_method("request_sign_in"):
+			pgs.call("request_sign_in")
+		return false
 	is_signed_in = _plugin_sign_in()
 	signed_in_changed.emit()
 	return is_signed_in
@@ -54,7 +71,7 @@ func save_blob(blob: Dictionary) -> bool:
 	if not CloudSaveLogic.is_valid_blob(blob):
 		last_error = "invalid blob"
 		return false
-	if is_play_games_available() and is_signed_in:
+	if not is_stub() and is_signed_in:
 		return _plugin_save_blob(blob)
 	return _write_snapshot(blob)
 
@@ -62,46 +79,52 @@ func save_blob(blob: Dictionary) -> bool:
 ## Loads the remote (or stub) blob. Empty dict when nothing is stored.
 func load_blob() -> Dictionary:
 	last_error = ""
-	if is_play_games_available() and is_signed_in:
+	if not is_stub() and is_signed_in:
 		return _plugin_load_blob()
 	return _read_snapshot()
 
 
 ## Merges local SaveManager state with remote using newest timestamp.
+## Play Games path is async; result arrives via [signal sync_finished].
 func sync_now() -> bool:
+	if is_syncing:
+		last_error = "Sync in progress"
+		return false
 	var sm := get_node_or_null("/root/SaveManager")
 	if sm == null or not sm.has_method("export_cloud_payload"):
 		last_error = "no SaveManager"
 		sync_finished.emit(false, last_error)
 		return false
-	var local: Dictionary = sm.export_cloud_payload()
-	var remote: Dictionary = load_blob()
-	var chosen: Dictionary = CloudSaveLogic.winner(local, remote)
-	if chosen.is_empty():
-		chosen = local
-	var applied_remote := (
-		CloudSaveLogic.is_valid_blob(remote)
-		and int(chosen.get("timestamp", 0)) == int(remote.get("timestamp", 0))
-		and int(chosen.get("timestamp", 0)) > int(local.get("timestamp", 0))
-	)
-	if applied_remote and sm.has_method("apply_cloud_payload"):
-		sm.apply_cloud_payload(chosen)
-	var ok := save_blob(chosen)
-	sync_finished.emit(ok, last_error)
-	return ok
+	if not is_stub() and not is_signed_in:
+		last_error = "Not signed in"
+		sync_finished.emit(false, last_error)
+		return false
+	is_syncing = true
+	sync_started.emit()
+	last_error = ""
+	_sync_local_payload = sm.export_cloud_payload()
+	if is_stub():
+		_complete_sync(_read_snapshot())
+		return false
+	var pgs := _play_games()
+	if pgs != null and pgs.has_method("load_snapshot_blob"):
+		pgs.call("load_snapshot_blob")
+		return false
+	_fail_sync("Play Games snapshots not wired")
+	return false
 
 
 ## Local snapshot write used by the desktop stub (and as a plugin fallback).
 func _write_snapshot(blob: Dictionary) -> bool:
-	var text := CloudSaveLogic.encode_json(blob)
-	if text.is_empty():
+	var bytes := CloudSaveLogic.blob_to_bytes(blob)
+	if bytes.is_empty():
 		last_error = "encode failed"
 		return false
 	var file := FileAccess.open(SNAPSHOT_PATH, FileAccess.WRITE)
 	if file == null:
 		last_error = "snapshot write failed"
 		return false
-	file.store_string(text)
+	file.store_buffer(bytes)
 	file.close()
 	return true
 
@@ -114,28 +137,85 @@ func _read_snapshot() -> Dictionary:
 	if file == null:
 		last_error = "snapshot read failed"
 		return {}
-	var text := file.get_as_text()
+	var bytes := file.get_buffer(file.get_length())
 	file.close()
-	var blob := CloudSaveLogic.decode_json(text)
-	if blob.is_empty():
+	var blob := CloudSaveLogic.blob_from_bytes(bytes)
+	if blob.is_empty() and not bytes.is_empty():
 		last_error = "snapshot parse failed"
 	return blob
 
 
-## Returns a short plugin kind string, or "" when none is present.
-func _detect_play_games() -> String:
-	for singleton_name in ["GodotPlayGamesServices", "PlayGamesServices", "PlayGames"]:
-		if Engine.has_singleton(singleton_name):
-			return singleton_name
-	for cfg in _PLUGIN_CFGS:
-		if ResourceLoader.exists(cfg) or FileAccess.file_exists(cfg):
-			return cfg
-	return ""
+func _complete_sync(remote: Dictionary) -> void:
+	var sm := get_node_or_null("/root/SaveManager")
+	if sm == null:
+		_fail_sync("no SaveManager")
+		return
+	var local: Dictionary = _sync_local_payload
+	var chosen: Dictionary = CloudSaveLogic.winner(local, remote)
+	if chosen.is_empty():
+		chosen = local
+	var applied_remote := (
+		CloudSaveLogic.is_valid_blob(remote)
+		and int(chosen.get("timestamp", 0)) == int(remote.get("timestamp", 0))
+		and int(chosen.get("timestamp", 0)) > int(local.get("timestamp", 0))
+	)
+	if applied_remote and sm.has_method("apply_cloud_payload"):
+		sm.apply_cloud_payload(chosen)
+	if is_stub():
+		var ok := _write_snapshot(chosen)
+		_finish_sync(ok, "" if ok else last_error)
+		return
+	var pgs := _play_games()
+	if pgs != null and pgs.has_method("save_snapshot_blob"):
+		pgs.call("save_snapshot_blob", chosen)
+		return
+	_fail_sync("Play Games snapshots not wired")
+
+
+func _on_snapshot_load_finished(ok: bool, remote: Dictionary, message: String) -> void:
+	if not is_syncing:
+		return
+	if not ok:
+		_fail_sync(message if not message.is_empty() else "Cloud load failed")
+		return
+	_complete_sync(remote)
+
+
+func _on_snapshot_save_finished(ok: bool, message: String) -> void:
+	if not is_syncing:
+		return
+	_finish_sync(ok, message)
+
+
+func _finish_sync(ok: bool, message: String) -> void:
+	is_syncing = false
+	_sync_local_payload = {}
+	if not message.is_empty():
+		last_error = message
+	sync_finished.emit(ok, last_error if not ok else "")
+
+
+func _fail_sync(message: String) -> void:
+	_finish_sync(false, message)
+
+
+func _on_play_games_sign_in_finished(ok: bool, message: String) -> void:
+	last_error = message
+	var pgs := _play_games()
+	is_signed_in = ok and pgs != null and bool(pgs.get("is_signed_in"))
+	signed_in_changed.emit()
+
+
+func _play_games() -> Node:
+	return get_node_or_null("/root/PlayGamesManager")
 
 
 ## Plugin sign-in hook. Returns false until a real client is wired.
 func _plugin_sign_in() -> bool:
-	# Intentionally conservative: presence of the addon is not a signed-in session.
+	var pgs := _play_games()
+	if pgs != null and pgs.has_method("request_sign_in"):
+		pgs.call("request_sign_in")
+		return bool(pgs.get("is_signed_in"))
 	last_error = "Play Games sign-in not wired"
 	return false
 

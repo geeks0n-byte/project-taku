@@ -63,7 +63,7 @@ func _ready() -> void:
 		legacy_victory_panel.visible = false
 	_connect_signals()
 	if test_mode_label:
-		test_mode_label.text = HudLayout.format_mode_label("TEST_MODE", true)
+		test_mode_label.text = HudLayout.format_mode_label("UI_TEST_MODE", true)
 	_layout_how_to_play()
 	_setup_how_to_play_font()
 	_refresh_how_to_play_text()
@@ -264,7 +264,7 @@ func _setup_end_layer() -> void:
 # Pixel-fonts the victory action buttons (Latin captions stay Press Start).
 func _style_end_buttons() -> void:
 	_style_end_button(_try_again_button, HudLayout.english("UI_TRY_AGAIN"))
-	_style_end_button(_return_button, HudLayout.english("RETURN"))
+	_style_end_button(_return_button, HudLayout.english("UI_RETURN"))
 
 ## Panel chrome + Press Start caption for Latin/digits/symbols (incl. ka/uk English chrome).
 # One victory button: raster caption, then grow to the translated text width.
@@ -524,7 +524,8 @@ func _layout_how_to_play_stack() -> void:
 		how_to_play_panel,
 		rules_label,
 		how_to_play_nav,
-		_htp_page == 0
+		_htp_page == 0,
+		false
 	)
 
 # Opens the HTP overlay from page 0 and disables playtest HUD controls.
@@ -558,7 +559,7 @@ func update_playtest_hud(elapsed_seconds: int, moves: int, _editor_time_limit: i
 		HudLayout.prepare_counter_label(moves_label)
 		var target := required_moves if required_moves >= 0 else moves
 		moves_label.text = HudLayout.format_icon_ratio_counter(
-			GameConstants.TILE_SHIFTER, moves, target, GameConstants.HUD_COUNTER_SHIFTER, tr("MOVES")
+			GameConstants.TILE_SHIFTER, moves, target, GameConstants.HUD_COUNTER_SHIFTER, tr("UI_MOVES")
 		)
 
 # Updates the playtest joker ratio counter (current / required).
@@ -567,7 +568,7 @@ func update_playtest_joker_counter(current: int, required: int) -> void:
 		return
 	HudLayout.prepare_counter_label(jokers_label)
 	jokers_label.text = HudLayout.format_icon_ratio_counter(
-		GameConstants.TILE_GREEN, current, required, GameConstants.HUD_COUNTER_GREEN, tr("COUNTER_GREEN")
+		GameConstants.TILE_GREEN, current, required, GameConstants.HUD_COUNTER_GREEN, tr("UI_COUNTER_GREEN")
 	)
 
 ## Shows/hides the joker counter slot (parent preferred so spacing collapses cleanly).

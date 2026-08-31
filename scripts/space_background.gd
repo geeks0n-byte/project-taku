@@ -1,5 +1,7 @@
 extends ParallaxBackground
 
+signal boot_intro_impacted(impact_position: Vector2)
+
 # Autoload-style global that renders the animated space backdrop.
 # Manages a multi-layer parallax background, a foreground FX CanvasLayer for
 # shooting stars / comets / asteroids, and a static composite mode for performance.
@@ -18,10 +20,30 @@ const ASSET_DIR = "res://resources/background/"
 # Extra pixels beyond the asteroid's visual radius before it is considered fully offscreen.
 const ASTEROID_POOL_SIZE := 16
 const ASTEROID_OFFSCREEN_MARGIN := 64.0
-# Authored portrait size (project.godot). Layers tile at this scale so tablets
-# get more stars, not bigger stars, when canvas_items expand grows the viewport.
+# Authored portrait size (project.godot). Patterned layers draw ONE tile at
+# this size * LAYER_COVER_PAD (1458x2592), centered. Tablets keep phone-scale
+# stars; extra width is void gutters, not a second copy of the unique sky.
 const PHONE_VIEWPORT_SIZE := Vector2(1080.0, 1920.0)
 const LAYER_COVER_PAD := 1.35
+const BOOT_INTRO_COLLISION_LAYER := 8
+const BOOT_ICON_SIZE := 64
+const BOOT_TILE_DST := 16
+const BOOT_TILE_GAP := 3
+const BOOT_TILE_HALO := 1
+const BOOT_TILE_STRIDE := BOOT_TILE_DST - 2 * BOOT_TILE_HALO + BOOT_TILE_GAP
+const BOOT_TILE_MARGIN := (BOOT_ICON_SIZE - (BOOT_TILE_STRIDE + BOOT_TILE_DST)) >> 1
+const BOOT_INTRO_TILE_PATHS: Array[String] = [
+	GameConstants.TILE_SHIFTER,
+	GameConstants.TILE_YELLOW,
+	GameConstants.TILE_BLUE,
+	GameConstants.TILE_GREEN,
+]
+const BOOT_INTRO_ASTEROID_MASS := 18.0
+const BOOT_INTRO_TILE_MASS := 0.85
+const BOOT_INTRO_TILE_SCATTER_MIN := 110.0
+const BOOT_INTRO_TILE_SCATTER_MAX := 190.0
+const BOOT_INTRO_ASTEROID_SPIN_MIN := 1.0
+const BOOT_INTRO_ASTEROID_SPIN_MAX := 2.2
 
 # Maps logical layer names to their SVG asset filenames, keeping paths in one place.
 const ASSET_FILES = {
@@ -53,6 +75,8 @@ var _fg_comets: Node2D
 var _fg_asteroids: Node2D
 # Set to false during scenes where foreground FX would be distracting.
 var _foreground_events_enabled: bool = false
+# True while the main-menu boot intro is hiding parallax until stars fade in.
+var _boot_intro_prepared: bool = false
 
 # Keyed by timer name ("event"); each entry holds {"timer": Timer, "interval": Vector2}.
 var event_timers: Dictionary = {}
@@ -70,6 +94,12 @@ var _asteroid_pool: Array[RigidBody2D] = []
 var _asteroid_pool_root: Node2D
 # Tracked separately from pool size to avoid iterating children on every frame.
 var _active_asteroid_count: int = 0
+# Scripted splash asteroid (main menu boot intro); kept out of offscreen recycling.
+var _boot_intro_asteroid: RigidBody2D = null
+var _boot_intro_root: Node2D = null
+var _boot_intro_tiles: Array[RigidBody2D] = []
+var _boot_intro_active: bool = false
+var _boot_intro_phys_mat: PhysicsMaterial = null
 # Shared physics material instance reused by all pooled asteroids (bouncy, no friction-damp).
 var _asteroid_phys_mat: PhysicsMaterial
 # Cached bake for static background mode.
@@ -102,6 +132,409 @@ func set_foreground_events_enabled(enabled: bool) -> void:
 	_foreground_events_enabled = enabled
 	if not enabled:
 		_clear_foreground_fx()
+
+
+## Hides live parallax (or the static bake) so frame zero matches the solid boot splash.
+func prepare_boot_intro() -> void:
+	_boot_intro_prepared = true
+	set_foreground_events_enabled(false)
+	_stop_events_and_fx()
+	if _twinkle_tween:
+		_twinkle_tween.kill()
+		_twinkle_tween = null
+	if _static_mode and _static_rect:
+		_static_rect.modulate.a = 0.0
+	else:
+		for p_layer in _parallax_layer_nodes:
+			if is_instance_valid(p_layer):
+				p_layer.modulate.a = 0.0
+
+
+## Fades parallax layers (or static bake) in during the splash handoff to live stars.
+func fade_boot_parallax_in(duration: float) -> void:
+	var tween := create_tween()
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	if _static_mode and _static_rect:
+		tween.tween_property(_static_rect, "modulate:a", 1.0, duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	else:
+		tween.set_parallel(true)
+		for p_layer in _parallax_layer_nodes:
+			if is_instance_valid(p_layer):
+				tween.tween_property(p_layer, "modulate:a", 1.0, duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.finished.connect(_on_boot_parallax_fade_finished)
+
+
+func _on_boot_parallax_fade_finished() -> void:
+	if _boot_intro_prepared and not _static_mode:
+		_start_twinkle_on_mid_layers()
+	_boot_intro_prepared = false
+
+
+## Restores normal FX after the splash intro finishes or is skipped.
+func finish_boot_intro() -> void:
+	dismiss_boot_intro()
+	_boot_intro_prepared = false
+	set_foreground_events_enabled(true)
+	if _static_mode:
+		if _static_rect:
+			_static_rect.modulate.a = 1.0
+		return
+	for p_layer in _parallax_layer_nodes:
+		if is_instance_valid(p_layer):
+			p_layer.modulate.a = 1.0
+	if _twinkle_tween == null:
+		_start_twinkle_on_mid_layers()
+	_restart_timer("event")
+
+
+func _boot_intro_icon_layout(view_rect: Rect2) -> Dictionary:
+	return GameConstants.boot_splash_icon_layout(view_rect)
+
+
+func _boot_intro_ref_tile_px() -> float:
+	return GameConstants.boot_splash_ref_tile_px(_live_viewport_size().x)
+
+
+func _ensure_boot_intro_root() -> Node2D:
+	if _boot_intro_root != null and is_instance_valid(_boot_intro_root):
+		return _boot_intro_root
+	_ensure_foreground_fx_layer()
+	_boot_intro_root = Node2D.new()
+	_boot_intro_root.name = "BootIntroPhysics"
+	_fg_asteroids.add_child(_boot_intro_root)
+	return _boot_intro_root
+
+
+func _ensure_foreground_fx_layer() -> void:
+	if _fg_asteroids == null:
+		_build_foreground_fx_layer()
+
+
+func _boot_intro_material() -> PhysicsMaterial:
+	if _boot_intro_phys_mat == null:
+		_boot_intro_phys_mat = PhysicsMaterial.new()
+		_boot_intro_phys_mat.bounce = 0.06
+		_boot_intro_phys_mat.friction = 0.35
+	return _boot_intro_phys_mat
+
+
+func _make_boot_intro_tile(tex_path: String, center: Vector2, tile_px: float) -> RigidBody2D:
+	var rb := RigidBody2D.new()
+	rb.set_meta("boot_intro_tile", true)
+	rb.gravity_scale = 0.0
+	rb.linear_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
+	rb.linear_damp = 0.35
+	rb.angular_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
+	rb.angular_damp = 0.9
+	rb.physics_material_override = _boot_intro_material()
+	rb.collision_layer = BOOT_INTRO_COLLISION_LAYER
+	rb.collision_mask = BOOT_INTRO_COLLISION_LAYER
+	rb.contact_monitor = true
+	rb.max_contacts_reported = 2
+	rb.freeze = true
+	rb.mass = BOOT_INTRO_TILE_MASS
+	rb.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	var tex := load(tex_path) as Texture2D
+	var sprite := Sprite2D.new()
+	sprite.name = "Sprite"
+	sprite.texture = tex
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	var tex_w := 16.0
+	if tex != null:
+		tex_w = float(tex.get_width())
+	sprite.scale = Vector2.ONE * GameConstants.boot_splash_tile_sprite_scale(tile_px, tex_w)
+	rb.add_child(sprite)
+	var col := CollisionShape2D.new()
+	col.name = "Collision"
+	var box := RectangleShape2D.new()
+	box.size = Vector2.ONE * tile_px * 0.88
+	col.shape = box
+	rb.add_child(col)
+	rb.position = center
+	return rb
+
+
+## Four app-icon tiles as separate frozen bodies until the intro asteroid hits.
+func setup_boot_intro_tiles() -> void:
+	dismiss_boot_intro()
+	_boot_intro_active = true
+	if _asteroid_phys_mat == null:
+		_init_asteroid_pool()
+	var root := _ensure_boot_intro_root()
+	var layout := _boot_intro_icon_layout(_live_visible_rect())
+	var tile_px: float = layout["tile_px"]
+	var centers: Array = layout["centers"]
+	for i in BOOT_INTRO_TILE_PATHS.size():
+		var center: Vector2 = centers[i]
+		var tile := _make_boot_intro_tile(BOOT_INTRO_TILE_PATHS[i], center, tile_px)
+		root.add_child(tile)
+		_boot_intro_tiles.append(tile)
+
+
+func _relayout_boot_intro_tiles_if_idle() -> void:
+	if not _boot_intro_active or _boot_intro_tiles.is_empty():
+		return
+	for tile in _boot_intro_tiles:
+		if is_instance_valid(tile) and not tile.freeze:
+			return
+	var layout := _boot_intro_icon_layout(_live_visible_rect())
+	var centers: Array = layout["centers"]
+	for i in _boot_intro_tiles.size():
+		if i >= centers.size():
+			break
+		var tile := _boot_intro_tiles[i]
+		if is_instance_valid(tile):
+			tile.position = centers[i]
+
+
+func _unfreeze_boot_intro_tiles() -> void:
+	for tile in _boot_intro_tiles:
+		if is_instance_valid(tile):
+			tile.freeze = false
+			tile.linear_velocity = Vector2.ZERO
+			tile.angular_velocity = 0.0
+
+
+func _apply_boot_intro_scatter(asteroid: RigidBody2D) -> void:
+	var approach_vel := asteroid.linear_velocity
+	var layout := _boot_intro_icon_layout(_live_visible_rect())
+	var cluster_center: Vector2 = layout["cluster_center"]
+	var tile_px: float = layout["tile_px"]
+	var scatter_scale := tile_px / maxf(_boot_intro_ref_tile_px(), 1.0)
+	var speed_min := BOOT_INTRO_TILE_SCATTER_MIN * scatter_scale
+	var speed_max := BOOT_INTRO_TILE_SCATTER_MAX * scatter_scale
+	var dir := approach_vel.normalized() if approach_vel.length_squared() > 1.0 else Vector2(-0.75, 0.55).normalized()
+	for tile in _boot_intro_tiles:
+		if not is_instance_valid(tile):
+			continue
+		var away := tile.global_position - cluster_center
+		if away.length_squared() < 4.0:
+			away = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0))
+		var push_dir := (away.normalized() * 0.55 + dir * 0.45).normalized()
+		var speed := randf_range(speed_min, speed_max)
+		tile.linear_velocity = push_dir * speed
+		tile.angular_velocity = randf_range(-1.8, 1.8) * scatter_scale
+	# Heavy rock keeps plowing through instead of ricocheting off the cluster.
+	if approach_vel.length_squared() > 1.0:
+		asteroid.linear_velocity = approach_vel * 0.96
+	var spin_cap := BOOT_INTRO_ASTEROID_SPIN_MAX * 1.15
+	asteroid.angular_velocity = clampf(asteroid.angular_velocity, -spin_cap, spin_cap)
+
+
+## Spawns a tile-sized rock aimed at the icon cluster using pooled physics motion.
+func spawn_boot_intro_asteroid(travel_duration: float) -> RigidBody2D:
+	dismiss_boot_intro_asteroid()
+	if tex_asteroids.is_empty():
+		_load_fx_assets()
+	if tex_asteroids.is_empty():
+		return null
+	if _boot_intro_tiles.is_empty():
+		setup_boot_intro_tiles()
+	var layout := _boot_intro_icon_layout(_live_visible_rect())
+	var tile_px: float = layout["tile_px"]
+	var target: Vector2 = layout["cluster_center"]
+	var tex: Texture2D = tex_asteroids.pick_random()
+	if tex == null:
+		return null
+	var size := Vector2.ONE * tile_px
+	var rb := _acquire_asteroid()
+	if rb == null:
+		return null
+	rb.set_meta("boot_intro_asteroid", true)
+	rb.set_meta("boot_intro_impact_done", false)
+	rb.set_meta("spawn_msec", Time.get_ticks_msec())
+	rb.set_meta("entered_view", false)
+	rb.collision_layer = BOOT_INTRO_COLLISION_LAYER
+	rb.collision_mask = BOOT_INTRO_COLLISION_LAYER
+	rb.freeze = false
+	rb.process_mode = Node.PROCESS_MODE_INHERIT
+	rb.visible = true
+	rb.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	rb.physics_material_override = _boot_intro_material()
+	rb.mass = BOOT_INTRO_ASTEROID_MASS
+	rb.linear_damp = 0.0
+	rb.angular_damp = 0.0
+	for conn in rb.body_entered.get_connections():
+		rb.body_entered.disconnect(conn["callable"])
+	rb.body_entered.connect(_on_boot_intro_asteroid_collided.bind(rb))
+
+	var sprite := rb.get_node("Sprite") as Sprite2D
+	sprite.texture = tex
+	var base_scale := size.x / maxf(1.0, float(tex.get_width()))
+	sprite.scale = Vector2.ONE * base_scale
+	var overlay := rb.get_node("Overlay") as Sprite2D
+	overlay.visible = false
+	overlay.texture = null
+
+	var col := rb.get_node("Collision") as CollisionShape2D
+	if col and col.shape is CircleShape2D:
+		(col.shape as CircleShape2D).radius = size.x * 0.44
+
+	var viewport_size := _live_viewport_size()
+	var max_dim: float = maxf(size.x, size.y)
+	var start_x: float = viewport_size.x + max_dim * 0.85
+	var start_y: float = randf_range(-max_dim * 0.35, viewport_size.y * 0.24)
+	var start := Vector2(start_x, start_y)
+	var travel := target - start
+	var duration := maxf(travel_duration, 0.05)
+	rb.position = start
+	rb.rotation = randf_range(0.0, TAU)
+	rb.linear_velocity = travel / duration
+	var spin_dir := 1.0 if randi() % 2 == 0 else -1.0
+	rb.angular_velocity = randf_range(BOOT_INTRO_ASTEROID_SPIN_MIN, BOOT_INTRO_ASTEROID_SPIN_MAX) * spin_dir
+
+	if rb.get_parent() != null:
+		rb.get_parent().remove_child(rb)
+	_ensure_boot_intro_root().add_child(rb)
+	# Resting dynamic bodies stay put until the hit; avoids frozen-wall ricochet.
+	_unfreeze_boot_intro_tiles()
+	_boot_intro_asteroid = rb
+	return rb
+
+
+func _on_boot_intro_asteroid_collided(body: Node, asteroid: RigidBody2D) -> void:
+	if not (body is RigidBody2D and body.get_meta("boot_intro_tile", false)):
+		return
+	var impact_pos := (asteroid.global_position + (body as Node2D).global_position) * 0.5
+	var burst_parent := _boot_intro_root if _boot_intro_root else _fg_asteroids
+	_spawn_asteroid_impact_burst(impact_pos, burst_parent)
+	if asteroid.get_meta("boot_intro_impact_done", false):
+		return
+	asteroid.set_meta("boot_intro_impact_done", true)
+	_apply_boot_intro_scatter(asteroid)
+	boot_intro_impacted.emit(impact_pos)
+
+
+func get_boot_intro_asteroid() -> RigidBody2D:
+	return _boot_intro_asteroid if is_instance_valid(_boot_intro_asteroid) else null
+
+
+func get_boot_intro_asteroid_velocity() -> Vector2:
+	var rb := get_boot_intro_asteroid()
+	if rb == null:
+		return Vector2.ZERO
+	return rb.linear_velocity
+
+
+func boot_intro_tiles_offscreen() -> bool:
+	if _boot_intro_tiles.size() < 4:
+		return false
+	var view := _live_visible_rect()
+	for tile in _boot_intro_tiles:
+		if not is_instance_valid(tile):
+			continue
+		if not _boot_intro_body_offscreen(tile, view):
+			return false
+	return true
+
+
+## Poof any splash tiles still on screen when the clear-timeout fires (e.g. large tablets).
+func explode_boot_intro_tiles_remaining() -> void:
+	var view := _live_visible_rect()
+	var parent := _boot_intro_root if _boot_intro_root else _fg_asteroids
+	for tile in _boot_intro_tiles:
+		if not is_instance_valid(tile):
+			continue
+		if _boot_intro_body_offscreen(tile, view):
+			tile.queue_free()
+			continue
+		_spawn_boot_intro_tile_explosion(tile.global_position, parent)
+		tile.queue_free()
+	_boot_intro_tiles.clear()
+	if is_instance_valid(_boot_intro_asteroid):
+		if not _boot_intro_body_offscreen(_boot_intro_asteroid, view):
+			_spawn_boot_intro_tile_explosion(_boot_intro_asteroid.global_position, parent)
+		dismiss_boot_intro_asteroid()
+
+
+func _spawn_boot_intro_tile_explosion(global_pos: Vector2, parent: Node) -> void:
+	if parent == null:
+		return
+	_spawn_boot_intro_impact_burst(global_pos, parent)
+	var vfx := CPUParticles2D.new()
+	vfx.emitting = true
+	vfx.one_shot = true
+	vfx.explosiveness = 1.0
+	vfx.amount = 38
+	vfx.lifetime = 1.0
+	vfx.spread = 180.0
+	vfx.gravity = Vector2.ZERO
+	vfx.initial_velocity_min = 110.0
+	vfx.initial_velocity_max = 280.0
+	vfx.scale_amount_min = 7.0
+	vfx.scale_amount_max = 18.0
+	vfx.color = Color(0.72, 0.74, 0.82, 1.0)
+	parent.add_child(vfx)
+	vfx.global_position = global_pos
+	get_tree().create_timer(1.45).timeout.connect(vfx.queue_free)
+
+
+func _spawn_boot_intro_impact_burst(global_pos: Vector2, parent: Node) -> void:
+	if parent == null:
+		return
+	var vfx := CPUParticles2D.new()
+	vfx.emitting = true
+	vfx.one_shot = true
+	vfx.explosiveness = 0.95
+	vfx.amount = 16
+	vfx.lifetime = 0.85
+	vfx.spread = 180.0
+	vfx.gravity = Vector2.ZERO
+	vfx.initial_velocity_min = 45.0
+	vfx.initial_velocity_max = 150.0
+	vfx.scale_amount_min = 5.0
+	vfx.scale_amount_max = 12.0
+	vfx.color = Color(0.65, 0.67, 0.74, 1.0)
+	parent.add_child(vfx)
+	vfx.global_position = global_pos
+	get_tree().create_timer(1.2).timeout.connect(vfx.queue_free)
+
+
+func _boot_intro_body_offscreen(body: RigidBody2D, view: Rect2, margin: float = 32.0) -> bool:
+	var col := body.get_node_or_null("Collision") as CollisionShape2D
+	var radius := 64.0
+	if col and col.shape is RectangleShape2D:
+		var half := (col.shape as RectangleShape2D).size * 0.5
+		radius = half.length()
+	elif col and col.shape is CircleShape2D:
+		radius = (col.shape as CircleShape2D).radius
+	radius *= maxf(absf(body.scale.x), absf(body.scale.y))
+	radius += margin
+	var pos := body.global_position
+	return (
+		pos.x + radius < view.position.x
+		or pos.x - radius > view.position.x + view.size.x
+		or pos.y + radius < view.position.y
+		or pos.y - radius > view.position.y + view.size.y
+	)
+
+
+func play_asteroid_impact_burst(global_pos: Vector2) -> void:
+	var parent := _boot_intro_root if _boot_intro_root else _fg_asteroids
+	if parent == null:
+		parent = dyn_layer_asteroids
+	if parent:
+		_spawn_asteroid_impact_burst(global_pos, parent)
+
+
+func dismiss_boot_intro_asteroid() -> void:
+	if not is_instance_valid(_boot_intro_asteroid):
+		_boot_intro_asteroid = null
+		return
+	_release_asteroid(_boot_intro_asteroid)
+	_boot_intro_asteroid = null
+
+
+func dismiss_boot_intro() -> void:
+	dismiss_boot_intro_asteroid()
+	for tile in _boot_intro_tiles:
+		if is_instance_valid(tile):
+			tile.queue_free()
+	_boot_intro_tiles.clear()
+	if _boot_intro_root != null and is_instance_valid(_boot_intro_root):
+		_boot_intro_root.queue_free()
+		_boot_intro_root = null
+	_boot_intro_active = false
 
 ## Cached static composite used when animated FX are turned off.
 func _get_baked_texture() -> Texture2D:
@@ -290,6 +723,10 @@ func _asteroid_intersects_view(rb: RigidBody2D, view: Rect2) -> bool:
 func _release_asteroid(rb: RigidBody2D) -> void:
 	if not is_instance_valid(rb):
 		return
+	if rb == _boot_intro_asteroid:
+		_boot_intro_asteroid = null
+	if rb.has_meta("boot_intro_asteroid"):
+		rb.remove_meta("boot_intro_asteroid")
 	# Guard against double-release (already pooled or already in the pool root).
 	if rb.get_parent() == _asteroid_pool_root or _asteroid_pool.has(rb):
 		return
@@ -347,14 +784,17 @@ func _stop_events_and_fx() -> void:
 					child.queue_free()
 	_clear_foreground_fx()
 
-# Hides all animated layers and replaces them with a single baked composite TextureRect.
-# The twinkle tween is killed to stop alpha animation while static.
+# Hides patterned parallax layers and shows a single baked composite TextureRect.
+# Void stays visible so tablet gutters keep the solid sky color. The bake is one
+# phone cover tile, centered — never STRETCH_TILE of the 1080 composite.
 # _static_rect is created lazily and reused on subsequent calls.
 func _present_baked_composite() -> void:
 	for p_layer in _parallax_layer_nodes:
 		if is_instance_valid(p_layer):
 			p_layer.visible = false
 	for child in get_children():
+		if child.name == "Void":
+			continue
 		if child is TextureRect and child != _static_rect:
 			child.visible = false
 		elif child is ColorRect:
@@ -368,10 +808,26 @@ func _present_baked_composite() -> void:
 		_static_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		_static_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(_static_rect)
-		move_child(_static_rect, 0)
+	_place_static_composite_above_void()
 	_static_rect.texture = _get_baked_texture()
 	_static_rect.visible = true
 	_apply_phone_scale_cover(_static_rect, _cover_size())
+
+
+## Stacks the bake just above Void so gutters stay the void color and the 1080
+## composite is a single centered tile (not behind the full-viewport void).
+func _place_static_composite_above_void() -> void:
+	if _static_rect == null:
+		return
+	var void_idx := -1
+	for i in get_child_count():
+		if get_child(i).name == "Void":
+			void_idx = i
+			break
+	if void_idx < 0:
+		move_child(_static_rect, 0)
+	else:
+		move_child(_static_rect, void_idx + 1)
 
 ## Swaps animated layers for the baked composite (performance / options toggle).
 func _show_static_composite() -> void:
@@ -456,12 +912,14 @@ func _start_twinkle_on_mid_layers() -> void:
 func _build_background_layers() -> void:
 	_parallax_layer_nodes.clear()
 	var view_size := _cover_size()
+	var viewport_size := _live_viewport_size()
 	if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["void"]):
-		add_child(_create_pixel_rect(load(ASSET_DIR + ASSET_FILES["void"]), view_size))
+		add_child(_create_void_rect(load(ASSET_DIR + ASSET_FILES["void"])))
 	else:
 		var fallback_bg = ColorRect.new()
+		fallback_bg.name = "Void"
 		fallback_bg.color = Color(0.04, 0.04, 0.08, 1)
-		_apply_cover_rect(fallback_bg, view_size)
+		_apply_cover_rect(fallback_bg, viewport_size)
 		add_child(fallback_bg)
 	
 	if ResourceLoader.exists(ASSET_DIR + ASSET_FILES["dust"]):
@@ -529,60 +987,112 @@ static func phone_layer_scale(tex_size: Vector2, phone_viewport: Vector2 = Vecto
 	return maxf(tile.x / tw, tile.y / th)
 
 
-# Returns the size each background layer should be so it covers the viewport even during
-# parallax scrolling. The 1.35x factor prevents edge gaps when the scroll offset shifts layers.
-# Star size stays at phone scale; extra viewport is filled by tiling (see _apply_phone_scale_cover).
-func _cover_size() -> Vector2:
-	var view := get_viewport().get_visible_rect().size
-	if view.x <= 1.0 or view.y <= 1.0:
-		view = PHONE_VIEWPORT_SIZE
-	return view * LAYER_COVER_PAD
+## One patterned-layer tile: authored phone size * LAYER_COVER_PAD (1458x2592).
+## Does not use the live viewport, so a 1440-wide tablet still gets 1080*1.35.
+static func phone_cover_size() -> Vector2:
+	return PHONE_VIEWPORT_SIZE * LAYER_COVER_PAD
 
-# Sizes and centers a Control rect so it covers the viewport symmetrically.
-# Since the layer is oversized (1.35×), centering keeps the overflow equally distributed
-# on all sides regardless of which way the scroll offset drifts.
+
+## Off-window FX start X from the live window's right edge.
+## `viewport_width` is the live visible rect (tablet 1440, phone 1080), never
+## the authored cover width. Both spawn paths share this so stars never appear
+## at x=1080 on a wider window.
+static func fx_spawn_start_x(viewport_width: float, max_dim: float, margin: float = 50.0) -> float:
+	return viewport_width + max_dim + margin
+
+
+## Live visible-rect size, or the authored phone size when the viewport is not ready.
+func _live_viewport_size() -> Vector2:
+	return _live_visible_rect().size
+
+
+func _live_visible_rect() -> Rect2:
+	var view := get_viewport().get_visible_rect()
+	if view.size.x <= 1.0 or view.size.y <= 1.0:
+		return Rect2(Vector2.ZERO, PHONE_VIEWPORT_SIZE)
+	return view
+
+
+## Patterned-layer and motion_mirroring size: always the phone cover tile.
+## Extra tablet width is void gutters; we do not grow this with the viewport.
+func _cover_size() -> Vector2:
+	return phone_cover_size()
+
+# Sizes and centers a Control rect (void ColorRect fallback) on the live viewport.
+# Passing the live viewport size fills the window; an oversized size is centered.
 func _apply_cover_rect(rect: Control, view_size: Vector2) -> void:
-	var viewport_size := get_viewport().get_visible_rect().size
-	if viewport_size.x <= 1.0 or viewport_size.y <= 1.0:
-		viewport_size = PHONE_VIEWPORT_SIZE
+	var viewport_size := _live_viewport_size()
 	rect.scale = Vector2.ONE
 	rect.size = view_size
 	rect.position = (viewport_size - view_size) * 0.5
 
 
-# Sizes a TextureRect so one phone cover tile matches 1080x1920 KEEP_ASPECT_COVERED,
-# then tiles that texture to fill view_size. On phones this is one tile at the same 1.35 cover scale.
+## Fills the live viewport with the solid void. A flat color can tile without a
+## visible seam; we size to the window so gutters exist when the patterned phone
+## cover is narrower than a tablet. Never uses the 1080*1.35 unique-sky tile.
+func _apply_void_cover(rect: TextureRect) -> void:
+	var viewport_size := _live_viewport_size()
+	rect.stretch_mode = TextureRect.STRETCH_SCALE
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.scale = Vector2.ONE
+	rect.size = viewport_size
+	rect.position = Vector2.ZERO
+
+
+## Solid void TextureRect sized to the live viewport (not the phone cover tile).
+func _create_void_rect(tex: Texture2D) -> TextureRect:
+	var rect := TextureRect.new()
+	rect.name = "Void"
+	rect.texture = tex
+	rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_apply_void_cover(rect)
+	return rect
+
+
+## One KEEP_ASPECT_COVERED phone tile, centered on the live viewport.
+## Does not STRETCH_TILE: tiling a 1080 unique drawing is the tablet double-sky bug.
+## view_size is the phone cover (1458x2592), not the live viewport.
 func _apply_phone_scale_cover(rect: TextureRect, view_size: Vector2) -> void:
-	var viewport_size := get_viewport().get_visible_rect().size
-	if viewport_size.x <= 1.0 or viewport_size.y <= 1.0:
-		viewport_size = PHONE_VIEWPORT_SIZE
+	var viewport_size := _live_viewport_size()
+	var cover := view_size
+	if cover.x <= 1.0 or cover.y <= 1.0:
+		cover = phone_cover_size()
 	var tex_size := PHONE_VIEWPORT_SIZE
 	if rect.texture:
 		tex_size = Vector2(float(rect.texture.get_width()), float(rect.texture.get_height()))
 	var phone_scale := phone_layer_scale(tex_size)
-	rect.stretch_mode = TextureRect.STRETCH_TILE
+	rect.stretch_mode = TextureRect.STRETCH_SCALE
 	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	rect.scale = Vector2(phone_scale, phone_scale)
-	rect.size = view_size / phone_scale
-	rect.position = (viewport_size - view_size) * 0.5
+	rect.size = cover / phone_scale
+	rect.position = (viewport_size - cover) * 0.5
 
-## Retiles/covers every backdrop layer for the new viewport size.
+## Re-centers the phone cover on resize. Void still fills the live viewport.
+## Does not start tiling when width > 1458 — void gutters are OK.
 func _on_viewport_size_changed() -> void:
-	var view_size := _cover_size()
+	var cover := _cover_size()
+	var viewport_size := _live_viewport_size()
 	for child in get_children():
 		if child is ParallaxLayer:
-			child.motion_mirroring = view_size
+			child.motion_mirroring = cover
 			for rect_child in child.get_children():
 				if rect_child is TextureRect:
-					_apply_phone_scale_cover(rect_child as TextureRect, view_size)
+					_apply_phone_scale_cover(rect_child as TextureRect, cover)
 				elif rect_child is Control:
-					_apply_cover_rect(rect_child as Control, view_size)
+					_apply_cover_rect(rect_child as Control, cover)
+		elif child.name == "Void":
+			if child is TextureRect:
+				_apply_void_cover(child as TextureRect)
+			elif child is Control:
+				_apply_cover_rect(child as Control, viewport_size)
 		elif child is TextureRect:
-			_apply_phone_scale_cover(child as TextureRect, view_size)
-		elif child is Control:
-			_apply_cover_rect(child as Control, view_size)
+			_apply_phone_scale_cover(child as TextureRect, cover)
+		elif child is ColorRect:
+			_apply_cover_rect(child as Control, viewport_size)
 	if _static_mode and _static_rect and _static_rect.visible:
-		_apply_phone_scale_cover(_static_rect, view_size)
+		_apply_phone_scale_cover(_static_rect, cover)
+	_relayout_boot_intro_tiles_if_idle()
 
 # Advances the parallax scroll and checks for asteroids that have left the screen.
 func _process(delta: float) -> void:
@@ -605,6 +1115,10 @@ func _release_offscreen_asteroids() -> void:
 			if not (child is RigidBody2D and child.has_meta("pooled_asteroid")):
 				continue
 			var rb := child as RigidBody2D
+			if rb.get_meta("boot_intro_asteroid", false):
+				continue
+			if rb.get_meta("boot_intro_tile", false):
+				continue
 			var seen := bool(rb.get_meta("entered_view", false))
 			if not seen and _asteroid_intersects_view(rb, view):
 				rb.set_meta("entered_view", true)
@@ -614,7 +1128,8 @@ func _release_offscreen_asteroids() -> void:
 
 # Creates a parallax layer for a given texture.
 # motion_offset is seeded so layers don't all start aligned and each launch differs.
-# motion_mirroring wraps the cover during scroll; the TextureRect tiles at phone star size.
+# motion_mirroring wraps one phone cover tile (1458x2592) during scroll — not the
+# live viewport. The TextureRect is a single untiled KEEP_ASPECT_COVERED drawing.
 func _build_parallax_layer(tex: Texture2D, speed_scale: Vector2, view_size: Vector2 = Vector2.ZERO) -> ParallaxLayer:
 	if view_size == Vector2.ZERO:
 		view_size = _cover_size()
@@ -629,7 +1144,7 @@ func _build_parallax_layer(tex: Texture2D, speed_scale: Vector2, view_size: Vect
 	add_child(p_layer)
 	return p_layer
 
-## Nearest-filter TextureRect sized to cover the viewport at the phone layer scale.
+## Nearest-filter TextureRect for one patterned phone-cover tile (no STRETCH_TILE).
 func _create_pixel_rect(tex: Texture2D, view_size: Vector2 = Vector2.ZERO) -> TextureRect:
 	if view_size == Vector2.ZERO:
 		view_size = _cover_size()
@@ -814,10 +1329,10 @@ func _spawn_debug_asteroid_standard_motion(
 		(col.shape as CircleShape2D).radius = size.x * 0.4
 
 	rb.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	var viewport_size := get_viewport().get_visible_rect().size
+	var viewport_size := _live_viewport_size()
 	var max_dim: float = maxf(size.x, size.y)
-	# All asteroids enter from the right edge and exit off the left edge.
-	var start_x: float = viewport_size.x + max_dim + 50.0
+	# Enter from the live window's right edge (tablet 1440, phone 1080), never 1080-as-cover.
+	var start_x: float = fx_spawn_start_x(viewport_size.x, max_dim)
 	var end_x: float = -max_dim - 100.0
 	var travel_x: float = start_x - end_x
 	var start_y: float = randf_range(-100.0, viewport_size.y * 0.8)
@@ -882,6 +1397,15 @@ func _spawn_shower_comet(use_fg: bool) -> void:
 func _on_asteroid_collided(body: Node, self_entity: RigidBody2D) -> void:
 	if not body is RigidBody2D: return
 	if self_entity.get_instance_id() > body.get_instance_id(): return
+	_spawn_asteroid_impact_burst(
+		(self_entity.global_position + body.global_position) * 0.5,
+		dyn_layer_asteroids
+	)
+
+
+func _spawn_asteroid_impact_burst(global_pos: Vector2, parent: Node) -> void:
+	if parent == null:
+		return
 	var vfx = CPUParticles2D.new()
 	vfx.emitting = true
 	vfx.one_shot = true
@@ -895,9 +1419,9 @@ func _on_asteroid_collided(body: Node, self_entity: RigidBody2D) -> void:
 	vfx.scale_amount_min = 2.0
 	vfx.scale_amount_max = 6.0
 	# Grey-blue tint matches the overall cool colour palette of the background.
-	vfx.color = Color(0.6, 0.6, 0.65) 
-	vfx.global_position = (self_entity.global_position + body.global_position) / 2.0
-	dyn_layer_asteroids.add_child(vfx)
+	vfx.color = Color(0.6, 0.6, 0.65)
+	parent.add_child(vfx)
+	vfx.global_position = global_pos
 	get_tree().create_timer(1.0).timeout.connect(vfx.queue_free)
 
 # General-purpose entity spawner used by shooting stars, comets, and the tween-based
@@ -969,10 +1493,10 @@ func _spawn_entity(
 
 	entity.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	
-	var viewport_size = get_viewport().get_visible_rect().size
+	var viewport_size = _live_viewport_size()
 	var max_dim = max(size.x, size.y)
 	
-	var start_x = viewport_size.x + max_dim + 50
+	var start_x = fx_spawn_start_x(viewport_size.x, max_dim)
 	var end_x = -max_dim - 100 
 	var travel_x = start_x - end_x
 	var start_y: float

@@ -55,18 +55,18 @@ func _ready() -> void:
 	call_deferred("_style_header")
 	call_deferred("_fit_menu_buttons")
 
-## Applies the shared screen-header style to the PAUSED title.
+## Applies the shared screen-header style to the PAUSED header.
 func _style_header() -> void:
 	if not title_label:
 		return
 	title_label.set_meta("_screen_header_font_size", PAUSE_TITLE_FONT_SIZE)
-	HudLayout._bind_header_translation_key(title_label, "PAUSED")
+	HudLayout._bind_header_translation_key(title_label, "UI_PAUSED")
 	HudLayout.apply_screen_header_style(title_label)
 
 ## Pause buttons that are currently shown (debug auto-win may be hidden).
 func _visible_menu_buttons() -> Array[Button]:
 	var buttons: Array[Button] = []
-	for btn in [resume_btn, restart_btn, level_select_btn, settings_btn, achievements_btn, quit_btn, auto_win_btn]:
+	for btn in [resume_btn, restart_btn, level_select_btn, achievements_btn, settings_btn, quit_btn, auto_win_btn]:
 		if btn and btn.visible:
 			buttons.append(btn)
 	return buttons
@@ -102,13 +102,13 @@ func _fit_menu_buttons() -> void:
 		achievements_btn.set_meta("_tr_key", "UI_ACHIEVEMENTS")
 	if title_label:
 		title_label.set_meta("_screen_header_font_size", PAUSE_TITLE_FONT_SIZE)
-		HudLayout._bind_header_translation_key(title_label, "PAUSED")
+		HudLayout._bind_header_translation_key(title_label, "UI_PAUSED")
 		HudLayout.apply_screen_header_style(title_label)
 		var title_top := SafeInsets.padded_top(GameConstants.SCREEN_HEADER_TOP)
 		title_label.offset_top = title_top
 		title_label.offset_bottom = title_top + GameConstants.SCREEN_HEADER_HEIGHT
 	var row_h := _menu_row_height()
-	for btn in [resume_btn, restart_btn, level_select_btn, settings_btn, achievements_btn, quit_btn]:
+	for btn in [resume_btn, restart_btn, level_select_btn, achievements_btn, settings_btn, quit_btn]:
 		_apply_pause_button(btn, row_h)
 	_style_auto_win_button(row_h)
 

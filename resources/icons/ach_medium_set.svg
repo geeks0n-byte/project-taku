@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- MIDDLE MAN — between easy and hard -->
+  <rect x="8" y="20" width="14" height="14" fill="#1a1a1a"/>
+  <rect x="9" y="21" width="12" height="12" fill="#00e436"/>
+  <rect x="9" y="21" width="10" height="2" fill="#a1ff00"/>
+  <rect x="42" y="20" width="14" height="14" fill="#1a1a1a"/>
+  <rect x="43" y="21" width="12" height="12" fill="#e85d4c"/>
+  <rect x="43" y="21" width="10" height="2" fill="#ff8a80"/>
+  <rect x="24" y="10" width="16" height="44" fill="#1a1a1a"/>
+  <rect x="25" y="11" width="14" height="14" fill="#c49c00"/>
+  <rect x="25" y="11" width="12" height="2" fill="#ffe066"/>
+  <rect x="27" y="27" width="10" height="12" fill="#c49c00"/>
+  <rect x="27" y="27" width="8" height="2" fill="#ffe066"/>
+  <rect x="28" y="15" width="8" height="8" fill="#1d2b53"/>
+  <rect x="30" y="17" width="4" height="4" fill="#fff1e8"/>
+  <rect x="29" y="41" width="6" height="10" fill="#c49c00"/>
+  <rect x="27" y="51" width="10" height="4" fill="#704700"/>
+</svg>

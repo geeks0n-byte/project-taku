@@ -6,6 +6,7 @@ const SAVE_FORMAT_VERSION := 2
 const SUPPORTED_LANGUAGES := ["en", "es", "de", "fr", "pl", "ka", "uk"]
 
 signal language_changed
+signal unseen_levels_changed(count: int)
 
 var max_unlocked_level: int = 1
 var current_language: String = "en"
@@ -26,8 +27,20 @@ var session_data: Dictionary = {}
 var ads_wins_since_interstitial: int = 0
 # Local achievements: id -> unix timestamp. New section; existing keys stay intact.
 var achievements_unlocked: Dictionary = {}
-# Campaign clears with zero hints (hint_saver progress).
+# ids the player has viewed in the achievements list since unlocking (menu badge).
+var achievements_seen: Dictionary = {}
+# Campaign level numbers unlocked since last viewed/played (menu + level-select badges).
+var levels_unseen: Dictionary = {}
+# Campaign clears with zero hints (hint_saver / no_hint family progress).
 var no_hint_clears: int = 0
+# Replay-counting campaign victories (clears family). Not unique max_unlocked.
+var campaign_wins: int = 0
+# Campaign victories that earned the time star (on_time family).
+var on_time_clears: int = 0
+# Lifetime shifter slides (purple_rain).
+var shifter_slides: int = 0
+# Lifetime rules overlay opens (rules_reader).
+var rules_opens: int = 0
 # Last local save time (unix seconds) for cloud conflict resolution.
 var updated_unix: int = 0
 
@@ -179,7 +192,20 @@ func load_progress() -> void:
 		achievements_unlocked = config.get_value("Achievements", "unlocked", {})
 		if typeof(achievements_unlocked) != TYPE_DICTIONARY:
 			achievements_unlocked = {}
+		achievements_seen = config.get_value("Achievements", "seen", {})
+		if typeof(achievements_seen) != TYPE_DICTIONARY:
+			achievements_seen = {}
+		levels_unseen = config.get_value("Progression", "levels_unseen", {})
+		if typeof(levels_unseen) != TYPE_DICTIONARY:
+			levels_unseen = {}
+		# Existing installs: do not badge old unlocks the first time we track "seen".
+		if achievements_seen.is_empty() and not achievements_unlocked.is_empty():
+			mark_achievements_seen()
 		no_hint_clears = int(config.get_value("Achievements", "no_hint_clears", 0))
+		campaign_wins = int(config.get_value("Achievements", "campaign_wins", 0))
+		on_time_clears = int(config.get_value("Achievements", "on_time_clears", 0))
+		shifter_slides = int(config.get_value("Achievements", "shifter_slides", 0))
+		rules_opens = int(config.get_value("Achievements", "rules_opens", 0))
 		updated_unix = int(config.get_value("Meta", "updated_unix", 0))
 		if not SUPPORTED_LANGUAGES.has(current_language):
 			current_language = "en"
@@ -193,7 +219,13 @@ func load_progress() -> void:
 		tutorial_intro_answered = false
 		ads_wins_since_interstitial = 0
 		achievements_unlocked = {}
+		achievements_seen = {}
+		levels_unseen = {}
 		no_hint_clears = 0
+		campaign_wins = 0
+		on_time_clears = 0
+		shifter_slides = 0
+		rules_opens = 0
 		updated_unix = 0
 		max_unlocked_level = get_campaign_start_unlock()
 		save_progress()
@@ -233,9 +265,15 @@ func save_progress() -> void:
 	config.set_value("Progression", "privacy_accepted", privacy_accepted)
 	# dev_mode_enabled is not saved — it resets each session by design.
 	config.set_value("Progression", "level_star_bits", level_star_bits)
+	config.set_value("Progression", "levels_unseen", levels_unseen)
 	config.set_value("Ads", "wins_since_interstitial", ads_wins_since_interstitial)
 	config.set_value("Achievements", "unlocked", achievements_unlocked)
+	config.set_value("Achievements", "seen", achievements_seen)
 	config.set_value("Achievements", "no_hint_clears", no_hint_clears)
+	config.set_value("Achievements", "campaign_wins", campaign_wins)
+	config.set_value("Achievements", "on_time_clears", on_time_clears)
+	config.set_value("Achievements", "shifter_slides", shifter_slides)
+	config.set_value("Achievements", "rules_opens", rules_opens)
 	if session_data.is_empty():
 		if config.has_section("Session"):
 			config.erase_section("Session")
@@ -348,7 +386,29 @@ func _apply_background_mode() -> void:
 func unlock_level(level_num: int) -> void:
 	if level_num > max_unlocked_level:
 		max_unlocked_level = level_num
+		levels_unseen[str(level_num)] = true
 		save_progress()
+		unseen_levels_changed.emit(unseen_level_count())
+
+
+## True when this campaign level was unlocked but not yet viewed/played.
+func is_level_unseen(level_num: int) -> bool:
+	return levels_unseen.has(str(level_num))
+
+
+## Clears the new-level badge for one campaign number.
+func mark_level_seen(level_num: int) -> void:
+	var key := str(level_num)
+	if not levels_unseen.has(key):
+		return
+	levels_unseen.erase(key)
+	save_progress()
+	unseen_levels_changed.emit(unseen_level_count())
+
+
+## Count of unlocked levels the player has not opened or played yet.
+func unseen_level_count() -> int:
+	return levels_unseen.size()
 
 ## Debug: unlocks through the highest campaign level number.
 func unlock_all_levels() -> void:
@@ -402,6 +462,27 @@ func save_session(data: Dictionary) -> void:
 	session_data = _serialize_session(data)
 	save_progress()
 
+## Marks every current unlock as seen in the achievements list (clears the menu badge).
+func mark_achievements_seen() -> void:
+	var changed := false
+	for id in achievements_unlocked:
+		if achievements_seen.has(id):
+			continue
+		achievements_seen[id] = true
+		changed = true
+	if changed:
+		save_progress()
+
+
+## Count of unlocked achievements not yet viewed in the achievements list.
+func unseen_achievement_count() -> int:
+	var count := 0
+	for id in achievements_unlocked:
+		if not achievements_seen.has(id):
+			count += 1
+	return count
+
+
 ## Drops the stored run if one exists.
 func clear_session() -> void:
 	if session_data.is_empty():
@@ -419,11 +500,20 @@ func delete_save_file() -> void:
 	privacy_accepted = false
 	ads_wins_since_interstitial = 0
 	achievements_unlocked.clear()
+	achievements_seen.clear()
+	levels_unseen.clear()
 	no_hint_clears = 0
+	campaign_wins = 0
+	on_time_clears = 0
+	shifter_slides = 0
+	rules_opens = 0
 	updated_unix = 0
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(SAVE_PATH)
 	save_progress()
+	unseen_levels_changed.emit(0)
+	if AchievementManager:
+		AchievementManager.notify_unseen_changed()
 
 ## Remembers whether the first-run tutorial prompt was answered.
 func set_tutorial_intro_answered(answered: bool = true) -> void:
@@ -465,6 +555,10 @@ func export_cloud_payload() -> Dictionary:
 		{
 			"unlocked": achievements_unlocked.duplicate(true),
 			"no_hint_clears": no_hint_clears,
+			"campaign_wins": campaign_wins,
+			"on_time_clears": on_time_clears,
+			"shifter_slides": shifter_slides,
+			"rules_opens": rules_opens,
 		},
 		ts
 	)
@@ -498,6 +592,10 @@ func apply_cloud_payload(blob: Dictionary) -> void:
 	if typeof(unlocked) == TYPE_DICTIONARY:
 		achievements_unlocked = unlocked
 	no_hint_clears = int(ach.get("no_hint_clears", no_hint_clears))
+	campaign_wins = int(ach.get("campaign_wins", campaign_wins))
+	on_time_clears = int(ach.get("on_time_clears", on_time_clears))
+	shifter_slides = int(ach.get("shifter_slides", shifter_slides))
+	rules_opens = int(ach.get("rules_opens", rules_opens))
 	updated_unix = int(blob.get("timestamp", updated_unix))
 	_apply_background_mode()
 	if BgmManager and BgmManager.has_method("apply_enabled"):

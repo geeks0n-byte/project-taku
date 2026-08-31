@@ -30,11 +30,12 @@ GlobalGameManager="*uid://bn8d4xks38olr"
 SaveManager="*uid://blp08aux0so6"
 AchievementManager="*res://scripts/achievement_manager.gd"
 CloudSaveManager="*res://scripts/cloud_save_manager.gd"
+PlayGamesManager="*res://scripts/play_games_manager.gd"
 BgmManager="*uid://cq8bgmmanager01"
 UiSfx="*uid://c8uisfxclick001"
 SpaceBackground="*uid://bjs0g2pap4nsi"
 AdsManager="*uid://cadsmanager0001"
-_mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
+GodotPlayGameServices="*uid://dwybtygm726ry"
 
 [display]
 
@@ -50,7 +51,7 @@ project/assembly_name="project-taku"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/admob/plugin.cfg", "res://addons/godot_ai/plugin.cfg")
+enabled=PackedStringArray("res://addons/GodotPlayGameServices/plugin.cfg", "res://addons/admob/plugin.cfg", "res://addons/godot_ai/plugin.cfg", "res://addons/android_splash/plugin.cfg")
 
 [internationalization]
 

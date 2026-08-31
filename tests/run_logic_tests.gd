@@ -27,6 +27,7 @@ func _init() -> void:
 	_test_hint_unique_pool_only()
 	_test_hold_repeat()
 	_test_achievement_catalog()
+	_test_levels_unseen_badges()
 	_test_cloud_save_logic()
 	_test_cloud_save_stub()
 	print("logic_tests: %d passed, %d failed" % [_passed, _failed])
@@ -312,13 +313,49 @@ func _test_wide_ui_cap() -> void:
 	_ok(HudLayout.grid_row_pad_count(1, 3) == 2, "grid-pad: single leftover")
 	_ok(HudLayout.grid_row_pad_count(0, 3) == 0, "grid-pad: empty is none")
 	_ok(HudLayout.grid_row_pad_count(11, 3) == 1, "grid-pad: eleven needs one")
-	# Same formula as SpaceBackground.phone_layer_scale (do not preload that node script here).
+	# Same formula as SpaceBackground.phone_layer_scale / phone_cover_size /
+	# fx_spawn_start_x. Do not preload space_background.gd here: SaveManager is
+	# an autoload and the script fails to compile in this SceneTree runner.
 	var phone := Vector2(1080.0, 1920.0)
 	var pad := 1.35
 	var tile := phone * pad
 	_ok(is_equal_approx(maxf(tile.x / 1080.0, tile.y / 1920.0), 1.35), "bg-scale: phone tex is 1.35")
 	var wide_tile := Vector2(1920.0, 1920.0) * pad
 	_ok(not is_equal_approx(maxf(wide_tile.x / 1080.0, wide_tile.y / 1920.0), 1.35), "bg-scale: wider base would zoom")
+	# Patterned cover stays 1080*1.35 even on a 1440x1920 tablet viewport.
+	var tablet_vp := Vector2(1440.0, 1920.0)
+	var cover := phone * pad
+	_ok(is_equal_approx(cover.x, 1080.0 * 1.35), "bg-cover: width stays 1080*1.35 on 1440 viewport")
+	_ok(not is_equal_approx(cover.x, tablet_vp.x), "bg-cover: not live 1440")
+	# Same as SpaceBackground.fx_spawn_start_x(viewport.x, max_dim): window edge + size + margin.
+	var spawn_x := tablet_vp.x + 64.0 + 50.0
+	_ok(spawn_x > tablet_vp.x, "bg-spawn: start x is off the live window")
+	# Android splash icon slot is 288dp when background is a separate theme color.
+	var phone_side := GameConstants.android_splash_icon_side_px(phone)
+	_ok(absf(phone_side - 288.0 * (1080.0 / 411.0)) < 1.0, "boot-splash: 288dp side on phone")
+	var layout := GameConstants.boot_splash_icon_layout(Rect2(Vector2.ZERO, phone))
+	var tile_px: float = layout["tile_px"]
+	_ok(absf(tile_px - 16.0 * phone_side / 64.0) < 0.05, "boot-splash: tile px tracks icon side")
+	_ok(
+		absf(GameConstants.boot_splash_tile_sprite_scale(tile_px, 120.0) - tile_px / 120.0) < 0.05,
+		"boot-splash: tile sprite scale fills 16px cell",
+	)
+	var visible_px := GameConstants.boot_splash_tile_visible_px(tile_px)
+	var gap_px := (17.0 * phone_side / 64.0) - visible_px
+	_ok(absf(gap_px - 3.0 * phone_side / 64.0) < 0.05, "boot-splash: 3px gap between visible tiles")
+	_ok(tile_px > 120.0 and tile_px < 260.0, "boot-splash: tile px between old wrong extremes")
+	_ok(
+		is_equal_approx(
+			HudLayout.page_nav_bottom_inset(true),
+			GameConstants.SCREEN_PAGE_NAV_BOTTOM_INSET + GameConstants.AD_BANNER_RESERVE
+		),
+		"page-nav: menu banner reserve stacks on base inset"
+	)
+	_ok(
+		HudLayout.page_nav_content_bottom_offset(true)
+		< HudLayout.page_nav_content_bottom_offset(false),
+		"page-nav: banner reserve pushes content higher"
+	)
 
 # Minimal cell dict for hint-policy tests.
 func _mock_cell(state: int, locked: bool = false) -> Dictionary:
@@ -503,22 +540,24 @@ func _test_hold_repeat() -> void:
 
 
 
-# AchievementCatalog: starter ids, counters, and set flags.
+# AchievementCatalog: families, counters, hidden/secret, grant, event ids.
 func _test_achievement_catalog() -> void:
 	var empty := AchievementCatalog.collect_unlocks({})
 	_ok(empty.is_empty(), "ach: empty state unlocks nothing")
 	var first := AchievementCatalog.collect_unlocks({"campaign_clears": 1})
 	_ok(first.has(AchievementCatalog.ID_FIRST_CLEAR), "ach: first_clear")
 	_ok(not first.has(AchievementCatalog.ID_FIRST_HARD), "ach: first_hard not from easy")
+	_ok(not first.has(AchievementCatalog.ID_CLEARS_SILVER), "ach: silver needs 30 clears")
 	var hard := AchievementCatalog.collect_unlocks({"campaign_clears": 1, "hard_clears": 1})
 	_ok(hard.has(AchievementCatalog.ID_FIRST_HARD), "ach: first_hard")
-	var hinted := AchievementCatalog.collect_unlocks({"campaign_clears": 1, "no_hint_clears": 0})
+	var hinted := AchievementCatalog.collect_unlocks({"campaign_clears": 10, "no_hint_clears": 0})
 	_ok(not hinted.has(AchievementCatalog.ID_NO_HINT_CLEAR), "ach: hinted clear is not no_hint")
-	var no_hint := AchievementCatalog.collect_unlocks({"campaign_clears": 1, "no_hint_clears": 1})
+	var no_hint := AchievementCatalog.collect_unlocks({"campaign_clears": 10, "no_hint_clears": 10})
 	_ok(no_hint.has(AchievementCatalog.ID_NO_HINT_CLEAR), "ach: no_hint_clear")
-	_ok(not no_hint.has(AchievementCatalog.ID_HINT_SAVER), "ach: hint_saver needs 10")
-	var saver := AchievementCatalog.collect_unlocks({"campaign_clears": 10, "no_hint_clears": 10})
-	_ok(saver.has(AchievementCatalog.ID_HINT_SAVER), "ach: hint_saver at 10")
+	_ok(not no_hint.has(AchievementCatalog.ID_HINT_SAVER), "ach: hint_saver needs 30")
+	var saver := AchievementCatalog.collect_unlocks({"campaign_clears": 30, "no_hint_clears": 30})
+	_ok(saver.has(AchievementCatalog.ID_HINT_SAVER), "ach: hint_saver at 30")
+	_ok(not saver.has(AchievementCatalog.ID_NO_HINT_GOLD), "ach: no_hint_gold needs 60")
 	var sets := AchievementCatalog.collect_unlocks({
 		"campaign_clears": 60,
 		"easy_complete": true,
@@ -537,6 +576,328 @@ func _test_achievement_catalog() -> void:
 	var hard_first := AchievementCatalog.first_level_number_in_dir(GameConstants.CAMPAIGN_HARD_DIR)
 	_ok(easy_last > 0, "ach: easy folder is detectable")
 	_ok(hard_first > easy_last, "ach: hard starts after easy")
+	# Two new ids in one collect_unlocks must stay unique for the toast queue.
+	var duo: Array = AchievementCatalog.collect_unlocks({
+		"campaign_clears": 10,
+		"no_hint_clears": 10,
+	})
+	_ok(duo.has(AchievementCatalog.ID_FIRST_CLEAR), "ach: duo has first_clear")
+	_ok(duo.has(AchievementCatalog.ID_NO_HINT_CLEAR), "ach: duo has no_hint_clear")
+	_ok(duo.has(AchievementCatalog.ID_CLEARS_BRONZE), "ach: duo has clears_bronze")
+	_ok(duo.size() == 3, "ach: collect_unlocks unique size 3")
+	var seen := {}
+	for raw_id in duo:
+		var sid := str(raw_id)
+		_ok(not seen.has(sid), "ach: no duplicate %s" % sid)
+		seen[sid] = true
+	_ok(
+		AchievementCatalog.icon_path(AchievementCatalog.ID_FIRST_CLEAR).ends_with("ach_first_clear.svg"),
+		"ach: first_clear uses solved-board icon"
+	)
+	_ok(
+		AchievementCatalog.icon_path(AchievementCatalog.ID_FIRST_HARD)
+		!= AchievementCatalog.icon_path(AchievementCatalog.ID_FIRST_CLEAR),
+		"ach: first_hard has its own icon"
+	)
+	_ok(
+		AchievementCatalog.icon_path(AchievementCatalog.ID_CLEARS_BRONZE).ends_with(
+			"ach_one_more_level.svg"
+		),
+		"ach: clears family uses one-more-level icon"
+	)
+	_ok(
+		AchievementCatalog.icon_path(AchievementCatalog.ID_CLEARS_BRONZE)
+		!= AchievementCatalog.icon_path(AchievementCatalog.ID_FIRST_CLEAR),
+		"ach: first_clear icon differs from clears family"
+	)
+	_ok(
+		AchievementCatalog.icon_path(AchievementCatalog.ID_HINT_SAVER)
+		== AchievementCatalog.icon_path(AchievementCatalog.ID_NO_HINT_CLEAR),
+		"ach: no_hint family shares base icon"
+	)
+	_ok(
+		AchievementCatalog.icon_path(AchievementCatalog.ID_ON_TIME_GOLD).ends_with("ach_on_time.svg"),
+		"ach: on_time family uses clock/star icon"
+	)
+	_ok(AchievementCatalog.tier(AchievementCatalog.ID_FIRST_CLEAR) == AchievementCatalog.TIER_NONE, "ach: first_clear is standalone")
+	_ok(AchievementCatalog.tier(AchievementCatalog.ID_CLEARS_BRONZE) == AchievementCatalog.TIER_BRONZE, "ach: clears_bronze is bronze")
+	_ok(AchievementCatalog.tier(AchievementCatalog.ID_CLEARS_SILVER) == AchievementCatalog.TIER_SILVER, "ach: clears_silver is silver")
+	_ok(AchievementCatalog.tier(AchievementCatalog.ID_CLEARS_GOLD) == AchievementCatalog.TIER_GOLD, "ach: clears_gold is gold")
+	_ok(AchievementCatalog.family(AchievementCatalog.ID_FIRST_CLEAR) == "", "ach: first_clear is standalone")
+	_ok(AchievementCatalog.family(AchievementCatalog.ID_CLEARS_BRONZE) == AchievementCatalog.FAM_CLEARS, "ach: clears_bronze family clears")
+	_ok(AchievementCatalog.family(AchievementCatalog.ID_HINT_SAVER) == AchievementCatalog.FAM_NO_HINT, "ach: hint_saver family no_hint")
+	_ok(AchievementCatalog.family(AchievementCatalog.ID_FIRST_HARD) == "", "ach: first_hard is standalone")
+	_ok(AchievementCatalog.visibility(AchievementCatalog.ID_FIRST_CLEAR) == AchievementCatalog.VIS_VISIBLE, "ach: starter vis visible")
+	_ok(AchievementCatalog.visibility(AchievementCatalog.ID_IM_BLUE) == AchievementCatalog.VIS_HIDDEN_DESC, "ach: im_blue hidden_desc")
+	_ok(AchievementCatalog.visibility(AchievementCatalog.ID_SHALL_NOT_PASS) == AchievementCatalog.VIS_HIDDEN_DESC, "ach: shall_not_pass hidden_desc")
+	_ok(AchievementCatalog.visibility(AchievementCatalog.ID_DEV_MODE) == AchievementCatalog.VIS_SECRET, "ach: dev_mode secret")
+	_ok(
+		AchievementCatalog.medal_overlay_path(AchievementCatalog.ID_CLEARS_BRONZE, true).ends_with("ach_medal_bronze.svg"),
+		"ach: bronze medal on clears_bronze"
+	)
+	_ok(AchievementCatalog.medal_overlay_path(AchievementCatalog.ID_FIRST_HARD, true) == "", "ach: no medal on unranked")
+	_ok(AchievementCatalog.listed_when(AchievementCatalog.VIS_VISIBLE, false), "ach: visible locked is listed")
+	_ok(AchievementCatalog.listed_when(AchievementCatalog.VIS_HIDDEN_DESC, false), "ach: hidden_desc locked is listed")
+	_ok(not AchievementCatalog.listed_when(AchievementCatalog.VIS_SECRET, false), "ach: secret locked is omitted")
+	_ok(AchievementCatalog.listed_when(AchievementCatalog.VIS_SECRET, true), "ach: secret unlocked is listed")
+	_ok(AchievementCatalog.desc_shown_when(AchievementCatalog.VIS_VISIBLE, false), "ach: visible locked shows desc")
+	_ok(not AchievementCatalog.desc_shown_when(AchievementCatalog.VIS_HIDDEN_DESC, false), "ach: hidden_desc locked hides desc")
+	_ok(AchievementCatalog.desc_shown_when(AchievementCatalog.VIS_HIDDEN_DESC, true), "ach: hidden_desc unlocked shows desc")
+	_ok(not AchievementCatalog.desc_visible(AchievementCatalog.ID_IM_BLUE, false), "ach: im_blue locked hides desc")
+	_ok(AchievementCatalog.desc_visible(AchievementCatalog.ID_IM_BLUE, true), "ach: im_blue unlocked shows desc")
+	_ok(not AchievementCatalog.identity_visible(AchievementCatalog.ID_IM_BLUE, false), "ach: im_blue locked hides identity")
+	_ok(AchievementCatalog.identity_visible(AchievementCatalog.ID_IM_BLUE, true), "ach: im_blue unlocked shows identity")
+	_ok(
+		AchievementCatalog.display_title_key(
+			AchievementCatalog.ID_CLEARS_SILVER,
+			true
+		) == AchievementCatalog.title_key(AchievementCatalog.ID_CLEARS_BRONZE),
+		"ach: ranked family shares bronze title"
+	)
+	_ok(
+		AchievementCatalog.display_desc_key(AchievementCatalog.ID_CLEARS_GOLD)
+		== AchievementCatalog.desc_key(AchievementCatalog.ID_CLEARS_BRONZE),
+		"ach: ranked family shares bronze desc"
+	)
+	_ok(
+		AchievementCatalog.display_title_key(AchievementCatalog.ID_IM_BLUE, false) == "ACH_HIDDEN_NAME",
+		"ach: hidden locked uses mystery title key"
+	)
+	_ok(
+		AchievementCatalog.hidden_locked_icon_path().ends_with("ach_medal_bronze_outline.svg"),
+		"ach: hidden locked uses mystery icon"
+	)
+	_ok(AchievementCatalog.display_icon_path(AchievementCatalog.ID_IM_BLUE, false) == "", "ach: hidden locked display icon empty")
+	_ok(
+		AchievementCatalog.tier_modulate(AchievementCatalog.ID_FIRST_CLEAR) == Color.WHITE,
+		"ach: standalone first_clear is white"
+	)
+	_ok(
+		AchievementCatalog.tier_modulate(AchievementCatalog.ID_CLEARS_BRONZE) != Color.WHITE,
+		"ach: bronze tier tints icon"
+	)
+	_ok(
+		AchievementCatalog.tier_modulate(AchievementCatalog.ID_FIRST_HARD) == Color.WHITE,
+		"ach: unranked tier is white"
+	)
+	_ok(
+		AchievementCatalog.display_title_key(AchievementCatalog.ID_FIRST_CLEAR, false) == AchievementCatalog.title_key(AchievementCatalog.ID_FIRST_CLEAR),
+		"ach: visible locked keeps real title key"
+	)
+	var locked_grid: Array = AchievementCatalog.grid_ids({})
+	_ok(locked_grid.size() == 17, "ach: grid lists 17 cells (families collapsed, secret omitted)")
+	_ok(locked_grid.has(AchievementCatalog.ID_CLEARS_BRONZE), "ach: locked grid shows clears bronze")
+	_ok(not locked_grid.has(AchievementCatalog.ID_CLEARS_SILVER), "ach: locked grid hides silver sibling")
+	_ok(not locked_grid.has(AchievementCatalog.ID_DEV_MODE), "ach: secret omitted until unlock")
+	_ok(locked_grid.has(AchievementCatalog.ID_IM_BLUE), "ach: hidden_desc listed while locked")
+	_ok(locked_grid.has(AchievementCatalog.ID_SHALL_NOT_PASS), "ach: shall_not_pass listed while locked")
+	_ok(locked_grid.has(AchievementCatalog.ID_THREE_STAR_DEBUT), "ach: three_star_debut listed while locked")
+	var silver_grid: Array = AchievementCatalog.grid_ids({
+		AchievementCatalog.ID_CLEARS_BRONZE: 1,
+		AchievementCatalog.ID_CLEARS_SILVER: 1,
+	})
+	_ok(silver_grid.has(AchievementCatalog.ID_CLEARS_SILVER), "ach: family cell promotes to silver")
+	_ok(not silver_grid.has(AchievementCatalog.ID_CLEARS_BRONZE), "ach: bronze sibling collapsed after silver")
+	_ok(silver_grid.size() == 17, "ach: unlock does not duplicate family cells")
+	var secret_grid: Array = AchievementCatalog.grid_ids({AchievementCatalog.ID_DEV_MODE: 1})
+	_ok(secret_grid.has(AchievementCatalog.ID_DEV_MODE), "ach: secret listed after unlock")
+	_ok(secret_grid.size() == 18, "ach: secret adds one cell")
+	# Ranked families use unique campaign_clears only — replays never count.
+	var clears29 := AchievementCatalog.collect_unlocks({"campaign_clears": 29})
+	_ok(clears29.has(AchievementCatalog.ID_FIRST_CLEAR), "ach: 29 clears is first_clear")
+	_ok(clears29.has(AchievementCatalog.ID_CLEARS_BRONZE), "ach: 29 clears is bronze")
+	_ok(not clears29.has(AchievementCatalog.ID_CLEARS_SILVER), "ach: 29 clears is not silver")
+	var clears30 := AchievementCatalog.collect_unlocks({"campaign_clears": 30})
+	_ok(clears30.has(AchievementCatalog.ID_CLEARS_SILVER), "ach: 30 clears is silver")
+	_ok(not clears30.has(AchievementCatalog.ID_CLEARS_GOLD), "ach: 30 clears is not gold")
+	var clears60 := AchievementCatalog.collect_unlocks({"campaign_clears": 60})
+	_ok(clears60.has(AchievementCatalog.ID_CLEARS_GOLD), "ach: 60 clears is gold")
+	var keep_bronze := AchievementCatalog.collect_unlocks({"campaign_clears": 30}, {AchievementCatalog.ID_CLEARS_BRONZE: 1})
+	_ok(not keep_bronze.has(AchievementCatalog.ID_CLEARS_BRONZE), "ach: migrate keeps clears_bronze")
+	_ok(keep_bronze.has(AchievementCatalog.ID_CLEARS_SILVER), "ach: migrate still requires silver counter")
+	var on_time := AchievementCatalog.collect_unlocks({"on_time_clears": 10})
+	_ok(on_time.has(AchievementCatalog.ID_ON_TIME_BRONZE), "ach: on_time bronze at 10")
+	_ok(not on_time.has(AchievementCatalog.ID_ON_TIME_SILVER), "ach: on_time silver needs 30")
+	var on_time30 := AchievementCatalog.collect_unlocks({"on_time_clears": 30})
+	_ok(on_time30.has(AchievementCatalog.ID_ON_TIME_SILVER), "ach: on_time silver at 30")
+	_ok(not on_time30.has(AchievementCatalog.ID_ON_TIME_GOLD), "ach: on_time gold needs 60")
+	var on_time60 := AchievementCatalog.collect_unlocks({"on_time_clears": 60})
+	_ok(on_time60.has(AchievementCatalog.ID_ON_TIME_GOLD), "ach: on_time gold at 60")
+	var gold_hints := AchievementCatalog.collect_unlocks({"no_hint_clears": 60})
+	_ok(gold_hints.has(AchievementCatalog.ID_NO_HINT_GOLD), "ach: no_hint gold at 60")
+	var purple := AchievementCatalog.collect_unlocks({"shifter_slides": 30})
+	_ok(purple.has(AchievementCatalog.ID_PURPLE_RAIN), "ach: purple_rain at 30 slides")
+	var rules := AchievementCatalog.collect_unlocks({"rules_opens": 10})
+	_ok(rules.has(AchievementCatalog.ID_RULES_READER), "ach: rules_reader at 10 opens")
+	# Event ids must not re-fire from collect unless flagged.
+	var no_events := AchievementCatalog.collect_unlocks({"campaign_clears": 60})
+	_ok(not no_events.has(AchievementCatalog.ID_IM_BLUE), "ach: im_blue not from collect")
+	_ok(not no_events.has(AchievementCatalog.ID_SHALL_NOT_PASS), "ach: shall_not_pass not from collect")
+	_ok(not no_events.has(AchievementCatalog.ID_DEV_MODE), "ach: dev_mode not from collect")
+	var flagged := AchievementCatalog.collect_unlocks({
+		"im_blue": true,
+		"shall_not_pass": true,
+		"dev_mode": true,
+	})
+	_ok(flagged.has(AchievementCatalog.ID_IM_BLUE), "ach: im_blue from flag")
+	_ok(flagged.has(AchievementCatalog.ID_SHALL_NOT_PASS), "ach: shall_not_pass from flag")
+	_ok(flagged.has(AchievementCatalog.ID_DEV_MODE), "ach: dev_mode from flag")
+	# grant() / apply_grant is idempotent.
+	var bag := {}
+	_ok(AchievementCatalog.apply_grant(bag, AchievementCatalog.ID_IM_BLUE, 9), "ach: first grant writes")
+	_ok(bag.has(AchievementCatalog.ID_IM_BLUE), "ach: grant stores id")
+	_ok(not AchievementCatalog.apply_grant(bag, AchievementCatalog.ID_IM_BLUE, 10), "ach: grant is idempotent")
+	_ok(int(bag[AchievementCatalog.ID_IM_BLUE]) == 9, "ach: second grant keeps first timestamp")
+	_ok(not AchievementCatalog.apply_grant(bag, "not_a_real_id", 1), "ach: unknown id is rejected")
+	# Grid polish helpers: tier tint, progress, next-tier preview.
+	var none_unlocked: Dictionary = {}
+	_ok(
+		AchievementCatalog.display_tier_modulate(
+			AchievementCatalog.ID_CLEARS_BRONZE,
+			none_unlocked
+		) != Color.WHITE,
+		"ach: locked family uses bronze tint"
+	)
+	var bronze_only := {AchievementCatalog.ID_CLEARS_BRONZE: 1}
+	_ok(
+		AchievementCatalog.display_tier_modulate(
+			AchievementCatalog.ID_CLEARS_SILVER,
+			bronze_only
+		) == AchievementCatalog.tier_modulate(AchievementCatalog.ID_CLEARS_BRONZE),
+		"ach: display tint follows highest earned tier"
+	)
+	_ok(
+		AchievementCatalog.cell_is_unlocked(AchievementCatalog.ID_CLEARS_BRONZE, bronze_only),
+		"ach: family cell unlocked when bronze earned"
+	)
+	_ok(
+		not AchievementCatalog.cell_is_unlocked(AchievementCatalog.ID_CLEARS_BRONZE, none_unlocked),
+		"ach: family cell locked when none earned"
+	)
+	var prog := AchievementCatalog.progress_for_cell(
+		AchievementCatalog.ID_CLEARS_BRONZE,
+		none_unlocked,
+		{"campaign_clears": 23}
+	)
+	_ok(prog.get("show", false), "ach: locked clears shows progress")
+	var clears_targets: Array = prog.get("thresholds", [])
+	_ok(clears_targets.size() == 3, "ach: clears family has three tier targets")
+	_ok(int(clears_targets[0]) == 10, "ach: clears bronze target is 10")
+	_ok(int(clears_targets[1]) == 30, "ach: clears silver target is 30")
+	_ok(int(clears_targets[2]) == 60, "ach: clears gold target is 60")
+	_ok(int(prog.get("highlight_index", 0)) == -1, "ach: no tier earned highlights none")
+	var prog_silver := AchievementCatalog.progress_for_cell(
+		AchievementCatalog.ID_CLEARS_SILVER,
+		bronze_only,
+		{"campaign_clears": 23}
+	)
+	_ok(prog_silver.get("show", false), "ach: partial clears family still shows tier row")
+	_ok(int(prog_silver.get("highlight_index", -1)) == 0, "ach: bronze earned highlights first threshold")
+	var silver_only := {
+		AchievementCatalog.ID_CLEARS_BRONZE: 1,
+		AchievementCatalog.ID_CLEARS_SILVER: 2,
+	}
+	var prog_silver_earned := AchievementCatalog.progress_for_cell(
+		AchievementCatalog.ID_CLEARS_SILVER,
+		silver_only,
+		{"campaign_clears": 60}
+	)
+	_ok(prog_silver_earned.get("show", false), "ach: silver earned still shows tier row")
+	_ok(
+		int(prog_silver_earned.get("highlight_index", -1)) == 1,
+		"ach: silver earned highlights middle threshold"
+	)
+	var all_clears := {
+		AchievementCatalog.ID_CLEARS_BRONZE: 1,
+		AchievementCatalog.ID_CLEARS_SILVER: 2,
+		AchievementCatalog.ID_CLEARS_GOLD: 3,
+	}
+	var prog_done := AchievementCatalog.progress_for_cell(
+		AchievementCatalog.ID_CLEARS_GOLD,
+		all_clears,
+		{"campaign_clears": 60}
+	)
+	_ok(prog_done.get("show", false), "ach: all tiers earned still shows tier row")
+	_ok(int(prog_done.get("highlight_index", -1)) == 2, "ach: gold earned highlights final threshold")
+	_ok(
+		AchievementCatalog.next_tier_preview_path(AchievementCatalog.ID_CLEARS_SILVER).ends_with(
+			"ach_medal_silver_outline.svg"
+		),
+		"ach: next tier preview uses silver medal outline"
+	)
+	_ok(
+		AchievementCatalog.earned_tier_badge_path(
+			AchievementCatalog.ID_CLEARS_SILVER,
+			bronze_only
+		).ends_with("ach_medal_bronze.svg"),
+		"ach: earned badge follows highest tier"
+	)
+	_ok(
+		AchievementCatalog.display_tier_badge_path(
+			AchievementCatalog.ID_CLEARS_BRONZE,
+			none_unlocked
+		) == "",
+		"ach: no tier badge until a family rank is earned"
+	)
+	_ok(
+		AchievementCatalog.display_tier_badge_path(
+			AchievementCatalog.ID_CLEARS_BRONZE,
+			bronze_only
+		).ends_with("ach_medal_bronze.svg"),
+		"ach: tier badge shows once a family rank is earned"
+	)
+	# All-blue: every unlocked playable cell is BLUE; walls/locked ignored.
+	var y := GameConstants.TileState.YELLOW
+	var b := GameConstants.TileState.BLUE
+	var e := GameConstants.TileState.EMPTY
+	var wall := GameConstants.TileState.WALL
+	var all_blue := {
+		Vector2i(0, 0): {"state": b, "is_playable": true, "is_locked": false},
+		Vector2i(1, 0): {"state": b, "is_playable": true, "is_locked": false},
+		Vector2i(0, 1): {"state": y, "is_playable": true, "is_locked": true},
+		Vector2i(1, 1): {"state": wall, "is_playable": false, "is_locked": true},
+	}
+	_ok(AchievementCatalog.board_is_all_blue(all_blue), "ach: all fillable cells blue")
+	var leftover := all_blue.duplicate(true)
+	leftover[Vector2i(1, 0)] = {"state": e, "is_playable": true, "is_locked": false}
+	_ok(not AchievementCatalog.board_is_all_blue(leftover), "ach: leftover empty is not all blue")
+	var yellow_fill := all_blue.duplicate(true)
+	yellow_fill[Vector2i(0, 0)] = {"state": y, "is_playable": true, "is_locked": false}
+	_ok(not AchievementCatalog.board_is_all_blue(yellow_fill), "ach: yellow fillable is not all blue")
+	_ok(not AchievementCatalog.board_is_all_blue({}), "ach: empty board is not all blue")
+	var sh := GameConstants.TileState.SHIFTER
+	var with_shifter := {
+		Vector2i(0, 0): {"state": b, "is_playable": true, "is_locked": false},
+		Vector2i(1, 0): {"state": b, "is_playable": true, "is_locked": false},
+		Vector2i(2, 0): {"state": sh, "is_playable": true, "is_locked": false},
+	}
+	_ok(AchievementCatalog.board_is_all_blue(with_shifter), "ach: shifter tile ignored for im_blue")
+	var shifter_empty := with_shifter.duplicate(true)
+	shifter_empty[Vector2i(2, 0)] = {"state": e, "is_playable": true, "is_locked": false}
+	_ok(not AchievementCatalog.board_is_all_blue(shifter_empty), "ach: vacated shifter cell must be blue")
+	var all_yellow := {
+		Vector2i(0, 0): {"state": y, "is_playable": true, "is_locked": false},
+		Vector2i(1, 0): {"state": y, "is_playable": true, "is_locked": false},
+	}
+	_ok(AchievementCatalog.board_is_all_yellow(all_yellow), "ach: all fillable cells yellow")
+	_ok(not AchievementCatalog.board_is_all_yellow(all_blue), "ach: blue board is not all yellow")
+	# Toast queue: two ids plus a duplicate enqueue => two different snapshot ids.
+	var packed := load("res://scenes/achievement_toast.tscn")
+	_ok(packed is PackedScene, "toast: scene loads")
+	if packed is PackedScene:
+		var toast: Node = packed.instantiate()
+		root.add_child(toast)
+		for raw_id in duo:
+			toast.enqueue(str(raw_id))
+			toast.enqueue(str(raw_id))
+		var snap: Array = toast.snapshot_ids() if toast.has_method("snapshot_ids") else []
+		_ok(snap.size() == 3, "toast: three unique queued ids")
+		if snap.size() >= 2:
+			_ok(str(snap[0]) != str(snap[1]), "toast: different ids not duplicates")
+			_ok(snap.has(AchievementCatalog.ID_FIRST_CLEAR), "toast: first_clear present")
+			_ok(snap.has(AchievementCatalog.ID_NO_HINT_CLEAR), "toast: no_hint_clear present")
+			_ok(snap.has(AchievementCatalog.ID_CLEARS_BRONZE), "toast: clears_bronze present")
+		toast.queue_free()
 
 
 # CloudSaveLogic: newest timestamp wins; empty side yields the other.
@@ -574,10 +935,28 @@ func _test_cloud_save_logic() -> void:
 	_ok(decoded_progress.has("level_star_bits"), "cloud: star bits preserved")
 	_ok(decoded_settings.has("current_language"), "cloud: settings preserved")
 	_ok(decoded_ach.has("unlocked"), "cloud: achievements preserved")
+	var sample := CloudSaveLogic.build_blob({"a": 1}, {"b": 2}, {"c": 3}, 42)
+	var bytes := CloudSaveLogic.blob_to_bytes(sample)
+	var roundtrip := CloudSaveLogic.blob_from_bytes(bytes)
+	_ok(int(roundtrip.get("timestamp", 0)) == 42, "cloud: blob bytes roundtrip")
 
 
-# Cloud save scaffolding: no Play Games plugin in this tree (desktop stub).
+# New-level badges: unseen dict tracks freshly unlocked campaign levels.
+func _test_levels_unseen_badges() -> void:
+	if SaveManager == null:
+		_ok(true, "levels unseen: skip without SaveManager")
+		return
+	var backup_unseen: Dictionary = SaveManager.levels_unseen.duplicate()
+	SaveManager.levels_unseen = {"7": true, "8": true}
+	_ok(SaveManager.unseen_level_count() == 2, "levels unseen: count")
+	_ok(SaveManager.is_level_unseen(7), "levels unseen: query true")
+	SaveManager.mark_level_seen(7)
+	_ok(not SaveManager.is_level_unseen(7), "levels unseen: mark seen clears")
+	_ok(SaveManager.is_level_unseen(8), "levels unseen: other level untouched")
+	SaveManager.levels_unseen = backup_unseen
+
+
+# Cloud save scaffolding: addon installed; runtime only on Android export builds.
 func _test_cloud_save_stub() -> void:
-	_ok(not CloudSaveLogic.play_games_plugin_present(), "cloud: Play Games plugin absent")
-	_ok(not Engine.has_singleton("GodotPlayGamesServices"), "cloud: no PGS singleton")
-	_ok(not FileAccess.file_exists("res://addons/godot-play-games-services/plugin.cfg"), "cloud: no PGS addon folder")
+	_ok(CloudSaveLogic.play_games_plugin_installed(), "cloud: Play Games addon installed")
+	_ok(not CloudSaveLogic.play_games_runtime_available(), "cloud: no Android runtime in headless")

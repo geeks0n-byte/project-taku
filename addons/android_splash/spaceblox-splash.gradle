@@ -1,0 +1,39 @@
+// Patches Godot's generated themes.xml before every Gradle build so the Android 12+
+// system splash uses void navy instead of @mipmap/icon_background (gray surround).
+def VOID_HEX = "#00123a"
+
+tasks.register("spacebloxPatchSplashTheme") {
+	doLast {
+		def themesFile = file("res/values/themes.xml")
+		if (!themesFile.exists()) {
+			return
+		}
+		def text = themesFile.getText("UTF-8")
+		def patched = text
+		patched = patched.replaceAll(
+			/(?m)\t\t<item name="android:windowSplashScreenBackground">[^<]*<\/item>/,
+			"\t\t<item name=\"android:windowSplashScreenBackground\">${VOID_HEX}</item>"
+		)
+		patched = patched.replaceAll(
+			/(?m)\t\t<item name="android:windowSplashScreenIconBackgroundColor">[^<]*<\/item>/,
+			"\t\t<item name=\"android:windowSplashScreenIconBackgroundColor\">${VOID_HEX}</item>"
+		)
+		if (!patched.contains("android:windowSplashScreenIconBackgroundColor")) {
+			patched = patched.replace(
+				"\t\t<item name=\"postSplashScreenTheme\">@style/GodotAppMainTheme</item>",
+				"\t\t<item name=\"android:windowSplashScreenIconBackgroundColor\">${VOID_HEX}</item>\n\t\t<item name=\"postSplashScreenTheme\">@style/GodotAppMainTheme</item>"
+			)
+		}
+		patched = patched.replaceAll(
+			/(?m)\t\t<item name="android:windowBackground">[^<]*<\/item>/,
+			"\t\t<item name=\"android:windowBackground\">${VOID_HEX}</item>"
+		)
+		patched = patched.replace("\t\t<item name=\"android:windowIsTranslucent\">true</item>", "\t\t<item name=\"android:windowIsTranslucent\">false</item>")
+		if (patched != text) {
+			themesFile.write(patched, "UTF-8")
+			println("spaceblox-splash: patched themes.xml with void splash background")
+		}
+	}
+}
+
+preBuild.dependsOn(tasks.named("spacebloxPatchSplashTheme"))

@@ -148,9 +148,6 @@ vertical_alignment = 1
 [node name="UILayer" type="CanvasLayer" parent="." unique_id=116812140]
 layer = 0
 
-[node name="OverlayLayer" type="CanvasLayer" parent="." unique_id=1125842400]
-layer = 5
-
 [node name="CenterContainer" type="Control" parent="UILayer" unique_id=669949293]
 layout_mode = 3
 anchors_preset = 15
@@ -194,7 +191,7 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 0
 theme_override_fonts/font = ExtResource("3_font")
 theme_override_font_sizes/font_size = 64
-text = "TUTORIAL"
+text = "UI_TUTORIAL"
 flat = true
 
 [node name="LevelSelectButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=732738076]
@@ -217,6 +214,17 @@ theme_override_constants/outline_size = 0
 theme_override_fonts/font = ExtResource("3_font")
 theme_override_font_sizes/font_size = 64
 text = "UI_HOW_TO_PLAY"
+flat = true
+
+[node name="AchievementsButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=732738078]
+custom_minimum_size = Vector2(640, 140)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 64
+text = "UI_ACHIEVEMENTS"
 flat = true
 
 [node name="OptionsButton" type="Button" parent="UILayer/CenterContainer/VBoxContainer" unique_id=600817596]
@@ -360,6 +368,9 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
+[node name="OverlayLayer" type="CanvasLayer" parent="." unique_id=1125842400]
+layer = 5
+
 [node name="OverlayBlocker" type="Panel" parent="OverlayLayer" unique_id=1317697056]
 visible = false
 anchors_preset = 15
@@ -408,8 +419,8 @@ theme_override_font_sizes/normal_font_size = 48
 theme_override_font_sizes/bold_font_size = 48
 bbcode_enabled = true
 text = "CREDITS_TEXT"
-scroll_active = false
 fit_content = true
+scroll_active = false
 
 [node name="VersionLabel" type="Label" parent="OverlayLayer/OverlayBlocker/CreditsPanel" unique_id=1799760303]
 custom_minimum_size = Vector2(0, 48)
@@ -647,9 +658,9 @@ theme_override_constants/separation = 28
 alignment = 1
 
 [node name="PromptLabel" type="Label" parent="OverlayLayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer" unique_id=303453963]
+custom_minimum_size = Vector2(608, 0)
 layout_mode = 2
 size_flags_vertical = 3
-custom_minimum_size = Vector2(608, 0)
 theme_override_colors/font_color = Color(1, 0.92, 0.55, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 0

@@ -27,6 +27,9 @@ var _has_shifters: bool = false
 var _challenges_disabled: bool = false
 var is_game_active: bool = true
 var is_paused: bool = false
+var _run_used_undo: bool = false
+var _pause_accumulated_sec: float = 0.0
+var _pause_started_msec: int = 0
 var current_level_index: int = 0
 # A fully solved copy of the board layout, used as reference for hint generation.
 var solved_solution_reference: Dictionary = {}
@@ -263,6 +266,9 @@ func _bind_submanager_signals():
 func _on_invalid_move_attempted(msg: String):
 	if not is_game_active or is_paused:
 		return
+	# Joke grant is independent of tutorial messaging; editor playtest never hits this scene.
+	if AchievementManager:
+		AchievementManager.notify_invalid_move(msg)
 	if tutorial_director and tutorial_director.is_active():
 		if tutorial_director.on_invalid_move(msg):
 			return
@@ -379,6 +385,8 @@ func generate_board():
 	_timer_paused_for_ad = false
 
 	var current_level_resource = levels[current_level_index]
+	if SaveManager and current_level_resource is LevelData:
+		SaveManager.mark_level_seen(current_level_resource.level_number)
 	var is_custom = current_level_resource.resource_path.begins_with("user://")
 	var is_unique_solution: bool = true
 	if current_level_resource is LevelData:
@@ -399,6 +407,9 @@ func generate_board():
 	elapsed_seconds = 0
 	shifter_move_count = 0
 	hints_used = 0
+	_run_used_undo = false
+	_pause_accumulated_sec = 0.0
+	_pause_started_msec = 0
 	required_shifter_moves = 0
 	required_jokers = 0
 	_has_shifters = false
@@ -660,6 +671,7 @@ func _on_undo_requested():
 	if tutorial_director and tutorial_director.is_active():
 		return
 	_apply_game_snapshot(game_undo.undo())
+	_run_used_undo = true
 	ui_manager.update_undo_redo_buttons(game_undo.can_undo(), game_undo.can_redo())
 	_autosave_session()
 
@@ -708,6 +720,8 @@ func _on_hint_requested():
 # Reward callback grants a small hint bundle, then immediately applies one hint.
 func _on_rewarded_hint_earned() -> void:
 	hints_remaining = GameConstants.HINTS_FROM_REWARDED_AD
+	if AchievementManager:
+		AchievementManager.notify_rewarded_ad_watched()
 	if AdsManager:
 		AdsManager.warm_rewarded_hint()
 	_apply_hint()
@@ -779,6 +793,9 @@ func _on_cell_changed(_coord: Vector2i):
 	_update_joker_count()
 	if tutorial_director and tutorial_director.is_active():
 		tutorial_director.on_board_changed(_coord)
+	if AchievementManager and board_manager:
+		AchievementManager.check_all_blue(board_manager.board_cells)
+		AchievementManager.check_all_yellow(board_manager.board_cells)
 	_run_validation_pass()
 	if not _is_recording_action:
 		_is_recording_action = true
@@ -789,6 +806,8 @@ func _on_shifter_move_made():
 	if not is_game_active or is_paused:
 		return
 	shifter_move_count += 1
+	if AchievementManager:
+		AchievementManager.notify_shifter_slide()
 	ui_manager.update_move_counter(shifter_move_count, required_shifter_moves)
 	if tutorial_director and tutorial_director.is_active():
 		tutorial_director.on_board_changed()
@@ -833,6 +852,8 @@ func _run_validation_pass():
 
 # Ends the run, computes stars/unlocks, records ad cadence, and opens victory UI.
 func trigger_victory():
+	if not is_game_active:
+		return
 	if tutorial_director:
 		tutorial_director.stop()
 	is_game_active = false
@@ -870,12 +891,17 @@ func trigger_victory():
 		if not _challenges_disabled:
 			SaveManager.record_level_stars(unlock_num, int(star_result.get("bits", 0)))
 	if not is_custom and AchievementManager:
+		_end_pause_timer()
 		AchievementManager.record_level_clear(
 			levels[current_level_index],
 			0 if _challenges_disabled else hints_used,
 			_difficulty_for_level(levels[current_level_index]),
 			won_tutorial,
-			is_custom
+			is_custom,
+			int(star_result.get("bits", 0)),
+			not _challenges_disabled,
+			_run_used_undo,
+			_pause_accumulated_sec
 		)
 	_set_board_and_hud_visible(false)
 	var solved_preview := LevelPreview.make_texture_from_board_cells(board_manager.board_cells, 320)
@@ -897,6 +923,18 @@ func _set_board_and_hud_visible(should_show: bool) -> void:
 	if hud_layer:
 		hud_layer.visible = should_show
 
+
+func _begin_pause_timer() -> void:
+	if _pause_started_msec <= 0:
+		_pause_started_msec = Time.get_ticks_msec()
+
+
+func _end_pause_timer() -> void:
+	if _pause_started_msec <= 0:
+		return
+	_pause_accumulated_sec += float(Time.get_ticks_msec() - _pause_started_msec) / 1000.0
+	_pause_started_msec = 0
+
 # Pauses gameplay and opens pause menu.
 func _on_pause():
 	if _is_generating_board or (_loading_overlay and _loading_overlay.is_busy()):
@@ -904,6 +942,7 @@ func _on_pause():
 	if not is_game_active or is_paused:
 		return
 	is_paused = true
+	_begin_pause_timer()
 	_timer_paused_for_ad = false
 	if timer_node:
 		timer_node.stop()
@@ -928,6 +967,7 @@ func _on_how_to_play():
 	if not is_game_active or is_paused:
 		return
 	is_paused = true
+	_begin_pause_timer()
 	_timer_paused_for_ad = false
 	if timer_node:
 		timer_node.stop()
@@ -935,11 +975,14 @@ func _on_how_to_play():
 	_set_board_and_hud_visible(false)
 	if ui_manager.has_method("show_how_to_play"):
 		ui_manager.show_how_to_play()
+	if AchievementManager:
+		AchievementManager.notify_rules_opened()
 
 # Resumes gameplay from pause/tutorial overlays and restores button states.
 func _on_resume():
 	if not is_paused:
 		return
+	_end_pause_timer()
 	is_paused = false
 	if timer_node and not _challenges_disabled:
 		timer_node.start()
@@ -967,6 +1010,7 @@ func _on_reset():
 	if not is_game_active or is_paused:
 		return
 	is_paused = true
+	_begin_pause_timer()
 	if timer_node:
 		timer_node.stop()
 	board_manager.process_mode = Node.PROCESS_MODE_DISABLED

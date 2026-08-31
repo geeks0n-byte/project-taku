@@ -6,21 +6,6 @@
 
 # Section: In-game HUD and status
 
-[TIME]
-TIME
-
-[MOVES]
-MOVES
-
-[COUNTER_GREEN]
-GREEN
-
-[LVL]
-LEVEL
-
-[DEV]
-CUSTOM
-
 [MSG_FILL_EMPTY]
 Fill empty spaces.
 

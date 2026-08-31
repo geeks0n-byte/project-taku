@@ -274,7 +274,7 @@ static func screen_header_font(force_pixel: bool = false) -> Font:
 static func _is_message_key(text: String) -> bool:
 	if text.is_empty():
 		return false
-	# Message ids are ASCII tokens like UI_OPTIONS / PAUSED / HTP_TITLE.
+	# Message ids are ASCII tokens like UI_OPTIONS / UI_PAUSED / UI_HTP_TITLE.
 	var first := text.unicode_at(0)
 	if first < 65 or first > 90:
 		return false
@@ -298,9 +298,9 @@ static func _recover_header_key_from_translated(text: String) -> String:
 		return text
 	# Recover after a bad bake of tr() into .text (e.g. Ukrainian stuck forever).
 	for key in [
-		"UI_OPTIONS", "UI_CREDITS", "UI_SELECT_LEVEL", "PAUSED",
-		"HTP_TITLE", "HTP_EXAMPLES_TITLE", "HTP_PURPLE_TITLE", "HTP_LINKS_TITLE", "HTP_STARS_TITLE",
-		"TUTORIAL", "COMPLETED", "ED_VICTORY_SOLVABLE",
+		"UI_OPTIONS", "UI_CREDITS", "UI_SELECT_LEVEL", "UI_PAUSED",
+		"UI_HTP_TITLE", "UI_HTP_EXAMPLES_TITLE", "UI_HTP_PURPLE_TITLE", "UI_HTP_LINKS_TITLE", "UI_HTP_STARS_TITLE",
+		"TUTORIAL", "UI_COMPLETED", "ED_VICTORY_SOLVABLE",
 	]:
 		if text == key:
 			return key
@@ -473,19 +473,72 @@ static func apply_end_screen_header_style(label: Label, base_size: int = 48) -> 
 	label.add_theme_color_override("font_color", GameConstants.SCREEN_HEADER_COLOR)
 	apply_safe_outline(label, 8)
 
-## Size the rules panel to its text. PREV/NEXT stay at a fixed Y locked from the
-## first layout after the lock is cleared (callers clear on open at page 0).
+## Size the rules panel to its text. PREV/NEXT sit at SCREEN_PAGE_NAV_BOTTOM_INSET.
 static func clear_how_to_play_nav_lock(host: Control) -> void:
 	if host and host.has_meta("_htp_nav_top"):
 		host.remove_meta("_htp_nav_top")
 
-## Sizes the HTP rules panel and locks PREV/NEXT at a stable Y after the first layout.
+
+## Bottom inset (px) from the host bottom to the PREV/NEXT row bottom, above safe area.
+## When reserve_menu_banner is true, leaves room for the menu AdMob banner.
+static func page_nav_bottom_inset(reserve_menu_banner: bool = false) -> float:
+	var inset := GameConstants.SCREEN_PAGE_NAV_BOTTOM_INSET
+	if reserve_menu_banner:
+		inset += GameConstants.AD_BANNER_RESERVE
+	return inset
+
+
+## Negative Control.offset_bottom for scroll/list hosts that must end above PREV/NEXT.
+static func page_nav_content_bottom_offset(reserve_menu_banner: bool = false) -> float:
+	return -(
+		page_nav_bottom_inset(reserve_menu_banner)
+		+ GameConstants.UI_BTN_NAV_SIZE.y
+		+ GameConstants.SCREEN_NAV_GAP
+	)
+
+
+## Pins a PREV/NEXT row to the shared bottom inset inside a full-screen host.
+static func pin_page_nav_row(
+	nav: Control,
+	host: Control,
+	reserve_menu_banner: bool = false,
+	horizontal_inset: float = 40.0
+) -> void:
+	if nav == null or host == null:
+		return
+	var host_h := host.size.y
+	if host_h <= 1.0:
+		host_h = float(
+			ProjectSettings.get_setting("display/window/size/viewport_height", 1920)
+		)
+	var nav_h := GameConstants.UI_BTN_NAV_SIZE.y
+	if nav.custom_minimum_size.y > 0.0:
+		nav_h = nav.custom_minimum_size.y
+	var bottom_inset := page_nav_bottom_inset(reserve_menu_banner)
+	var nav_bottom := host_h - SafeInsets.bottom() - bottom_inset
+	var nav_top := nav_bottom - nav_h
+	nav.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	nav.anchor_left = 0.0
+	nav.anchor_right = 1.0
+	nav.anchor_top = 0.0
+	nav.anchor_bottom = 0.0
+	nav.offset_left = horizontal_inset + SafeInsets.left()
+	nav.offset_right = -horizontal_inset - SafeInsets.right()
+	nav.offset_top = nav_top
+	nav.offset_bottom = nav_bottom
+	nav.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	nav.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	nav.z_index = maxi(nav.z_index, 4)
+
+
+## Sizes the HTP rules panel; PREV/NEXT are pinned to the shared bottom nav inset.
 static func layout_how_to_play_stack(
 	host: Control,
 	panel: Control,
 	rules: RichTextLabel,
 	nav: Control,
-	update_nav_lock: bool = false
+	_update_nav_lock: bool = false,
+	reserve_menu_banner: bool = false
 ) -> void:
 	if host == null or panel == null or nav == null:
 		return
@@ -496,10 +549,12 @@ static func layout_how_to_play_stack(
 		)
 	var nav_h := GameConstants.UI_BTN_NAV_SIZE.y
 	var panel_top := SafeInsets.padded_top(GameConstants.HTP_PANEL_TOP)
-	var bottom_limit := host_h - GameConstants.AD_BANNER_RESERVE - 16.0 - SafeInsets.bottom()
+	var bottom_inset := page_nav_bottom_inset(reserve_menu_banner)
+	var nav_bottom := host_h - SafeInsets.bottom() - bottom_inset
+	var nav_top := nav_bottom - nav_h
 	var max_panel_h := maxf(
 		GameConstants.HTP_PANEL_MIN_HEIGHT,
-		bottom_limit - panel_top - nav_h - GameConstants.SCREEN_NAV_GAP
+		nav_top - panel_top - GameConstants.SCREEN_NAV_GAP
 	)
 
 	# Lock horizontal size first so RichTextLabel can measure wrap height.
@@ -510,7 +565,6 @@ static func layout_how_to_play_stack(
 	panel.offset_left = -GameConstants.HTP_PANEL_HALF_WIDTH
 	panel.offset_right = GameConstants.HTP_PANEL_HALF_WIDTH
 	panel.offset_top = panel_top
-	panel.offset_bottom = panel_top + max_panel_h
 	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
@@ -520,36 +574,14 @@ static func layout_how_to_play_stack(
 		rules.scroll_active = false
 		rules.custom_minimum_size = Vector2(0, 0)
 		content_h = maxf(rules.get_content_height() + 24.0, GameConstants.HTP_PANEL_MIN_HEIGHT)
-	var natural_panel_h := clampf(content_h, GameConstants.HTP_PANEL_MIN_HEIGHT, max_panel_h)
-
-	# Capture nav Y from this page (typically page 0) once; later pages keep it.
-	if update_nav_lock or not host.has_meta("_htp_nav_top"):
-		host.set_meta(
-			"_htp_nav_top",
-			panel_top + natural_panel_h + GameConstants.SCREEN_NAV_GAP
-		)
-	var nav_top: float = float(host.get_meta("_htp_nav_top"))
-	var max_under_nav := maxf(
-		GameConstants.HTP_PANEL_MIN_HEIGHT,
-		nav_top - panel_top - GameConstants.SCREEN_NAV_GAP
-	)
-	var panel_h := clampf(content_h, GameConstants.HTP_PANEL_MIN_HEIGHT, minf(max_panel_h, max_under_nav))
+	var panel_h := clampf(content_h, GameConstants.HTP_PANEL_MIN_HEIGHT, max_panel_h)
 	panel.offset_bottom = panel_top + panel_h
 	if rules:
 		var needs_scroll := content_h > panel_h + 1.0
 		rules.scroll_active = needs_scroll
 		rules.fit_content = not needs_scroll
 
-	nav.anchor_left = 0.0
-	nav.anchor_right = 1.0
-	nav.anchor_top = 0.0
-	nav.anchor_bottom = 0.0
-	nav.offset_left = 40.0 + SafeInsets.left()
-	nav.offset_right = -40.0 - SafeInsets.right()
-	nav.offset_top = nav_top
-	nav.offset_bottom = nav_top + nav_h
-	nav.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	nav.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	pin_page_nav_row(nav, host, reserve_menu_banner)
 
 # Applies the 9-slice gray-dark tile texture to all visual states of a button,
 # with brightness modulation for hover, pressed, and disabled states.
@@ -1090,7 +1122,7 @@ static func _resolved_control_text(node: Node) -> String:
 	raw = raw.strip_edges()
 	if raw.is_empty():
 		return ""
-	# Include keys without "_" (TUTORIAL, PAUSED, COMPLETED). Underscore-only
+	# Include keys without "_" (TUTORIAL still used as victory copy). Underscore-only
 	# matching is for dialog-key recovery where TAK/JA must not look like keys.
 	if _is_message_key(raw):
 		return String(TranslationServer.translate(raw))
@@ -1812,6 +1844,14 @@ static func apply_nav_button(button: Button) -> void:
 	button.clip_text = true
 	button.autowrap_mode = TextServer.AUTOWRAP_OFF
 	button.custom_minimum_size = GameConstants.UI_BTN_NAV_SIZE
+	var slot := button.get_parent() as Control
+	if slot and String(slot.name).ends_with("Slot"):
+		slot.custom_minimum_size = GameConstants.UI_BTN_NAV_SIZE
+	var nav_row := slot.get_parent() if slot else null
+	if nav_row:
+		var spacer := nav_row.get_node_or_null("MidSpacer") as Control
+		if spacer:
+			spacer.custom_minimum_size = Vector2(GameConstants.UI_BTN_NAV_GAP, 0.0)
 	apply_top_bar_tile_styles(button)
 	var name_l := String(button.name).to_lower()
 	var is_next := name_l.contains("next")
@@ -2131,6 +2171,58 @@ static func _popup_prompt_with_title_gap(text: String, use_pixel_gap: bool = fal
 		return normalized
 	var gap := "\n\n" if (use_pixel_gap or uses_pixel_font()) else "\n"
 	return parts[0] + gap + parts[1].lstrip("\n")
+
+const NOTIFICATION_BADGE_TEXT := "!"
+const NOTIFICATION_BADGE_FONT := 24
+
+## Builds a red circular "!" badge panel + label for menu buttons and level cards.
+static func build_notification_badge() -> Dictionary:
+	var panel := Panel.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.visible = false
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.92, 0.22, 0.18, 1.0)
+	style.set_corner_radius_all(999)
+	style.set_content_margin(SIDE_LEFT, 4)
+	style.set_content_margin(SIDE_RIGHT, 4)
+	style.set_content_margin(SIDE_TOP, 2)
+	style.set_content_margin(SIDE_BOTTOM, 2)
+	style.set_border_width_all(2)
+	style.border_color = Color(0, 0, 0, 0.85)
+	panel.add_theme_stylebox_override("panel", style)
+	var label := Label.new()
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_color_override("font_color", Color.WHITE)
+	panel.add_child(label)
+	label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	apply_raster_pixel_label(label, NOTIFICATION_BADGE_TEXT, NOTIFICATION_BADGE_FONT, Color.WHITE, 0, true)
+	return {"panel": panel, "label": label}
+
+
+## Badge width/height for a host control height (menu row or level card).
+static func notification_badge_size(host_h: float) -> Vector2:
+	var badge_h := clampf(host_h * 0.34, 32.0, 44.0)
+	var badge_w := maxf(badge_h, badge_h * 0.72 * float(NOTIFICATION_BADGE_TEXT.length()))
+	return Vector2(badge_w, badge_h)
+
+
+## Pins a badge to the top-right corner of a card-style control.
+static func attach_notification_badge_corner(parent: Control, host_h: float = -1.0) -> Panel:
+	var built := build_notification_badge()
+	var panel: Panel = built["panel"]
+	var h := host_h if host_h > 1.0 else parent.custom_minimum_size.y
+	var dims := notification_badge_size(h)
+	parent.add_child(panel)
+	panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	panel.offset_right = -8.0
+	panel.offset_top = 8.0
+	panel.offset_left = -8.0 - dims.x
+	panel.offset_bottom = 8.0 + dims.y
+	panel.z_index = 2
+	return panel
+
 
 # Creates the near-opaque dark panel StyleBox used by all confirmation dialogs
 # (reset progress, session resume, etc.). Gold border gives it a premium feel.

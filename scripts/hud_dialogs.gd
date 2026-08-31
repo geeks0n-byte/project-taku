@@ -177,6 +177,11 @@ static func fit_content_column(
 		var viewport_w := HudLayout.max_ui_content_width(CONSENT_SIDE_MARGIN)
 		column_w = minf(viewport_w, maxf(width, measured_min + 32.0))
 		column_w = maxf(column_w, minf(HudLayout.UI_MIN_DIALOG_WIDTH, viewport_w))
+		# Consent body is a long autowrap Label; unwrapped measure equals the
+		# viewport on tablets. Cap to phone content width (same constant as
+		# cap_stretched_width / cap_box_row_width). No-op on phones: viewport_w
+		# is already <= UI_PHONE_CONTENT_WIDTH (1080 minus 24px each side).
+		column_w = minf(column_w, HudLayout.UI_PHONE_CONTENT_WIDTH)
 	content.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	for child in content.get_children():
 		if not (child is Control) or not (child as Control).visible:

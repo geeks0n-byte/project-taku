@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- YELLOW SUBMARINE -->
+  <rect x="8" y="32" width="48" height="16" fill="#1a1a1a"/>
+  <rect x="10" y="34" width="44" height="12" fill="#ffec27"/>
+  <rect x="10" y="34" width="40" height="3" fill="#fff1a8"/>
+  <rect x="10" y="43" width="44" height="3" fill="#c49c00"/>
+  <rect x="8" y="38" width="4" height="6" fill="#c49c00"/>
+  <rect x="52" y="38" width="4" height="6" fill="#c49c00"/>
+  <rect x="14" y="36" width="8" height="8" fill="#1d2b53"/>
+  <rect x="16" y="38" width="4" height="4" fill="#29adff"/>
+  <rect x="42" y="36" width="8" height="8" fill="#1d2b53"/>
+  <rect x="44" y="38" width="4" height="4" fill="#29adff"/>
+  <rect x="22" y="40" width="20" height="4" fill="#e85d4c"/>
+  <rect x="24" y="41" width="16" height="2" fill="#ff8a80"/>
+  <rect x="28" y="18" width="8" height="16" fill="#ffec27"/>
+  <rect x="30" y="14" width="4" height="6" fill="#c49c00"/>
+  <rect x="30" y="10" width="4" height="6" fill="#ffec27"/>
+  <rect x="4" y="38" width="6" height="4" fill="#83769c"/>
+  <rect x="2" y="40" width="4" height="6" fill="#83769c"/>
+</svg>

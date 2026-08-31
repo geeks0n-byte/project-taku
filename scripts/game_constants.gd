@@ -20,6 +20,85 @@ enum BrushTool {
 # Update this if the URL ever changes — it's referenced in consent_popup.gd.
 const PRIVACY_POLICY_URL := "https://geeks0n-byte.github.io/project-taku/privacy-policy.html"
 
+## Deep space void (#00123a) — boot splash, Android window background, parallax base.
+const BOOT_VOID_COLOR := Color(0, 0.0705882, 0.227451, 1)
+## Android export splash_screen/icon asset width (splash_app_icon_256.png).
+const BOOT_SPLASH_ICON_TEX_PX := 256
+## Android 12 splash icon slot with a separate windowSplashScreenBackground (no icon bg layer).
+const ANDROID_SPLASH_ICON_DP := 288.0
+## In-game tile SVG viewBox is 16 units; visible art insets 1 unit on each side.
+const BOOT_TILE_VIEWBOX_UNITS := 16.0
+const BOOT_TILE_DRAWABLE_UNITS := 14.0
+const BOOT_ICON_LOGICAL_PX := 64
+## Typical phone logical width (dp) used when DisplayServer DPI is unavailable.
+const ANDROID_PHONE_WIDTH_DP := 411.0
+
+## UI density scale (px per dp). Uses screen DPI, else viewport width heuristic.
+static func android_ui_density(viewport_width_px: float = 0.0) -> float:
+	var dpi := float(DisplayServer.screen_get_dpi())
+	if dpi > 0.0:
+		return dpi / 160.0
+	if viewport_width_px > 0.0:
+		return viewport_width_px / ANDROID_PHONE_WIDTH_DP
+	return 1080.0 / ANDROID_PHONE_WIDTH_DP
+
+
+## On-screen side length of the centered Android splash icon (px).
+static func android_splash_icon_side_px(viewport_size: Vector2) -> float:
+	return ANDROID_SPLASH_ICON_DP * android_ui_density(viewport_size.x)
+
+
+## Boot-intro tile size on a reference phone width (scatter velocity scaling).
+static func boot_splash_ref_tile_px(viewport_width_px: float = 1080.0) -> float:
+	var side := android_splash_icon_side_px(Vector2(viewport_width_px, 1920.0))
+	return 16.0 * side / float(BOOT_ICON_LOGICAL_PX)
+
+
+## Sprite scale so an imported tile SVG matches one splash-icon tile on screen.
+## Each icon cell is tile_px wide (16 logical); opaque art is 14 logical (1px halo).
+static func boot_splash_tile_sprite_scale(tile_px: float, texture_width_px: float) -> float:
+	return tile_px / maxf(1.0, texture_width_px)
+
+
+## Visible on-screen width/height of one boot splash tile (excludes 1px halo per side).
+static func boot_splash_tile_visible_px(tile_px: float) -> float:
+	return tile_px * (BOOT_TILE_DRAWABLE_UNITS / BOOT_TILE_VIEWBOX_UNITS)
+
+
+## Tile centers for the four app-icon tiles matching the Android splash icon slot.
+static func boot_splash_icon_layout(view_rect: Rect2) -> Dictionary:
+	var viewport_size := view_rect.size
+	var view_origin := view_rect.position
+	var side := android_splash_icon_side_px(viewport_size)
+	var icon_scale := side / float(BOOT_ICON_LOGICAL_PX)
+	const TILE_DST := 16
+	const TILE_GAP := 3
+	const TILE_HALO := 1
+	const TILE_STRIDE := TILE_DST - 2 * TILE_HALO + TILE_GAP
+	const TILE_MARGIN := (BOOT_ICON_LOGICAL_PX - (TILE_STRIDE + TILE_DST)) >> 1
+	var tile_px := float(TILE_DST) * icon_scale
+	var origin := view_origin + (viewport_size - Vector2.ONE * side) * 0.5
+	var centers: Array[Vector2] = []
+	var icon_origins: Array[Vector2i] = [
+		Vector2i(TILE_MARGIN, TILE_MARGIN),
+		Vector2i(TILE_MARGIN + TILE_STRIDE, TILE_MARGIN),
+		Vector2i(TILE_MARGIN, TILE_MARGIN + TILE_STRIDE),
+		Vector2i(TILE_MARGIN + TILE_STRIDE, TILE_MARGIN + TILE_STRIDE),
+	]
+	for icon_origin in icon_origins:
+		var tile_origin := Vector2(icon_origin) * icon_scale
+		centers.append(origin + tile_origin + Vector2.ONE * tile_px * 0.5)
+	var cluster_center := Vector2.ZERO
+	for center in centers:
+		cluster_center += center
+	cluster_center /= float(maxi(centers.size(), 1))
+	return {
+		"side_px": side,
+		"tile_px": tile_px,
+		"centers": centers,
+		"cluster_center": cluster_center,
+	}
+
 const CELL_SIZE := 120
 const TOP_HUD_BOTTOM := 236.0
 const BOARD_GAP := 40.0
@@ -86,6 +165,8 @@ const SCREEN_CONTENT_GAP := 36.0
 const SCREEN_HEADER_COLOR := Color(1.0, 0.84, 0.0, 1.0)
 
 const AD_BANNER_RESERVE := 140.0
+## Distance from the physical screen bottom (above home indicator) to the bottom edge of PREV/NEXT rows.
+const SCREEN_PAGE_NAV_BOTTOM_INSET := 120.0
 const SCREEN_BOTTOM_NAV_TOP := -260.0 - AD_BANNER_RESERVE
 const SCREEN_BOTTOM_NAV_BOTTOM := -160.0 - AD_BANNER_RESERVE
 const SCREEN_NAV_GAP := 28.0
@@ -109,10 +190,11 @@ const UI_DIALOG_RAISE_PX := 160.0
 # Milder lift for the victory screen so the layout stays readable.
 const UI_VICTORY_RAISE_PX := 100.0
 
-const UI_BTN_NAV_SIZE := Vector2(108, 114)
+const UI_BTN_NAV_SIZE := Vector2(124, 130)
+const UI_BTN_NAV_GAP := 56.0
 const UI_BTN_NAV_FONT := 22
 const UI_BTN_NAV_FONT_MIN := 12
-const UI_BTN_NAV_ICON_PX := 56.0
+const UI_BTN_NAV_ICON_PX := 64.0
 
 const UI_BTN_PANEL_SIZE := Vector2(460, 100)
 const UI_BTN_PANEL_FONT := 24

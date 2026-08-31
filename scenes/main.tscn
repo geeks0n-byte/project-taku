@@ -529,7 +529,7 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 0
 theme_override_font_sizes/normal_font_size = 48
 bbcode_enabled = true
-text = "[center]Fill the empty spaces on the board.[/center]"
+text = "[center]MSG_FILL_EMPTY[/center]"
 fit_content = true
 scroll_active = false
 
@@ -599,7 +599,7 @@ offset_bottom = 110.0
 grow_horizontal = 2
 theme_override_colors/font_color = Color(1, 0.84, 0, 1)
 theme_override_font_sizes/font_size = 24
-text = "PUZZLE SOLVED!"
+text = "UI_PUZZLE_SOLVED"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
@@ -674,7 +674,7 @@ alignment = 1
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 28
-text = "PLAY AGAIN"
+text = "UI_PLAY_AGAIN"
 vertical_alignment = 1
 
 [node name="RestartButton" type="Button" parent="EndLayer/CenterContainer/VictoryPanel" unique_id=22368695]
@@ -710,7 +710,7 @@ alignment = 1
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 28
-text = "NEXT LEVEL"
+text = "UI_NEXT_LEVEL"
 vertical_alignment = 1
 
 [node name="MainMenuButton" type="Button" parent="EndLayer/CenterContainer/VictoryPanel" unique_id=684748410]
@@ -747,7 +747,7 @@ alignment = 1
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 28
-text = "MAIN MENU"
+text = "UI_MAIN_MENU"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -769,7 +769,7 @@ offset_bottom = 240.0
 grow_horizontal = 2
 theme_override_colors/font_color = Color(1, 0.84, 0, 1)
 theme_override_font_sizes/font_size = 24
-text = "SESSION_RESUME_PROMPT"
+text = "UI_SESSION_RESUME_PROMPT"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3

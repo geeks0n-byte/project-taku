@@ -2,12 +2,12 @@
 # Do NOT change or remove [KEY] headers. Edit only the text under them.
 # Keep placeholders as-is: %s, %d, %d/%d, etc.
 # Blank line ends a string block. Use a single blank line inside text if needed.
-# Files in this folder are for editing only; the game reads translations.csv.
+# This file lists all keys are for editing only; the game reads translations.csv.
 
-[SPLASH_CREATED_BY]
+[UI_SPLASH_CREATED_BY]
 Created by
 
-[SPLASH_AUTHOR]
+[UI_SPLASH_AUTHOR]
 Giga "gix0n" Sichinava
 
 [UI_PLAY]
@@ -16,7 +16,7 @@ PLAY
 [UI_CONTINUE]
 CONTINUE
 
-[SESSION_RESUME_PROMPT]
+[UI_SESSION_RESUME_PROMPT]
 SAVE PROGRESS FOUND
 
 Continue or start a new puzzle?
@@ -32,6 +32,9 @@ LEVELS
 
 [UI_HOW_TO_PLAY]
 HOW TO PLAY
+
+[UI_TUTORIAL]
+TUTORIAL
 
 [UI_OPTIONS]
 OPTIONS
@@ -90,22 +93,22 @@ LOADING
 [UI_RESET_PROGRESS]
 RESET PROFILE
 
-[CONFIRM_RESET_PROGRESS]
+[UI_CONFIRM_RESET_PROGRESS]
 RESET PROFILE?
 
 This will erase progress and the privacy-policy agreement.
 
-[CONFIRM_NEW_PUZZLE]
+[UI_CONFIRM_NEW_PUZZLE]
 NEW PUZZLE?
 
 Current progress will be lost.
 
-[CONFIRM_RESTART_LEVEL]
+[UI_CONFIRM_RESTART_LEVEL]
 RESTART LEVEL?
 
 Current progress will be lost.
 
-[CONFIRM_DELETE_CUSTOM]
+[UI_CONFIRM_DELETE_CUSTOM]
 DELETE ALL CUSTOM LEVELS FROM THIS DEVICE?
 
 [UI_DELETE_CUSTOM]
@@ -113,6 +116,12 @@ DELETE CUSTOM LEVELS
 
 [UI_UNLOCK_ALL_LEVELS]
 UNLOCK ALL LEVELS
+
+[UI_DEBUG_UNLOCK_ALL]
+UNLOCK ALL
+
+[UI_DEBUG_DEL_CUSTOM]
+DEL CUSTOM
 
 [UI_BG_DYNAMIC]
 BACKGROUND: DYNAMIC
@@ -171,16 +180,16 @@ Privacy options are still loading.
 [UI_PRIVACY_OPTIONS_NOT_REQUIRED]
 Privacy options are not required for your region right now.
 
-[SAVE_DELETED]
+[UI_SAVE_DELETED]
 SAVE DELETED! PROGRESS RESET.
 
-[CUSTOM_DELETED]
+[UI_CUSTOM_DELETED]
 ALL CUSTOM LEVELS DELETED FROM THIS DEVICE
 
-[UNLOCK_ALL_DONE]
+[UI_UNLOCK_ALL_DONE]
 ALL LEVELS UNLOCKED
 
-[CONFIRM_UNLOCK_ALL]
+[UI_CONFIRM_UNLOCK_ALL]
 UNLOCK ALL LEVELS?
 
 [UI_SELECT_LEVEL]
@@ -207,61 +216,61 @@ MEDIUM
 [DIFF_HARD]
 HARD
 
-[CUSTOM_LVL]
+[UI_CUSTOM_LVL]
 CUSTOM LVL
 
-[LEVEL]
+[UI_LEVEL]
 LEVEL
 
-[LOCKED]
+[UI_LOCKED]
 LOCKED
 
-[NO_PLAYABLE_LEVELS]
+[UI_NO_PLAYABLE_LEVELS]
 NO PLAYABLE LEVELS FOUND!
 
-[NO_CUSTOM_LEVELS]
+[UI_NO_CUSTOM_LEVELS]
 NO CUSTOM LEVELS FOUND
 
-[TIME]
+[UI_TIME]
 TIME
 
-[MOVES]
+[UI_MOVES]
 MOVES
 
-[COUNTER_GREEN]
+[UI_COUNTER_GREEN]
 GREEN
 
-[STAR_TIME]
+[UI_STAR_TIME]
 TIME:
 
-[STAR_HINTS]
+[UI_STAR_HINTS]
 NO HINTS USED
 
-[STAR_HINTS_USED]
+[UI_STAR_HINTS_USED]
 HINTS USED
 
-[STAR_GREEN]
+[UI_STAR_GREEN]
 NO HINTS USED
 
-[STAR_COMPLETE]
+[UI_STAR_COMPLETE]
 SOLVED
 
-[STAR_MOVES]
+[UI_STAR_MOVES]
 MOVES
 
-[STAR_NONE]
+[UI_STAR_NONE]
 No bonus goals for this level.
 
-[STAT_TIME_LEFT]
+[UI_STAT_TIME_LEFT]
 TIME LEFT: %s
 
-[STAT_GREEN_TILES]
+[UI_STAT_GREEN_TILES]
 GREEN TILES: %d/%d
 
-[STAT_SHIFTER_MOVES]
+[UI_STAT_SHIFTER_MOVES]
 SHIFTER MOVES: %d/%d
 
-[TIMES_UP]
+[UI_TIMES_UP]
 TIME'S UP!
 
 [TUT1_WELCOME]
@@ -519,55 +528,55 @@ Tap stars for goals
 [TUT6_COMPLETE]
 Tools unlocked! Fix any mistakes and fill the remaining empties — Reset, Rules, Hint, Undo, and Redo are ready.
 
-[USED]
+[UI_USED]
 USED
 
-[LVL]
+[UI_LVL]
 LEVEL
 
 [TUTORIAL]
 TUTORIAL
 
-[DEV]
+[UI_DEV]
 CUSTOM
 
-[UNLIMITED]
+[UI_UNLIMITED]
 Unlimited
 
-[PAUSED]
+[UI_PAUSED]
 PAUSED
 
-[PUZZLE_SOLVED]
+[UI_PUZZLE_SOLVED]
 PUZZLE SOLVED!
 
-[ALL_COMPLETED]
+[UI_ALL_COMPLETED]
 ALL LEVELS COMPLETED
 
-[YOU_WIN]
+[UI_YOU_WIN]
 YOU WIN!
 
-[CUSTOM_COMPLETED]
+[UI_CUSTOM_COMPLETED]
 CUSTOM %d
 
-[LEVEL_COMPLETED]
+[UI_LEVEL_COMPLETED]
 LEVEL %d
 
 [TUTORIAL_COMPLETED]
 TUTORIAL %d
 
-[COMPLETED]
+[UI_COMPLETED]
 COMPLETED
 
-[PLAY_AGAIN]
+[UI_PLAY_AGAIN]
 PLAY AGAIN
 
-[NEXT_LEVEL]
+[UI_NEXT_LEVEL]
 NEXT LEVEL
 
-[COMPLETION_TIME]
+[UI_COMPLETION_TIME]
 COMPLETION TIME: %s
 
-[TIMES_UP_UNSOLVED]
+[UI_TIMES_UP_UNSOLVED]
 TIME'S UP! The puzzle remains unsolved.
 
 [MSG_FILL_EMPTY]
@@ -741,30 +750,30 @@ Out of hints. Watch an ad for 3 more hints.
 [MSG_HINTS_REWARDED]
 You earned 3 hints!
 
-[EDIT_MODE]
+[UI_EDIT_MODE]
 EDIT MODE
 
-[TEST_MODE]
+[UI_TEST_MODE]
 TEST MODE
 
-[LOCK_WALLS]
+[UI_LOCK_WALLS]
 LOCK WALLS
 
-[UNIQUE_SOLVE]
+[UI_UNIQUE_SOLVE]
 UNIQUE SOLVE
 
-[ALLOW]
+[UI_ALLOW]
 ALLOW:
 
-[LEVEL_EXISTS_OVERWRITE]
+[UI_LEVEL_EXISTS_OVERWRITE]
 LEVEL ALREADY EXISTS?
 
 OVERWRITE?
 
-[LEVEL_SOLVABLE]
+[UI_LEVEL_SOLVABLE]
 LEVEL IS SOLVABLE!
 
-[RETURN]
+[UI_RETURN]
 RETURN
 
 [Wall]
@@ -798,7 +807,7 @@ Not Equals (×) Link Tool
 [font_size=34]Giga "gix0n" Sichinava[/font_size]
 [/center]
 
-[HTP_TITLE]
+[UI_HTP_TITLE]
 HOW TO PLAY
 
 [HTP_GOAL_TAP]
@@ -807,10 +816,10 @@ Tap %s empty cells to place %s [color=#ffeb3b]Yellow[/color], %s [color=#2196f3]
 [HTP_GOAL_WIN]
 Fill every %s empty cell without breaking any rules.
 
-[HTP_CORE_TITLE]
+[UI_HTP_CORE_TITLE]
 CORE RULES
 
-[HTP_EXAMPLES_TITLE]
+[UI_HTP_EXAMPLES_TITLE]
 EXAMPLES
 
 [HTP_EXAMPLE_INVALID]
@@ -834,10 +843,10 @@ Rule of Two: never place three %s [color=#ffeb3b]Yellow[/color] or %s [color=#21
 [HTP_EXAMPLE_VALID_MIX]
 (Valid)
 
-[HTP_GREEN_TITLE]
+[UI_HTP_GREEN_TITLE]
 GREEN TILES
 
-[HTP_PURPLE_TITLE]
+[UI_HTP_PURPLE_TITLE]
 PURPLE TILES
 
 [HTP_GREEN_TILES_DESC]
@@ -861,10 +870,10 @@ Equal Balance ignores %s [color=#4caf50]Green[/color] — only %s [color=#ffeb3b
 [HTP_GREEN_EXAMPLE_VALID]
 (Valid mix)
 
-[HTP_SPECIALS_TITLE]
+[UI_HTP_SPECIALS_TITLE]
 SPECIAL RULES
 
-[HTP_LINKS_TITLE]
+[UI_HTP_LINKS_TITLE]
 LOCKS & LINKS
 
 [HTP_SHIFTER_TILES_DESC]
@@ -888,7 +897,7 @@ Tiles with a lock icon are fixed and cannot be changed.
 [HTP_NOT_EQUALS_RULE]
 [b]×[/b] between two cells means they must be [i]different[/i] colors.
 
-[HTP_STARS_TITLE]
+[UI_HTP_STARS_TITLE]
 STARS
 
 [HTP_STARS_INTRO]
@@ -1097,3 +1106,118 @@ All lessons done — finish the board. Hold a filled cell to remove a tile if yo
 
 [TUTF_SHIFTER_BLOCK]
 %s [color=#C77DFF]Purple[/color] tiles cannot hop onto each other — another Purple on the destination blocks the move.
+
+[UI_ACHIEVEMENTS]
+ACHIEVEMENTS
+
+[UI_CLOUD_SIGN_IN]
+CLOUD SIGN IN
+
+[UI_CLOUD_SYNC]
+SYNC CLOUD
+
+[UI_CLOUD_PLAY_GAMES_NEEDED]
+PLAY GAMES NEEDED
+
+[ACH_UNLOCKED]
+UNLOCKED
+
+[ACH_LOCKED]
+LOCKED
+
+[ACH_FIRST_CLEAR_NAME]
+FIRST CLEAR
+
+[ACH_FIRST_CLEAR_DESC]
+Clear your first campaign puzzle
+
+[ACH_FIRST_HARD_NAME]
+HARD START
+
+[ACH_FIRST_HARD_DESC]
+Clear a hard campaign puzzle
+
+[ACH_NO_HINT_CLEAR_NAME]
+NO HINTS
+
+[ACH_NO_HINT_CLEAR_DESC]
+Clear a campaign puzzle without using hints
+
+[ACH_EASY_SET_NAME]
+EASY DOES IT
+
+[ACH_EASY_SET_DESC]
+Clear every easy campaign puzzle
+
+[ACH_MEDIUM_SET_NAME]
+MIDDLE MAN
+
+[ACH_MEDIUM_SET_DESC]
+Clear every medium campaign puzzle
+
+[ACH_HARD_SET_NAME]
+HARD KNOCKS
+
+[ACH_HARD_SET_DESC]
+Clear every hard campaign puzzle
+
+[ACH_HINT_SAVER_NAME]
+HINT SAVER
+
+[ACH_HINT_SAVER_DESC]
+Clear 10 campaign puzzles without using hints
+
+[ACH_CLEARS_SILVER_NAME]
+FIFTY WINS
+
+[ACH_CLEARS_SILVER_DESC]
+Clear 50 campaign puzzles. Replays count
+
+[ACH_CLEARS_GOLD_NAME]
+HUNDRED WINS
+
+[ACH_CLEARS_GOLD_DESC]
+Clear 100 campaign puzzles. Replays count
+
+[ACH_NO_HINT_GOLD_NAME]
+FIFTY CLEAN
+
+[ACH_NO_HINT_GOLD_DESC]
+Clear 50 campaign puzzles without using hints
+
+[ACH_ON_TIME_BRONZE_NAME]
+ON TIME
+
+[ACH_ON_TIME_BRONZE_DESC]
+Clear a campaign puzzle in time
+
+[ACH_ON_TIME_SILVER_NAME]
+PACE SETTER
+
+[ACH_ON_TIME_SILVER_DESC]
+Clear 10 campaign puzzles in time
+
+[ACH_ON_TIME_GOLD_NAME]
+CLOCKWATCHER
+
+[ACH_ON_TIME_GOLD_DESC]
+Clear 50 campaign puzzles in time
+
+[ACH_IM_BLUE_NAME]
+I'M BLUE
+
+[ACH_IM_BLUE_DESC]
+Fill every empty cell with blue
+
+[ACH_SHALL_NOT_PASS_NAME]
+YOU SHALL NOT PASS
+
+[ACH_SHALL_NOT_PASS_DESC]
+Try to hop a shifter that cannot move
+
+[ACH_DEV_MODE_NAME]
+HELLO, DEVELOPER
+
+[ACH_DEV_MODE_DESC]
+Unlock dev mode from the credits screen
+

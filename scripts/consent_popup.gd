@@ -61,11 +61,35 @@ func _apply_locale_texts() -> void:
 		HudLayout.apply_tile_button(_accept_btn, _TILE_TEX)
 
 ## Sizes the content column to the dialog width used by other popups.
+## Re-runs on viewport size_changed so tablet rotation keeps the body cap.
 func _fit_layout() -> void:
 	var content := get_node_or_null("Outer/Content") as Control
 	if content == null:
 		return
 	HudDialogs.fit_content_column(content, 760.0, HudDialogs.DIALOG_EXTRA_PAD_V, 200.0, 1600.0, false)
+	_cap_consent_body_to_phone_width(content)
+
+
+## Caps ConsentBody wrap width (and the Content column that owns it) to the
+## same phone content width other menus use once the viewport is past 1080.
+## Title/buttons already shrink-center; the body Label expands with the column.
+## No-op on phones: column is already <= UI_PHONE_CONTENT_WIDTH.
+func _cap_consent_body_to_phone_width(content: Control) -> void:
+	if content == null:
+		return
+	var max_w := HudLayout.UI_PHONE_CONTENT_WIDTH
+	# Wrap width is custom_minimum_size.x; cap it even if the parent size is
+	# still the previous frame (cap_box_row_width keys off parent.size).
+	if _body:
+		HudLayout.cap_box_row_width(_body, max_w)
+		var body_min := _body.custom_minimum_size
+		body_min.x = minf(body_min.x, max_w)
+		_body.custom_minimum_size = body_min
+	# Outer is full-viewport, so this shrink-centers the column on tablets.
+	HudLayout.cap_box_row_width(content, max_w)
+	var col_min := content.custom_minimum_size
+	col_min.x = minf(col_min.x, max_w)
+	content.custom_minimum_size = col_min
 
 # Opens the privacy policy URL in the device's default browser.
 func _on_read_policy() -> void:

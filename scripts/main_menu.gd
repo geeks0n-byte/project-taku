@@ -1,5 +1,5 @@
 extends Control
-## Main menu: boot intro, campaign/tutorial entry, how-to-play, options, and credits.
+## Main menu: boot intro, campaign/tutorial entry, how-to-play, achievements, options, and credits.
 
 @export var show_debug_tools: bool = false
 
@@ -8,6 +8,7 @@ extends Control
 @onready var tutorial_btn = $UILayer/CenterContainer/VBoxContainer/TutorialButton
 @onready var levels_btn = $UILayer/CenterContainer/VBoxContainer/LevelSelectButton
 @onready var how_to_play_btn = $UILayer/CenterContainer/VBoxContainer/HowToPlayButton
+@onready var achievements_btn = $UILayer/CenterContainer/VBoxContainer/AchievementsButton
 @onready var options_btn = $UILayer/CenterContainer/VBoxContainer/OptionsButton
 @onready var credits_btn = $UILayer/CenterContainer/VBoxContainer/CreditsButton
 @onready var editor_btn = $UILayer/CenterContainer/VBoxContainer/EditorButton
@@ -55,13 +56,24 @@ const TITLE_FONT_SIZE := 96
 const TITLE_OUTLINE := 14
 const MENU_BTN_FONT := 64
 const MENU_BTN_OUTLINE := GameConstants.MENU_TEXT_OUTLINE
+const MENU_BADGE_MARGIN := 10.0
+const MENU_BADGE_TEXT_GAP := -6.0
+const _PIXEL_MONO_TEXT_SCRIPT: Script = preload("res://scripts/pixel_mono_text.gd")
 const CREDITS_BODY_SIZE := 48
 const CREDITS_HEADER_SIZE := 42
 const CREDITS_NAME_SIZE := 34
 const CREDITS_HEADER_LOCALE_SIZE := 52
 const CREDITS_NAME_LOCALE_SIZE := 42
 const MENU_FADE_IN := 1.35
-const TITLE_BG_HOLD := 0.7
+const BOOT_VOID_COLOR := GameConstants.BOOT_VOID_COLOR
+const SPLASH_HOLD := 0.55
+const SPLASH_STARS_FADE := 1.65
+const SPLASH_ASTEROID_APPROACH := 0.9
+const SPLASH_ASTEROID_MAX_WAIT := 2.4
+const SPLASH_POST_IMPACT_MIN := 0.4
+const SPLASH_TILES_CLEAR_MAX_WAIT := 3.8
+const SPLASH_TILES_EXPLODE_PAUSE := 0.32
+const SPLASH_TO_TITLE_PAUSE := 0.35
 const TITLE_LETTER_INTERVAL := 0.12
 const TITLE_AFTER_LETTERS := 0.16
 const TITLE_TILE_POP := 0.16
@@ -80,9 +92,17 @@ var _htp_page: int = 0
 var _boot_intro_active: bool = false
 var _boot_intro_tween: Tween
 var _button_fade_tween: Tween
+var _splash_fade_tween: Tween
 var _boot_intro_failsafe: SceneTreeTimer
+var _splash_deferred_timer: SceneTreeTimer
 var _boot_intro_waiting_on_consent: bool = false
+var _boot_intro_privacy_gate_passed: bool = false
 var _eat_intro_pointer: bool = false
+var _splash_physics_impact_handled: bool = false
+var _splash_impact_time_msec: int = 0
+var _title_intro_started: bool = false
+var _boot_splash_layer: CanvasLayer
+var _boot_splash_void: ColorRect
 
 # Instance of consent_popup.tscn. Kept as a reference so we can check
 # its visibility for the back-button handler.
@@ -94,6 +114,9 @@ var _consent_blocker: ColorRect
 var _version_hold_active: bool = false
 var _version_hold_elapsed: float = 0.0
 const _VERSION_HOLD_SEC := 3.0
+var _menu_badge_host: Control = null
+var _ach_badge_panel: Panel = null
+var _levels_badge_panel: Panel = null
 
 # Wires menu buttons, overlays, ads, and optionally starts the boot intro.
 func _ready() -> void:
@@ -103,6 +126,7 @@ func _ready() -> void:
 	_fit_menu_buttons()
 	HudLayout.apply_locale_fonts_to_tree(self)
 	_setup_title_under_fx()
+	_build_boot_splash_layer()
 	_setup_tutorial_intro_panel()
 	_setup_how_to_play_overlay()
 	if AdsManager:
@@ -110,13 +134,24 @@ func _ready() -> void:
 		AdsManager.show_menu_banner()
 		AdsManager.warm_rewarded_hint()
 	if SpaceBackground and SpaceBackground.has_method("set_foreground_events_enabled"):
-		SpaceBackground.set_foreground_events_enabled(true)
+		if not _boot_intro_active:
+			SpaceBackground.set_foreground_events_enabled(true)
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
 	if start_btn: start_btn.pressed.connect(_on_start_pressed)
 	if tutorial_btn: tutorial_btn.pressed.connect(_on_tutorial_pressed)
 	if levels_btn: levels_btn.pressed.connect(_on_levels_pressed)
 	if how_to_play_btn: how_to_play_btn.pressed.connect(_on_how_to_play_pressed)
+	if achievements_btn: achievements_btn.pressed.connect(_on_achievements_pressed)
+	_setup_menu_notification_badges()
+	if AchievementManager:
+		# Only unseen_count_changed — unlocked emits a String id, not a count.
+		if not AchievementManager.unseen_count_changed.is_connected(_refresh_achievements_badge):
+			AchievementManager.unseen_count_changed.connect(_refresh_achievements_badge)
+	_refresh_achievements_badge()
+	if SaveManager and not SaveManager.unseen_levels_changed.is_connected(_refresh_levels_badge):
+		SaveManager.unseen_levels_changed.connect(_refresh_levels_badge)
+	_refresh_levels_badge()
 	if options_btn: options_btn.pressed.connect(_on_options_pressed)
 	if credits_btn: credits_btn.pressed.connect(_on_credits_pressed)
 	if editor_btn: editor_btn.pressed.connect(_on_editor_pressed)
@@ -151,11 +186,8 @@ func _ready() -> void:
 		process_mode = Node.PROCESS_MODE_ALWAYS
 		if _needs_privacy_consent():
 			_boot_intro_waiting_on_consent = true
-			_show_privacy_consent_if_needed(false)
-			_prepare_boot_intro()
-		else:
-			_prepare_boot_intro()
-			call_deferred("_play_boot_intro")
+		_prepare_boot_intro()
+		call_deferred("_play_boot_intro")
 
 # Skips leftover intro animation and restores inherited process mode.
 func _ensure_menu_ui_visible() -> void:
@@ -183,7 +215,7 @@ func _is_primary_pointer_release(event: InputEvent) -> bool:
 # Ignores menu buttons during the boot intro so they cannot be pressed early.
 func _set_boot_menu_input_enabled(enabled: bool) -> void:
 	var filter := Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
-	for btn in [start_btn, tutorial_btn, levels_btn, how_to_play_btn, options_btn, credits_btn, editor_btn]:
+	for btn in [start_btn, tutorial_btn, levels_btn, how_to_play_btn, achievements_btn, options_btn, credits_btn, editor_btn]:
 		if btn:
 			btn.mouse_filter = filter
 	for btn in [debug_star_btn, debug_asteroid_btn, debug_asteroid_cloud_btn, debug_comet_btn, debug_comet_shower_btn]:
@@ -204,11 +236,25 @@ func _input(event: InputEvent) -> void:
 		return
 	if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
 		return
+	if not _can_skip_boot_intro():
+		return
 	if not _is_primary_pointer_press(event):
 		return
 	_eat_intro_pointer = true
 	get_viewport().set_input_as_handled()
 	_ensure_menu_ui_visible()
+
+
+# Tap skip is blocked until privacy is accepted on first launch.
+func _can_skip_boot_intro() -> bool:
+	if not _boot_intro_active:
+		return false
+	if _needs_privacy_consent():
+		return false
+	# First launch: after accept, wait until the title sequence actually starts.
+	if _boot_intro_privacy_gate_passed and not _title_intro_started:
+		return false
+	return true
 
 # Android back: close overlays first, then quit.
 func _notification(what: int) -> void:
@@ -351,9 +397,12 @@ func _prepare_boot_intro() -> void:
 	_place_title_cluster(_title_intro_center_top())
 	var title_host := get_node_or_null("TitleLayer/TitleHost") as CanvasItem
 	if title_host:
-		title_host.modulate.a = 1.0
+		title_host.modulate.a = 0.0
 	_set_button_ui_alpha(0.0)
 	_set_boot_menu_input_enabled(false)
+	if SpaceBackground and SpaceBackground.has_method("prepare_boot_intro"):
+		SpaceBackground.prepare_boot_intro()
+	_show_boot_splash()
 
 # Left-aligns the title at the settled glyph origin so typing matches rest.
 func _layout_title_for_typewriter(title: Label) -> void:
@@ -391,20 +440,182 @@ func _restore_title_layout(title: Label) -> void:
 	title.offset_bottom = 400.0
 	title.visible_characters = -1
 
-# Typewriter, tile pops, slide-up, then fade in menu buttons.
-func _play_boot_intro() -> void:
+# Navy overlay that matches the system boot splash before live parallax fades in.
+func _build_boot_splash_layer() -> void:
+	if _boot_splash_layer != null:
+		return
+	_boot_splash_layer = CanvasLayer.new()
+	_boot_splash_layer.name = "BootSplashLayer"
+	_boot_splash_layer.layer = -1
+	add_child(_boot_splash_layer)
+	_boot_splash_void = ColorRect.new()
+	_boot_splash_void.name = "VoidFill"
+	_boot_splash_void.color = BOOT_VOID_COLOR
+	_boot_splash_void.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_boot_splash_layer.add_child(_boot_splash_void)
+	_layout_boot_splash()
+	_boot_splash_layer.visible = false
+
+
+func _layout_boot_splash() -> void:
+	if _boot_splash_void:
+		_boot_splash_void.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_boot_splash_void.set_offsets_preset(Control.PRESET_FULL_RECT)
+
+
+func _show_boot_splash() -> void:
+	_build_boot_splash_layer()
+	_layout_boot_splash()
+	if _boot_splash_void:
+		_boot_splash_void.color = BOOT_VOID_COLOR
+	if SpaceBackground and SpaceBackground.has_method("setup_boot_intro_tiles"):
+		SpaceBackground.setup_boot_intro_tiles()
+	if _boot_splash_layer:
+		_boot_splash_layer.visible = true
+
+
+func _hide_boot_splash() -> void:
+	if _boot_splash_layer:
+		_boot_splash_layer.visible = false
+	if _boot_splash_void:
+		_boot_splash_void.color = BOOT_VOID_COLOR
+	_layout_boot_splash()
+
+
+func _begin_splash_stars_fade(duration: float) -> void:
+	if not _boot_intro_active:
+		return
+	if SpaceBackground and SpaceBackground.has_method("fade_boot_parallax_in"):
+		SpaceBackground.fade_boot_parallax_in(duration)
+	if _boot_splash_void == null:
+		return
+	if _splash_fade_tween and _splash_fade_tween.is_valid():
+		_splash_fade_tween.kill()
+	_splash_fade_tween = create_tween()
+	_splash_fade_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_splash_fade_tween.tween_property(_boot_splash_void, "color:a", 0.0, duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+
+func _launch_splash_physics_hit() -> void:
+	if not _boot_intro_active:
+		return
+	if SpaceBackground == null:
+		_on_boot_intro_impacted(get_viewport_rect().size * 0.5)
+		return
+	if SpaceBackground.has_signal("boot_intro_impacted"):
+		if not SpaceBackground.boot_intro_impacted.is_connected(_on_boot_intro_impacted):
+			SpaceBackground.boot_intro_impacted.connect(_on_boot_intro_impacted, CONNECT_ONE_SHOT)
+	if SpaceBackground.has_method("spawn_boot_intro_asteroid"):
+		SpaceBackground.spawn_boot_intro_asteroid(SPLASH_ASTEROID_APPROACH)
+	var tree := get_tree()
+	if tree:
+		_cancel_splash_deferred_timer()
+		_splash_deferred_timer = tree.create_timer(SPLASH_ASTEROID_MAX_WAIT, true, false, true)
+		_splash_deferred_timer.timeout.connect(_on_boot_intro_impacted_failsafe)
+
+
+func _on_boot_intro_impacted_failsafe() -> void:
+	_on_boot_intro_impacted(get_viewport_rect().size * 0.5)
+
+
+func _on_boot_intro_impacted(_impact_pos: Vector2) -> void:
+	if not _boot_intro_active or _splash_physics_impact_handled:
+		return
+	_splash_physics_impact_handled = true
+	_splash_impact_time_msec = Time.get_ticks_msec()
+	if UiSfx:
+		UiSfx.play_title_tile_pop(0)
+	_wait_for_splash_tiles_cleared()
+
+
+func _wait_for_splash_tiles_cleared() -> void:
+	if not _boot_intro_active:
+		return
+	var tree := get_tree()
+	var elapsed := float(Time.get_ticks_msec() - _splash_impact_time_msec) / 1000.0
+	var tiles_clear := true
+	if SpaceBackground and SpaceBackground.has_method("boot_intro_tiles_offscreen"):
+		tiles_clear = SpaceBackground.boot_intro_tiles_offscreen()
+	if elapsed >= SPLASH_POST_IMPACT_MIN and tiles_clear:
+		_continue_after_splash_tiles_cleared()
+		return
+	if elapsed >= SPLASH_TILES_CLEAR_MAX_WAIT:
+		if not tiles_clear and SpaceBackground and SpaceBackground.has_method("explode_boot_intro_tiles_remaining"):
+			SpaceBackground.explode_boot_intro_tiles_remaining()
+			if UiSfx:
+				UiSfx.play_title_tile_pop(1)
+			if tree:
+				_cancel_splash_deferred_timer()
+				_splash_deferred_timer = tree.create_timer(
+					SPLASH_TILES_EXPLODE_PAUSE, true, false, true
+				)
+				_splash_deferred_timer.timeout.connect(_continue_after_splash_tiles_cleared)
+				return
+		_continue_after_splash_tiles_cleared()
+		return
+	if tree == null:
+		return
+	_cancel_splash_deferred_timer()
+	_splash_deferred_timer = tree.create_timer(0.05, true, false, true)
+	_splash_deferred_timer.timeout.connect(_wait_for_splash_tiles_cleared)
+
+
+func _cancel_splash_deferred_timer() -> void:
+	if _splash_deferred_timer == null:
+		return
+	if _splash_deferred_timer.timeout.is_connected(_wait_for_splash_tiles_cleared):
+		_splash_deferred_timer.timeout.disconnect(_wait_for_splash_tiles_cleared)
+	if _splash_deferred_timer.timeout.is_connected(_continue_after_splash_tiles_cleared):
+		_splash_deferred_timer.timeout.disconnect(_continue_after_splash_tiles_cleared)
+	if _splash_deferred_timer.timeout.is_connected(_on_boot_intro_impacted_failsafe):
+		_splash_deferred_timer.timeout.disconnect(_on_boot_intro_impacted_failsafe)
+	_splash_deferred_timer = null
+
+
+# After splash tiles scatter or explode: privacy on first launch, else title letters.
+func _continue_after_splash_tiles_cleared() -> void:
+	if not _boot_intro_active:
+		return
+	if _boot_intro_waiting_on_consent and _needs_privacy_consent():
+		_cancel_boot_intro_failsafe()
+		_cancel_splash_deferred_timer()
+		_show_privacy_consent_if_needed(false)
+		return
+	_begin_title_intro_sequence()
+
+
+func _resume_title_intro_after_consent() -> void:
+	if not _boot_intro_active or _title_intro_started:
+		return
+	var title_layer := get_node_or_null("TitleLayer") as CanvasLayer
+	if title_layer:
+		title_layer.visible = true
+	if menu_center:
+		menu_center.visible = true
+	_set_button_ui_alpha(0.0)
 	var title := _title_label()
 	if title:
 		_layout_title_for_typewriter(title)
 		title.visible_characters = 0
 	_prepare_title_tile_pops()
 	_place_title_cluster(_title_intro_center_top())
+	_begin_title_intro_sequence()
+
+
+func _begin_title_intro_sequence() -> void:
+	if not _boot_intro_active:
+		return
+	if _title_intro_started:
+		return
+	_title_intro_started = true
+	var title := _title_label()
 	if _boot_intro_tween and _boot_intro_tween.is_valid():
 		_boot_intro_tween.kill()
 	_boot_intro_tween = create_tween()
 	_boot_intro_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	_boot_intro_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	_boot_intro_tween.tween_interval(TITLE_BG_HOLD)
+	_boot_intro_tween.tween_callback(_splash_handoff_to_title)
+	_boot_intro_tween.tween_interval(SPLASH_TO_TITLE_PAUSE)
 	var letter_count := title.text.length() if title else 0
 	for i in range(1, letter_count + 1):
 		var count := i
@@ -431,19 +642,91 @@ func _play_boot_intro() -> void:
 			cluster, "offset_bottom", TITLE_CLUSTER_REST_TOP + TITLE_CLUSTER_HEIGHT, TITLE_SLIDE_DUR
 		).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 	_boot_intro_tween.tween_callback(_fade_buttons_after_title)
+	_schedule_boot_intro_title_failsafe(letter_count)
+
+
+func _splash_handoff_to_title() -> void:
+	if not _boot_intro_active:
+		return
+	_hide_boot_splash()
+	if SpaceBackground and SpaceBackground.has_method("finish_boot_intro"):
+		SpaceBackground.finish_boot_intro()
+	var title_host := get_node_or_null("TitleLayer/TitleHost") as CanvasItem
+	if title_host:
+		title_host.modulate.a = 1.0
+
+
+func _cancel_boot_intro_failsafe() -> void:
+	if _boot_intro_failsafe == null:
+		return
+	if _boot_intro_failsafe.timeout.is_connected(_ensure_menu_ui_visible):
+		_boot_intro_failsafe.timeout.disconnect(_ensure_menu_ui_visible)
+	if _boot_intro_failsafe.timeout.is_connected(_on_boot_intro_splash_failsafe):
+		_boot_intro_failsafe.timeout.disconnect(_on_boot_intro_splash_failsafe)
+	_boot_intro_failsafe = null
+
+
+func _schedule_boot_intro_splash_failsafe() -> void:
 	var tree := get_tree()
-	if tree:
-		var intro_len := TITLE_BG_HOLD + float(letter_count) * TITLE_LETTER_INTERVAL + TITLE_AFTER_LETTERS
-		intro_len += float(_title_tiles().size()) * (TITLE_TILE_POP + TITLE_TILE_GAP)
-		intro_len += TITLE_AFTER_TILES + TITLE_SLIDE_DUR + MENU_FADE_IN + 0.6
-		var failsafe := tree.create_timer(intro_len, true, false, true)
-		if _boot_intro_failsafe and _boot_intro_failsafe.timeout.is_connected(_ensure_menu_ui_visible):
-			_boot_intro_failsafe.timeout.disconnect(_ensure_menu_ui_visible)
-		_boot_intro_failsafe = failsafe
-		failsafe.timeout.connect(_ensure_menu_ui_visible)
+	if tree == null:
+		return
+	var intro_len := SPLASH_HOLD + SPLASH_STARS_FADE + SPLASH_ASTEROID_MAX_WAIT
+	intro_len += SPLASH_POST_IMPACT_MIN + SPLASH_TILES_CLEAR_MAX_WAIT
+	intro_len += SPLASH_TILES_EXPLODE_PAUSE + 0.5
+	_cancel_boot_intro_failsafe()
+	var failsafe := tree.create_timer(intro_len, true, false, true)
+	_boot_intro_failsafe = failsafe
+	failsafe.timeout.connect(_on_boot_intro_splash_failsafe)
+
+
+func _on_boot_intro_splash_failsafe() -> void:
+	if not _boot_intro_active:
+		return
+	if not _splash_physics_impact_handled:
+		_on_boot_intro_impacted(get_viewport_rect().size * 0.5)
+		return
+	_continue_after_splash_tiles_cleared()
+
+
+func _schedule_boot_intro_title_failsafe(letter_count: int) -> void:
+	var tree := get_tree()
+	if tree == null:
+		return
+	var intro_len := SPLASH_TO_TITLE_PAUSE
+	intro_len += float(letter_count) * TITLE_LETTER_INTERVAL + TITLE_AFTER_LETTERS
+	intro_len += float(_title_tiles().size()) * (TITLE_TILE_POP + TITLE_TILE_GAP)
+	intro_len += TITLE_AFTER_TILES + TITLE_SLIDE_DUR + MENU_FADE_IN + 0.6
+	var failsafe := tree.create_timer(intro_len, true, false, true)
+	_cancel_boot_intro_failsafe()
+	_boot_intro_failsafe = failsafe
+	failsafe.timeout.connect(_ensure_menu_ui_visible)
+
+# Splash blend (system splash → stars → physics hit → title intro).
+func _play_boot_intro() -> void:
+	var title := _title_label()
+	if title:
+		_layout_title_for_typewriter(title)
+		title.visible_characters = 0
+	_prepare_title_tile_pops()
+	_place_title_cluster(_title_intro_center_top())
+	_splash_physics_impact_handled = false
+	_title_intro_started = false
+	_splash_impact_time_msec = 0
+	if _boot_intro_tween and _boot_intro_tween.is_valid():
+		_boot_intro_tween.kill()
+	_boot_intro_tween = create_tween()
+	_boot_intro_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	_boot_intro_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_boot_intro_tween.tween_interval(SPLASH_HOLD)
+	_boot_intro_tween.tween_callback(_begin_splash_stars_fade.bind(SPLASH_STARS_FADE))
+	_boot_intro_tween.tween_interval(SPLASH_STARS_FADE)
+	_boot_intro_tween.tween_callback(_launch_splash_physics_hit)
+	_schedule_boot_intro_splash_failsafe()
 
 # Shows the next typewriter letter and plays its SFX.
 func _reveal_title_letter(count: int) -> void:
+	if not _boot_intro_active:
+		return
 	var title := _title_label()
 	if is_instance_valid(title):
 		title.visible_characters = count
@@ -452,11 +735,15 @@ func _reveal_title_letter(count: int) -> void:
 
 # Tile-pop click used by the intro tween.
 func _play_title_tile_pop_sfx(index: int) -> void:
+	if not _boot_intro_active:
+		return
 	if UiSfx:
 		UiSfx.play_title_tile_pop(index)
 
 # Restores centred title layout as the cluster slides to rest.
 func _on_title_slide_start() -> void:
+	if not _boot_intro_active:
+		return
 	var title := _title_label()
 	if is_instance_valid(title):
 		_restore_title_layout(title)
@@ -465,6 +752,9 @@ func _on_title_slide_start() -> void:
 
 # Fades in the menu column after the title has settled.
 func _fade_buttons_after_title() -> void:
+	if not _boot_intro_active:
+		return
+	_set_main_menu_chrome_visible(true)
 	var buttons := _button_fade_targets()
 	if buttons.is_empty():
 		_complete_boot_intro()
@@ -482,16 +772,26 @@ func _fade_buttons_after_title() -> void:
 
 # Kills intro tweens and snaps title/buttons to their rest state.
 func _complete_boot_intro() -> void:
-	if _boot_intro_failsafe:
-		if _boot_intro_failsafe.timeout.is_connected(_ensure_menu_ui_visible):
-			_boot_intro_failsafe.timeout.disconnect(_ensure_menu_ui_visible)
-		_boot_intro_failsafe = null
+	if not _boot_intro_active and _boot_intro_tween == null and _button_fade_tween == null:
+		return
+	_boot_intro_active = false
+	_cancel_splash_deferred_timer()
+	_cancel_boot_intro_failsafe()
 	if _boot_intro_tween and _boot_intro_tween.is_valid():
 		_boot_intro_tween.kill()
 	_boot_intro_tween = null
 	if _button_fade_tween and _button_fade_tween.is_valid():
 		_button_fade_tween.kill()
 	_button_fade_tween = null
+	if _splash_fade_tween and _splash_fade_tween.is_valid():
+		_splash_fade_tween.kill()
+	_splash_fade_tween = null
+	if SpaceBackground and SpaceBackground.has_signal("boot_intro_impacted"):
+		if SpaceBackground.boot_intro_impacted.is_connected(_on_boot_intro_impacted):
+			SpaceBackground.boot_intro_impacted.disconnect(_on_boot_intro_impacted)
+	_hide_boot_splash()
+	if SpaceBackground and SpaceBackground.has_method("finish_boot_intro"):
+		SpaceBackground.finish_boot_intro()
 	var title := _title_label()
 	if title:
 		_restore_title_layout(title)
@@ -501,7 +801,10 @@ func _complete_boot_intro() -> void:
 	if title_host:
 		title_host.modulate.a = 1.0
 	_set_button_ui_alpha(1.0)
-	_boot_intro_active = false
+	_title_intro_started = false
+	_splash_physics_impact_handled = false
+	_set_main_menu_chrome_visible(true)
+	_apply_debug_tools_visibility()
 	process_mode = Node.PROCESS_MODE_INHERIT
 	if not _eat_intro_pointer:
 		_set_boot_menu_input_enabled(true)
@@ -554,6 +857,7 @@ func _on_language_changed() -> void:
 # Viewport resized: recompute menu + debug-bar safe-area padding.
 func _on_safe_area_viewport_resized() -> void:
 	_apply_safe_area_layout()
+	_layout_boot_splash()
 
 # Pads the menu column and debug bar away from notches / nav bars.
 func _apply_safe_area_layout() -> void:
@@ -579,13 +883,15 @@ func _refresh_start_button_label() -> void:
 func _on_save_deleted() -> void:
 	_refresh_start_button_label()
 	_fit_menu_buttons()
+	_refresh_achievements_badge()
+	_refresh_levels_badge()
 	# Privacy agreement is cleared with the profile — show consent immediately
 	# (not only after a later main-menu reload via Level Select).
 	_show_privacy_consent_if_needed(true)
 
 # Sizes/fonts menu buttons, title, debug bar, and credits text.
 func _fit_menu_buttons() -> void:
-	for btn in [start_btn, tutorial_btn, levels_btn, how_to_play_btn, options_btn, credits_btn, editor_btn]:
+	for btn in [start_btn, tutorial_btn, levels_btn, how_to_play_btn, achievements_btn, options_btn, credits_btn, editor_btn]:
 		_apply_main_menu_button(btn)
 	_fit_debug_bar_buttons()
 	if close_credits_btn:
@@ -596,6 +902,8 @@ func _fit_menu_buttons() -> void:
 	var credits_text_node = credits_panel.get_node_or_null("CreditsText") if credits_panel else null
 	if credits_text_node:
 		_apply_credits_fonts(credits_text_node)
+	call_deferred("_bind_menu_badge_layout_hooks")
+	call_deferred("_layout_menu_badges")
 
 # Flat menu row: Press Start for Latin, locale font otherwise.
 func _apply_main_menu_button(button: Button) -> void:
@@ -707,6 +1015,22 @@ func _set_main_menu_chrome_visible(should_show: bool) -> void:
 	if title_layer:
 		title_layer.visible = should_show
 
+
+# Hides menu chrome for overlays. During boot intro, keep the title layer
+# visible so the post-consent letter sequence can play.
+func _hide_main_menu_chrome_for_overlay() -> void:
+	if menu_center:
+		menu_center.visible = false
+	_set_debug_bar_visible(false)
+	if _boot_intro_active:
+		var title_layer := get_node_or_null("TitleLayer") as CanvasLayer
+		if title_layer:
+			title_layer.visible = true
+	else:
+		var title_layer := get_node_or_null("TitleLayer") as CanvasLayer
+		if title_layer:
+			title_layer.visible = false
+
 # Locale-aware credits BBCode sizes; Press Start for Latin names.
 func _apply_credits_fonts(credits_text_node: RichTextLabel) -> void:
 	if not credits_text_node:
@@ -790,7 +1114,7 @@ func _wrap_credits_author_name_display(author: String, pixel_sz: int) -> String:
 
 # Replaces the translated author run with mixed-font BBCode.
 func _wrap_credits_author_pixel_font(bbcode: String, body_sz: int, pixel_sz: int) -> String:
-	var author := String(TranslationServer.translate("SPLASH_AUTHOR"))
+	var author := String(TranslationServer.translate("UI_SPLASH_AUTHOR"))
 	var author_display := _wrap_credits_author_name_display(author, pixel_sz)
 	var author_single := _credits_author_single_line(author)
 	if author_display == author_single and HudFonts.locale_code() == "ka":
@@ -885,6 +1209,9 @@ func _toggle_dev_mode() -> void:
 	if SaveManager == null:
 		return
 	var now_on := SaveManager.toggle_dev_mode()
+	# Secret achievement: only when the hold successfully turns dev mode ON.
+	if now_on and AchievementManager:
+		AchievementManager.grant(AchievementCatalog.ID_DEV_MODE)
 	GlobalGameManager.debug_tools_enabled = _is_debug_enabled()
 	_refresh_credits_version()
 	if credits_version_label:
@@ -995,7 +1322,7 @@ func _refresh_how_to_play_text() -> void:
 # Places HTP panel + nav after the rules label has measured.
 func _layout_how_to_play_stack() -> void:
 	HudLayout.layout_how_to_play_stack(
-		_htp_host, _htp_panel, _htp_rules, _htp_nav, _htp_page == 0
+		_htp_host, _htp_panel, _htp_rules, _htp_nav, _htp_page == 0, true
 	)
 
 # Previous HTP page, clamped at 0.
@@ -1021,8 +1348,8 @@ const _CONSENT_POPUP_SCENE := preload("res://scenes/consent_popup.tscn")
 func _needs_privacy_consent() -> bool:
 	return SaveManager != null and not SaveManager.privacy_accepted
 
-# Instantiates the consent popup scene. Shown on first launch before the title
-# intro, or immediately when a reset profile still needs acceptance.
+# Instantiates the consent popup scene. Shown after splash tiles clear on first
+# launch, or immediately when a reset profile still needs acceptance.
 func _build_consent_popup() -> void:
 	_ensure_overlays_above_fx()
 	var host := get_node_or_null("OverlayLayer") as CanvasLayer
@@ -1060,8 +1387,7 @@ func _show_privacy_consent_if_needed(close_options: bool = false) -> void:
 		return
 	if close_options and options_menu and options_menu.visible:
 		options_menu.visible = false
-	_set_main_menu_chrome_visible(false)
-	_set_debug_bar_visible(false)
+	_hide_main_menu_chrome_for_overlay()
 	# Refresh copy/fonts for the current locale (reset can reopen after a language change).
 	if _consent_blocker.has_method("refresh_locale"):
 		_consent_blocker.refresh_locale()
@@ -1069,19 +1395,32 @@ func _show_privacy_consent_if_needed(close_options: bool = false) -> void:
 	_consent_blocker.move_to_front()
 
 # Called when the player taps ACCEPT on the consent popup.
-# Saves acceptance, then either starts the title intro or restores the menu.
+# Saves acceptance, then resumes the title intro or restores the menu.
 func _on_consent_accepted() -> void:
+	var resume_intro := _boot_intro_active and not _title_intro_started
+	if resume_intro:
+		_boot_intro_privacy_gate_passed = true
+		_eat_intro_pointer = true
 	if SaveManager:
 		SaveManager.accept_privacy()
-	if _boot_intro_waiting_on_consent:
-		_boot_intro_waiting_on_consent = false
-		_set_main_menu_chrome_visible(true)
-		_apply_debug_tools_visibility()
-		_prepare_boot_intro()
-		_play_boot_intro()
+	_boot_intro_waiting_on_consent = false
+	if _consent_blocker:
+		_consent_blocker.visible = false
+	if resume_intro:
+		_cancel_boot_intro_failsafe()
+		_cancel_splash_deferred_timer()
+		_resume_title_intro_after_consent()
 		return
 	_set_main_menu_chrome_visible(true)
+	_set_button_ui_alpha(1.0)
+	var title_host := get_node_or_null("TitleLayer/TitleHost") as CanvasItem
+	if title_host:
+		title_host.modulate.a = 1.0
+	var title := _title_label()
+	if title:
+		_restore_title_layout(title)
 	_apply_debug_tools_visibility()
+	_set_boot_menu_input_enabled(true)
 
 # Styles the first-play tutorial prompt (no dimmer; chrome hides instead).
 func _setup_tutorial_intro_panel() -> void:
@@ -1188,6 +1527,170 @@ func _on_how_to_play_pressed() -> void:
 		_htp_host.visible = true
 		_htp_host.move_to_front()
 
+
+# Hides menu chrome and shows the achievements overlay.
+func _on_achievements_pressed() -> void:
+	_set_main_menu_chrome_visible(false)
+	_set_debug_bar_visible(false)
+	if AchievementManager:
+		AchievementManager.show_list(_on_achievements_closed)
+	else:
+		_set_main_menu_chrome_visible(true)
+		_set_debug_bar_visible(true)
+
+
+## Restores menu after the achievements list closes.
+func _on_achievements_closed() -> void:
+	_set_main_menu_chrome_visible(true)
+	_set_debug_bar_visible(true)
+	_refresh_achievements_badge()
+	_refresh_levels_badge()
+	_fit_menu_buttons()
+
+
+func _setup_menu_notification_badges() -> void:
+	if _menu_badge_host == null:
+		var host := _ensure_menu_badge_host()
+		if host == null:
+			return
+	if achievements_btn != null and _ach_badge_panel == null:
+		var ach_built := HudLayout.build_notification_badge()
+		_ach_badge_panel = ach_built["panel"] as Panel
+		_ach_badge_panel.name = "AchievementsUnseenBadge"
+		_menu_badge_host.add_child(_ach_badge_panel)
+	if levels_btn != null and _levels_badge_panel == null:
+		var levels_built := HudLayout.build_notification_badge()
+		_levels_badge_panel = levels_built["panel"] as Panel
+		_levels_badge_panel.name = "LevelsUnseenBadge"
+		_menu_badge_host.add_child(_levels_badge_panel)
+	if achievements_btn and not achievements_btn.resized.is_connected(_layout_menu_badges):
+		achievements_btn.resized.connect(_layout_menu_badges)
+	if levels_btn and not levels_btn.resized.is_connected(_layout_menu_badges):
+		levels_btn.resized.connect(_layout_menu_badges)
+	if menu_center and not menu_center.resized.is_connected(_layout_menu_badges):
+		menu_center.resized.connect(_layout_menu_badges)
+
+
+func _ensure_menu_badge_host() -> Control:
+	if _menu_badge_host != null and is_instance_valid(_menu_badge_host):
+		return _menu_badge_host
+	if menu_center == null:
+		return null
+	_menu_badge_host = Control.new()
+	_menu_badge_host.name = "MenuNotificationBadgeHost"
+	_menu_badge_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_menu_badge_host.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_menu_badge_host.offset_left = 0.0
+	_menu_badge_host.offset_top = 0.0
+	_menu_badge_host.offset_right = 0.0
+	_menu_badge_host.offset_bottom = 0.0
+	_menu_badge_host.z_index = 10
+	menu_center.add_child(_menu_badge_host)
+	return _menu_badge_host
+
+
+func _menu_button_display_text(button: Button, fallback_key: String) -> String:
+	if button == null:
+		return ""
+	var key := String(button.get_meta("_tr_key", fallback_key)).strip_edges()
+	if key.is_empty():
+		key = fallback_key
+	var display := String(TranslationServer.translate(key))
+	return display if not display.is_empty() else key
+
+
+func _bind_menu_badge_layout_hooks() -> void:
+	for button in [achievements_btn, levels_btn]:
+		if button == null:
+			continue
+		var mono: Control = button.get_node_or_null("PixelMonoCaption") as Control
+		if mono != null and not mono.resized.is_connected(_layout_menu_badges):
+			mono.resized.connect(_layout_menu_badges)
+
+
+func _centered_label_trailing_x(display: String, host_w: float, font_size: int, use_pixel: bool) -> float:
+	if display.is_empty() or host_w <= 0.0 or font_size <= 0:
+		return host_w * 0.5
+	var font := HudLayout.pixel_font_clean() if use_pixel else HudFonts.default_font()
+	var px := font_size if use_pixel else HudLayout.body_font_size(font_size)
+	if use_pixel:
+		return _PIXEL_MONO_TEXT_SCRIPT.ink_trailing_x_for_centered_text(
+			display, font, px, host_w
+		)
+	var text_w := font.get_string_size(display, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	return (host_w + text_w) * 0.5
+
+
+func _menu_button_label_trailing_x(button: Button, btn_w: float, fallback_key: String) -> float:
+	if button == null or btn_w <= 0.0:
+		return btn_w * 0.5
+	var mono: Control = button.get_node_or_null("PixelMonoCaption") as Control
+	if mono != null and mono.has_method("text_trailing_local_x"):
+		return float(mono.call("text_trailing_local_x", btn_w))
+	var display := _menu_button_display_text(button, fallback_key)
+	return _centered_label_trailing_x(
+		display,
+		btn_w,
+		MENU_BTN_FONT,
+		HudFonts.should_use_press_start_font(display)
+	)
+
+
+func _layout_menu_button_badge(panel: Panel, button: Button, fallback_key: String) -> void:
+	if panel == null or button == null:
+		return
+	var host := _ensure_menu_badge_host()
+	if host == null:
+		return
+	if panel.get_parent() != host:
+		host.add_child(panel)
+	var btn_rect: Rect2 = button.get_global_rect()
+	var btn_w: float = btn_rect.size.x
+	if btn_w <= 1.0:
+		btn_w = button.custom_minimum_size.x
+	var btn_h: float = btn_rect.size.y
+	if btn_h <= 1.0:
+		btn_h = button.custom_minimum_size.y
+	var badge_dims: Vector2 = HudLayout.notification_badge_size(btn_h)
+	var trailing_x: float = _menu_button_label_trailing_x(button, btn_w, fallback_key)
+	var host_origin: Vector2 = host.get_global_rect().position
+	var x: float = btn_rect.position.x - host_origin.x + trailing_x + MENU_BADGE_TEXT_GAP
+	var y: float = btn_rect.position.y - host_origin.y + maxf(MENU_BADGE_MARGIN, btn_h * 0.12)
+	x = clampf(x, 0.0, maxf(0.0, host.size.x - badge_dims.x))
+	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	panel.offset_left = x
+	panel.offset_top = y
+	panel.offset_right = x + badge_dims.x
+	panel.offset_bottom = y + badge_dims.y
+	panel.z_index = 1
+	panel.move_to_front()
+
+
+func _layout_menu_badges() -> void:
+	_layout_menu_button_badge(_ach_badge_panel, achievements_btn, "UI_ACHIEVEMENTS")
+	_layout_menu_button_badge(_levels_badge_panel, levels_btn, "UI_LEVEL_SELECT")
+
+
+func _refresh_achievements_badge(_count: int = -1) -> void:
+	if _ach_badge_panel == null:
+		return
+	var unseen := _count if _count >= 0 else (AchievementManager.unseen_count() if AchievementManager else 0)
+	# Keep panel.visible true while unseen — parent menu_center hides with overlays.
+	# Gating on is_visible_in_tree() cleared the badge during credits unlocks.
+	_ach_badge_panel.visible = unseen > 0
+	if unseen > 0:
+		call_deferred("_layout_menu_badges")
+
+
+func _refresh_levels_badge(_count: int = -1) -> void:
+	if _levels_badge_panel == null:
+		return
+	var unseen := _count if _count >= 0 else (SaveManager.unseen_level_count() if SaveManager else 0)
+	_levels_badge_panel.visible = unseen > 0
+	if unseen > 0:
+		call_deferred("_layout_menu_badges")
+
+
 # Hides menu chrome and shows the options overlay.
 func _on_options_pressed() -> void:
 	_set_main_menu_chrome_visible(false)
@@ -1201,6 +1704,8 @@ func _on_options_back() -> void:
 	_set_debug_bar_visible(true)
 	_refresh_start_button_label()
 	_fit_menu_buttons()
+	_refresh_achievements_badge()
+	_refresh_levels_badge()
 	_show_privacy_consent_if_needed(false)
 
 # Hides menu chrome and shows credits.
@@ -1227,6 +1732,8 @@ func _on_close_credits() -> void:
 	# skips visibility changes until we return to the main menu.
 	_apply_debug_tools_visibility()
 	_fit_menu_buttons()
+	_refresh_achievements_badge()
+	_refresh_levels_badge()
 
 # Opens the level editor.
 func _on_editor_pressed() -> void:

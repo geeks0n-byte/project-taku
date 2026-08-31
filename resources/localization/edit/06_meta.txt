@@ -4,10 +4,12 @@
 # Blank line ends a string block. Use a single blank line inside text if needed.
 # Files in this folder are for editing only; the game reads translations.csv.
 
-# Section: Splash screen and credits
+# Section: Splash and credits
 
-[SPLASH_CREATED_BY]
-Created by
+[CREDITS_TEXT]
+[center]
+[font_size=42][color=#ffd700][b]CREATED BY[/b][/color][/font_size]
 
-[SPLASH_AUTHOR]
-Giga "gix0n" Sichinava
+[font_size=34]Giga "gix0n" Sichinava[/font_size]
+[/center]
+

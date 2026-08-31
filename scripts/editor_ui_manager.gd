@@ -97,7 +97,8 @@ func setup_ui(grid_width: int, grid_height: int) -> void:
 	editor_width = grid_width
 	editor_height = grid_height
 	if editor_mode_label:
-		editor_mode_label.text = HudLayout.format_mode_label("EDIT_MODE", true)
+		editor_mode_label.text = HudLayout.format_mode_label("UI_EDIT_MODE", true)
+	_bind_editor_chrome_captions()
 	_apply_top_bar_buttons()
 	if _hold_timer and not _hold_timer.timeout.is_connected(_on_hold_timer_timeout):
 		_hold_timer.timeout.connect(_on_hold_timer_timeout)
@@ -137,6 +138,7 @@ func _refresh_editor_pixel_fonts() -> void:
 # player changes language without reloading the editor scene.
 func _on_language_changed() -> void:
 	_apply_default_font_to_link_buttons()
+	_bind_editor_chrome_captions()
 	_apply_star_time_label()
 	_apply_top_bar_buttons()
 	if status_label:
@@ -189,7 +191,7 @@ func _apply_star_time_label() -> void:
 	) as Label
 	if not title:
 		return
-	title.text = "TIME:"
+	_bind_editor_caption(title, "UI_STAR_TIME")
 	title.tooltip_text = "Star time: beat this to earn the time star. Infinity = time star always awarded."
 
 # Connects button_down/button_up/mouse_exited to the hold-repeat system for a
@@ -237,6 +239,50 @@ func _nudge_editor_control_icons() -> void:
 		HudLayout.nudge_button_icon_up(button, 2)
 	for button in [wall_button, empty_button, equals_button, not_equals_button]:
 		HudLayout.nudge_button_icon_up(button, 2)
+
+
+# Binds one editor-only Label to a UI_ key while keeping English display.
+# Editor chrome is English-only (EditorUiPolicy); auto-translate is disabled so
+# the key never flashes as the visible caption.
+func _bind_editor_caption(label: Label, key: String) -> void:
+	if label == null:
+		return
+	label.set_meta("_tr_key", key)
+	label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	label.text = HudLayout.english(key)
+
+
+# Binds one editor-only Button caption to a UI_ key (English display).
+# When wrap_spaces is true, spaces become newlines so two-word labels fit the tile.
+func _bind_editor_button_caption(button: Button, key: String, wrap_spaces: bool = false) -> void:
+	if button == null:
+		return
+	button.set_meta("_tr_key", key)
+	button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	var display := HudLayout.english(key)
+	if wrap_spaces:
+		display = display.replace(" ", "\n")
+	button.text = display
+
+
+# Re-applies English captions for SAVE/LOAD, lock/unique, allow, and star-time.
+func _bind_editor_chrome_captions() -> void:
+	if save_button:
+		_bind_editor_caption(save_button.get_node_or_null("HBoxContainer/Label") as Label, "UI_SAVE")
+	if load_button:
+		_bind_editor_caption(load_button.get_node_or_null("HBoxContainer/Label") as Label, "UI_LOAD")
+	_bind_editor_button_caption(keep_walls_toggle, "UI_LOCK_WALLS", true)
+	_bind_editor_button_caption(unique_solution_toggle, "UI_UNIQUE_SOLVE", true)
+	var allowed := get_node_or_null(
+		"../EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/AllowedLabel"
+	) as Label
+	_bind_editor_caption(allowed, "UI_ALLOW")
+	var victory := get_node_or_null("../EditorUI/PlaytestVictoryPanel/VictoryMessageLabel") as Label
+	_bind_editor_caption(victory, "UI_LEVEL_SOLVABLE")
+	var star_time := get_node_or_null(
+		"../EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/TimeSelector/TimeTitleLabel"
+	) as Label
+	_bind_editor_caption(star_time, "UI_STAR_TIME")
 
 # Fires initial signals so listening systems (board manager, etc.) receive the
 # default brush and grid size immediately after setup completes.
@@ -387,7 +433,7 @@ func _update_number_labels() -> void:
 			var seconds := editor_time_limit % 60
 			time_label.text = "[center]%d:%02d[/center]" % [minutes, seconds]
 	if level_label:
-		level_label.text = "[center]LVL " + str(editor_level) + "[/center]"
+		level_label.text = "[center]%s %s[/center]" % [HudLayout.english("UI_LVL"), str(editor_level)]
 		level_label.custom_minimum_size = Vector2(240, 90)
 		level_label.fit_content = false
 		level_label.scroll_active = false
@@ -691,7 +737,7 @@ func show_overwrite_warning() -> void:
 	if warning_label:
 		warning_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		warning_label.add_theme_color_override("font_color", Color(1.0, 0.45, 0.45))
-		warning_label.text = HudLayout.english("LEVEL_EXISTS_OVERWRITE")
+		warning_label.text = HudLayout.english("UI_LEVEL_EXISTS_OVERWRITE")
 		HudLayout.apply_popup_label(warning_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
 	if confirm_button:
 		confirm_button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED

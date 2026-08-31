@@ -13,15 +13,24 @@ const PLUGIN_CFGS: PackedStringArray = [
 ]
 
 
-## True when a Play Games singleton or addon plugin.cfg is present.
-static func play_games_plugin_present() -> bool:
-	for singleton_name in ["GodotPlayGamesServices", "PlayGamesServices", "PlayGames"]:
-		if Engine.has_singleton(singleton_name):
-			return true
+## True when the Godot Play Games addon is present in the project tree.
+static func play_games_plugin_installed() -> bool:
 	for cfg in PLUGIN_CFGS:
 		if ResourceLoader.exists(cfg) or FileAccess.file_exists(cfg):
 			return true
 	return false
+
+
+## True when the Android engine singleton exists (device/export build only).
+static func play_games_runtime_available() -> bool:
+	if OS.get_name() != "Android":
+		return false
+	return Engine.has_singleton("GodotPlayGameServices")
+
+
+## Back-compat alias for callers that mean "installed or runtime".
+static func play_games_plugin_present() -> bool:
+	return play_games_plugin_installed() or play_games_runtime_available()
 
 
 ## Builds the portable cloud blob. `timestamp` is unix seconds.
@@ -84,3 +93,20 @@ static func decode_json(text: String) -> Dictionary:
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return {}
 	return parsed
+
+
+## Snapshot bytes → blob dictionary.
+static func blob_from_bytes(bytes: PackedByteArray) -> Dictionary:
+	if bytes.is_empty():
+		return {}
+	return decode_json(bytes.get_string_from_utf8())
+
+
+## Blob dictionary → UTF-8 bytes for Play Games snapshots.
+static func blob_to_bytes(blob: Dictionary) -> PackedByteArray:
+	if not is_valid_blob(blob):
+		return PackedByteArray()
+	var text := encode_json(blob)
+	if text.is_empty():
+		return PackedByteArray()
+	return text.to_utf8_buffer()
