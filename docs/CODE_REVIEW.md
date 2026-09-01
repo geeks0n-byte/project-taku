@@ -51,7 +51,7 @@ No new **P0** logic defects found in this pass. Prior high-severity bugs (cloud 
 
 | Component | Lines (approx.) | Notes |
 |-----------|-----------------|-------|
-| `hud_layout.gd` | ~2,800 | Central HUD/dialog/font helper — works but is the main maintainability hotspot |
+| `hud_layout.gd` | ~2,050 | Facade + fonts/buttons/dialogs; split into `HudSafeArea`, `HudTopBar`, `HudPageNav`, `HudDialogs`, `HudFonts` |
 | `main_menu.gd` | ~590 | Reasonable after helper extraction |
 | `options_menu.gd` | ~760 | Cloud + confirm flows; debug bar separated |
 | `ads_manager.gd` | ~720 | Consent → init → banner/rewarded lifecycle |
@@ -97,7 +97,7 @@ No new **P0** logic defects found in this pass. Prior high-severity bugs (cloud 
 
 | Item | Severity | Notes |
 |------|----------|-------|
-| Split `hud_layout.gd` | **P3** | ~2,800 lines — main maintainability hotspot |
+| Split `hud_layout.gd` | **P3** | In progress — `HudSafeArea`, `HudTopBar`, `HudPageNav` extracted; buttons/fonts remain in facade |
 | Color-blind tile patterns | **P3** | Accessibility |
 | TalkBack pass | **P3** | Android a11y |
 

@@ -3,14 +3,6 @@
 class_name HudLayout
 extends RefCounted
 
-# Shared tile texture for all top-bar buttons (close, nav, square action buttons).
-const _TOP_BAR_TILE_TEX := preload("res://resources/buttons/button_tile_gray_dark.svg")
-# Icon textures used by the close button and the HTP prev/next nav buttons.
-const _CLOSE_ICON_TEX := preload("res://resources/icons/icon_close.svg")
-const _PREV_ICON_TEX := preload("res://resources/icons/icon_prev.svg")
-const _NEXT_ICON_TEX := preload("res://resources/icons/icon_next.svg")
-# Default icon render size in pixels for square top-bar buttons.
-const _TOP_BAR_ICON_PX := 83.0
 ## Horizontal inset from screen edges for auto-sized popups and wrapped controls.
 const UI_SAFE_SIDE_MARGIN := 32.0
 ## Minimum width for centered dialog/popup panels (capped by viewport when narrow).
@@ -31,36 +23,21 @@ const UI_PHONE_EDITOR_ROW_WIDTH := 1040.0
 
 ## Usable content width inside centered overlays (viewport minus side margins).
 static func max_ui_content_width(extra_margin: float = UI_SAFE_SIDE_MARGIN) -> float:
-	var window_w := 0.0
-	var tree := Engine.get_main_loop()
-	if tree is SceneTree:
-		var root := (tree as SceneTree).root
-		if root:
-			window_w = root.get_viewport().get_visible_rect().size.x
-	if window_w <= 0.0:
-		window_w = float(DisplayServer.window_get_size().x)
-	if window_w <= 0.0:
-		window_w = float(ProjectSettings.get_setting("display/window/size/viewport_width", 1080))
-	return maxf(240.0, window_w - extra_margin * 2.0)
+	return HudSafeArea.max_ui_content_width(extra_margin)
 
 ## Clamps a generic UI width between the dialog minimum and the viewport content max.
 static func clamp_ui_width(width: float, extra_margin: float = UI_SAFE_SIDE_MARGIN) -> float:
-	var max_w := max_ui_content_width(extra_margin)
-	var min_w := minf(UI_MIN_DIALOG_WIDTH, max_w)
-	return clampf(width, min_w, max_w)
+	return HudSafeArea.clamp_ui_width(width, extra_margin)
 
 ## Clamps a dialog panel's outer width to the viewport (uses tighter side margins).
 static func clamp_dialog_panel_width(width: float) -> float:
-	var viewport_max := max_ui_content_width(UI_DIALOG_SCREEN_MARGIN)
-	var max_w := minf(viewport_max, UI_MAX_DIALOG_WIDTH)
-	var min_w := minf(UI_MIN_DIALOG_WIDTH, max_w)
-	return clampf(width, min_w, max_w)
+	return HudSafeArea.clamp_dialog_panel_width(width)
 
 ## Inner content width for a dialog panel with symmetric vbox insets.
 static func dialog_content_width(
 	panel_width: float, horizontal_inset: float = HudDialogs.DIALOG_EDGE_INSET * 2.0
 ) -> float:
-	return maxf(120.0, clamp_dialog_panel_width(panel_width) - horizontal_inset)
+	return HudSafeArea.dialog_content_width(panel_width, horizontal_inset)
 
 ## Single-line width of a label's current text (locale-aware, respects label_settings).
 static func measure_label_min_width(label: Label) -> float:
@@ -68,194 +45,53 @@ static func measure_label_min_width(label: Label) -> float:
 
 ## Caps width to the viewport without applying the dialog minimum (for buttons/controls).
 static func cap_ui_width(width: float, extra_margin: float = UI_SAFE_SIDE_MARGIN) -> float:
-	return minf(width, max_ui_content_width(extra_margin))
+	return HudSafeArea.cap_ui_width(width, extra_margin)
 
 ## Extra inset on each side so a stretched control is at most max_width. 0 on phones.
 static func extra_side_inset_for_cap(current_width: float, max_width: float) -> float:
-	if current_width <= max_width + 0.5:
-		return 0.0
-	return (current_width - max_width) * 0.5
-
+	return HudSafeArea.extra_side_inset_for_cap(current_width, max_width)
 
 ## Centers a left-right stretched Control so it never exceeds max_width.
-## Call after setting left/right offsets (safe-area included). No-op on narrow screens.
 static func cap_stretched_width(control: Control, max_width: float = UI_PHONE_CONTENT_WIDTH) -> void:
-	if control == null or max_width <= 0.0:
-		return
-	var span := control.anchor_right - control.anchor_left
-	if span <= 0.0001:
-		return
-	var parent_w := _layout_parent_width(control)
-	if parent_w <= 1.0:
-		return
-	var current_w := parent_w * span + control.offset_right - control.offset_left
-	var extra := extra_side_inset_for_cap(current_w, max_width)
-	if extra <= 0.0:
-		return
-	control.offset_left += extra
-	control.offset_right -= extra
-
+	HudSafeArea.cap_stretched_width(control, max_width)
 
 ## On viewports wider than max_width, shrink-center a fill row; restore phone flags otherwise.
 static func cap_box_row_width(row: Control, max_width: float = UI_PHONE_EDITOR_ROW_WIDTH) -> void:
-	if row == null or max_width <= 0.0:
-		return
-	if not row.has_meta("_wide_cap_hflags"):
-		row.set_meta("_wide_cap_hflags", row.size_flags_horizontal)
-		row.set_meta("_wide_cap_min_x", row.custom_minimum_size.x)
-	# Use the box parent only — viewport fallback would treat a 1080 phone as wide.
-	var parent := row.get_parent()
-	if not (parent is Control):
-		return
-	var parent_w := (parent as Control).size.x
-	if parent_w <= 1.0:
-		return
-	if parent_w <= max_width + 0.5:
-		row.size_flags_horizontal = int(row.get_meta("_wide_cap_hflags"))
-		var min_sz := row.custom_minimum_size
-		min_sz.x = float(row.get_meta("_wide_cap_min_x"))
-		row.custom_minimum_size = min_sz
-		return
-	row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var capped := row.custom_minimum_size
-	capped.x = max_width
-	row.custom_minimum_size = capped
-
+	HudSafeArea.cap_box_row_width(row, max_width)
 
 ## Invisible cells needed so the last GridContainer row keeps the same column count.
-## 0 when item_count is empty or already fills the row (phone and full pages).
 static func grid_row_pad_count(item_count: int, columns: int) -> int:
-	if item_count <= 0 or columns <= 1:
-		return 0
-	var rem := item_count % columns
-	if rem == 0:
-		return 0
-	return columns - rem
-
+	return HudSafeArea.grid_row_pad_count(item_count, columns)
 
 static func _layout_parent_width(control: Control) -> float:
-	if control == null:
-		return 0.0
-	var parent := control.get_parent()
-	if parent is Control:
-		var pw := (parent as Control).size.x
-		if pw > 1.0:
-			return pw
-	var vp := control.get_viewport()
-	if vp:
-		var w := vp.get_visible_rect().size.x
-		if w > 0.0:
-			return w
-	return float(ProjectSettings.get_setting("display/window/size/viewport_width", 1080))
+	return HudSafeArea.layout_parent_width(control)
 
 ## Shifts a top-anchored HUD bar (and optional counter row) below the status bar / cutout.
 static func apply_top_hud_safe_area(top_bar: Control, counter: Control = null) -> void:
-	var edge := float(GameConstants.HUD_TOP_BAR_EDGE_MARGIN)
-	var top := SafeInsets.padded_top(edge)
-	var left := SafeInsets.left()
-	var right := SafeInsets.right()
-	if top_bar:
-		top_bar.offset_left = edge + left
-		top_bar.offset_top = top
-		top_bar.offset_right = -edge - right
-		top_bar.offset_bottom = top + GameConstants.HUD_TOP_BAR_HEIGHT - edge
-	if counter:
-		var shift := top - edge
-		counter.offset_left = edge + left
-		counter.offset_top = GameConstants.HUD_COUNTER_ROW_TOP + shift
-		counter.offset_right = -edge - right
-		counter.offset_bottom = (
-			GameConstants.HUD_COUNTER_ROW_TOP + GameConstants.HUD_COUNTER_ROW_HEIGHT + shift
-		)
-
+	HudSafeArea.apply_top_hud_safe_area(top_bar, counter)
 
 ## Lifts a bottom-anchored panel above the nav bar / home indicator.
 static func apply_bottom_bar_safe_area(control: Control) -> void:
-	if control == null:
-		return
-	if not control.has_meta("_safe_authored"):
-		control.set_meta("_safe_authored", true)
-		control.set_meta("_safe_t", control.offset_top)
-		control.set_meta("_safe_b", control.offset_bottom)
-		control.set_meta("_safe_l", control.offset_left)
-		control.set_meta("_safe_r", control.offset_right)
-	var m := SafeInsets.viewport_margins()
-	control.offset_top = float(control.get_meta("_safe_t")) - m.w
-	control.offset_bottom = float(control.get_meta("_safe_b")) - m.w
-	control.offset_left = float(control.get_meta("_safe_l")) + m.x
-	control.offset_right = float(control.get_meta("_safe_r")) - m.z
-
+	HudSafeArea.apply_bottom_bar_safe_area(control)
 
 ## Pads a full-rect content host so authored top/bottom/side offsets clear system bars.
 static func apply_content_edge_safe_area(control: Control) -> void:
-	if control == null:
-		return
-	if not control.has_meta("_safe_authored"):
-		control.set_meta("_safe_authored", true)
-		control.set_meta("_safe_t", control.offset_top)
-		control.set_meta("_safe_b", control.offset_bottom)
-		control.set_meta("_safe_l", control.offset_left)
-		control.set_meta("_safe_r", control.offset_right)
-	var m := SafeInsets.viewport_margins()
-	control.offset_top = SafeInsets.padded_top(float(control.get_meta("_safe_t")))
-	control.offset_bottom = SafeInsets.padded_bottom_offset(float(control.get_meta("_safe_b")))
-	control.offset_left = float(control.get_meta("_safe_l")) + m.x
-	control.offset_right = float(control.get_meta("_safe_r")) - m.z
+	HudSafeArea.apply_content_edge_safe_area(control)
 
-
-# Stretches a control to the full horizontal width with symmetric side margins,
-# anchored to the top of its parent at the given pixel offset.
 static func position_top_wide(control: Control, top: float, height: float, margin: float = GameConstants.HUD_SIDE_MARGIN) -> void:
-	if not control:
-		return
-	control.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	control.offset_left = margin
-	control.offset_right = -margin
-	control.offset_top = top
-	control.offset_bottom = top + height
+	HudSafeArea.position_top_wide(control, top, height, margin)
 
-# Places the in-game status label (error / success messages) directly below the board
-# with the standard gap defined in GameConstants.
-# Caps wrap width to the phone content column so tablets keep the same line breaks.
 static func position_status_below_board(status: Control, board_y: float, board_height: float) -> void:
-	position_top_wide(status, board_y + board_height + GameConstants.HUD_STATUS_GAP, GameConstants.HUD_STATUS_MIN_HEIGHT)
-	cap_stretched_width(status, UI_PHONE_CONTENT_WIDTH)
+	HudSafeArea.position_status_below_board(status, board_y, board_height)
 
-# Pins the editor's status bar at the bottom of its parent and shrinks the control
-# panel's bottom edge flush so there's no gap between them.
 static func position_editor_status_below_panel(control_panel: Control, status: Control) -> void:
-	if not control_panel or not status:
-		return
-	var bottom_margin := GameConstants.HUD_TOP_BAR_EDGE_MARGIN + SafeInsets.bottom()
-	var status_top := -(bottom_margin + GameConstants.HUD_EDITOR_STATUS_HEIGHT)
-	status.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	status.offset_left = bottom_margin
-	status.offset_right = -bottom_margin
-	status.offset_bottom = -bottom_margin
-	status.offset_top = status_top
-	control_panel.offset_bottom = 0.0
-	# Phone editor bar is 1080 minus 4px edge each side; no-op at 1080.
-	var phone_w := UI_PHONE_VIEWPORT_WIDTH - 2.0 * float(GameConstants.HUD_TOP_BAR_EDGE_MARGIN)
-	cap_stretched_width(status, phone_w)
+	HudSafeArea.position_editor_status_below_panel(control_panel, status)
 
-# Public entry point for counter row layout. Actual position offsets are
-# managed by the HUD scene tree; this call handles only the internal alignment.
 static func position_counter_row(counter_row: Control) -> void:
-	# Geometry is owned by the HUD scene tree.
-	align_counter_row(counter_row)
+	HudSafeArea.position_counter_row(counter_row)
 
-# Centres the HBoxContainer and makes all visible child slots share equal width,
-# so the counter row re-balances when slots are hidden/shown.
 static func align_counter_row(counter_row: Control) -> void:
-	if counter_row == null:
-		return
-	if counter_row is HBoxContainer:
-		(counter_row as HBoxContainer).alignment = BoxContainer.ALIGNMENT_CENTER
-	for child in counter_row.get_children():
-		if child is Control and (child as Control).visible:
-			var slot := child as Control
-			slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			slot.size_flags_stretch_ratio = 1.0
+	HudSafeArea.align_counter_row(counter_row)
 
 # Cached fallback font reference so we don't call HudFonts.default_font() on every frame.
 static var _screen_header_font_default: Font
@@ -475,63 +311,22 @@ static func apply_end_screen_header_style(label: Label, base_size: int = 48) -> 
 
 ## Size the rules panel to its text. PREV/NEXT sit at SCREEN_PAGE_NAV_BOTTOM_INSET.
 static func clear_how_to_play_nav_lock(host: Control) -> void:
-	if host and host.has_meta("_htp_nav_top"):
-		host.remove_meta("_htp_nav_top")
+	HudPageNav.clear_how_to_play_nav_lock(host)
 
-
-## Bottom inset (px) from the host bottom to the PREV/NEXT row bottom, above safe area.
-## When reserve_menu_banner is true, leaves room for the menu AdMob banner.
 static func page_nav_bottom_inset(reserve_menu_banner: bool = false) -> float:
-	var inset := GameConstants.SCREEN_PAGE_NAV_BOTTOM_INSET
-	if reserve_menu_banner:
-		inset += GameConstants.AD_BANNER_RESERVE
-	return inset
+	return HudPageNav.page_nav_bottom_inset(reserve_menu_banner)
 
-
-## Negative Control.offset_bottom for scroll/list hosts that must end above PREV/NEXT.
 static func page_nav_content_bottom_offset(reserve_menu_banner: bool = false) -> float:
-	return -(
-		page_nav_bottom_inset(reserve_menu_banner)
-		+ GameConstants.UI_BTN_NAV_SIZE.y
-		+ GameConstants.SCREEN_NAV_GAP
-	)
+	return HudPageNav.page_nav_content_bottom_offset(reserve_menu_banner)
 
-
-## Pins a PREV/NEXT row to the shared bottom inset inside a full-screen host.
 static func pin_page_nav_row(
 	nav: Control,
 	host: Control,
 	reserve_menu_banner: bool = false,
 	horizontal_inset: float = 40.0
 ) -> void:
-	if nav == null or host == null:
-		return
-	var host_h := host.size.y
-	if host_h <= 1.0:
-		host_h = float(
-			ProjectSettings.get_setting("display/window/size/viewport_height", 1920)
-		)
-	var nav_h := GameConstants.UI_BTN_NAV_SIZE.y
-	if nav.custom_minimum_size.y > 0.0:
-		nav_h = nav.custom_minimum_size.y
-	var bottom_inset := page_nav_bottom_inset(reserve_menu_banner)
-	var nav_bottom := host_h - SafeInsets.bottom() - bottom_inset
-	var nav_top := nav_bottom - nav_h
-	nav.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	nav.anchor_left = 0.0
-	nav.anchor_right = 1.0
-	nav.anchor_top = 0.0
-	nav.anchor_bottom = 0.0
-	nav.offset_left = horizontal_inset + SafeInsets.left()
-	nav.offset_right = -horizontal_inset - SafeInsets.right()
-	nav.offset_top = nav_top
-	nav.offset_bottom = nav_bottom
-	nav.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	nav.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	nav.z_index = maxi(nav.z_index, 4)
+	HudPageNav.pin_page_nav_row(nav, host, reserve_menu_banner, horizontal_inset)
 
-
-## Sizes the HTP rules panel; PREV/NEXT are pinned to the shared bottom nav inset.
 static func layout_how_to_play_stack(
 	host: Control,
 	panel: Control,
@@ -540,223 +335,19 @@ static func layout_how_to_play_stack(
 	_update_nav_lock: bool = false,
 	reserve_menu_banner: bool = false
 ) -> void:
-	if host == null or panel == null or nav == null:
-		return
-	var host_h := host.size.y
-	if host_h <= 1.0:
-		host_h = float(
-			ProjectSettings.get_setting("display/window/size/viewport_height", 1920)
-		)
-	var nav_h := GameConstants.UI_BTN_NAV_SIZE.y
-	var panel_top := SafeInsets.padded_top(GameConstants.HTP_PANEL_TOP)
-	var bottom_inset := page_nav_bottom_inset(reserve_menu_banner)
-	var nav_bottom := host_h - SafeInsets.bottom() - bottom_inset
-	var nav_top := nav_bottom - nav_h
-	var max_panel_h := maxf(
-		GameConstants.HTP_PANEL_MIN_HEIGHT,
-		nav_top - panel_top - GameConstants.SCREEN_NAV_GAP
-	)
+	HudPageNav.layout_how_to_play_stack(host, panel, rules, nav, _update_nav_lock, reserve_menu_banner)
 
-	# Lock horizontal size first so RichTextLabel can measure wrap height.
-	panel.anchor_left = 0.5
-	panel.anchor_right = 0.5
-	panel.anchor_top = 0.0
-	panel.anchor_bottom = 0.0
-	panel.offset_left = -GameConstants.HTP_PANEL_HALF_WIDTH
-	panel.offset_right = GameConstants.HTP_PANEL_HALF_WIDTH
-	panel.offset_top = panel_top
-	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
-
-	var content_h := max_panel_h
-	if rules:
-		rules.fit_content = true
-		rules.scroll_active = false
-		rules.custom_minimum_size = Vector2(0, 0)
-		content_h = maxf(rules.get_content_height() + 24.0, GameConstants.HTP_PANEL_MIN_HEIGHT)
-	var panel_h := clampf(content_h, GameConstants.HTP_PANEL_MIN_HEIGHT, max_panel_h)
-	panel.offset_bottom = panel_top + panel_h
-	if rules:
-		var needs_scroll := content_h > panel_h + 1.0
-		rules.scroll_active = needs_scroll
-		rules.fit_content = not needs_scroll
-
-	pin_page_nav_row(nav, host, reserve_menu_banner)
-
-# Applies the 9-slice gray-dark tile texture to all visual states of a button,
-# with brightness modulation for hover, pressed, and disabled states.
 static func apply_top_bar_tile_styles(button: Button) -> void:
-	if not button:
-		return
-	for style_name in ["normal", "pressed", "hover", "disabled", "focus"]:
-		var box := StyleBoxTexture.new()
-		box.texture = _TOP_BAR_TILE_TEX
-		box.texture_margin_left = 16.0
-		box.texture_margin_top = 16.0
-		box.texture_margin_right = 16.0
-		box.texture_margin_bottom = 16.0
-		box.content_margin_left = 8.0
-		box.content_margin_top = 8.0
-		box.content_margin_right = 8.0
-		box.content_margin_bottom = 8.0
-		if style_name == "hover":
-			box.modulate_color = Color(1.2, 1.2, 1.2, 1.0)
-		elif style_name == "pressed":
-			box.modulate_color = Color(0.8, 0.8, 0.8, 1.0)
-		elif style_name == "disabled":
-			box.modulate_color = Color(0.55, 0.55, 0.55, 1.0)
-		button.add_theme_stylebox_override(style_name, box)
+	HudTopBar.apply_top_bar_tile_styles(button)
 
-# Creates or reuses an IconContainer/Icon child hierarchy inside a button so
-# the texture is rendered at a fixed pixel size independent of the button's font metrics.
-# Using a child node instead of button.icon avoids theme-driven scaling surprises.
 static func ensure_top_bar_icon(button: Button, texture: Texture2D) -> void:
-	if not button or texture == null:
-		return
-	button.text = ""
-	button.flat = false
-	button.clip_text = true
-	button.autowrap_mode = TextServer.AUTOWRAP_OFF
-	var icon_container := button.get_node_or_null("IconContainer") as MarginContainer
-	if icon_container == null:
-		icon_container = MarginContainer.new()
-		icon_container.name = "IconContainer"
-		icon_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		icon_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		icon_container.grow_horizontal = Control.GROW_DIRECTION_BOTH
-		icon_container.grow_vertical = Control.GROW_DIRECTION_BOTH
-		button.add_child(icon_container)
-	var icon := icon_container.get_node_or_null("Icon") as TextureRect
-	if icon == null:
-		icon = TextureRect.new()
-		icon.name = "Icon"
-		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		icon_container.add_child(icon)
-	icon.texture = texture
-	icon.custom_minimum_size = Vector2(_TOP_BAR_ICON_PX, _TOP_BAR_ICON_PX)
+	HudTopBar.ensure_top_bar_icon(button, texture)
 
-# Full setup for a close/back button aligned with SCREEN_HEADER_* title rows.
 static func style_screen_header_close_button(button: Button) -> void:
-	if button == null:
-		return
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
-	button.z_index = 20
-	button.focus_mode = Control.FOCUS_NONE
-	apply_top_bar_tile_styles(button)
-	ensure_top_bar_icon(button, _CLOSE_ICON_TEX)
-	apply_square_top_bar_button(button)
-	button.set_meta("_overlay_close_layout_mode", "screen_header")
-	_place_overlay_close_for_screen_header(button)
-	_register_overlay_close_layout(button)
+	HudTopBar.style_screen_header_close_button(button)
 
-
-# Match level-select / achievements header chrome (not in-game HUD pause row).
-static func _place_overlay_close_for_screen_header(button: Button) -> void:
-	if button == null or not is_instance_valid(button):
-		return
-	if button.get_parent() is HBoxContainer:
-		return
-	var title_top := SafeInsets.padded_top(GameConstants.SCREEN_HEADER_TOP)
-	var title_h := GameConstants.SCREEN_HEADER_HEIGHT
-	var size := float(GameConstants.HUD_BUTTON_WIDTH)
-	var top := title_top + (title_h - size) * 0.5
-	var left := float(GameConstants.HUD_SIDE_MARGIN) + SafeInsets.left()
-	button.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	button.offset_left = left
-	button.offset_top = top
-	button.offset_right = left + size
-	button.offset_bottom = top + size
-
-
-# Full setup for a close/back button in the top bar: stops mouse events, puts it
-# on top of other controls (z_index 20), and gives it tile style + close icon.
 static func style_top_bar_close_button(button: Button) -> void:
-	if button == null:
-		return
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
-	button.z_index = 20
-	button.focus_mode = Control.FOCUS_NONE
-	apply_top_bar_tile_styles(button)
-	ensure_top_bar_icon(button, _CLOSE_ICON_TEX)
-	apply_square_top_bar_button(button)
-	button.set_meta("_overlay_close_layout_mode", "pause")
-	_place_overlay_close_like_pause(button)
-	_register_overlay_close_layout(button)
-
-# One size_changed hook per viewport; Godot treats binds of the same method as one connection.
-static func _register_overlay_close_layout(button: Button) -> void:
-	if button == null or not button.is_inside_tree():
-		return
-	var viewport := button.get_viewport()
-	if viewport == null:
-		return
-	var buttons: Array = viewport.get_meta("_overlay_close_layout_buttons", [])
-	if not buttons.has(button):
-		buttons.append(button)
-	viewport.set_meta("_overlay_close_layout_buttons", buttons)
-	if not viewport.get_meta("_overlay_close_layout_hooked", false):
-		viewport.set_meta("_overlay_close_layout_hooked", true)
-		viewport.size_changed.connect(_relayout_overlay_close_buttons.bind(viewport))
-	if not button.get_meta("_overlay_close_layout_reg", false):
-		button.set_meta("_overlay_close_layout_reg", true)
-		button.tree_exiting.connect(_unregister_overlay_close_layout.bind(viewport, button), CONNECT_ONE_SHOT)
-
-static func _relayout_overlay_close_buttons(viewport: Viewport) -> void:
-	if not is_instance_valid(viewport):
-		return
-	var buttons: Array = viewport.get_meta("_overlay_close_layout_buttons", [])
-	var kept: Array = []
-	for item in buttons:
-		if not is_instance_valid(item):
-			continue
-		kept.append(item)
-		if item is Button:
-			if str(item.get_meta("_overlay_close_layout_mode", "pause")) == "screen_header":
-				_place_overlay_close_for_screen_header(item)
-			else:
-				_place_overlay_close_like_pause(item)
-	viewport.set_meta("_overlay_close_layout_buttons", kept)
-
-static func _unregister_overlay_close_layout(viewport: Viewport, button: Button) -> void:
-	if not is_instance_valid(viewport):
-		return
-	var buttons: Array = viewport.get_meta("_overlay_close_layout_buttons", [])
-	var kept: Array = []
-	for item in buttons:
-		if not is_instance_valid(item) or item == button:
-			continue
-		kept.append(item)
-	viewport.set_meta("_overlay_close_layout_buttons", kept)
-
-# Match the in-game pause button: HUD top-bar left cluster, not the raw screen corner.
-static func _place_overlay_close_like_pause(button: Button) -> void:
-	if button == null or not is_instance_valid(button):
-		return
-	if button.get_parent() is HBoxContainer:
-		return
-	var viewport_w := 1080.0
-	if button.is_inside_tree():
-		viewport_w = button.get_viewport_rect().size.x
-	var edge := float(GameConstants.HUD_TOP_BAR_EDGE_MARGIN)
-	var safe := SafeInsets.viewport_margins()
-	var top := SafeInsets.padded_top(edge)
-	var inner := viewport_w - edge * 2.0 - safe.x - safe.z
-	var fixed := (
-		float(GameConstants.HUD_BUTTON_CLUSTER_WIDTH) * 2.0
-		+ float(GameConstants.HUD_CENTER_LABEL_WIDTH)
-	)
-	var leftover := maxf(inner - fixed, 0.0)
-	var left := edge + safe.x + leftover * 0.5
-	var size := float(GameConstants.HUD_BUTTON_WIDTH)
-	button.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	button.offset_left = left
-	button.offset_top = top
-	button.offset_right = left + size
-	button.offset_bottom = top + size
+	HudTopBar.style_top_bar_close_button(button)
 
 # Returns the English translation of an i18n key regardless of the active locale.
 # Used by the editor preview and forced-English paths to get consistent layout metrics.
@@ -1875,42 +1466,7 @@ static func grow_panel_button_to_text(button: Button, horizontal_padding: float 
 # Styles a PREV/NEXT navigation button: tile background, directional icon chosen
 # by whether the button name contains "next", and an extra +1 px icon lift.
 static func apply_nav_button(button: Button) -> void:
-	if not button:
-		return
-	button.focus_mode = Control.FOCUS_NONE
-	button.text = ""
-	button.flat = false
-	button.clip_text = true
-	button.autowrap_mode = TextServer.AUTOWRAP_OFF
-	button.custom_minimum_size = GameConstants.UI_BTN_NAV_SIZE
-	var slot := button.get_parent() as Control
-	if slot and String(slot.name).ends_with("Slot"):
-		slot.custom_minimum_size = GameConstants.UI_BTN_NAV_SIZE
-	var nav_row := slot.get_parent() if slot else null
-	if nav_row:
-		var spacer := nav_row.get_node_or_null("MidSpacer") as Control
-		if spacer:
-			spacer.custom_minimum_size = Vector2(GameConstants.UI_BTN_NAV_GAP, 0.0)
-	apply_top_bar_tile_styles(button)
-	var name_l := String(button.name).to_lower()
-	var is_next := name_l.contains("next")
-	ensure_top_bar_icon(button, _NEXT_ICON_TEX if is_next else _PREV_ICON_TEX)
-	var icon := button.get_node_or_null("IconContainer/Icon") as TextureRect
-	if icon:
-		var px := GameConstants.UI_BTN_NAV_ICON_PX
-		icon.custom_minimum_size = Vector2(px, px - 1.0)
-	nudge_button_icon_up(button, GameConstants.HUD_TOP_BAR_ICON_NUDGE)
-	# Nudge helper uses 2x margins; add exactly +1px more lift for nav icons.
-	var icon_root := button.get_node_or_null("IconContainer") as MarginContainer
-	if icon_root:
-		icon_root.add_theme_constant_override(
-			"margin_bottom",
-			GameConstants.HUD_TOP_BAR_ICON_NUDGE * 2 + 2
-		)
-	refresh_button_icon_modulate(button)
-	if not button.has_meta("_icon_disabled_hook"):
-		button.set_meta("_icon_disabled_hook", true)
-		button.draw.connect(func(): refresh_button_icon_modulate(button))
+	HudTopBar.apply_nav_button(button)
 
 # Styles a "panel" button (victory screen: Next Level, Play Again, Main Menu).
 # Height is UI_BTN_PANEL_SIZE.y; width grows to the label with that size as a minimum.
@@ -2449,29 +2005,13 @@ static func _sync_button_attention_pivot(button: Button) -> void:
 # Dims IconContainer (and hint count badge) when the button is disabled.
 # Connected to button.draw so it re-evaluates whenever the disabled state changes.
 static func refresh_button_icon_modulate(button: Button) -> void:
-	if not button:
-		return
-	var dim := GameConstants.DISABLED_ICON_MODULATE if button.disabled else Color.WHITE
-	var icon_root := button.get_node_or_null("IconContainer") as CanvasItem
-	if icon_root:
-		icon_root.modulate = dim
-	# Infinity / ad badge sits outside IconContainer — dim it with the button too.
-	var count_icon := button.get_node_or_null("HintCountIcon") as CanvasItem
-	if count_icon:
-		count_icon.modulate = dim
-	var count_label := button.get_node_or_null("HintCountLabel") as CanvasItem
-	if count_label:
-		count_label.modulate = dim
+	HudTopBar.refresh_button_icon_modulate(button)
 
-# Translates a mode name (e.g. "EASY MODE") and replaces spaces with newlines
-# so it fits on two lines in the top-bar centre label.
 static func format_mode_label(translation_key: String, force_english: bool = false) -> String:
-	var text := _tr(translation_key, force_english)
-	return format_outlined_center_text(text.replace(" ", "\n"))
+	return HudTopBar.format_mode_label(translation_key, force_english)
 
-# Wraps text in BBCode [center] tags for use in a RichTextLabel.
 static func format_outlined_center_text(body: String) -> String:
-	return "[center]%s[/center]" % body
+	return HudTopBar.format_outlined_center_text(body)
 
 # Internal translation helper that supports forced-English mode for the editor preview.
 static func _tr(key: String, force_english: bool = false) -> String:
@@ -2494,288 +2034,38 @@ static func glue_tile_icon_color_labels(bbcode: String) -> String:
 # nudges its icon upward, and connects a draw callback to keep the icon modulation
 # in sync with the button's disabled state.
 static func apply_square_top_bar_button(button: Button) -> void:
-	if not button:
-		return
-	button.focus_mode = Control.FOCUS_NONE
-	var size := float(GameConstants.HUD_BUTTON_WIDTH)
-	button.custom_minimum_size = Vector2(size, size)
-	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var icon := button.get_node_or_null("IconContainer/Icon") as TextureRect
-	if icon:
-		var px := float(GameConstants.HUD_ICON_SIZE)
-		icon.custom_minimum_size = Vector2(px, px)
-	nudge_button_icon_up(button, GameConstants.HUD_TOP_BAR_ICON_NUDGE)
-	refresh_button_icon_modulate(button)
-	if not button.has_meta("_icon_disabled_hook"):
-		button.set_meta("_icon_disabled_hook", true)
-		button.draw.connect(func(): refresh_button_icon_modulate(button))
+	HudTopBar.apply_square_top_bar_button(button)
 
-# Sets the overall size and spacing for a left-buttons or right-buttons cluster
-# so all buttons sit at a consistent height in the top bar.
 static func apply_top_bar_button_cluster(cluster: HBoxContainer) -> void:
-	if not cluster:
-		return
-	var visible_buttons := 0
-	for child in cluster.get_children():
-		if child is Button and (child as CanvasItem).visible:
-			visible_buttons += 1
-	var count := maxi(visible_buttons, 1)
-	var width := (
-		GameConstants.HUD_BUTTON_WIDTH * count
-		+ GameConstants.HUD_BUTTON_SEPARATION * maxi(count - 1, 0)
-	)
-	cluster.custom_minimum_size = Vector2(width, GameConstants.HUD_BUTTON_HEIGHT)
-	cluster.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	cluster.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	cluster.add_theme_constant_override("separation", GameConstants.HUD_BUTTON_SEPARATION)
+	HudTopBar.apply_top_bar_button_cluster(cluster)
 
-# Shifts the icon upward by pixels by adjusting the IconContainer's bottom margin.
-# This compensates for the visual weight of the tile background pushing icons down.
-# Handles both MarginContainer and CenterContainer icon layouts.
 static func nudge_button_icon_up(button: Button, pixels: int = 1) -> void:
-	if not button:
-		return
-	var icon_container := button.get_node_or_null("IconContainer")
-	if icon_container is MarginContainer:
-		icon_container.add_theme_constant_override("margin_bottom", pixels * 2)
-		icon_container.add_theme_constant_override("margin_top", 0)
-	elif icon_container is CenterContainer:
-		for child in icon_container.get_children():
-			if child is MarginContainer and child.has_meta("_icon_nudge"):
-				child.add_theme_constant_override("margin_bottom", pixels * 2)
-				continue
-			if child is Control:
-				var wrapper := MarginContainer.new()
-				wrapper.set_meta("_icon_nudge", true)
-				wrapper.mouse_filter = Control.MOUSE_FILTER_IGNORE
-				wrapper.add_theme_constant_override("margin_bottom", pixels * 2)
-				var idx := child.get_index()
-				icon_container.remove_child(child)
-				wrapper.add_child(child)
-				icon_container.add_child(wrapper)
-				icon_container.move_child(wrapper, idx)
-	if button.text != "" and icon_container == null:
-		_nudge_button_text_up(button, pixels)
+	HudTopBar.nudge_button_icon_up(button, pixels)
 
-# Fallback nudge for text-only buttons (no IconContainer): shifts content upward
-# by reducing top content margin and increasing bottom margin in each StyleBox.
-static func _nudge_button_text_up(button: Button, pixels: int) -> void:
-	for style_name in ["normal", "pressed", "hover", "disabled"]:
-		var style: StyleBox = button.get_theme_stylebox(style_name)
-		if style is StyleBoxTexture:
-			var copied: StyleBoxTexture = style.duplicate()
-			copied.content_margin_top = maxf(0.0, copied.content_margin_top - float(pixels))
-			copied.content_margin_bottom = copied.content_margin_bottom + float(pixels)
-			button.add_theme_stylebox_override(style_name, copied)
-
-# Applies layout and font to the top-bar centre RichTextLabel that shows the
-# current mode name. Strips BBCode centre/font tags to get the plain text for
-# font-size fitting, then re-applies pixel or scalable styling.
 static func apply_top_bar_mode_label(label: RichTextLabel) -> void:
-	if not label:
-		return
-	_layout_top_bar_center_label(label)
-	var plain := _plain_top_bar_label_text(label.text)
-	_clear_pixel_raster(label)
-	if plain.is_empty():
-		label.text = ""
-		return
-	if control_uses_pixel_font(label):
-		label.set_meta("_use_default_font", false)
-		label.set_meta("_force_pixel_font", true)
-		label.text = format_outlined_center_text(plain)
-		label.add_theme_font_override("normal_font", pixel_font())
-		label.add_theme_font_size_override("normal_font_size", fit_top_bar_two_line_font_size(plain))
-		_strip_live_pixel_outline(label)
-		return
-	label.set_meta("_force_pixel_font", false)
-	label.set_meta("_use_default_font", true)
-	apply_locale_font_to_control(label)
-	apply_safe_outline(label, GameConstants.HUD_LEVEL_OUTLINE_SIZE)
-	label.add_theme_font_size_override("normal_font_size", fit_top_bar_two_line_font_size(plain))
+	HudTopBar.apply_top_bar_mode_label(label)
 
-## Level word uses locale font; digits always use Press Start (like the timer).
 static func apply_level_label(label: RichTextLabel, prefix: String, num: int) -> void:
-	if not label:
-		return
-	_layout_top_bar_center_label(label)
-	_clear_pixel_raster(label)
-	var num_str := str(num)
-	var plain := "%s\n%s" % [prefix, num_str]
-	var font_size := fit_top_bar_two_line_font_size(plain)
-	if uses_pixel_font():
-		label.set_meta("_use_default_font", false)
-		label.set_meta("_force_pixel_font", true)
-		label.set_meta("_fixed_counter_font_size", false)
-		label.text = format_outlined_center_text(plain)
-		label.add_theme_font_override("normal_font", pixel_font())
-		label.add_theme_font_size_override("normal_font_size", font_size)
-		_strip_live_pixel_outline(label)
-		return
-	label.set_meta("_force_pixel_font", false)
-	label.set_meta("_use_default_font", true)
-	apply_locale_font_to_control(label)
-	apply_safe_outline(label, GameConstants.HUD_LEVEL_OUTLINE_SIZE)
-	label.add_theme_font_size_override("normal_font_size", font_size)
-	label.text = "[center]%s\n[font=%s][font_size=%d]%s[/font_size][/font][/center]" % [
-		prefix, PIXEL_FONT_PATH, font_size, num_str
-	]
+	HudTopBar.apply_level_label(label, prefix, num)
 
-# Configures the RichTextLabel geometry for the top-bar centre slot:
-# fixed size, no scroll, centred alignment, and propagates the size up to the
-# wrapping ancestors so the HBoxContainer knows the reserved width.
-static func _layout_top_bar_center_label(label: RichTextLabel) -> void:
-	label.bbcode_enabled = true
-	label.fit_content = false
-	label.scroll_active = false
-	label.clip_contents = false
-	label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_constant_override("line_separation", GameConstants.HUD_CENTER_LABEL_LINE_SEPARATION)
-	var w := float(GameConstants.HUD_CENTER_LABEL_WIDTH)
-	var h := float(GameConstants.HUD_BUTTON_HEIGHT)
-	label.custom_minimum_size = Vector2(w, h)
-	label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var inset := label.get_parent() as Control
-	if inset:
-		inset.custom_minimum_size = Vector2(w, h)
-		inset.clip_contents = false
-		if inset is MarginContainer:
-			inset.add_theme_constant_override("margin_top", 0)
-			inset.add_theme_constant_override("margin_bottom", 0)
-		var label_wrap := inset.get_parent() as Control
-		if label_wrap:
-			label_wrap.custom_minimum_size = Vector2(w, h)
-			label_wrap.clip_contents = false
-			label_wrap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-			label_wrap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-
-# Strips all BBCode formatting from the top-bar label text so the raw string
-# can be measured for font-size fitting without tags inflating its width.
-static func _plain_top_bar_label_text(bbcode: String) -> String:
-	var plain := bbcode
-	for tag in ["[center]", "[/center]"]:
-		plain = plain.replace(tag, "")
-	# Strip optional [font=...] wrappers used for digit Press Start.
-	while true:
-		var start := plain.find("[font=")
-		if start < 0:
-			break
-		var end := plain.find("]", start)
-		if end < 0:
-			break
-		plain = plain.substr(0, start) + plain.substr(end + 1)
-	for tag in ["[/font]", "[font_size=", "[/font_size]"]:
-		if tag == "[font_size=":
-			while true:
-				var s := plain.find(tag)
-				if s < 0:
-					break
-				var e := plain.find("]", s)
-				if e < 0:
-					break
-				plain = plain.substr(0, s) + plain.substr(e + 1)
-		else:
-			plain = plain.replace(tag, "")
-	return plain.strip_edges()
-
-# Convenience wrapper that builds the "LVL\n5" two-line string before fitting.
 static func fit_top_bar_level_font_size(prefix: String, num: int) -> int:
-	return fit_top_bar_two_line_font_size("%s\n%d" % [prefix, num])
+	return HudTopBar.fit_top_bar_level_font_size(prefix, num)
 
-# Finds the largest font size at which a two-line body string fits inside the
-# top-bar centre area (HUD_BUTTON_HEIGHT × HUD_CENTER_LABEL_WIDTH), stepping by 1px.
 static func fit_top_bar_two_line_font_size(body: String) -> int:
-	var base := GameConstants.HUD_LEVEL_FONT_SIZE
-	var size := scaled_font_size(base) if not uses_pixel_font() else base
-	var font: Font = pixel_font() if uses_pixel_font() else ui_font()
-	if font == null:
-		font = HudFonts.default_font()
-	if font == null:
-		return size
-	var bar_h := float(GameConstants.HUD_BUTTON_HEIGHT)
-	var bar_w := float(GameConstants.HUD_CENTER_LABEL_WIDTH)
-	var line_sep := GameConstants.HUD_CENTER_LABEL_LINE_SEPARATION
-	while size > 16:
-		var measured := font.get_multiline_string_size(
-			body, HORIZONTAL_ALIGNMENT_CENTER, bar_w, size
-		)
-		var total_h := measured.y + float(line_sep)
-		if measured.x <= bar_w - 8.0 and total_h <= bar_h - 8.0:
-			break
-		size -= 1
-	return size
+	return HudTopBar.fit_top_bar_two_line_font_size(body)
 
-# Configures a HUD counter RichTextLabel to be centred and non-scrolling.
-# _y_nudge is reserved for future vertical fine-tuning and currently unused.
 static func align_counter_label(label: RichTextLabel, _y_nudge: float = 0.0) -> void:
-	if not label:
-		return
-	label.bbcode_enabled = true
-	label.fit_content = false
-	label.scroll_active = false
-	label.clip_contents = false
-	label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	HudTopBar.align_counter_label(label, _y_nudge)
 
-# Prepares a timer RichTextLabel for Press Start rendering by disabling scroll,
-# fit-content, and any live outline (which scrambles under GL Compatibility).
 static func prepare_timer_label(label: RichTextLabel) -> void:
-	if not label:
-		return
-	label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	label.fit_content = false
-	label.scroll_active = false
-	label.clip_contents = false
-	_strip_live_pixel_outline(label)
+	HudTopBar.prepare_timer_label(label)
 
-# Sets the timer label to display a formatted time string using Press Start
-# at the fixed counter font size. The ∞ symbol shows a special icon instead.
 static func set_timer_raster_text(label: RichTextLabel, plain_time: String) -> void:
-	if not label:
-		return
-	prepare_timer_label(label)
-	_clear_pixel_raster(label)
-	# Timer stays Press Start + fixed size in every language (digits only).
-	label.set_meta("_force_pixel_font", true)
-	label.set_meta("_fixed_counter_font_size", true)
-	label.set_meta("_use_default_font", false)
-	if plain_time.is_empty():
-		label.text = ""
-		return
-	if plain_time == "∞":
-		label.text = format_time_counter(plain_time)
-		return
-	var font_size := GameConstants.HUD_COUNTER_FONT_SIZE
-	label.add_theme_font_override("normal_font", pixel_font())
-	label.add_theme_font_size_override("normal_font_size", font_size)
-	label.add_theme_color_override("default_color", Color(0.96, 0.96, 0.96, 1))
-	_strip_live_pixel_outline(label)
-	label.text = format_time_counter(plain_time)
+	HudTopBar.set_timer_raster_text(label, plain_time)
 
-# Prepares a joker/move counter label for BBCode icon+number rendering.
-# Uses the default (scalable) font because Press Start and inline icon images
-# don't mix well under GL Compatibility.
 static func prepare_counter_label(label: RichTextLabel) -> void:
-	if not label:
-		return
-	# Counter BBCode mixes icons + numbers; keep default font to avoid Press Start scramble.
-	label.set_meta("_use_default_font", true)
-	apply_locale_font_to_control(label)
-	label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	label.fit_content = false
-	label.scroll_active = false
-	label.clip_contents = false
-	label.add_theme_font_size_override("normal_font_size", scaled_font_size(GameConstants.HUD_COUNTER_FONT_SIZE))
-	apply_safe_outline(label, 6)
-	label.add_theme_color_override("default_color", Color(0.96, 0.96, 0.96, 1))
+	HudTopBar.prepare_counter_label(label)
 
-# Builds a BBCode string that shows [icon] current/required with an optional
-# caption label before the numbers. Used for joker and move-count HUD slots.
 static func format_icon_ratio_counter(
 	icon_path: String,
 	current: int,
@@ -2783,25 +2073,7 @@ static func format_icon_ratio_counter(
 	accent: Color = Color.WHITE,
 	caption: String = ""
 ) -> String:
-	var icon_size := GameConstants.HUD_COUNTER_ICON_SIZE
-	var num_size := scaled_font_size(GameConstants.HUD_COUNTER_FONT_SIZE)
-	var label_size := scaled_font_size(GameConstants.HUD_COUNTER_LABEL_FONT_SIZE)
-	var hex := accent.to_html(false)
-	if caption.is_empty():
-		return "[center][img=%dx%d]%s[/img] [font_size=%d][color=#%s]%d/%d[/color][/font_size][/center]" % [
-			icon_size, icon_size, icon_path, num_size, hex, current, required
-		]
-	return "[center][img=%dx%d]%s[/img] [font_size=%d][color=#%s]%s[/color][/font_size] [font_size=%d][color=#%s]%d/%d[/color][/font_size][/center]" % [
-		icon_size, icon_size, icon_path, label_size, hex, caption, num_size, hex, current, required
-	]
+	return HudTopBar.format_icon_ratio_counter(icon_path, current, required, accent, caption)
 
-# Builds the BBCode string for the timer slot. Shows an infinity icon for ∞
-# and wraps the time digits in a fixed Press Start font-size tag otherwise.
 static func format_time_counter(formatted_time: String, _label_text: String = "") -> String:
-	var num_size := GameConstants.HUD_COUNTER_FONT_SIZE
-	if formatted_time == "∞":
-		var icon_size := GameConstants.HUD_INFINITY_ICON_SIZE
-		return "[center][img=%dx%d]%s[/img][/center]" % [
-			icon_size, icon_size, GameConstants.ICON_INFINITY
-		]
-	return "[center][font_size=%d]%s[/font_size][/center]" % [num_size, formatted_time]
+	return HudTopBar.format_time_counter(formatted_time, _label_text)
