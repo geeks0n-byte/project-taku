@@ -2357,14 +2357,10 @@ static func apply_body_richtext(
 	label.add_theme_font_size_override("normal_font_size", body_font_size(base_size))
 
 # Adds or updates the amber/white rounded overlay that indicates a toggled-on
-# or tutorial-highlighted button. Hides and cleans up any legacy ColorRect version.
+# or tutorial-highlighted button.
 static func apply_toggle_active_mask(button: Button, is_on: bool, tint: Color = GameConstants.TOGGLE_MASK_AMBER) -> void:
 	if not button:
 		return
-	var legacy := button.get_node_or_null("ActiveMask")
-	if legacy is ColorRect:
-		legacy.queue_free()
-		legacy = null
 	var mask := button.get_node_or_null("ActiveMask") as Panel
 	if mask == null:
 		mask = Panel.new()

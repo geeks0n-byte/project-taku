@@ -58,3 +58,7 @@ desktop.ini
 
 # Local scratch / review pads (source of truth is translations.csv)
 resources/localization/english_copy_review.txt
+
+# Play Games import — Godot CSV sidecars and release zips (regenerate from source CSVs)
+resources/play_games/achievement_import/*.translation
+resources/play_games/achievement_import/*.zip

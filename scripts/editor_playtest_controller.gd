@@ -248,10 +248,6 @@ func _after_player_board_change() -> void:
 	canvas_manager.trigger_redraw()
 
 
-# Legacy press-on-interceptor path (unused while playtest input mode is on).
-func handle_cell_click(coord: Vector2i) -> void:
-	handle_cell_played(coord)
-
 # Undo/redo actions inside playtest mode.
 func undo() -> void:
 	if not is_active or not _undo_stack.can_undo():

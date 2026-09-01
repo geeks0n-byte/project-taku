@@ -141,9 +141,6 @@ func _apply_debug_icon(button: Button, texture: Texture2D) -> void:
 	if button == null or texture == null:
 		return
 	button.text = ""
-	var legacy := button.get_node_or_null("IconContainer")
-	if legacy:
-		legacy.queue_free()
 	var host := button.get_node_or_null("IconHost") as Control
 	if host == null:
 		host = Control.new()

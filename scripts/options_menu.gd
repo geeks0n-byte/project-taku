@@ -493,9 +493,6 @@ func _set_toggle_button_caption(button: Button, full_text: String) -> void:
 		return
 	button.text = ""
 	HudLayout._clear_pixel_raster(button)
-	var legacy := button.get_node_or_null("ToggleCaption")
-	if legacy:
-		legacy.queue_free()
 	var host := button.get_node_or_null("ToggleCaptionHost") as CenterContainer
 	var font_size := HudLayout.scaled_font_size(GameConstants.UI_BTN_PRIMARY_FONT)
 	if host == null:
@@ -718,6 +715,8 @@ func _on_unlock_achievements_pressed() -> void:
 ## Debug: unlocks every campaign level and shows a green status.
 func _do_unlock_all() -> void:
 	SaveManager.unlock_all_levels()
+	if AchievementManager:
+		AchievementManager.sync_from_progress(true, true)
 	_show_status_message(tr("UI_UNLOCK_ALL_DONE"), Color(0.45, 1.0, 0.45))
 
 

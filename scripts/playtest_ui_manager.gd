@@ -25,7 +25,6 @@ signal resume_from_tutorial_requested  ## Player closed the How-To-Play overlay;
 @onready var jokers_label: RichTextLabel = $"../EditorUI/CounterContainer/JokerSlot/JokerCounterLabel"
 @onready var status_label: RichTextLabel = $"../EditorUI/PlaytestStatusLabel"
 @onready var counter_container: HBoxContainer = $"../EditorUI/CounterContainer"
-@onready var legacy_victory_panel: Panel = $"../EditorUI/PlaytestVictoryPanel"
 @onready var how_to_play_container: Control = $"../HowToPlayLayer/CenterContainer"
 @onready var how_to_play_panel: Control = $"../HowToPlayLayer/CenterContainer/HowToPlayPanel"
 @onready var _htp_header: Label = $"../HowToPlayLayer/CenterContainer/HowToPlayPageHeader"
@@ -59,8 +58,6 @@ var _hold_repeat := HoldRepeat.new()
 func _ready() -> void:
 	_button_style_source = exit_button if exit_button else reset_button
 	_setup_end_layer()
-	if legacy_victory_panel:
-		legacy_victory_panel.visible = false
 	_connect_signals()
 	if test_mode_label:
 		test_mode_label.text = HudLayout.format_mode_label("UI_TEST_MODE", true)
@@ -475,8 +472,6 @@ func hide_end_overlays() -> void:
 		_end_dimmer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if _victory_panel:
 		_victory_panel.visible = false
-	if legacy_victory_panel:
-		legacy_victory_panel.visible = false
 	_set_playtest_buttons_disabled(false)
 
 # Alias used by the editor controller; same as hide_end_overlays.

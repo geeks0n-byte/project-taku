@@ -8,9 +8,6 @@ extends RefCounted
 const BIT_TIME := 1
 const BIT_NO_HINTS := 2
 const BIT_COMPLETE := 4
-## Legacy aliases.
-const BIT_GREEN := BIT_NO_HINTS
-const BIT_MOVES := BIT_COMPLETE
 ## Display / award order: clear → no hints → time.
 const ALL_GOAL_MASKS: Array = [BIT_COMPLETE, BIT_NO_HINTS, BIT_TIME]
 

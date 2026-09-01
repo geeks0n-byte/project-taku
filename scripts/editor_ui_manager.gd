@@ -277,8 +277,6 @@ func _bind_editor_chrome_captions() -> void:
 		"../EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer/AllowedLabel"
 	) as Label
 	_bind_editor_caption(allowed, "UI_ALLOW")
-	var victory := get_node_or_null("../EditorUI/PlaytestVictoryPanel/VictoryMessageLabel") as Label
-	_bind_editor_caption(victory, "UI_LEVEL_SOLVABLE")
 	var star_time := get_node_or_null(
 		"../EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/TimeSelector/TimeTitleLabel"
 	) as Label
