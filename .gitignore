@@ -17,6 +17,8 @@ tools/godot.local.env
 /ios/
 .mono/
 bin/
+!addons/play_review/bin/
+!addons/play_review/bin/**
 obj/
 
 # Python

@@ -5,6 +5,7 @@ extends RefCounted
 
 const EXAMPLE_PRESET_PATH := "res://export_presets.example.cfg"
 const ANDROID_BUILD_GRADLE := "res://android/build/build.gradle"
+const PLAY_REVIEW_AAR := "res://addons/play_review/bin/PlayReview-release.aar"
 const REQUIRED_EXCLUDES := [
 	"tests/",
 	"dev/",
@@ -26,6 +27,8 @@ static func audit() -> Array[String]:
 		issues.append("export_presets.example.cfg has no Android preset")
 	if not FileAccess.file_exists(ANDROID_BUILD_GRADLE):
 		issues.append("missing android/build/build.gradle")
+	if not FileAccess.file_exists(PLAY_REVIEW_AAR):
+		issues.append("missing addons/play_review/bin/PlayReview-release.aar")
 	var exclude_line := ""
 	for line in text.split("\n"):
 		if line.begins_with("exclude_filter="):

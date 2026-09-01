@@ -103,6 +103,12 @@ func show_cloud_choice(message: String, local_summary: Dictionary, remote_summar
 
 
 func hide() -> void:
+	if pending == Action.CLOUD_SYNC_CHOICE and CloudSaveManager and CloudSaveManager.is_syncing:
+		CloudSaveManager.resolve_sync_choice(false)
+	_dismiss_panel()
+
+
+func _dismiss_panel() -> void:
 	pending = Action.NONE
 	cloud_local_summary = {}
 	cloud_remote_summary = {}
@@ -157,12 +163,17 @@ func refresh_texts() -> void:
 func _on_no() -> void:
 	if pending == Action.CLOUD_SYNC_CHOICE and CloudSaveManager:
 		CloudSaveManager.resolve_sync_choice(false)
-	hide()
+	_dismiss_panel()
 
 
 func _on_yes() -> void:
 	var action := pending
-	hide()
+	if action == Action.CLOUD_SYNC_CHOICE:
+		if CloudSaveManager:
+			CloudSaveManager.resolve_sync_choice(true)
+		_dismiss_panel()
+		return
+	_dismiss_panel()
 	match action:
 		Action.RESET_PROGRESS:
 			if _on_reset_progress.is_valid():
@@ -176,6 +187,3 @@ func _on_yes() -> void:
 		Action.UNLOCK_ALL_ACHIEVEMENTS:
 			if _on_unlock_achievements.is_valid():
 				_on_unlock_achievements.call()
-		Action.CLOUD_SYNC_CHOICE:
-			if CloudSaveManager:
-				CloudSaveManager.resolve_sync_choice(true)

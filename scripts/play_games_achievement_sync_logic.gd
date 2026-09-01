@@ -26,7 +26,7 @@ static func should_sync_catalog_id(catalog_id: String) -> bool:
 
 static func play_achievement_is_unlocked(state: int) -> bool:
 	# PlayGamesAchievement.State: UNLOCKED=0, REVEALED=1, HIDDEN=2
-	return state == 0 or state == 1
+	return state == 0
 
 
 static func is_incremental_catalog_id(catalog_id: String) -> bool:

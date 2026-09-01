@@ -11,9 +11,10 @@ static func run(r: LogicTestRunner) -> void:
 
 static func _test_achievement_map(r: LogicTestRunner) -> void:
 	PlayGamesAchievementMap.reload()
+	r.ok(PlayGamesAchievementMap.is_configured(), "pgach: achievement map is configured")
 	r.ok(
-		PlayGamesAchievementMap.play_id_for_catalog(AchievementCatalog.ID_FIRST_CLEAR).is_empty(),
-		"pgach: example map leaves ids empty until configured"
+		not PlayGamesAchievementMap.play_id_for_catalog(AchievementCatalog.ID_FIRST_CLEAR).is_empty(),
+		"pgach: first_clear has a Play Games id"
 	)
 
 
@@ -27,8 +28,8 @@ static func _test_sync_logic(r: LogicTestRunner) -> void:
 		"pgach: unlocked state"
 	)
 	r.ok(
-		PlayGamesAchievementSyncLogic.play_achievement_is_unlocked(1),
-		"pgach: revealed state counts as unlocked"
+		not PlayGamesAchievementSyncLogic.play_achievement_is_unlocked(1),
+		"pgach: revealed state is not unlocked"
 	)
 	r.ok(
 		PlayGamesAchievementSyncLogic.is_incremental_catalog_id(AchievementCatalog.ID_CLEARS_BRONZE),
