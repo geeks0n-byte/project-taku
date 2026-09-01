@@ -35,6 +35,16 @@ static func count_earned_bits(bits: int) -> int:
 			n += 1
 	return n
 
+
+## True when any saved level earned all three star goals (retroactive three_star_debut).
+static func has_perfect_clear_in_bits_dict(bits_dict: Dictionary) -> bool:
+	if typeof(bits_dict) != TYPE_DICTIONARY:
+		return false
+	for key in bits_dict:
+		if count_earned_bits(int(bits_dict[key])) >= ALL_GOAL_MASKS.size():
+			return true
+	return false
+
 ## Builds the compact 3-star icon row shown on each level-select card.
 ## Earned stars are fully opaque; unearned stars are dimmed.
 static func make_select_star_row(_level: LevelData, earned_bits: int) -> Control:

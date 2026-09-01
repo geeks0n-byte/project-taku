@@ -4,6 +4,7 @@ extends CanvasLayer
 signal back_requested
 
 @onready var title_label: Label = $ScreenHeaderHost/TitleLabel
+@onready var progress_label: Label = $ScreenHeaderHost/ProgressLabel
 @onready var close_btn: Button = $CloseButtonHost/CloseButton
 @onready var _nav_host: Control = $ScreenHeaderHost
 @onready var _header_host: Control = $ScreenHeaderHost
@@ -19,13 +20,18 @@ signal back_requested
 const _GRID_COLUMNS := 2
 const _ROWS_PER_PAGE := 4
 const _ITEMS_PER_PAGE := _GRID_COLUMNS * _ROWS_PER_PAGE
-const _ROW_H := 252.0
+const _ROW_H := 350.0
 const _CELL_SEP_H := 24
 const _CELL_SEP_V := 24
 const _ICON_PX := 120.0
 const _ICON_ART_PX := 96.0
 const _BADGE_PX := 48.0
 const _BADGE_INSET := 0.0
+const _NAME_SLOT_H := 86.0
+const _TIER_SLOT_H := 28.0
+const _DESC_SLOT_H := 90.0
+const _TEXT_SLOT_PAD_TOP := 2.0
+const _TEXT_SLOT_PAD_BOTTOM := 6.0
 const _BELOW_TITLE_GAP := 48.0
 const _RESERVE_MENU_BANNER_NAV := true
 const _LOCKED_ICON_MODULATE := Color(0.34, 0.34, 0.38, 1.0)
@@ -36,17 +42,20 @@ const _TIER_COUNTER_DIM := Color(0.55, 0.58, 0.64, 1.0)
 const _TIER_PROGRESS_FONT := 20
 const _NEXT_BADGE_MODULATE := Color(1.0, 1.0, 1.0, 0.45)
 const _NAME_FONT_BASE := 28
-const _NAME_FONT_MIN := 18
+const _NAME_MAX_LINES := 2
 const _DESC_FONT_BASE := 22
-const _DESC_FONT_MIN := 16
+const _DESC_MAX_LINES := 3
 const LOCK_ICON := preload("res://resources/tiles/tile_lock.svg")
 const LOCK_OVERLAY_PX := 88.0
 const _LOCK_SCRIM_RADIUS := 22.0
+
+const _NEW_BADGE_INSET := 2.0
 
 var _progress_state: Dictionary = {}
 var _all_ids: Array = []
 var _unlocked_map: Dictionary = {}
 var _page_index: int = 0
+var _viewed_page_indices: Dictionary = {}
 
 
 ## Wires close, header style, paging, and safe-area resize.
@@ -70,6 +79,7 @@ func _ready() -> void:
 		get_viewport().size_changed.connect(_on_resized)
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
+	call_deferred("_apply_a11y_labels")
 
 
 func _on_resized() -> void:
@@ -80,6 +90,18 @@ func _on_resized() -> void:
 func _on_language_changed() -> void:
 	if visible:
 		refresh()
+	_apply_a11y_labels()
+
+
+func _apply_a11y_labels() -> void:
+	if title_label:
+		title_label.accessibility_name = tr("UI_ACHIEVEMENTS")
+	if close_btn:
+		A11yLabels.bind_button(close_btn, "UI_CLOSE")
+	if _page_prev_button:
+		A11yLabels.bind_button(_page_prev_button, "UI_PREVIOUS")
+	if _page_next_button:
+		A11yLabels.bind_button(_page_next_button, "UI_NEXT")
 
 
 func _style_header() -> void:
@@ -87,6 +109,22 @@ func _style_header() -> void:
 		return
 	HudLayout._bind_header_translation_key(title_label, "UI_ACHIEVEMENTS")
 	HudLayout.apply_screen_header_style(title_label)
+	if progress_label:
+		HudLayout.apply_popup_label(progress_label, 22)
+		progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		progress_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		progress_label.add_theme_color_override("font_color", GameConstants.SCREEN_HEADER_COLOR)
+
+
+func _update_progress_label() -> void:
+	if progress_label == null:
+		return
+	var total := _all_ids.size()
+	var unlocked := 0
+	for id in _all_ids:
+		if AchievementCatalog.cell_is_unlocked(str(id), _unlocked_map):
+			unlocked += 1
+	progress_label.text = tr("UI_ACHIEVEMENTS_PROGRESS") % [unlocked, total]
 
 
 func _style_close() -> void:
@@ -119,10 +157,12 @@ func _reparent_page_nav() -> void:
 func refresh() -> void:
 	if not visible:
 		_page_index = 0
+	_viewed_page_indices.clear()
 	_style_header()
 	_style_close()
 	_style_page_nav()
 	_load_catalog_state()
+	_update_progress_label()
 	_page_index = clampi(_page_index, 0, _max_page_index())
 	_refresh_page()
 	_layout()
@@ -144,7 +184,7 @@ func _load_catalog_state() -> void:
 			"no_hint_clears": SaveManager.no_hint_clears,
 			"on_time_clears": SaveManager.on_time_clears,
 			"shifter_slides": SaveManager.shifter_slides,
-			"rules_opens": SaveManager.rules_opens,
+			"rules_open_levels": SaveManager.rules_open_level_count(),
 		}
 	_all_ids = AchievementCatalog.grid_ids(_unlocked_map)
 
@@ -156,12 +196,14 @@ func _max_page_index() -> int:
 
 
 func _on_page_prev() -> void:
+	_commit_page_seen(_page_index)
 	_page_index = maxi(_page_index - 1, 0)
 	_refresh_page()
 	call_deferred("_fit_all_cell_labels")
 
 
 func _on_page_next() -> void:
+	_commit_page_seen(_page_index)
 	_page_index = mini(_page_index + 1, _max_page_index())
 	_refresh_page()
 	call_deferred("_fit_all_cell_labels")
@@ -171,6 +213,7 @@ func _on_page_next() -> void:
 func _refresh_page() -> void:
 	if _grid == null:
 		return
+	_viewed_page_indices[_page_index] = true
 	for child in _grid.get_children():
 		_grid.remove_child(child)
 		child.queue_free()
@@ -238,7 +281,7 @@ func _pin_grid_to_top() -> void:
 	_grid_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
 
-## One grid cell: icon + tier medal, title, optional progress + description.
+## One grid cell: icon + tier medal, title, tier progress slot, description slot.
 func _make_cell(id: String, unlocked_map: Dictionary) -> Control:
 	var unlocked: bool = AchievementCatalog.cell_is_unlocked(id, unlocked_map)
 	var show_identity := AchievementCatalog.identity_visible(id, unlocked)
@@ -249,8 +292,10 @@ func _make_cell(id: String, unlocked_map: Dictionary) -> Control:
 	cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(_make_icon_row(id, unlocked, show_identity, unlocked_map))
 
+	var name_slot := _make_text_slot(_NAME_SLOT_H)
 	var name_label := Label.new()
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	name_label.text = tr(AchievementCatalog.display_title_key(id, unlocked))
 	var name_color := (
 		GameConstants.SCREEN_HEADER_COLOR if unlocked else _LOCKED_TITLE_COLOR
@@ -259,18 +304,27 @@ func _make_cell(id: String, unlocked_map: Dictionary) -> Control:
 	HudLayout.apply_popup_label(name_label, _NAME_FONT_BASE)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_label.clip_contents = false
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	cell.add_child(name_label)
+	name_label.max_lines_visible = _NAME_MAX_LINES
+	name_label.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+	name_slot.add_child(name_label)
+	_anchor_slot_child(name_label)
+	cell.add_child(name_slot)
 	name_label.set_meta("_ach_fit_base", _NAME_FONT_BASE)
-	name_label.set_meta("_ach_fit_min", _NAME_FONT_MIN)
+	name_label.set_meta("_ach_fit_max_lines", _NAME_MAX_LINES)
 
+	var tier_slot := _make_text_slot(_TIER_SLOT_H)
 	var progress := AchievementCatalog.progress_for_cell(id, unlocked_map, _progress_state)
 	if progress.get("show", false):
-		cell.add_child(_make_tier_progress_label(progress))
+		var tier_label := _make_tier_progress_label(progress)
+		tier_slot.add_child(tier_label)
+		_anchor_slot_child(tier_label)
+	cell.add_child(tier_slot)
 
+	var desc_slot := _make_text_slot(_DESC_SLOT_H)
 	if AchievementCatalog.desc_visible(id, unlocked):
 		var desc := Label.new()
 		desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		desc.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		desc.text = tr(AchievementCatalog.display_desc_key(id))
 		desc.add_theme_color_override(
 			"font_color",
@@ -279,23 +333,48 @@ func _make_cell(id: String, unlocked_map: Dictionary) -> Control:
 		HudLayout.apply_popup_label(desc, _DESC_FONT_BASE)
 		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		desc.clip_contents = false
-		desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		cell.add_child(desc)
+		desc.max_lines_visible = _DESC_MAX_LINES
+		desc.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+		desc_slot.add_child(desc)
+		_anchor_slot_child(desc)
 		desc.set_meta("_ach_fit_base", _DESC_FONT_BASE)
-		desc.set_meta("_ach_fit_min", _DESC_FONT_MIN)
+		desc.set_meta("_ach_fit_max_lines", _DESC_MAX_LINES)
+	cell.add_child(desc_slot)
 
 	return cell
+
+
+func _make_text_slot(height: float) -> Control:
+	var slot := Control.new()
+	slot.custom_minimum_size = Vector2(0.0, height)
+	slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slot.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	slot.clip_contents = true
+	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return slot
+
+
+func _anchor_slot_child(child: Control) -> void:
+	child.set_anchors_preset(Control.PRESET_FULL_RECT)
+	child.offset_left = 0.0
+	child.offset_top = _TEXT_SLOT_PAD_TOP
+	child.offset_right = 0.0
+	child.offset_bottom = -_TEXT_SLOT_PAD_BOTTOM
+	child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	child.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
 
 func _make_tier_progress_label(progress: Dictionary) -> RichTextLabel:
 	var label := RichTextLabel.new()
 	label.bbcode_enabled = true
-	label.fit_content = true
+	label.fit_content = false
 	label.scroll_active = false
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	label.custom_minimum_size = Vector2(0.0, _TIER_SLOT_H)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.text = _tier_progress_bbcode(progress)
 	if HudLayout.uses_pixel_font():
@@ -319,7 +398,7 @@ func _tier_progress_bbcode(progress: Dictionary) -> String:
 	return "[center]%s[/center]" % "/".join(parts)
 
 
-## Keeps the main icon centered; tier medal uses a fixed slot on the 120px frame.
+## Keeps the main icon centered; tier cup uses a fixed slot on the 120px frame.
 func _make_icon_row(
 	id: String,
 	unlocked: bool,
@@ -342,6 +421,8 @@ func _make_icon_row(
 		badge_path = AchievementCatalog.display_tier_badge_path(id, unlocked_map)
 	if not badge_path.is_empty() and ResourceLoader.exists(badge_path):
 		frame.add_child(_make_corner_tier_badge(badge_path, unlocked))
+	if _is_achievement_unseen(id, unlocked):
+		frame.add_child(_make_new_badge())
 
 	icon_wrap.add_child(frame)
 	return icon_wrap
@@ -361,6 +442,25 @@ func _make_corner_tier_badge(path: String, unlocked: bool) -> TextureRect:
 	badge.offset_top = -_BADGE_PX - _BADGE_INSET
 	badge.offset_right = -_BADGE_INSET
 	badge.offset_bottom = -_BADGE_INSET
+	return badge
+
+
+func _is_achievement_unseen(id: String, unlocked: bool) -> bool:
+	if not unlocked or SaveManager == null:
+		return false
+	return SaveManager.is_achievement_unseen(id)
+
+
+func _make_new_badge() -> Label:
+	var badge := HudLayout.build_plain_notification_badge(_ICON_PX)
+	badge.name = "NewBadge"
+	var dims := HudLayout.plain_notification_badge_size(_ICON_PX)
+	badge.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	badge.offset_left = -dims.x - _NEW_BADGE_INSET
+	badge.offset_top = _NEW_BADGE_INSET
+	badge.offset_right = -_NEW_BADGE_INSET
+	badge.offset_bottom = _NEW_BADGE_INSET + dims.y
+	badge.visible = true
 	return badge
 
 
@@ -452,59 +552,56 @@ func _make_lock_overlay() -> TextureRect:
 func _fit_all_cell_labels() -> void:
 	if _grid == null:
 		return
-	var cell_w := _cell_label_width()
+	var name_labels: Array[Label] = []
+	var desc_labels: Array[Label] = []
 	for child in _grid.get_children():
 		if child is VBoxContainer:
-			_fit_cell_labels(child as VBoxContainer, cell_w)
+			_collect_fit_labels(child as VBoxContainer, name_labels, desc_labels)
+	for label in name_labels:
+		var max_lines := int(label.get_meta("_ach_fit_max_lines", _NAME_MAX_LINES))
+		_apply_fitted_label_size(label, _name_font_size(label), max_lines)
+	for label in desc_labels:
+		var max_lines := int(label.get_meta("_ach_fit_max_lines", _DESC_MAX_LINES))
+		_apply_fitted_label_size(label, _desc_font_size(label), max_lines)
 
 
-func _cell_label_width() -> float:
-	var grid_w := _grid.size.x if _grid else HudLayout.UI_PHONE_CONTENT_WIDTH
-	if grid_w <= 1.0:
-		grid_w = HudLayout.UI_PHONE_CONTENT_WIDTH
-	var col_w := (grid_w - float(_CELL_SEP_H)) / 2.0
-	return maxf(96.0, col_w - 20.0)
+func _name_font_size(label: Label) -> int:
+	if HudLayout.control_uses_pixel_font(label):
+		return _NAME_FONT_BASE
+	return HudLayout.body_font_size(_NAME_FONT_BASE)
 
 
-func _fit_cell_labels(cell: VBoxContainer, target_w: float) -> void:
-	for label in cell.get_children():
-		if label is Label and label.has_meta("_ach_fit_base"):
-			_fit_wrapped_label(
-				label as Label,
-				int(label.get_meta("_ach_fit_base")),
-				int(label.get_meta("_ach_fit_min")),
-				target_w
-			)
+func _desc_font_size(label: Label) -> int:
+	if HudLayout.control_uses_pixel_font(label):
+		return _DESC_FONT_BASE
+	return HudLayout.body_font_size(_DESC_FONT_BASE)
 
 
-func _fit_wrapped_label(label: Label, base_size: int, min_size: int, target_w: float) -> void:
-	var text := label.text
-	if text.is_empty():
-		return
-	var font: Font = label.get_theme_font("font")
-	if font == null:
-		font = ThemeDB.fallback_font
-	if font == null:
-		return
-	var use_pixel := HudLayout.control_uses_pixel_font(label)
-	var size := HudLayout.snap_pixel_font_size(base_size) if use_pixel else HudLayout.body_font_size(base_size)
-	var floor_size := HudLayout.snap_pixel_font_size(min_size) if use_pixel else HudLayout.body_font_size(min_size)
-	var step := 8 if use_pixel else 2
-	while size > floor_size:
-		var measured := font.get_multiline_string_size(
-			text,
-			HORIZONTAL_ALIGNMENT_CENTER,
-			target_w,
-			size
+func _collect_fit_labels(cell: VBoxContainer, name_labels: Array[Label], desc_labels: Array[Label]) -> void:
+	for child in cell.get_children():
+		if child is Control:
+			for label in (child as Control).get_children():
+				if label is Label and label.has_meta("_ach_fit_base"):
+					var base := int(label.get_meta("_ach_fit_base"))
+					if base == _NAME_FONT_BASE:
+						name_labels.append(label as Label)
+					elif base == _DESC_FONT_BASE:
+						desc_labels.append(label as Label)
+
+
+func _apply_fitted_label_size(label: Label, size: int, max_lines: int) -> void:
+	if HudLayout.control_uses_pixel_font(label):
+		var color := (
+			label.get_theme_color("font_color")
+			if label.has_theme_color_override("font_color")
+			else Color.WHITE
 		)
-		if measured.y <= size * 3.2:
-			break
-		size = maxi(floor_size, size - step)
-	if use_pixel:
-		var color := label.get_theme_color("font_color") if label.has_theme_color_override("font_color") else Color.WHITE
-		HudLayout.apply_live_pixel_label_settings(label, text, size, color)
+		HudLayout.apply_live_pixel_label_settings(label, label.text, size, color)
 	else:
 		label.add_theme_font_size_override("font_size", size)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.max_lines_visible = max_lines
+	label.clip_contents = false
 
 
 ## Safe-area header, close button, and phone-width-capped paged grid region.
@@ -515,8 +612,14 @@ func _layout() -> void:
 	if title_label:
 		title_label.offset_top = SafeInsets.padded_top(GameConstants.SCREEN_HEADER_TOP)
 		title_label.offset_bottom = title_label.offset_top + GameConstants.SCREEN_HEADER_HEIGHT
+	if progress_label and title_label:
+		progress_label.offset_top = title_label.offset_bottom + 4.0
+		progress_label.offset_bottom = progress_label.offset_top + 32.0
 	if _list_host and title_label:
-		_list_host.offset_top = title_label.offset_bottom + _BELOW_TITLE_GAP
+		var list_top := title_label.offset_bottom + _BELOW_TITLE_GAP
+		if progress_label:
+			list_top = progress_label.offset_bottom + 12.0
+		_list_host.offset_top = list_top
 		_list_host.offset_bottom = SafeInsets.padded_bottom_offset(
 			HudLayout.page_nav_content_bottom_offset(_RESERVE_MENU_BANNER_NAV)
 		)
@@ -535,12 +638,63 @@ func _layout() -> void:
 
 
 func _on_close() -> void:
+	_commit_viewed_pages_seen()
 	back_requested.emit()
+
+
+func _commit_viewed_pages_seen() -> void:
+	if SaveManager == null or _viewed_page_indices.is_empty():
+		return
+	if _all_pages_viewed():
+		SaveManager.mark_achievements_seen()
+		_notify_unseen_changed()
+		return
+	_commit_pages_seen(_viewed_page_indices.keys())
+
+
+func _commit_page_seen(page_idx: int) -> void:
+	_commit_pages_seen([page_idx])
+
+
+func _commit_pages_seen(page_indices: Array) -> void:
+	if SaveManager == null or page_indices.is_empty():
+		return
+	var ids: Array = []
+	var seen_ids: Dictionary = {}
+	for raw_page in page_indices:
+		var page_idx := int(raw_page)
+		var start := page_idx * _ITEMS_PER_PAGE
+		var end := mini(start + _ITEMS_PER_PAGE, _all_ids.size())
+		for i in range(start, end):
+			for sid in AchievementCatalog.seen_ids_for_grid_cell(str(_all_ids[i]), _unlocked_map):
+				if seen_ids.has(sid):
+					continue
+				seen_ids[sid] = true
+				ids.append(sid)
+	if ids.is_empty():
+		return
+	SaveManager.mark_achievements_seen_for_ids(ids)
+	_notify_unseen_changed()
+
+
+func _notify_unseen_changed() -> void:
+	if AchievementManager:
+		AchievementManager.notify_unseen_changed()
+
+
+func _all_pages_viewed() -> bool:
+	if _all_ids.is_empty():
+		return true
+	var last := _max_page_index()
+	for page_idx in range(last + 1):
+		if not _viewed_page_indices.has(page_idx):
+			return false
+	return true
 
 
 ## Android back closes this overlay.
 func handle_system_back() -> bool:
 	if not visible:
 		return false
-	back_requested.emit()
+	_on_close()
 	return true

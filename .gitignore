@@ -8,6 +8,9 @@ export_presets.cfg
 # Local CI Godot download cache
 .godot-ci/
 
+# Optional machine-local Godot path override
+tools/godot.local.env
+
 # Build / platform
 /build/
 /android/

@@ -4,18 +4,21 @@ extends CanvasLayer
 const SHOW_SEC := 3.2
 const FADE_SEC := 0.28
 const SLIDE_PX := 36.0
-const CHIP_HEIGHT := 104.0
+const CHIP_HEIGHT := 112.0
 const CHIP_WIDTH := 420.0
 const BELOW_HUD_GAP := 16.0
+const TOAST_ICON_MARGIN := 12.0
 const NAME_FONT_BASE := 24
 const NAME_FONT_MIN := 16
+const TOAST_ICON := preload("res://resources/icons/icon_achievement_cup.svg")
 
 @onready var _root: Control = $Root
 @onready var _panel: Panel = $Root/Panel
 @onready var _icon_wrap: Control = $Root/Panel/HBox/IconWrap
 @onready var _icon: TextureRect = $Root/Panel/HBox/IconWrap/Icon
-@onready var _subtitle: Label = $Root/Panel/HBox/TextColumn/SubtitleLabel
-@onready var _name: Label = $Root/Panel/HBox/TextColumn/NameLabel
+@onready var _subtitle: Label = $Root/Panel/HBox/VBox/SubtitleLabel
+@onready var _name: Label = $Root/Panel/HBox/VBox/NameLabel
+@onready var _tier: Label = $Root/Panel/HBox/VBox/TierLabel
 
 var _queue: Array[String] = []
 var _busy: bool = false
@@ -41,6 +44,7 @@ func _ready() -> void:
 	_ignore_mouse(_icon)
 	_ignore_mouse(_subtitle)
 	_ignore_mouse(_name)
+	_ignore_mouse(_tier)
 	_hold_timer = Timer.new()
 	_hold_timer.one_shot = true
 	_hold_timer.process_mode = Node.PROCESS_MODE_ALWAYS
@@ -104,7 +108,7 @@ func _style_subtitle() -> void:
 	HudLayout._bind_header_translation_key(_subtitle, "ACH_UNLOCKED")
 	_subtitle.add_theme_color_override("font_color", GameConstants.SCREEN_HEADER_COLOR)
 	HudLayout.apply_popup_label(_subtitle, 20)
-	_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_subtitle.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_subtitle.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_subtitle.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -140,6 +144,7 @@ func _layout_panel() -> void:
 	_panel.anchor_bottom = 0.0
 	_layout_top = _toast_top()
 	_layout_bottom = _layout_top + CHIP_HEIGHT
+	_apply_icon_layout()
 	if not _busy:
 		_apply_layout_offsets(_layout_left, _layout_right)
 	elif _panel:
@@ -163,6 +168,18 @@ func _toast_top() -> float:
 func _offscreen_right_shift() -> float:
 	var vp_w := get_viewport().get_visible_rect().size.x
 	return vp_w - _layout_left + SLIDE_PX
+
+
+## Cup fills the toast height with a small inset inside the panel padding.
+func _toast_icon_size() -> float:
+	return maxf(48.0, CHIP_HEIGHT - TOAST_ICON_MARGIN * 2.0)
+
+
+func _apply_icon_layout() -> void:
+	if _icon_wrap == null:
+		return
+	var icon_sz := _toast_icon_size()
+	_icon_wrap.custom_minimum_size = Vector2(icon_sz, icon_sz)
 
 
 func _apply_layout_offsets(left: float, right: float) -> void:
@@ -193,7 +210,8 @@ func _show_next() -> void:
 	_fit_name_label(id)
 	if _icon_wrap:
 		_icon_wrap.scale = Vector2.ONE
-		_icon_wrap.pivot_offset = Vector2(28.0, 28.0)
+		var pivot := _icon_wrap.custom_minimum_size * 0.5
+		_icon_wrap.pivot_offset = pivot
 	visible = true
 	var hide_shift := _offscreen_right_shift()
 	if _panel:
@@ -268,7 +286,7 @@ func _pop_icon(gen: int) -> void:
 	if _icon_wrap == null:
 		return
 	_icon_wrap.scale = Vector2(0.72, 0.72)
-	_icon_wrap.pivot_offset = Vector2(28.0, 28.0)
+	_icon_wrap.pivot_offset = _icon_wrap.custom_minimum_size * 0.5
 	var pop := _make_tween()
 	pop.tween_property(_icon_wrap, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	pop.tween_callback(func() -> void:
@@ -280,24 +298,42 @@ func _pop_icon(gen: int) -> void:
 
 
 func _play_unlock_fx() -> void:
-	if UiSfx and UiSfx.has_method("play_achievement_unlock"):
-		UiSfx.play_achievement_unlock()
+	var sfx := _ui_sfx()
+	if sfx and sfx.has_method("play_achievement_unlock"):
+		sfx.call("play_achievement_unlock")
 
 
-## Sets icon and achievement name from the popped id.
+## UiSfx autoload via runtime lookup (headless -s tests have no autoload globals at compile time).
+func _ui_sfx() -> Node:
+	var tree := get_tree()
+	if tree == null:
+		return null
+	return tree.root.get_node_or_null("UiSfx")
+
+
+## Sets the cup icon, achievement name, and hides tier text (rank shown via cup color).
 func _apply_chip(id: String) -> void:
 	if _icon:
-		_icon.texture = _texture_for_id(id)
-		_icon.modulate = AchievementCatalog.tier_modulate(id)
+		var cup_path := AchievementCatalog.toast_cup_icon_path(id)
+		var cup_tex: Texture2D = load(cup_path) as Texture2D
+		_icon.texture = cup_tex if cup_tex != null else TOAST_ICON
+		_icon.modulate = Color.WHITE
 	if _name:
 		HudLayout._bind_header_translation_key(_name, AchievementCatalog.display_title_key(id, true))
 		HudLayout.apply_popup_label(_name, NAME_FONT_BASE)
-		_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		_name.autowrap_mode = TextServer.AUTOWRAP_OFF
 		_name.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 		_name.clip_contents = true
-		_fit_name_label(id)
+	_apply_tier_label(id)
+
+
+func _apply_tier_label(_id: String) -> void:
+	if _tier == null:
+		return
+	_tier.visible = false
+	_tier.text = ""
 
 
 ## Shrinks the name line so the full title fits without ellipsis.
@@ -311,13 +347,16 @@ func _fit_name_label(id: String) -> void:
 		font = ThemeDB.fallback_font
 	if font == null:
 		return
-	var target_w := maxf(72.0, _chip_width - 56.0 - 14.0 - 32.0)
+	var target_w := maxf(
+		72.0,
+		_chip_width - TOAST_ICON_MARGIN * 2.0 - _toast_icon_size() - 14.0 - 8.0
+	)
 	var use_pixel := HudLayout.control_uses_pixel_font(_name)
 	var size := HudLayout.snap_pixel_font_size(NAME_FONT_BASE) if use_pixel else HudLayout.body_font_size(NAME_FONT_BASE)
 	var min_size := HudLayout.snap_pixel_font_size(NAME_FONT_MIN) if use_pixel else HudLayout.body_font_size(NAME_FONT_MIN)
 	var step := 8 if use_pixel else 2
 	while size > min_size:
-		var measured := font.get_string_size(display, HORIZONTAL_ALIGNMENT_LEFT, -1, size)
+		var measured := font.get_string_size(display, HORIZONTAL_ALIGNMENT_CENTER, -1, size)
 		if measured.x <= target_w + 1.0:
 			break
 		size = maxi(min_size, size - step)
@@ -327,16 +366,6 @@ func _fit_name_label(id: String) -> void:
 		return
 	_name.text = display
 	_name.add_theme_font_size_override("font_size", size)
-
-
-## Loads the catalog SVG, falling back to the HUD star if the import is missing.
-func _texture_for_id(id: String) -> Texture2D:
-	var path := AchievementCatalog.icon_path(id)
-	if path.is_empty() or not ResourceLoader.exists(path):
-		path = AchievementCatalog.icon_path(AchievementCatalog.ID_FIRST_CLEAR)
-	if ResourceLoader.exists(path):
-		return load(path) as Texture2D
-	return null
 
 
 ## Drops any in-flight tween so a second enqueue cannot fire a stale callback.

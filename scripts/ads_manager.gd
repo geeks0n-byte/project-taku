@@ -498,6 +498,11 @@ func _session_age_sec() -> float:
 	return float(Time.get_ticks_msec() - _session_started_msec) / 1000.0
 
 
+## Public session age for review prompt eligibility.
+func session_age_sec() -> float:
+	return _session_age_sec()
+
+
 # Returns true if a rewarded ad could ever be shown (used to show/hide the hint ad button).
 # In debug builds without ads, always returns true so the flow can be tested.
 func can_offer_rewarded_hint() -> bool:

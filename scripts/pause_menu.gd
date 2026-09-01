@@ -31,6 +31,7 @@ const PAUSE_TITLE_FONT_SIZE := GameConstants.SCREEN_HEADER_FONT_SIZE + 2
 
 # The restart button label changes depending on game mode (restart vs new layout).
 var _restart_label_key: String = "UI_NEW_LAYOUT"
+var _menu_badges := MainMenuBadges.new()
 
 ## Wires pause buttons and language refresh, then styles the header and rows.
 func _ready() -> void:
@@ -50,6 +51,14 @@ func _ready() -> void:
 		quit_btn.pressed.connect(_on_quit)
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
+	_menu_badges.setup($CenterContainer, achievements_btn, level_select_btn)
+	_menu_badges.setup_panels()
+	_menu_badges.bind_resize_hooks()
+	if AchievementManager and not AchievementManager.unseen_count_changed.is_connected(_refresh_notification_badges):
+		AchievementManager.unseen_count_changed.connect(_refresh_notification_badges)
+	if SaveManager and not SaveManager.unseen_levels_changed.is_connected(_refresh_notification_badges):
+		SaveManager.unseen_levels_changed.connect(_refresh_notification_badges)
+	_refresh_notification_badges()
 	# Deferred so SaveManager's tree-walk font pass finishes first —
 	# our overrides must be applied last to win.
 	call_deferred("_style_header")
@@ -100,6 +109,8 @@ func _fit_menu_buttons() -> void:
 	if achievements_btn:
 		achievements_btn.text = "UI_ACHIEVEMENTS"
 		achievements_btn.set_meta("_tr_key", "UI_ACHIEVEMENTS")
+	if level_select_btn:
+		level_select_btn.set_meta("_tr_key", "UI_LEVEL_SELECT")
 	if title_label:
 		title_label.set_meta("_screen_header_font_size", PAUSE_TITLE_FONT_SIZE)
 		HudLayout._bind_header_translation_key(title_label, "UI_PAUSED")
@@ -111,6 +122,23 @@ func _fit_menu_buttons() -> void:
 	for btn in [resume_btn, restart_btn, level_select_btn, achievements_btn, settings_btn, quit_btn]:
 		_apply_pause_button(btn, row_h)
 	_style_auto_win_button(row_h)
+	_apply_a11y_labels()
+	_refresh_notification_badges()
+	_menu_badges.layout.call_deferred()
+
+
+func refresh_notification_badges(count: int = -1) -> void:
+	_refresh_notification_badges(count)
+
+
+## Refit rows and badge positions after the menu becomes visible (layout is stale while hidden).
+func on_shown() -> void:
+	call_deferred("_fit_menu_buttons")
+
+
+func _refresh_notification_badges(_count: int = -1) -> void:
+	_menu_badges.refresh_achievements(_count)
+	_menu_badges.refresh_levels(_count)
 
 # Keeps Auto Win in the same pause-menu slot, but fully invisible while still clickable.
 func _style_auto_win_button(row_h: float = MENU_BTN_ROW_H) -> void:
@@ -181,6 +209,23 @@ func set_restart_label_key(key: String) -> void:
 		restart_btn.text = _restart_label_key
 		restart_btn.set_meta("_tr_key", _restart_label_key)
 		_apply_pause_button(restart_btn, _menu_row_height())
+		_bind_a11y_button(restart_btn)
+
+
+func _apply_a11y_labels() -> void:
+	if title_label:
+		title_label.accessibility_name = tr("UI_PAUSED")
+	for btn in [resume_btn, restart_btn, level_select_btn, achievements_btn, settings_btn, quit_btn]:
+		_bind_a11y_button(btn)
+
+
+func _bind_a11y_button(btn: Button) -> void:
+	if btn == null or not btn.visible:
+		return
+	var key := String(btn.get_meta("_tr_key", "")).strip_edges()
+	if key.is_empty():
+		return
+	A11yLabels.bind_button(btn, key)
 
 ## Refits rows and reapplies locale fonts after a language change.
 func _on_language_changed() -> void:
@@ -193,9 +238,11 @@ func set_debug_tools_visible(visible_state: bool) -> void:
 		auto_win_btn.visible = visible_state
 	_fit_menu_buttons()
 
-## Refits button rows when this control is resized.
+## Refits button rows when this control is resized or shown.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
+		call_deferred("_fit_menu_buttons")
+	elif what == NOTIFICATION_VISIBILITY_CHANGED and visible:
 		call_deferred("_fit_menu_buttons")
 
 ## Forwards Resume to the game scene.

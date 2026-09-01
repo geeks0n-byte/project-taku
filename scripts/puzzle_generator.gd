@@ -37,7 +37,8 @@ static func generate_random_layout(
 	current_layout: Dictionary = {},
 	require_unique: bool = true,
 	lock_walls: bool = false,
-	difficulty: int = Difficulty.MEDIUM
+	difficulty: int = Difficulty.MEDIUM,
+	quiet: bool = false
 ) -> Dictionary:
 	var attempt = 0
 	var punch_difficulty := clampi(difficulty, Difficulty.EASY, Difficulty.HARD)
@@ -386,7 +387,8 @@ static func generate_random_layout(
 			"required_shifter_moves": required_shifter_moves
 		}
 		
-	push_error("Generator failed: Generated walls may be mathematically impossible with the strict parity rules.")
+	if not quiet:
+		push_error("Generator failed: Generated walls may be mathematically impossible with the strict parity rules.")
 	return {}
 
 # Places a difficulty-scaled number of walls. Interior cells and 2×2 clusters are

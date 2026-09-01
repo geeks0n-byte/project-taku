@@ -326,7 +326,7 @@ anchor_right = 1.0
 offset_left = 24.0
 offset_top = 16.0
 offset_right = -24.0
-offset_bottom = 88.0
+offset_bottom = 112.0
 grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
@@ -349,8 +349,19 @@ theme_override_font_sizes/font_size = 16
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-auto_translate_mode = 1
-text = "UI_DEBUG_UNLOCK_ALL"
+auto_translate_mode = 0
+text = ""
+
+[node name="IconHost" type="Control" parent="DebugBarHost/DebugButtons/UnlockAllButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -1.0
+offset_bottom = -1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
 [node name="DeleteCustomButton" type="Button" parent="DebugBarHost/DebugButtons"]
 layout_mode = 2
@@ -362,8 +373,21 @@ theme_override_font_sizes/font_size = 16
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-auto_translate_mode = 1
-text = "UI_DEBUG_DEL_CUSTOM"
+auto_translate_mode = 0
+text = ""
+
+[node name="UnlockAchievementsButton" type="Button" parent="DebugBarHost/DebugButtons"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
+auto_translate_mode = 0
+text = ""
 
 [node name="StatusLabel" type="Label" parent="DebugBarHost"]
 visible = false

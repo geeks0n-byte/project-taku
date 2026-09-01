@@ -91,6 +91,7 @@ UI_CONFIRM_DELETE_CUSTOM,DELETE ALL CUSTOM LEVELS FROM THIS DEVICE?,¿BORRAR TOD
 UI_DELETE_CUSTOM,DELETE CUSTOM LEVELS,BORRAR NIVELES PERSONALIZADOS,BENUTZERDEFINIERTE LEVEL LÖSCHEN,SUPPRIMER NIVEAUX PERSONNALISÉS,USUŃ WŁASNE POZIOMY,საკუთარი დონეების წაშლა,ВИДАЛИТИ КОРИСТУВАЦЬКІ РІВНІ
 UI_UNLOCK_ALL_LEVELS,UNLOCK ALL LEVELS,DESBLOQUEAR TODOS LOS NIVELES,ALLE LEVEL FREISCHALTEN,DÉBLOQUER TOUS LES NIVEAUX,ODBLOKUJ WSZYSTKIE POZIOMY,ყველა დონის განბლოკვა,ВІДБЛОКУВАТИ ВСІ РІВНІ
 UI_DEBUG_UNLOCK_ALL,UNLOCK ALL,DESBLOQ. TODO,ALLE FREI,DÉBLOQ. TOUT,ODBLOKUJ WSZYST.,ყველა,ВСІ РІВНІ
+UI_DEBUG_UNLOCK_ACHIEVEMENTS,UNLOCK ACHIEVEMENTS,DESBLOQ. LOGROS,ALLE ERFOLGE,DÉBLOQ. SUCCÈS,ODBLOKUJ OSIĄGNIĘCIA,ყველა მიღწევა,ВСІ ДОСЯГНЕННЯ
 UI_DEBUG_DEL_CUSTOM,DEL CUSTOM,BORRAR CUSTOM,CUSTOM LÖSCHEN,SUPPR. CUSTOM,USUŃ CUSTOM,წაშლა CUSTOM,ВИД. CUSTOM
 UI_BG_DYNAMIC,BACKGROUND: DYNAMIC,FONDO: DINÁMICO,HINTERGRUND: DYNAMISCH,FOND : DYNAMIQUE,TŁO: DYNAMICZNE,ფონი: დინამიკური,ФОН: ДИНАМІЧНИЙ
 UI_BG_STATIC,BACKGROUND: STATIC,FONDO: ESTÁTICO,HINTERGRUND: STATISCH,FOND : STATIQUE,TŁO: STATYCZNE,ფონი: სტატიკური,ФОН: СТАТИЧНИЙ
@@ -114,7 +115,9 @@ UI_PRIVACY_OPTIONS_NOT_REQUIRED,Privacy options are not required for your region
 UI_SAVE_DELETED,SAVE DELETED! PROGRESS RESET.,¡PARTIDA BORRADA! PROGRESO RESTABLECIDO.,SPIELSTAND GELÖSCHT! FORTSCHRITT ZURÜCKGESETZT.,SAUVEGARDE SUPPRIMÉE ! PROGRESSION RÉINITIALISÉE.,ZAPIS USUNIĘTY! POSTĘP ZRESETOWANY.,შენახვა წაიშალა! პროგრესი განულდა.,ЗБЕРЕЖЕННЯ ВИДАЛЕНО! ПРОГРЕС СКИНУТО.
 UI_CUSTOM_DELETED,ALL CUSTOM LEVELS DELETED FROM THIS DEVICE,TODOS LOS NIVELES PERSONALIZADOS BORRADOS DE ESTE DISPOSITIVO,ALLE BENUTZERDEFINIERTEN LEVEL VON DIESEM GERÄT GELÖSCHT,TOUS LES NIVEAUX PERSONNALISÉS ONT ÉTÉ SUPPRIMÉS DE CET APPAREIL,WSZYSTKIE WŁASNE POZIOMY USUNIĘTE Z TEGO URZĄDZENIA,ყველა საკუთარი დონე წაიშალა ამ მოწყობილობიდან,ВСІ КОРИСТУВАЦЬКІ РІВНІ ВИДАЛЕНО З ЦЬОГО ПРИСТРОЮ
 UI_UNLOCK_ALL_DONE,ALL LEVELS UNLOCKED,TODOS LOS NIVELES DESBLOQUEADOS,ALLE LEVEL FREIGESCHALTET,TOUS LES NIVEAUX DÉBLOQUÉS,WSZYSTKIE POZIOMY ODBLOKOWANE,ყველა დონე განბლოკილია,УСІ РІВНІ ВІДБЛОКОВАНО
+UI_UNLOCK_ACHIEVEMENTS_DONE,ALL ACHIEVEMENTS UNLOCKED,TODOS LOS LOGROS DESBLOQUEADOS,ALLE ERFOLGE FREIGESCHALTET,TOUS LES SUCCÈS DÉBLOQUÉS,WSZYSTKIE OSIĄGNIĘCIA ODBLOKOWANE,ყველა მიღწევა განბლოკილია,УСІ ДОСЯГНЕННЯ ВІДБЛОКОВАНО
 UI_CONFIRM_UNLOCK_ALL,UNLOCK ALL LEVELS?,¿DESBLOQUEAR TODOS LOS NIVELES?,ALLE LEVEL FREISCHALTEN?,DÉBLOQUER TOUS LES NIVEAUX ?,ODBLOKOWAĆ WSZYSTKIE POZIOMY?,გსურთ ყველა დონის განბლოკვა?,ВІДБЛОКУВАТИ ВСІ РІВНІ?
+UI_CONFIRM_UNLOCK_ACHIEVEMENTS,UNLOCK ALL ACHIEVEMENTS?,¿DESBLOQUEAR TODOS LOS LOGROS?,ALLE ERFOLGE FREISCHALTEN?,DÉBLOQUER TOUS LES SUCCÈS ?,ODBLOKOWAĆ WSZYSTKIE OSIĄGNIĘCIA?,გსურთ ყველა მიღწევის განბლოკვა?,ВІДБЛОКУВАТИ ВСІ ДОСЯГНЕННЯ?
 UI_SELECT_LEVEL,SELECT LEVEL,SELECCIONAR NIVEL,LEVEL AUSWÄHLEN,CHOISIR LE NIVEAU,WYBIERZ POZIOM,დონის არჩევა,ВИБІР РІВНЯ
 UI_LEVEL_SELECT,LEVEL SELECT,ELEGIR NIVEL,LEVEL WÄHLEN,CHOISIR NIVEAU,WYBIERZ POZIOM,დონის არჩევა,ВИБРАТИ РІВЕНЬ
 UI_CORE,CORE,PRINCIPAL,HAUPT,PRINCIPAL,GŁÓWNE,მთავარი,ОСНОВНІ
@@ -468,7 +471,14 @@ UI_CLOUD_PLAY_GAMES_NEEDED,PLAY GAMES NEEDED,SE NECESITA PLAY GAMES,PLAY GAMES E
 UI_CLOUD_SYNCING,SYNCING...,SINCRONIZANDO...,SYNCHRONISIERE...,SYNCHRONISATION...,SYNCHRONIZUJĘ...,სინქრონიზაცია...,СИНХРОНІЗАЦІЯ...
 UI_CLOUD_SYNC_OK,CLOUD SYNCED,NUBE SINCRONIZADA,CLOUD SYNCHRONISIERT,NUAGE SYNCHRONISÉ,CHMURA ZSYNCHRONIZOWANA,სინქრონიზებულია,ХМАРУ СИНХРОНІЗОВАНО
 UI_CLOUD_SYNC_FAIL,SYNC FAILED,ERROR DE SINCRONIZACIÓN,SYNC FEHLGESCHLAGEN,ÉCHEC SYNCHRO,BŁĄD SYNCHRONIZACJI,სინქრონიზაცია ვერ მოხდა,ПОМИЛКА СИНХРОНІЗАЦІЇ
+UI_CLOUD_SYNC_CHOICE,"DEVICE: Level %d (%d stars)\nCLOUD: Level %d (%d stars)\n\nBoth saves share the same timestamp. Keep which copy?","DISPOSITIVO: Nivel %d (%d estrellas)\nNUBE: Nivel %d (%d estrellas)\n\nMisma marca de tiempo. ¿Cuál conservar?","GERÄT: Level %d (%d Sterne)\nCLOUD: Level %d (%d Sterne)\n\nGleicher Zeitstempel. Welche Kopie behalten?","APPAREIL : Niveau %d (%d étoiles)\nNUAGE : Niveau %d (%d étoiles)\n\nMême horodatage. Laquelle garder ?","URZĄDZENIE: Poziom %d (%d gwiazdek)\nCHMURA: Poziom %d (%d gwiazdek)\n\nTen sam znacznik czasu. Którą kopię zachować?","მოწყობილობა: დონე %d (%d ვარსკვლავი)\nღრუბელი: დონე %d (%d ვარსკვლავი)\n\nიგივე დრო. რომელი შევინახოთ?","ПРИСТРІЙ: Рівень %d (%d зірок)\nХМАРА: Рівень %d (%d зірок)\n\nОднакова мітка часу. Яку копію зберегти?"
+UI_CLOUD_KEEP_DEVICE,THIS DEVICE,ESTE DISPOSITIVO,DIESES GERÄT,CET APPAREIL,TO URZĄDZENIE,ეს მოწყობილობა,ЦЕЙ ПРИСТРІЙ
+UI_CLOUD_KEEP_CLOUD,CLOUD SAVE,NUBE,CLOUD,NUAGE,CHMURA,ღრუბელი,ХМАРА
+UI_ACHIEVEMENTS_PROGRESS,%d / %d,%d / %d,%d / %d,%d / %d,%d / %d,%d / %d,%d / %d
 ACH_UNLOCKED,UNLOCKED,DESBLOQUEADO,FREIGESCHALTET,DÉBLOQUÉ,ODBLOKOWANO,გაიხსნა,ВІДКРИТО
+ACH_TIER_BRONZE,BRONZE,BRONCE,BRONZE,BRONZE,BRĄZ,ბრინჯაო,БРОНЗА
+ACH_TIER_SILVER,SILVER,PLATA,SILBER,ARGENT,SREBRO,ვერცხლი,СЕРЕБЛО
+ACH_TIER_GOLD,GOLD,ORO,GOLD,OR,ZŁOTO,ოქრო,ЗОЛОТО
 ACH_LOCKED,LOCKED,BLOQUEADO,GESPERRT,VERROUILLÉ,ZABLOKOWANE,დაბლოკილი,ЗАБЛОКОВАНО
 ACH_HIDDEN_NAME,???,???,???,???,???,???,???
 ACH_FIRST_CLEAR_NAME,FIRST CLEAR,PRIMERA VICTORIA,ERSTER SIEG,PREMIÈRE VICTOIRE,PIERWSZE UKOŃCZENIE,პირველი გავლა,ПЕРШЕ ПРОХОДЖЕННЯ
@@ -502,7 +512,7 @@ ACH_ON_TIME_GOLD_DESC,Clear unique campaign puzzles in time,Completa puzles úni
 ACH_THREE_STAR_DEBUT_NAME,THREE STAR DEBUT,DEBUT DE TRES ESTRELLAS,DREI-STERNE-DEBÜT,DÉBUT TROIS ÉTOILES,DEBIUT TRZECH GWIAZD,სამი ვარსკვლავის დებიუტი,ДЕБЮТ ТРЬОХ ЗІРОК
 ACH_THREE_STAR_DEBUT_DESC,Earn all three stars on a campaign puzzle,Gana las tres estrellas en un puzle de campaña,Verdiene alle drei Sterne in einem Kampagnen-Rätsel,Gagnez les trois étoiles sur un puzzle de campagne,Zdobądź wszystkie trzy gwiazdy w zagadce kampanii,მოიპოვეთ სამივე ვარსკვლავი კამპანიის თავსატეხზე,Заробіть усі три зірки на головоломці кампанії
 ACH_UNDO_NOTHING_NAME,UNDO NOTHING,SIN DESHACER,KEIN RÜCKGÄNGIG,PAS D'ANNULATION,BEZ COFANIA,დაბრუნების გარეშე,БЕЗ СКАСУВАННЯ
-ACH_UNDO_NOTHING_DESC,Clear a campaign puzzle without using undo,Completa un puzle de campaña sin deshacer,Löse ein Kampagnen-Rätsel ohne Rückgängig,Terminez un puzzle de campagne sans annulation,Ukończ zagadkę kampanii bez cofania,გაიარეთ კამპანიის თავსატეხი დაბრუნების გარეშე,Пройдіть головоломку кампанії без скасування
+ACH_UNDO_NOTHING_DESC,Clear a hard campaign puzzle without using undo,Completa un puzle difícil de campaña sin deshacer,Löse ein schweres Kampagnen-Rätsel ohne Rückgängig,Terminez un puzzle de campagne difficile sans annulation,Ukończ trudną zagadkę kampanii bez cofania,გაიარეთ რთული კამპანიის თავსატეხი დაბრუნების გარეშე,Пройдіть складну головоломку кампанії без скасування
 ACH_AD_FRIEND_NAME,AD FRIEND,AMIGO DEL ANUNCIO,WERBEFREUND,AMI DE LA PUB,PRZYJACIEL REKLAM,რекლამის მეგობარი,ДРУГ РЕКЛАМИ
 ACH_AD_FRIEND_DESC,Watch a rewarded ad for hints,Mira un anuncio con recompensa por pistas,Sieh dir eine belohnte Werbung für Hinweise an,Regardez une pub récompensée pour des indices,Obejrzyj reklamę z nagrodą za wskazówki,ნახეთ საჩუქრიანი რეკლამა მინიშნებებისთვის,Перегляньте рекламу з винагородою за підказки
 ACH_IM_BLUE_NAME,I'M BLUE,SOY AZUL,ICH BIN BLAU,JE SUIS BLEU,JESTEM NIEBIESKI,მე ლურჯი ვარ,Я СИНІЙ
@@ -510,7 +520,7 @@ ACH_IM_BLUE_DESC,Fill every empty cell with blue,Rellena cada celda vacía con a
 ACH_SHALL_NOT_PASS_NAME,YOU SHALL NOT PASS,NO PASARÁS,DU KOMMST NICHT VORBEI,TU NE PASSERAS PAS,NIE PRZEJDZIESZ,არ გაივლი,ТИ НЕ ПРОЙДЕШ
 ACH_SHALL_NOT_PASS_DESC,Try to hop a shifter that cannot move,Intenta saltar con un shifter que no puede moverse,Versuche einen Shifter zu springen der sich nicht bewegen kann,Essayez de sauter avec un shifter qui ne peut pas bouger,Spróbuj przeskoczyć shifterem który nie może się ruszyć,სცადეთ გადახტომა shifter-ით რომელიც ვერ მოძრაობს,Спробуйте стрибнути shifter-ом який не може рухатися
 ACH_RULES_READER_NAME,RULES READER,LECTOR DE REGLAS,REGELLESER,LECTEUR DES RÈGLES,CZYTELNIK ZASAD,წესების მკითხველი,ЧИТАЧ ПРАВИЛ
-ACH_RULES_READER_DESC,Open the rules ten times,Abre las reglas diez veces,Öffne die Regeln zehn Mal,Ouvrez les règles dix fois,Otwórz zasady dziesięć razy,გახსენით წესები ათჯერ,Відкрийте правила десять разів
+ACH_RULES_READER_DESC,Open the rules on ten different levels,Abre las reglas en diez niveles distintos,Öffne die Regeln auf zehn verschiedenen Leveln,Ouvrez les règles sur dix niveaux différents,Otwórz zasady na dziesięciu różnych poziomach,გახსენით წესები ათ სხვადასხვა დონეზე,Відкрийте правила на десяти різних рівнях
 ACH_PURPLE_RAIN_NAME,PURPLE RAIN,LLUVIA MORADA,LILA REGEN,PLUIE VIOLETTE,FIOLETOWY DESZCZ,იისფერი წვიმა,ФІОЛЕТОВИЙ ДОЩ
 ACH_PURPLE_RAIN_DESC,Make 30 shifter slides,Haz 30 deslizamientos de shifter,Mache 30 Shifter-Rutschen,Effectuez 30 glissades de shifter,Wykonaj 30 przesunięć shiftera,გააკეთეთ 30 shifter-ის გადახვევა,Зробіть 30 ковзань shifter
 ACH_YELLOW_SUBMARINE_NAME,YELLOW SUBMARINE,SUBMARINO AMARILLO,GELBES U-BOOT,SOUS-MARIN JAUNE,ŻÓŁTA ŁÓDŹ PODWODNA,ყვითელი საზღვაო ქვედანი,ЖОВТИЙ ПІДВОДНИЙ ЧОВЕН

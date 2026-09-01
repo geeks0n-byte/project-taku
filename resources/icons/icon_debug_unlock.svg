@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="120" height="120" shape-rendering="crispEdges">
+  <!-- DEBUG UNLOCK — tile_lock shape, open shackle (one pixel removed), gold palette -->
+  <g transform="translate(5,5)">
+    <rect x="2" y="0" width="2" height="1" fill="#ffe066"/>
+    <rect x="1" y="1" width="1" height="2" fill="#ffe066"/>
+    <rect x="4" y="1" width="1" height="1" fill="#ffe066"/>
+    <rect x="0" y="3" width="6" height="4" fill="#c49c00"/>
+    <rect x="1" y="4" width="4" height="1" fill="#ffec27"/>
+    <rect x="2" y="5" width="2" height="1" fill="#704700"/>
+  </g>
+</svg>

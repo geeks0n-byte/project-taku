@@ -30,16 +30,34 @@ const ANDROID_SPLASH_ICON_DP := 288.0
 const BOOT_TILE_VIEWBOX_UNITS := 16.0
 const BOOT_TILE_DRAWABLE_UNITS := 14.0
 const BOOT_ICON_LOGICAL_PX := 64
+const BOOT_TILE_DST := 16
+const BOOT_TILE_GAP := 3
+const BOOT_TILE_HALO := 1
+const BOOT_TILE_STRIDE := BOOT_TILE_DST - 2 * BOOT_TILE_HALO + BOOT_TILE_GAP
+const BOOT_TILE_MARGIN := (BOOT_ICON_LOGICAL_PX - (BOOT_TILE_STRIDE + BOOT_TILE_DST)) >> 1
 ## Typical phone logical width (dp) used when DisplayServer DPI is unavailable.
 const ANDROID_PHONE_WIDTH_DP := 411.0
 
-## UI density scale (px per dp). Uses screen DPI, else viewport width heuristic.
+## UI density scale (px per dp). Android matches the OS splash (dpi/160).
+## Headless/desktop use viewport width — DisplayServer DPI is often bogus (96).
 static func android_ui_density(viewport_width_px: float = 0.0) -> float:
+	var viewport_density := 0.0
+	if viewport_width_px > 0.0:
+		viewport_density = viewport_width_px / ANDROID_PHONE_WIDTH_DP
+	var dpi_density := 0.0
 	var dpi := float(DisplayServer.screen_get_dpi())
 	if dpi > 0.0:
-		return dpi / 160.0
-	if viewport_width_px > 0.0:
-		return viewport_width_px / ANDROID_PHONE_WIDTH_DP
+		dpi_density = dpi / 160.0
+	if is_headless_run():
+		if viewport_density > 0.0:
+			return viewport_density
+		return 1080.0 / ANDROID_PHONE_WIDTH_DP
+	if OS.get_name() == "Android" and dpi_density > 0.0:
+		return dpi_density
+	if viewport_density > 0.0:
+		return viewport_density
+	if dpi_density > 0.0:
+		return dpi_density
 	return 1080.0 / ANDROID_PHONE_WIDTH_DP
 
 
@@ -71,19 +89,14 @@ static func boot_splash_icon_layout(view_rect: Rect2) -> Dictionary:
 	var view_origin := view_rect.position
 	var side := android_splash_icon_side_px(viewport_size)
 	var icon_scale := side / float(BOOT_ICON_LOGICAL_PX)
-	const TILE_DST := 16
-	const TILE_GAP := 3
-	const TILE_HALO := 1
-	const TILE_STRIDE := TILE_DST - 2 * TILE_HALO + TILE_GAP
-	const TILE_MARGIN := (BOOT_ICON_LOGICAL_PX - (TILE_STRIDE + TILE_DST)) >> 1
-	var tile_px := float(TILE_DST) * icon_scale
+	var tile_px := float(BOOT_TILE_DST) * icon_scale
 	var origin := view_origin + (viewport_size - Vector2.ONE * side) * 0.5
 	var centers: Array[Vector2] = []
 	var icon_origins: Array[Vector2i] = [
-		Vector2i(TILE_MARGIN, TILE_MARGIN),
-		Vector2i(TILE_MARGIN + TILE_STRIDE, TILE_MARGIN),
-		Vector2i(TILE_MARGIN, TILE_MARGIN + TILE_STRIDE),
-		Vector2i(TILE_MARGIN + TILE_STRIDE, TILE_MARGIN + TILE_STRIDE),
+		Vector2i(BOOT_TILE_MARGIN, BOOT_TILE_MARGIN),
+		Vector2i(BOOT_TILE_MARGIN + BOOT_TILE_STRIDE, BOOT_TILE_MARGIN),
+		Vector2i(BOOT_TILE_MARGIN, BOOT_TILE_MARGIN + BOOT_TILE_STRIDE),
+		Vector2i(BOOT_TILE_MARGIN + BOOT_TILE_STRIDE, BOOT_TILE_MARGIN + BOOT_TILE_STRIDE),
 	]
 	for icon_origin in icon_origins:
 		var tile_origin := Vector2(icon_origin) * icon_scale
@@ -109,6 +122,15 @@ const HINT_LIMIT_MEDIUM := 3
 const HINT_LIMIT_HARD := 5
 const HINT_LIMIT_UNLIMITED := -1
 const HINTS_FROM_REWARDED_AD := 3
+## Wall-clock budget for procedural board generation inside the loading overlay.
+const GENERATOR_WALL_CLOCK_SEC := 8.0
+
+## In-app review prompt policy (Google Play).
+const REVIEW_MIN_UNIQUE_CLEARS := 5
+const REVIEW_MIN_EARNED_STARS := 2
+const REVIEW_MAX_PROMPTS := 3
+const REVIEW_MIN_DAYS_BETWEEN := 90
+const REVIEW_MIN_SESSION_SEC := 300.0
 
 # Interstitial cadence (session-only; see AdsManager).
 # First interstitial waits for both a min win count and a min session age so
@@ -260,3 +282,22 @@ static func hint_limit_for_difficulty(difficulty: int) -> int:
 			return HINT_LIMIT_HARD
 		_:
 			return HINT_LIMIT_MEDIUM
+
+
+## True when running without a display (CI, `godot --headless -s`, export pipelines).
+## `OS.has_feature("headless")` is not set for `--headless` CLI launches.
+static func is_headless_run() -> bool:
+	if OS.has_feature("headless"):
+		return true
+	if DisplayServer.get_name().to_lower() == "headless":
+		return true
+	var args := OS.get_cmdline_args()
+	for i in range(args.size()):
+		var arg: String = args[i]
+		if arg == "--headless":
+			return true
+		if arg == "--display-driver" and i + 1 < args.size() and args[i + 1] == "headless":
+			return true
+		if arg.begins_with("--display-driver=") and arg.get_slice("=", 1) == "headless":
+			return true
+	return false

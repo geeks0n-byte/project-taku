@@ -47,7 +47,7 @@ func initialize() -> PlayGamesPluginError:
 				image_stored.emit(file_path)
 			)
 			return PlayGamesPluginError.OK
-		else:
+		elif OS.get_name() == "Android":
 			printerr("GodotPlayGameServices not found. Google Play Games Services will not work.")
 	
 	return PlayGamesPluginError.PLUGIN_NOT_FOUND

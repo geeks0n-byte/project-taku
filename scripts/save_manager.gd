@@ -2,8 +2,13 @@ extends Node
 ## Autoload for progression.cfg: unlocks, settings, locale fonts, and in-progress sessions.
 
 const SAVE_PATH = "user://progression.cfg"
-const SAVE_FORMAT_VERSION := 2
-const SUPPORTED_LANGUAGES := ["en", "es", "de", "fr", "pl", "ka", "uk"]
+const SAVE_TEMP_PATH = "user://progression.cfg.tmp"
+const SAVE_FORMAT_VERSION := 3
+const SUPPORTED_LANGUAGES := ["en", "es", "de", "fr", "pl", "ka", "uk", Pseudolocale.LOCALE]
+const PSEUDO_LOCALE := Pseudolocale.LOCALE
+const _TranslationHygiene := preload("res://scripts/translation_hygiene.gd")
+const _PseudolocaleTranslation := preload("res://scripts/pseudolocale_translation.gd")
+const _SessionSerialization := preload("res://scripts/session_serialization.gd")
 
 signal language_changed
 signal unseen_levels_changed(count: int)
@@ -33,16 +38,18 @@ var achievements_seen: Dictionary = {}
 var levels_unseen: Dictionary = {}
 # Campaign clears with zero hints (hint_saver / no_hint family progress).
 var no_hint_clears: int = 0
-# Replay-counting campaign victories (clears family). Not unique max_unlocked.
-var campaign_wins: int = 0
 # Campaign victories that earned the time star (on_time family).
 var on_time_clears: int = 0
 # Lifetime shifter slides (purple_rain).
 var shifter_slides: int = 0
-# Lifetime rules overlay opens (rules_reader).
-var rules_opens: int = 0
+# Campaign level numbers where the player opened rules (rules_reader).
+var rules_open_levels: Dictionary = {}
 # Last local save time (unix seconds) for cloud conflict resolution.
 var updated_unix: int = 0
+# In-app review prompt bookkeeping.
+var review_prompt_count: int = 0
+var review_last_prompt_unix: int = 0
+var first_play_unix: int = 0
 
 ## Loads save data, applies background mode, and walks new text controls for locale fonts.
 func _ready() -> void:
@@ -111,33 +118,8 @@ func _sync_translations_from_csv() -> void:
 func _verify_translation_hygiene() -> void:
 	if not OS.has_feature("editor"):
 		return
-	const CSV_PATH := "res://resources/localization/translations.csv"
-	if not FileAccess.file_exists(CSV_PATH):
-		push_warning("translations.csv missing — exported builds rely on .translation files")
-		return
-	var file := FileAccess.open(CSV_PATH, FileAccess.READ)
-	if file == null:
-		return
-	var headers: PackedStringArray = file.get_csv_line()
-	var expected := headers.size()
-	var empty_cells := 0
-	var rows := 0
-	while not file.eof_reached():
-		var row: PackedStringArray = file.get_csv_line()
-		if row.is_empty() or String(row[0]).strip_edges().is_empty():
-			continue
-		rows += 1
-		if row.size() != expected:
-			continue
-		for i in range(1, expected):
-			if String(row[i]).is_empty():
-				empty_cells += 1
-	file.close()
-	for code in SUPPORTED_LANGUAGES:
-		if not headers.has(code):
-			push_warning("translations.csv missing locale column: %s" % code)
-	if empty_cells > 0:
-		push_warning("translations.csv: %d empty cell(s) across %d keys — fill before shipping" % [empty_cells, rows])
+	for issue in _TranslationHygiene.audit():
+		push_warning(issue)
 
 ## Level number of the first easy campaign puzzle (unlock floor for new saves).
 func get_campaign_start_unlock() -> int:
@@ -198,38 +180,45 @@ func load_progress() -> void:
 		levels_unseen = config.get_value("Progression", "levels_unseen", {})
 		if typeof(levels_unseen) != TYPE_DICTIONARY:
 			levels_unseen = {}
-		# Existing installs: do not badge old unlocks the first time we track "seen".
-		if achievements_seen.is_empty() and not achievements_unlocked.is_empty():
-			mark_achievements_seen()
 		no_hint_clears = int(config.get_value("Achievements", "no_hint_clears", 0))
-		campaign_wins = int(config.get_value("Achievements", "campaign_wins", 0))
 		on_time_clears = int(config.get_value("Achievements", "on_time_clears", 0))
 		shifter_slides = int(config.get_value("Achievements", "shifter_slides", 0))
-		rules_opens = int(config.get_value("Achievements", "rules_opens", 0))
+		rules_open_levels = config.get_value("Achievements", "rules_open_levels", {})
+		if typeof(rules_open_levels) != TYPE_DICTIONARY:
+			rules_open_levels = {}
 		updated_unix = int(config.get_value("Meta", "updated_unix", 0))
+		review_prompt_count = int(config.get_value("Meta", "review_prompt_count", 0))
+		review_last_prompt_unix = int(config.get_value("Meta", "review_last_prompt_unix", 0))
+		first_play_unix = int(config.get_value("Meta", "first_play_unix", 0))
 		if not SUPPORTED_LANGUAGES.has(current_language):
 			current_language = "en"
-		TranslationServer.set_locale(current_language)
+		_apply_translation_locale(current_language)
 		if save_version < SAVE_FORMAT_VERSION:
 			save_progress()
+	elif err == ERR_FILE_NOT_FOUND:
+		_seed_new_save()
 	else:
-		current_language = _detect_system_language()
-		TranslationServer.set_locale(current_language)
-		session_data = {}
-		tutorial_intro_answered = false
-		ads_wins_since_interstitial = 0
-		achievements_unlocked = {}
-		achievements_seen = {}
-		levels_unseen = {}
-		no_hint_clears = 0
-		campaign_wins = 0
-		on_time_clears = 0
-		shifter_slides = 0
-		rules_opens = 0
-		updated_unix = 0
-		max_unlocked_level = get_campaign_start_unlock()
-		save_progress()
+		push_error("SaveManager: failed to load %s (error %d) — starting fresh" % [SAVE_PATH, err])
+		_seed_new_save()
 	_ensure_campaign_start_unlock()
+
+## Initializes default progression for a missing or unreadable save file.
+func _seed_new_save() -> void:
+	current_language = _detect_system_language()
+	_apply_translation_locale(current_language)
+	session_data = {}
+	tutorial_intro_answered = false
+	ads_wins_since_interstitial = 0
+	achievements_unlocked = {}
+	achievements_seen = {}
+	levels_unseen = {}
+	no_hint_clears = 0
+	on_time_clears = 0
+	shifter_slides = 0
+	rules_open_levels = {}
+	updated_unix = 0
+	max_unlocked_level = get_campaign_start_unlock()
+	save_progress()
 
 ## Migrates older progression.cfg shapes in-place before fields are read.
 func _migrate_save(config: ConfigFile, from_version: int) -> void:
@@ -254,6 +243,11 @@ func save_progress() -> void:
 	updated_unix = int(Time.get_unix_time_from_system())
 	config.set_value("Meta", "version", SAVE_FORMAT_VERSION)
 	config.set_value("Meta", "updated_unix", updated_unix)
+	config.set_value("Meta", "review_prompt_count", review_prompt_count)
+	config.set_value("Meta", "review_last_prompt_unix", review_last_prompt_unix)
+	if first_play_unix <= 0:
+		first_play_unix = updated_unix
+	config.set_value("Meta", "first_play_unix", first_play_unix)
 	config.set_value("Progression", "max_unlocked_level", max_unlocked_level)
 	config.set_value("Progression", "current_language", current_language)
 	config.set_value("Progression", "background_static", background_static)
@@ -270,16 +264,30 @@ func save_progress() -> void:
 	config.set_value("Achievements", "unlocked", achievements_unlocked)
 	config.set_value("Achievements", "seen", achievements_seen)
 	config.set_value("Achievements", "no_hint_clears", no_hint_clears)
-	config.set_value("Achievements", "campaign_wins", campaign_wins)
 	config.set_value("Achievements", "on_time_clears", on_time_clears)
 	config.set_value("Achievements", "shifter_slides", shifter_slides)
-	config.set_value("Achievements", "rules_opens", rules_opens)
+	config.set_value("Achievements", "rules_open_levels", rules_open_levels)
 	if session_data.is_empty():
 		if config.has_section("Session"):
 			config.erase_section("Session")
 	else:
 		config.set_value("Session", "data", session_data)
-	config.save(SAVE_PATH)
+	var save_err := config.save(SAVE_TEMP_PATH)
+	if save_err != OK:
+		push_error("SaveManager: failed to write %s (error %d)" % [SAVE_TEMP_PATH, save_err])
+		return
+	var dir := DirAccess.open("user://")
+	if dir == null:
+		push_error("SaveManager: failed to open user:// for atomic save")
+		return
+	if dir.file_exists("progression.cfg"):
+		var remove_err := dir.remove("progression.cfg")
+		if remove_err != OK:
+			push_error("SaveManager: failed to replace %s (error %d)" % [SAVE_PATH, remove_err])
+			return
+	var rename_err := dir.rename("progression.cfg.tmp", "progression.cfg")
+	if rename_err != OK:
+		push_error("SaveManager: failed to finalize %s (error %d)" % [SAVE_PATH, rename_err])
 
 ## Counts a win/restart toward the next interstitial.
 func record_ad_win() -> void:
@@ -296,16 +304,28 @@ func consume_interstitial_wins() -> void:
 	save_progress()
 
 var _locale_fonts_deferred: bool = false
+var _pseudolocale_translation: Translation = null
 
 ## Persists locale, emits language_changed, then defers a single font walk.
 func set_language(lang_code: String) -> void:
 	current_language = lang_code
-	TranslationServer.set_locale(lang_code)
+	_apply_translation_locale(lang_code)
 	HudFonts.clear_pixel_text_cache()
 	save_progress()
 	# Listeners refresh translated copy first; fonts run once after (deferred).
 	language_changed.emit()
 	request_locale_fonts()
+
+
+func _apply_translation_locale(lang_code: String) -> void:
+	if lang_code == PSEUDO_LOCALE:
+		if _pseudolocale_translation == null:
+			_pseudolocale_translation = _PseudolocaleTranslation.new()
+			_pseudolocale_translation.locale = PSEUDO_LOCALE
+			TranslationServer.add_translation(_pseudolocale_translation)
+		TranslationServer.set_locale(PSEUDO_LOCALE)
+		return
+	TranslationServer.set_locale(lang_code)
 
 ## Coalesces locale font walks onto the next idle frame.
 func request_locale_fonts() -> void:
@@ -383,10 +403,11 @@ func _apply_background_mode() -> void:
 		SpaceBackground.set_static_mode(background_static)
 
 ## Raises max_unlocked_level when this number is new, then saves.
-func unlock_level(level_num: int) -> void:
+func unlock_level(level_num: int, mark_unseen: bool = true) -> void:
 	if level_num > max_unlocked_level:
 		max_unlocked_level = level_num
-		levels_unseen[str(level_num)] = true
+		if mark_unseen:
+			levels_unseen[str(level_num)] = true
 		save_progress()
 		unseen_levels_changed.emit(unseen_level_count())
 
@@ -404,6 +425,38 @@ func mark_level_seen(level_num: int) -> void:
 	levels_unseen.erase(key)
 	save_progress()
 	unseen_levels_changed.emit(unseen_level_count())
+
+
+## Count of unique campaign levels where rules were opened.
+func rules_open_level_count() -> int:
+	return rules_open_levels.size()
+
+
+## Records a rules overlay open for `level` (campaign only). Returns true when newly counted.
+func record_rules_opened(level: LevelData) -> bool:
+	var key := rules_level_key(level)
+	if key.is_empty() or rules_open_levels.has(key):
+		return false
+	rules_open_levels[key] = true
+	return true
+
+
+## Stable save key for rules_reader progress (campaign level numbers only).
+static func rules_level_key(level: LevelData) -> String:
+	if level == null:
+		return ""
+	var path := String(level.resource_path)
+	if path.begins_with("user://"):
+		return ""
+	if path.begins_with(GameConstants.CAMPAIGN_TUTORIALS_DIR):
+		return ""
+	if not (
+		path.begins_with(GameConstants.CAMPAIGN_EASY_DIR)
+		or path.begins_with(GameConstants.CAMPAIGN_MEDIUM_DIR)
+		or path.begins_with(GameConstants.CAMPAIGN_HARD_DIR)
+	):
+		return ""
+	return str(level.level_number)
 
 
 ## Count of unlocked levels the player has not opened or played yet.
@@ -455,12 +508,31 @@ func has_session_for(level: LevelData) -> bool:
 func load_session() -> Dictionary:
 	if not has_session():
 		return {}
-	return _deserialize_session(session_data)
+	return _SessionSerialization.deserialize_session(session_data)
 
 ## Serializes an in-progress run into progression.cfg.
 func save_session(data: Dictionary) -> void:
-	session_data = _serialize_session(data)
+	session_data = _SessionSerialization.serialize_session(data)
 	save_progress()
+
+## Marks achievement ids as seen after the player viewed their list page(s).
+func mark_achievements_seen_for_ids(ids: Array) -> void:
+	var changed := false
+	for raw_id in ids:
+		var sid := str(raw_id)
+		if not achievements_unlocked.has(sid) or achievements_seen.has(sid):
+			continue
+		achievements_seen[sid] = true
+		changed = true
+	if changed:
+		save_progress()
+
+
+## True when an unlocked achievement has not yet been viewed on its list page.
+func is_achievement_unseen(id: String) -> bool:
+	var sid := str(id)
+	return achievements_unlocked.has(sid) and not achievements_seen.has(sid)
+
 
 ## Marks every current unlock as seen in the achievements list (clears the menu badge).
 func mark_achievements_seen() -> void:
@@ -503,17 +575,26 @@ func delete_save_file() -> void:
 	achievements_seen.clear()
 	levels_unseen.clear()
 	no_hint_clears = 0
-	campaign_wins = 0
 	on_time_clears = 0
 	shifter_slides = 0
-	rules_opens = 0
+	rules_open_levels.clear()
 	updated_unix = 0
+	review_prompt_count = 0
+	review_last_prompt_unix = 0
+	first_play_unix = int(Time.get_unix_time_from_system())
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(SAVE_PATH)
 	save_progress()
 	unseen_levels_changed.emit(0)
 	if AchievementManager:
 		AchievementManager.notify_unseen_changed()
+
+
+## Records that the in-app review flow was requested (quota + spacing).
+func record_review_prompt() -> void:
+	review_prompt_count += 1
+	review_last_prompt_unix = int(Time.get_unix_time_from_system())
+	save_progress()
 
 ## Remembers whether the first-run tutorial prompt was answered.
 func set_tutorial_intro_answered(answered: bool = true) -> void:
@@ -546,7 +627,7 @@ func export_cloud_payload() -> Dictionary:
 			"privacy_accepted": privacy_accepted,
 		},
 		{
-			"current_language": current_language,
+			"current_language": "en" if current_language == PSEUDO_LOCALE else current_language,
 			"background_static": background_static,
 			"bgm_enabled": bgm_enabled,
 			"sfx_enabled": sfx_enabled,
@@ -555,10 +636,9 @@ func export_cloud_payload() -> Dictionary:
 		{
 			"unlocked": achievements_unlocked.duplicate(true),
 			"no_hint_clears": no_hint_clears,
-			"campaign_wins": campaign_wins,
 			"on_time_clears": on_time_clears,
 			"shifter_slides": shifter_slides,
-			"rules_opens": rules_opens,
+			"rules_open_levels": rules_open_levels.duplicate(true),
 		},
 		ts
 	)
@@ -581,9 +661,11 @@ func apply_cloud_payload(blob: Dictionary) -> void:
 		completed_tutorial_scripts = scripts
 	privacy_accepted = bool(progress.get("privacy_accepted", privacy_accepted))
 	var lang := str(settings.get("current_language", current_language))
+	if lang == PSEUDO_LOCALE:
+		lang = "en"
 	if SUPPORTED_LANGUAGES.has(lang):
 		current_language = lang
-		TranslationServer.set_locale(current_language)
+		_apply_translation_locale(current_language)
 	background_static = bool(settings.get("background_static", background_static))
 	bgm_enabled = bool(settings.get("bgm_enabled", bgm_enabled))
 	sfx_enabled = bool(settings.get("sfx_enabled", sfx_enabled))
@@ -592,10 +674,11 @@ func apply_cloud_payload(blob: Dictionary) -> void:
 	if typeof(unlocked) == TYPE_DICTIONARY:
 		achievements_unlocked = unlocked
 	no_hint_clears = int(ach.get("no_hint_clears", no_hint_clears))
-	campaign_wins = int(ach.get("campaign_wins", campaign_wins))
 	on_time_clears = int(ach.get("on_time_clears", on_time_clears))
 	shifter_slides = int(ach.get("shifter_slides", shifter_slides))
-	rules_opens = int(ach.get("rules_opens", rules_opens))
+	var rules_levels = ach.get("rules_open_levels", rules_open_levels)
+	if typeof(rules_levels) == TYPE_DICTIONARY:
+		rules_open_levels = rules_levels
 	updated_unix = int(blob.get("timestamp", updated_unix))
 	_apply_background_mode()
 	if BgmManager and BgmManager.has_method("apply_enabled"):
@@ -603,205 +686,3 @@ func apply_cloud_payload(blob: Dictionary) -> void:
 	save_progress()
 	language_changed.emit()
 	request_locale_fonts()
-
-## Vector2i as "x,y" for ConfigFile-friendly dictionary keys.
-static func _coord_key(v: Vector2i) -> String:
-	return "%d,%d" % [v.x, v.y]
-
-## Parses "x,y" back to Vector2i (ZERO if malformed).
-static func _parse_coord_key(s: String) -> Vector2i:
-	var parts := str(s).split(",")
-	if parts.size() < 2:
-		return Vector2i.ZERO
-	return Vector2i(int(parts[0]), int(parts[1]))
-
-## Vector2i as a two-int array for JSON/ConfigFile.
-static func _serialize_vec(v: Vector2i) -> Array:
-	return [v.x, v.y]
-
-## Vector2i from a stored array or Vector2i; ZERO if unknown.
-static func _deserialize_vec(val: Variant) -> Vector2i:
-	if typeof(val) == TYPE_VECTOR2I:
-		return val
-	if typeof(val) == TYPE_ARRAY and val.size() >= 2:
-		return Vector2i(int(val[0]), int(val[1]))
-	return Vector2i.ZERO
-
-## Dictionary keys as "x,y" strings.
-static func _serialize_coord_dict(src: Dictionary) -> Dictionary:
-	var out := {}
-	for key in src:
-		var k: String = str(key) if typeof(key) == TYPE_STRING else _coord_key(key as Vector2i)
-		out[k] = src[key]
-	return out
-
-## Dictionary keys back to Vector2i.
-static func _deserialize_coord_dict(src: Dictionary) -> Dictionary:
-	var out := {}
-	for key in src:
-		out[_parse_coord_key(str(key))] = src[key]
-	return out
-
-## Shifter/constraint pair arrays with Vector2i fields turned into arrays.
-static func _serialize_pairs(pairs: Array) -> Array:
-	var out: Array = []
-	for pair in pairs:
-		if typeof(pair) != TYPE_DICTIONARY:
-			continue
-		var d := {}
-		for key in pair:
-			var val = pair[key]
-			if typeof(val) == TYPE_VECTOR2I:
-				d[key] = _serialize_vec(val)
-			else:
-				d[key] = val
-		out.append(d)
-	return out
-
-## Pair arrays with Vector2i fields restored.
-static func _deserialize_pairs(pairs: Array) -> Array:
-	var out: Array = []
-	for pair in pairs:
-		if typeof(pair) != TYPE_DICTIONARY:
-			continue
-		var d := {}
-		for key in pair:
-			var val = pair[key]
-			if key == "type" or key == "state":
-				d[key] = val
-			elif typeof(val) == TYPE_ARRAY or typeof(val) == TYPE_VECTOR2I:
-				d[key] = _deserialize_vec(val)
-			else:
-				d[key] = val
-		out.append(d)
-	return out
-
-## Cell snapshot dict: coord keys as strings, nested dictionaries copied.
-static func _serialize_cells(cells: Dictionary) -> Dictionary:
-	var out := {}
-	for key in cells:
-		var k: String = str(key) if typeof(key) == TYPE_STRING else _coord_key(key as Vector2i)
-		var entry = cells[key]
-		if typeof(entry) != TYPE_DICTIONARY:
-			continue
-		var dir_val = entry.get("shifter_direction", Vector2i.ZERO)
-		var dir: Vector2i = dir_val if typeof(dir_val) == TYPE_VECTOR2I else _deserialize_vec(dir_val)
-		out[k] = {
-			"state": int(entry.get("state", 0)),
-			"shifter_direction": _serialize_vec(dir),
-		}
-	return out
-
-## Cell snapshot dict with Vector2i keys restored.
-static func _deserialize_cells(cells: Dictionary) -> Dictionary:
-	var out := {}
-	for key in cells:
-		var entry = cells[key]
-		if typeof(entry) != TYPE_DICTIONARY:
-			continue
-		out[_parse_coord_key(str(key))] = {
-			"state": int(entry.get("state", 0)),
-			"shifter_direction": _deserialize_vec(entry.get("shifter_direction", [0, 0])),
-		}
-	return out
-
-## In-progress run as a ConfigFile-safe dictionary.
-static func _serialize_session(data: Dictionary) -> Dictionary:
-	return {
-		"level_path": str(data.get("level_path", "")),
-		"level_number": int(data.get("level_number", 0)),
-		"elapsed_seconds": int(data.get("elapsed_seconds", 0)),
-		"shifter_move_count": int(data.get("shifter_move_count", 0)),
-		"hints_used": int(data.get("hints_used", 0)),
-		"required_jokers": int(data.get("required_jokers", 0)),
-		"required_shifter_moves": int(data.get("required_shifter_moves", 0)),
-		"has_shifters": bool(data.get("has_shifters", false)),
-		"prefer_hidden_hints": bool(data.get("prefer_hidden_hints", false)),
-		"challenges_disabled": bool(data.get("challenges_disabled", false)),
-		"star_time_limit": int(data.get("star_time_limit", 0)),
-		"hints_remaining": int(data.get("hints_remaining", GameConstants.HINT_LIMIT_UNLIMITED)),
-		"available_tiles": data.get("available_tiles", [0, 1, 2]).duplicate(),
-		"layout": _serialize_coord_dict(data.get("layout", {})),
-		"shifter_pairs": _serialize_pairs(data.get("shifter_pairs", [])),
-		"active_constraint_pairs": _serialize_pairs(data.get("active_constraint_pairs", [])),
-		"hidden_reference_constraints": _serialize_pairs(data.get("hidden_reference_constraints", [])),
-		"solved_solution_reference": _serialize_coord_dict(data.get("solved_solution_reference", {})),
-		"cells": _serialize_cells(data.get("cells", {})),
-		"undo_history": _serialize_undo_history(data.get("undo_history", {})),
-	}
-
-## In-progress run with Vector2i board data restored.
-static func _deserialize_session(data: Dictionary) -> Dictionary:
-	return {
-		"level_path": str(data.get("level_path", "")),
-		"level_number": int(data.get("level_number", 0)),
-		"elapsed_seconds": int(data.get("elapsed_seconds", 0)),
-		"shifter_move_count": int(data.get("shifter_move_count", 0)),
-		"hints_used": int(data.get("hints_used", 0)),
-		"required_jokers": int(data.get("required_jokers", 0)),
-		"required_shifter_moves": int(data.get("required_shifter_moves", 0)),
-		"has_shifters": bool(data.get("has_shifters", false)),
-		"prefer_hidden_hints": bool(data.get("prefer_hidden_hints", false)),
-		"challenges_disabled": bool(data.get("challenges_disabled", false)),
-		"star_time_limit": int(data.get("star_time_limit", 0)),
-		"hints_remaining": int(data.get("hints_remaining", GameConstants.HINT_LIMIT_UNLIMITED)),
-		"has_hints_remaining": data.has("hints_remaining"),
-		"available_tiles": data.get("available_tiles", [0, 1, 2]).duplicate(),
-		"layout": _deserialize_coord_dict(data.get("layout", {})),
-		"shifter_pairs": _deserialize_pairs(data.get("shifter_pairs", [])),
-		"active_constraint_pairs": _deserialize_pairs(data.get("active_constraint_pairs", [])),
-		"hidden_reference_constraints": _deserialize_pairs(data.get("hidden_reference_constraints", [])),
-		"solved_solution_reference": _deserialize_coord_dict(data.get("solved_solution_reference", {})),
-		"cells": _deserialize_cells(data.get("cells", {})),
-		"undo_history": _deserialize_undo_history(data.get("undo_history", {})),
-	}
-
-## UndoStack export with each snapshot serialized.
-static func _serialize_undo_history(history: Dictionary) -> Dictionary:
-	if history.is_empty():
-		return {}
-	return {
-		"current": _serialize_game_snapshot(history.get("current", {})),
-		"undo": _serialize_snapshot_list(history.get("undo", [])),
-		"redo": _serialize_snapshot_list(history.get("redo", [])),
-	}
-
-## UndoStack export with each snapshot restored.
-static func _deserialize_undo_history(history: Dictionary) -> Dictionary:
-	if history.is_empty():
-		return {}
-	return {
-		"current": _deserialize_game_snapshot(history.get("current", {})),
-		"undo": _deserialize_snapshot_list(history.get("undo", [])),
-		"redo": _deserialize_snapshot_list(history.get("redo", [])),
-	}
-
-## Maps serialize over an array of game snapshots.
-static func _serialize_snapshot_list(snaps: Array) -> Array:
-	var out: Array = []
-	for snap in snaps:
-		if snap is Dictionary:
-			out.append(_serialize_game_snapshot(snap))
-	return out
-
-## Maps deserialize over an array of game snapshots.
-static func _deserialize_snapshot_list(snaps: Array) -> Array:
-	var out: Array = []
-	for snap in snaps:
-		if snap is Dictionary:
-			out.append(_deserialize_game_snapshot(snap))
-	return out
-
-## One undo snapshot: move count plus serialized cells.
-static func _serialize_game_snapshot(snap: Dictionary) -> Dictionary:
-	return {
-		"moves": int(snap.get("moves", 0)),
-		"cells": _serialize_cells(snap.get("cells", {})),
-	}
-
-## One undo snapshot with cells restored.
-static func _deserialize_game_snapshot(snap: Dictionary) -> Dictionary:
-	return {
-		"moves": int(snap.get("moves", 0)),
-		"cells": _deserialize_cells(snap.get("cells", {})),
-	}

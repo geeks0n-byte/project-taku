@@ -310,21 +310,26 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 
-[node name="CustomTabButton" type="Button" parent="UILayer"]
+[node name="CustomDebugBarHost" type="HBoxContainer" parent="UILayer"]
 visible = false
 z_index = 8
-modulate = Color(0.6, 0.6, 0.6, 1)
-custom_minimum_size = Vector2(280, 96)
 layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -140.0
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
 offset_top = 24.0
-offset_right = 140.0
+offset_right = -24.0
 offset_bottom = 120.0
 grow_horizontal = 2
-grow_vertical = 0
+mouse_filter = 0
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="CustomTabButton" type="Button" parent="UILayer/CustomDebugBarHost"]
+modulate = Color(0.6, 0.6, 0.6, 1)
+custom_minimum_size = Vector2(280, 96)
+layout_mode = 2
+size_flags_horizontal = 0
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 0
 theme_override_fonts/font = ExtResource("3_font")

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- Classic trophy  bronze palette -->
+  <rect x="10" y="14" width="6" height="22" fill="#a05828"/>
+  <rect x="48" y="14" width="6" height="22" fill="#a05828"/>
+  <rect x="16" y="10" width="32" height="4" fill="#cd7f32"/>
+  <rect x="16" y="10" width="28" height="2" fill="#ffc896"/>
+  <rect x="16" y="14" width="32" height="18" fill="#cd7f32"/>
+  <rect x="16" y="14" width="6" height="18" fill="#ffc896"/>
+  <rect x="42" y="22" width="6" height="10" fill="#a05828"/>
+  <rect x="29" y="32" width="6" height="12" fill="#a05828"/>
+  <rect x="29" y="32" width="3" height="10" fill="#d49348"/>
+  <rect x="22" y="44" width="20" height="2" fill="#a05828"/>
+  <rect x="18" y="46" width="28" height="8" fill="#cd7f32"/>
+  <rect x="18" y="46" width="24" height="2" fill="#ffc896"/>
+  <rect x="18" y="52" width="28" height="2" fill="#5c3418"/>
+</svg>

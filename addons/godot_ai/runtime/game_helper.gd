@@ -99,6 +99,23 @@ var _last_frames_advance_msec: int = -1
 var _last_eval_liveness_reply: Dictionary = {}
 
 
+static func _is_headless_run() -> bool:
+	if OS.has_feature("headless"):
+		return true
+	if DisplayServer.get_name().to_lower() == "headless":
+		return true
+	var args := OS.get_cmdline_args()
+	for i in range(args.size()):
+		var arg: String = args[i]
+		if arg == "--headless":
+			return true
+		if arg == "--display-driver" and i + 1 < args.size() and args[i + 1] == "headless":
+			return true
+		if arg.begins_with("--display-driver=") and arg.get_slice("=", 1) == "headless":
+			return true
+	return false
+
+
 func _ready() -> void:
 	## Only run in the game process, not in the editor. Use is_editor_hint
 	## — NOT OS.has_feature("editor"), which is a BUILD-config check
@@ -108,6 +125,9 @@ func _ready() -> void:
 	## in play-from-editor. The earlier has_feature check was causing us
 	## to skip registration in the game and time out every capture.
 	if Engine.is_editor_hint():
+		return
+	## Logic tests and CI export pipelines run headless — skip MCP/logger setup.
+	if _is_headless_run():
 		return
 	## Keep ticking while the tree is paused: _process both ferries game logs
 	## and timestamps main-loop liveness for the stalled-loop screenshot

@@ -1,26 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128" shape-rendering="crispEdges">
-  <!-- CLEAR (Trash can - Moved 1px Down) -->
-  <g transform="translate(2, 2)">
-    <!-- Drop Shadow Layer -->
-    <g fill="#1d2b53" transform="translate(0, 1)">
-      <!-- Lid Handle -->
-      <rect x="4" y="0" width="4" height="1"/>
-      <!-- Lid -->
-      <rect x="3" y="1" width="6" height="1"/>
-      <rect x="1" y="2" width="10" height="2"/>
-      <!-- Body -->
-      <rect x="2" y="4" width="8" height="8"/>
-    </g>
-    
-    <!-- Red Lid Handle -->
-    <rect x="4" y="0" width="4" height="1" fill="#ff3333"/>
-    <!-- Gray Lid -->
-    <rect x="3" y="1" width="6" height="1" fill="#c2c3c7"/>
-    <rect x="1" y="2" width="10" height="2" fill="#7d7d7d"/>
-    <!-- Can Body (Gray) -->
-    <rect x="2" y="4" width="8" height="8" fill="#c2c3c7"/>
-    <!-- Body Details -->
-    <rect x="4" y="5" width="1" height="6" fill="#7d7d7d"/>
-    <rect x="7" y="5" width="1" height="6" fill="#7d7d7d"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- CLEAR — trash can, normalized to the debug icon content box -->
+  <g transform="translate(8,8)">
+    <rect x="18" y="0" width="16" height="4" fill="#ff3333"/>
+    <rect x="14" y="4" width="24" height="4" fill="#c2c3c7"/>
+    <rect x="6" y="8" width="40" height="8" fill="#7d7d7d"/>
+    <rect x="10" y="16" width="32" height="32" fill="#c2c3c7"/>
+    <rect x="18" y="20" width="4" height="24" fill="#7d7d7d"/>
+    <rect x="30" y="20" width="4" height="24" fill="#7d7d7d"/>
+    <rect x="10" y="46" width="32" height="4" fill="#1d2b53"/>
   </g>
 </svg>

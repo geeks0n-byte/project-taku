@@ -14,6 +14,10 @@ const LEVEL_GOALS_PANEL_WIDTH := 720.0
 const LEVEL_GOALS_TITLE_FONT := 36
 const LEVEL_GOALS_TITLE_COLOR := Color(1.0, 0.92, 0.55, 1.0)
 const _RESERVE_MENU_BANNER_NAV := true
+## Matches main-menu / options debug bar vertical placement; width fits text label.
+const CUSTOM_DEBUG_BTN_TOP := 24.0
+const CUSTOM_DEBUG_BTN_HEIGHT := 96.0
+const CUSTOM_DEBUG_BTN_WIDTH := 280.0
 
 @onready var level_grid: GridContainer = $"UILayer/CenterContainer/VBoxContainer/LevelListHost/LevelGrid"
 @onready var back_button: Button = $"UILayer/CloseButtonHost/BackButton"
@@ -23,7 +27,8 @@ const _RESERVE_MENU_BANNER_NAV := true
 @onready var easy_tab_button: Button = $"UILayer/CenterContainer/VBoxContainer/TabContainer/EasyTabButton"
 @onready var medium_tab_button: Button = $"UILayer/CenterContainer/VBoxContainer/TabContainer/MediumTabButton"
 @onready var hard_tab_button: Button = $"UILayer/CenterContainer/VBoxContainer/TabContainer/HardTabButton"
-@onready var custom_tab_button: Button = $"UILayer/CustomTabButton"
+@onready var custom_debug_bar_host: HBoxContainer = $"UILayer/CustomDebugBarHost"
+@onready var custom_tab_button: Button = $"UILayer/CustomDebugBarHost/CustomTabButton"
 @onready var button_template: Button = $"UILayer/CenterContainer/VBoxContainer/LevelListHost/LevelGrid/LevelButtonTemplate"
 @onready var locked_button_template: Button = $"UILayer/CenterContainer/VBoxContainer/LevelListHost/LevelGrid/LevelButtonTemplateLocked"
 @onready var custom_button_template: Button = $"UILayer/CenterContainer/VBoxContainer/LevelListHost/LevelGrid/LevelButtonTemplateCustom"
@@ -156,16 +161,27 @@ func _fit_chrome_buttons() -> void:
 			btn, GameConstants.UI_BTN_TAB_FONT, GameConstants.UI_BTN_TAB_FONT_MIN
 		)
 		btn.autowrap_mode = TextServer.AUTOWRAP_OFF
-	if custom_tab_button and custom_tab_button.visible:
-		HudLayout.apply_secondary_button(custom_tab_button)
+	if custom_debug_bar_host and custom_debug_bar_host.visible and custom_tab_button:
+		custom_tab_button.focus_mode = Control.FOCUS_NONE
+		custom_tab_button.custom_minimum_size = Vector2(
+			CUSTOM_DEBUG_BTN_WIDTH,
+			CUSTOM_DEBUG_BTN_HEIGHT
+		)
+		custom_tab_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		HudLayout.fit_text_button(
+			custom_tab_button,
+			GameConstants.UI_BTN_TAB_FONT,
+			GameConstants.UI_BTN_TAB_FONT_MIN
+		)
 		HudLayout.apply_safe_outline(custom_tab_button, GameConstants.MENU_TEXT_OUTLINE)
 		custom_tab_button.text = "UI_CUSTOM"
+		_layout_custom_tab_button()
 	if _page_prev_button:
 		HudLayout.apply_nav_button(_page_prev_button)
 	if _page_next_button:
 		HudLayout.apply_nav_button(_page_next_button)
 
-## Styles the top-left close control as a square top-bar X.
+## Styles the top-left close control (same top-bar slot as options / achievements).
 func _apply_close_button() -> void:
 	if back_button:
 		HudLayout.style_top_bar_close_button(back_button)
@@ -206,18 +222,24 @@ func _layout_level_select() -> void:
 			content_vbox.offset_left = 24.0 + SafeInsets.left()
 			content_vbox.offset_right = -24.0 - SafeInsets.right()
 			HudLayout.cap_stretched_width(content_vbox, HudLayout.UI_PHONE_CONTENT_WIDTH)
-		if _page_nav and content_root:
-			HudLayout.pin_page_nav_row(_page_nav, content_root, _RESERVE_MENU_BANNER_NAV)
+		if _page_nav and _screen_header_host:
+			HudLayout.pin_page_nav_row(_page_nav, _screen_header_host, _RESERVE_MENU_BANNER_NAV)
+	_apply_close_button()
 	_connect_level_list_host()
 	_pin_level_list_to_top()
+	_layout_custom_tab_button()
+	if _screen_header_host:
+		_screen_header_host.move_to_front()
+	if _close_button_host:
+		_close_button_host.move_to_front()
 
 
 ## Moves PREV/NEXT out of the scroll column so they share the global pinned nav row.
 func _reparent_page_nav() -> void:
-	if _page_nav == null or content_root == null:
+	if _page_nav == null or _screen_header_host == null:
 		return
-	if _page_nav.get_parent() != content_root:
-		_page_nav.reparent(content_root)
+	if _page_nav.get_parent() != _screen_header_host:
+		_page_nav.reparent(_screen_header_host)
 	var gap := content_vbox.get_node_or_null("PageNavGap") if content_vbox else null
 	if gap:
 		gap.queue_free()
@@ -290,12 +312,30 @@ func _pin_level_list_to_top() -> void:
 ## If the tab is hidden while it's the active view, resets to Easy.
 func _configure_custom_tab() -> void:
 	var show_custom := GlobalGameManager.debug_tools_enabled
-	if custom_tab_button:
-		custom_tab_button.visible = show_custom
-		if show_custom:
-			custom_tab_button.text = "UI_CUSTOM"
+	if custom_debug_bar_host:
+		custom_debug_bar_host.visible = show_custom
+	if custom_tab_button and show_custom:
+		custom_tab_button.text = "UI_CUSTOM"
 	if not show_custom and current_view == ViewMode.CUSTOM:
 		current_view = ViewMode.EASY
+	_layout_custom_tab_button()
+
+
+## Pins the Custom debug bar in the top slot (main menu / options debug bar parity).
+func _layout_custom_tab_button() -> void:
+	if custom_debug_bar_host == null or not custom_debug_bar_host.visible:
+		return
+	var top := SafeInsets.padded_top(CUSTOM_DEBUG_BTN_TOP)
+	custom_debug_bar_host.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	custom_debug_bar_host.offset_left = 24.0 + SafeInsets.left()
+	custom_debug_bar_host.offset_top = top
+	custom_debug_bar_host.offset_right = -24.0 - SafeInsets.right()
+	custom_debug_bar_host.offset_bottom = top + CUSTOM_DEBUG_BTN_HEIGHT
+	if custom_tab_button:
+		custom_tab_button.custom_minimum_size = Vector2(
+			CUSTOM_DEBUG_BTN_WIDTH,
+			CUSTOM_DEBUG_BTN_HEIGHT
+		)
 
 ## Switches the active difficulty tab, resets to page 0, and repopulates the grid.
 ## Guards against switching to locked or unavailable categories.
@@ -705,8 +745,8 @@ func _set_level_select_chrome_visible(should_show: bool) -> void:
 		_screen_header_host.visible = should_show
 	if _close_button_host:
 		_close_button_host.visible = should_show
-	if custom_tab_button:
-		custom_tab_button.visible = should_show and (
+	if custom_debug_bar_host:
+		custom_debug_bar_host.visible = should_show and (
 			GlobalGameManager != null and GlobalGameManager.debug_tools_enabled
 		)
 

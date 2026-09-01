@@ -1,0 +1,24 @@
+catalog_id,play_console_name,icon_file
+first_clear,FIRST CLEAR,first_clear.png
+clears_bronze,ONE MORE LEVEL BRONZE,clears_bronze.png
+clears_silver,ONE MORE LEVEL SILVER,clears_silver.png
+clears_gold,ONE MORE LEVEL GOLD,clears_gold.png
+first_hard,HARD START,first_hard.png
+no_hint_clear,NO SPOILERS BRONZE,no_hint_clear.png
+hint_saver,NO SPOILERS SILVER,hint_saver.png
+no_hint_gold,NO SPOILERS GOLD,no_hint_gold.png
+on_time_bronze,TICK TOCK BRONZE,on_time_bronze.png
+on_time_silver,TICK TOCK SILVER,on_time_silver.png
+on_time_gold,TICK TOCK GOLD,on_time_gold.png
+easy_set,EASY DOES IT,easy_set.png
+medium_set,MIDDLE MAN,medium_set.png
+hard_set,HARD KNOCKS,hard_set.png
+three_star_debut,THREE STAR DEBUT,three_star_debut.png
+undo_nothing,UNDO NOTHING,undo_nothing.png
+ad_friend,AD FRIEND,ad_friend.png
+im_blue,I'M BLUE,im_blue.png
+shall_not_pass,YOU SHALL NOT PASS,shall_not_pass.png
+rules_reader,RULES READER,rules_reader.png
+purple_rain,PURPLE RAIN,purple_rain.png
+yellow_submarine,YELLOW SUBMARINE,yellow_submarine.png
+pause_thinker,PAUSE THINKER,pause_thinker.png

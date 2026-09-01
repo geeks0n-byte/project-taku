@@ -12,9 +12,6 @@ signal back_requested
 const LANGUAGES = ["en", "es", "de", "fr", "pl", "ka", "uk"]
 const LANG_NAMES = ["ENGLISH", "ESPAÑOL", "DEUTSCH", "FRANÇAIS", "POLSKI", "ქართული", "УКРАЇНСЬКА"]
 
-# Tracks which destructive action the confirm dialog was opened for.
-enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM, UNLOCK_ALL }
-
 @onready var title_label: Label = $ScreenHeaderHost/TitleLabel
 @onready var lang_label: Label = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/LanguageContainer/LanguageLabel
 @onready var prev_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/LanguageContainer/PrevLangButton
@@ -30,6 +27,7 @@ enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM, UNLOCK_ALL }
 @onready var debug_bar_host: Control = $DebugBarHost
 @onready var debug_buttons: HBoxContainer = $DebugBarHost/DebugButtons
 @onready var unlock_all_btn: Button = $DebugBarHost/DebugButtons/UnlockAllButton
+@onready var unlock_achievements_btn: Button = $DebugBarHost/DebugButtons/UnlockAchievementsButton
 @onready var del_custom_btn: Button = $DebugBarHost/DebugButtons/DeleteCustomButton
 @onready var close_btn: Button = $CloseButtonHost/CloseOptionsButton
 @onready var status_label: Label = $DebugBarHost/StatusLabel
@@ -43,19 +41,15 @@ enum ConfirmAction { NONE, RESET_PROGRESS, DELETE_CUSTOM, UNLOCK_ALL }
 @onready var _confirm_no_btn: Button = $ConfirmBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/NoButton
 
 # Which destructive action the confirm dialog is waiting on, or NONE if not shown.
-var _pending_confirm: ConfirmAction = ConfirmAction.NONE
-# When true, destructive buttons (reset progress, delete custom) are visible.
 var _from_main_menu: bool = false
 # Debug buttons (unlock all, delete custom) are only shown when opened from the main menu
 # and GlobalGameManager.debug_tools_enabled is true.
 var _show_debug_options: bool = false
+var _debug_bar := OptionsMenuDebugBar.new()
+var _confirm := OptionsMenuConfirm.new()
+var _cloud := OptionsMenuCloud.new()
 # English scene authorship: title bottom at 412, options content starts at 500.
 const _OPTIONS_BELOW_TITLE_GAP := 88.0
-const DEBUG_BTN_FONT := 18
-const DEBUG_BTN_HEIGHT := 72.0
-const DEBUG_BTN_PAD_X := 36.0
-const DEBUG_STATUS_GAP := 8.0
-const DEBUG_STATUS_MIN_H := 48.0
 
 ## Wires option buttons, confirm dialog, and safe-area resize, then applies initial labels.
 func _ready() -> void:
@@ -72,15 +66,9 @@ func _ready() -> void:
 	if haptic_btn:
 		haptic_btn.pressed.connect(_on_toggle_haptic)
 	if cloud_btn:
-		cloud_btn.pressed.connect(_on_cloud_pressed)
-	var cloud := get_node_or_null("/root/CloudSaveManager")
-	if cloud != null:
-		if cloud.has_signal("signed_in_changed") and not cloud.signed_in_changed.is_connected(_update_cloud_button):
-			cloud.signed_in_changed.connect(_update_cloud_button)
-		if cloud.has_signal("sync_started") and not cloud.sync_started.is_connected(_update_cloud_button):
-			cloud.sync_started.connect(_update_cloud_button)
-		if cloud.has_signal("sync_finished") and not cloud.sync_finished.is_connected(_on_cloud_sync_finished):
-			cloud.sync_finished.connect(_on_cloud_sync_finished)
+		cloud_btn.pressed.connect(_cloud.on_pressed)
+	_cloud.setup(cloud_btn, _confirm.show_cloud_choice, _show_status_message)
+	_cloud.bind_manager()
 	if privacy_btn:
 		privacy_btn.pressed.connect(_on_privacy_policy_pressed)
 	if privacy_options_btn:
@@ -91,9 +79,32 @@ func _ready() -> void:
 		del_custom_btn.pressed.connect(_on_delete_custom_pressed)
 	if unlock_all_btn:
 		unlock_all_btn.pressed.connect(_on_unlock_all_pressed)
+	if unlock_achievements_btn:
+		unlock_achievements_btn.pressed.connect(_on_unlock_achievements_pressed)
+	_debug_bar.setup(
+		debug_bar_host,
+		debug_buttons,
+		status_label,
+		unlock_all_btn,
+		unlock_achievements_btn,
+		del_custom_btn,
+		_apply_button_tile_styles
+	)
 	if close_btn:
 		close_btn.pressed.connect(hide_menu)
-	_setup_confirm_panel()
+	_confirm.setup(
+		_confirm_blocker,
+		_confirm_label,
+		_confirm_yes_btn,
+		_confirm_no_btn,
+		_set_options_chrome_visible,
+		_copy_button_styles,
+		_do_delete_save,
+		_do_delete_custom,
+		_do_unlock_all,
+		_do_unlock_all_achievements
+	)
+	_confirm.setup_panel()
 	_configure_main_menu_buttons()
 	_style_header()
 	_update_lang_label()
@@ -101,7 +112,7 @@ func _ready() -> void:
 	_update_bgm_label()
 	_update_sfx_label()
 	_update_haptic_label()
-	_update_cloud_button()
+	_cloud.update_button()
 	_fit_option_buttons()
 	_style_debug_buttons()
 	_style_close_button()
@@ -136,13 +147,13 @@ func show_menu(from_main_menu: bool = false) -> void:
 	_update_bgm_label()
 	_update_sfx_label()
 	_update_haptic_label()
-	_update_cloud_button()
+	_cloud.update_button()
 	_fit_option_buttons()
 	_style_debug_buttons()
 	if status_label:
 		status_label.text = ""
 		_sync_status_label_slot()
-	_hide_confirm()
+	_confirm.hide()
 	visible = true
 	if _screen_header_host:
 		_screen_header_host.move_to_front()
@@ -152,7 +163,7 @@ func show_menu(from_main_menu: bool = false) -> void:
 
 ## Closes any confirm dialog, hides this overlay, and notifies the caller.
 func hide_menu() -> void:
-	_hide_confirm()
+	_confirm.hide()
 	if AchievementManager and AchievementManager.is_list_open():
 		AchievementManager.hide_list()
 	visible = false
@@ -166,8 +177,8 @@ func handle_system_back() -> bool:
 	if AchievementManager and AchievementManager.is_list_open():
 		AchievementManager.hide_list()
 		return true
-	if _confirm_blocker and _confirm_blocker.visible:
-		_hide_confirm()
+	if _confirm.is_visible():
+		_confirm.hide()
 		return true
 	hide_menu()
 	return true
@@ -178,20 +189,7 @@ func _configure_main_menu_buttons() -> void:
 	if del_save_btn:
 		del_save_btn.visible = _from_main_menu
 	var show_debug := _show_debug_options
-	if debug_buttons:
-		debug_buttons.visible = show_debug
-	if unlock_all_btn:
-		unlock_all_btn.visible = show_debug
-		if show_debug:
-			unlock_all_btn.text = "UI_DEBUG_UNLOCK_ALL"
-			unlock_all_btn.set_meta("_tr_key", "UI_DEBUG_UNLOCK_ALL")
-			unlock_all_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
-	if del_custom_btn:
-		del_custom_btn.visible = show_debug
-		if show_debug:
-			del_custom_btn.text = "UI_DEBUG_DEL_CUSTOM"
-			del_custom_btn.set_meta("_tr_key", "UI_DEBUG_DEL_CUSTOM")
-			del_custom_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
+	_debug_bar.set_show_debug_options(show_debug)
 	_refresh_debug_bar_visibility()
 	_style_debug_buttons()
 
@@ -239,83 +237,19 @@ func _layout_content_below_title() -> void:
 
 ## Pins the debug button row (+ status line) below the top safe area.
 func _layout_debug_bar() -> void:
-	if debug_bar_host == null:
-		return
-	if not debug_bar_host.has_meta("_safe_t"):
-		debug_bar_host.set_meta("_safe_t", debug_bar_host.offset_top)
-	var top := SafeInsets.padded_top(float(debug_bar_host.get_meta("_safe_t")))
-	debug_bar_host.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	debug_bar_host.offset_top = top
-	debug_bar_host.offset_left = 24.0 + SafeInsets.left()
-	debug_bar_host.offset_right = -24.0 - SafeInsets.right()
-	if debug_bar_host is BoxContainer:
-		(debug_bar_host as BoxContainer).alignment = BoxContainer.ALIGNMENT_CENTER
-	if debug_buttons:
-		debug_buttons.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	if status_label:
-		status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var stack_h := DEBUG_BTN_HEIGHT if _show_debug_options else 0.0
-	if status_label and status_label.visible:
-		if _show_debug_options:
-			stack_h += DEBUG_STATUS_GAP
-		stack_h += status_label.custom_minimum_size.y
-	debug_bar_host.offset_bottom = top + stack_h
+	_debug_bar.set_show_debug_options(_show_debug_options)
+	_debug_bar.layout()
 
 
 ## Debug bar stays visible while a status line is showing (e.g. cloud sync feedback).
 func _refresh_debug_bar_visibility() -> void:
-	if debug_bar_host == null:
-		return
-	var has_status := (
-		status_label != null and not status_label.text.strip_edges().is_empty()
-	)
-	debug_bar_host.visible = _show_debug_options or has_status
+	_debug_bar.set_show_debug_options(_show_debug_options)
 
 
 ## Compact side-by-side debug actions — kept out of the scrollable options list.
 func _style_debug_buttons() -> void:
-	if not _show_debug_options:
-		_refresh_debug_bar_visibility()
-		return
-	_refresh_debug_bar_visibility()
-	var font_size := HudLayout.scaled_font_size(DEBUG_BTN_FONT)
-	var pad_x := DEBUG_BTN_PAD_X + float(GameConstants.MENU_TEXT_OUTLINE)
-	for btn in [unlock_all_btn, del_custom_btn]:
-		if btn == null:
-			continue
-		btn.visible = true
-		btn.focus_mode = Control.FOCUS_NONE
-		btn.flat = false
-		btn.autowrap_mode = TextServer.AUTOWRAP_OFF
-		btn.clip_text = false
-		btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		btn.size_flags_stretch_ratio = 1.0
-		_apply_button_tile_styles(btn)
-		HudLayout._clear_pixel_raster(btn)
-		var display := _option_button_display_text(btn)
-		var use_pixel := HudFonts.should_use_press_start_font(display)
-		btn.custom_minimum_size = Vector2(0.0, DEBUG_BTN_HEIGHT)
-		var measured := 0.0
-		if use_pixel:
-			HudLayout.apply_raster_pixel_button(btn, display, font_size, 0, true)
-			measured = HudFonts.pixel_font().get_string_size(
-				display, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size
-			).x
-		else:
-			btn.set_meta("_force_pixel_font", false)
-			btn.set_meta("_use_default_font", true)
-			var key := String(btn.get_meta("_tr_key", btn.text)).strip_edges()
-			btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
-			btn.text = key if not key.is_empty() else display
-			HudLayout.apply_locale_font_to_control(btn)
-			btn.add_theme_font_size_override("font_size", HudLayout.body_font_size(font_size))
-			HudLayout.apply_safe_outline(btn, GameConstants.MENU_TEXT_OUTLINE)
-			measured = HudFonts.default_font().get_string_size(
-				display, HORIZONTAL_ALIGNMENT_CENTER, -1, HudLayout.body_font_size(font_size)
-			).x
-		btn.custom_minimum_size.x = measured + pad_x
-	_layout_debug_bar()
+	_debug_bar.set_show_debug_options(_show_debug_options)
+	_debug_bar.style_buttons()
 
 # The "Privacy Options" button is only visible when UMP has a form ready to display
 # (i.e. the user is in a region that requires consent management).
@@ -396,7 +330,7 @@ func _fit_option_buttons() -> void:
 	_update_lang_label()
 	_layout_content_below_title()
 	call_deferred("_layout_content_below_title")
-	_refresh_confirm_texts()
+	_confirm.refresh_texts()
 
 # Re-binds i18n keys before sizing so locale changes re-translate correctly.
 func _bind_option_button_keys() -> void:
@@ -412,7 +346,7 @@ func _bind_option_button_keys() -> void:
 		del_save_btn.text = "UI_RESET_PROGRESS"
 		del_save_btn.set_meta("_tr_key", "UI_RESET_PROGRESS")
 		del_save_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
-	_update_cloud_button()
+	_cloud.update_button()
 
 # Applies the gray-dark tile style to a single option button and sizes it so its
 # translated text fits on one line with standard padding. Toggle rows skip text override since
@@ -488,8 +422,6 @@ func _is_plain_text_option_button(button: Button) -> bool:
 		button == privacy_btn
 		or button == privacy_options_btn
 		or button == del_save_btn
-		or button == del_custom_btn
-		or button == unlock_all_btn
 		or button == cloud_btn
 	)
 
@@ -666,9 +598,11 @@ func _on_language_changed() -> void:
 	_update_bgm_label()
 	_update_sfx_label()
 	_update_haptic_label()
-	_update_cloud_button()
+	_cloud.update_button()
 	_fit_option_buttons()
 	_style_debug_buttons()
+	if _confirm.is_visible():
+		_confirm.refresh_texts()
 
 # Cycles to the previous language in the LANGUAGES array (wraps around).
 # Refreshes all toggle labels and button sizes because font metrics change per locale.
@@ -684,7 +618,7 @@ func _on_prev_lang() -> void:
 	_update_bgm_label()
 	_update_sfx_label()
 	_update_haptic_label()
-	_update_cloud_button()
+	_cloud.update_button()
 	_fit_option_buttons()
 
 # Cycles to the next language in the LANGUAGES array (wraps around).
@@ -700,7 +634,7 @@ func _on_next_lang() -> void:
 	_update_bgm_label()
 	_update_sfx_label()
 	_update_haptic_label()
-	_update_cloud_button()
+	_cloud.update_button()
 	_fit_option_buttons()
 
 # Toggle handlers: flip the saved setting and refresh the button caption immediately.
@@ -723,56 +657,6 @@ func _on_toggle_haptic() -> void:
 	SaveManager.set_haptic_enabled(not SaveManager.haptic_enabled)
 	_update_haptic_label()
 
-
-
-# Sign-in / sync. Stub mode uses local snapshot merge for dev testing.
-func _on_cloud_pressed() -> void:
-	if CloudSaveManager == null:
-		return
-	if CloudSaveManager.is_syncing:
-		return
-	if CloudSaveManager.is_stub():
-		if CloudSaveManager.is_play_games_available():
-			CloudSaveManager.sync_now()
-		_update_cloud_button()
-		return
-	if not CloudSaveManager.is_signed_in:
-		CloudSaveManager.sign_in()
-	else:
-		CloudSaveManager.sync_now()
-	_update_cloud_button()
-
-
-func _on_cloud_sync_finished(ok: bool, _message: String) -> void:
-	_update_cloud_button()
-	if ok:
-		_show_status_message(tr("UI_CLOUD_SYNC_OK"), Color(0.45, 1.0, 0.55))
-	else:
-		_show_status_message(tr("UI_CLOUD_SYNC_FAIL"), Color(1.0, 0.35, 0.35))
-
-
-# Greys out the cloud row when Play Games is missing; otherwise SIGN IN / SYNC.
-func _update_cloud_button() -> void:
-	if not cloud_btn:
-		return
-	var stub := CloudSaveManager == null or CloudSaveManager.is_stub()
-	var plugin_installed := CloudSaveManager != null and CloudSaveManager.is_play_games_available()
-	var syncing := CloudSaveManager != null and CloudSaveManager.is_syncing
-	var key := "UI_CLOUD_PLAY_GAMES_NEEDED"
-	if plugin_installed:
-		if syncing:
-			key = "UI_CLOUD_SYNCING"
-		elif stub:
-			key = "UI_CLOUD_SYNC"
-		else:
-			var signed_in := CloudSaveManager.is_signed_in
-			key = "UI_CLOUD_SYNC" if signed_in else "UI_CLOUD_SIGN_IN"
-	cloud_btn.disabled = not plugin_installed or syncing
-	cloud_btn.text = key
-	cloud_btn.set_meta("_tr_key", key)
-	cloud_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
-	cloud_btn.modulate = Color(0.55, 0.55, 0.55, 1.0) if stub else Color.WHITE
-
 # Opens the privacy policy URL via AdsManager (which knows the canonical URL),
 # or falls back to OS.shell_open if AdsManager is unavailable (editor/desktop).
 func _on_privacy_policy_pressed() -> void:
@@ -791,32 +675,6 @@ func _on_privacy_options_pressed() -> void:
 		AdsManager.open_privacy_policy()
 	else:
 		OS.shell_open("https://geeks0n-byte.github.io/project-taku/privacy-policy.html")
-
-# Initializes the confirmation dialog (styling, signal connections, initial text).
-# Called once from _ready; safe to call again after a locale change.
-func _setup_confirm_panel() -> void:
-	if _confirm_blocker:
-		_confirm_blocker.visible = false
-		_confirm_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
-		# Match other popups: no dim overlay — chrome is hidden instead.
-		_confirm_blocker.color = Color(0, 0, 0, 0)
-	var center := _confirm_blocker.get_node_or_null("CenterContainer") as Control if _confirm_blocker else null
-	if center:
-		HudLayout.raise_centered_dialog_host(center)
-	var panel := _confirm_blocker.get_node_or_null("CenterContainer/Panel") as Panel if _confirm_blocker else null
-	if panel:
-		panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
-	if _confirm_yes_btn and not _confirm_yes_btn.pressed.is_connected(_on_confirm_yes):
-		_confirm_yes_btn.pressed.connect(_on_confirm_yes)
-	if _confirm_no_btn and not _confirm_no_btn.pressed.is_connected(_hide_confirm):
-		_confirm_no_btn.pressed.connect(_hide_confirm)
-	if _confirm_yes_btn:
-		_confirm_yes_btn.set_meta("_tr_key", "UI_YES")
-	if _confirm_no_btn:
-		_confirm_no_btn.set_meta("_tr_key", "UI_NO")
-	_copy_button_styles(_confirm_yes_btn)
-	_copy_button_styles(_confirm_no_btn)
-	_refresh_confirm_texts()
 
 ## Shows or hides header/close/center chrome (hidden while a confirm dialog is up).
 func _set_options_chrome_visible(should_show: bool) -> void:
@@ -840,89 +698,33 @@ func _copy_button_styles(target: Button) -> void:
 	target.add_theme_color_override("font_outline_color", Color.BLACK)
 	HudLayout.apply_safe_outline(target, GameConstants.MENU_TEXT_OUTLINE)
 
-# Re-translates the confirm dialog button labels and prompt text.
-# Must be called after a locale change so the dialog doesn't show stale text.
-func _refresh_confirm_texts() -> void:
-	if _confirm_yes_btn:
-		var yes_text := tr("UI_YES")
-		_confirm_yes_btn.text = yes_text
-		HudLayout.apply_dialog_button(_confirm_yes_btn, yes_text)
-	if _confirm_no_btn:
-		var no_text := tr("UI_NO")
-		_confirm_no_btn.text = no_text
-		HudLayout.apply_dialog_button(_confirm_no_btn, no_text)
-	if _confirm_label:
-		match _pending_confirm:
-			ConfirmAction.RESET_PROGRESS:
-				_confirm_label.text = tr("UI_CONFIRM_RESET_PROGRESS")
-			ConfirmAction.DELETE_CUSTOM:
-				_confirm_label.text = tr("UI_CONFIRM_DELETE_CUSTOM")
-			ConfirmAction.UNLOCK_ALL:
-				_confirm_label.text = tr("UI_CONFIRM_UNLOCK_ALL")
-			_:
-				if _confirm_label.text.is_empty():
-					_confirm_label.text = tr("UI_CONFIRM_RESET_PROGRESS")
-		var prompt_color := (
-			Color(0.45, 1.0, 0.45)
-			if _pending_confirm == ConfirmAction.UNLOCK_ALL
-			else Color(1.0, 0.45, 0.45)
-		)
-		_confirm_label.add_theme_color_override("font_color", prompt_color)
-		HudLayout.apply_popup_label(_confirm_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
-	if _confirm_blocker and _confirm_blocker.visible:
-		var panel := _confirm_blocker.get_node_or_null("CenterContainer/Panel") as Panel
-		if panel:
-			HudLayout.fit_dialog_panel(panel, HudLayout.UI_DEFAULT_DIALOG_WIDTH)
-
-# Shows the confirmation overlay for a destructive action with the appropriate message.
-func _show_confirm(action: ConfirmAction, message: String) -> void:
-	_pending_confirm = action
-	if _confirm_label:
-		_confirm_label.text = message
-	_refresh_confirm_texts()
-	var panel := _confirm_blocker.get_node_or_null("CenterContainer/Panel") as Panel if _confirm_blocker else null
-	if panel:
-		HudLayout.fit_dialog_panel(panel, HudLayout.UI_DEFAULT_DIALOG_WIDTH)
-	_set_options_chrome_visible(false)
-	if _confirm_blocker:
-		_confirm_blocker.color = Color(0, 0, 0, 0)
-		_confirm_blocker.visible = true
-
-## Dismisses the destructive-action confirm overlay and restores chrome.
-func _hide_confirm() -> void:
-	_pending_confirm = ConfirmAction.NONE
-	if _confirm_blocker:
-		_confirm_blocker.visible = false
-	_set_options_chrome_visible(true)
-
-# Dispatches the confirmed destructive action and clears the pending state.
-func _on_confirm_yes() -> void:
-	var action := _pending_confirm
-	_hide_confirm()
-	match action:
-		ConfirmAction.RESET_PROGRESS:
-			_do_delete_save()
-		ConfirmAction.DELETE_CUSTOM:
-			_do_delete_custom()
-		ConfirmAction.UNLOCK_ALL:
-			_do_unlock_all()
-
 ## Confirm dialog for wiping campaign progress.
 func _on_delete_save_pressed() -> void:
-	_show_confirm(ConfirmAction.RESET_PROGRESS, tr("UI_CONFIRM_RESET_PROGRESS"))
+	_confirm.show_for_action(OptionsMenuConfirm.Action.RESET_PROGRESS)
 
 ## Confirm dialog for deleting custom levels.
 func _on_delete_custom_pressed() -> void:
-	_show_confirm(ConfirmAction.DELETE_CUSTOM, tr("UI_CONFIRM_DELETE_CUSTOM"))
+	_confirm.show_for_action(OptionsMenuConfirm.Action.DELETE_CUSTOM)
 
 # Debug tool: confirm, then unlock every campaign level and show a green status.
 func _on_unlock_all_pressed() -> void:
-	_show_confirm(ConfirmAction.UNLOCK_ALL, tr("UI_CONFIRM_UNLOCK_ALL"))
+	_confirm.show_for_action(OptionsMenuConfirm.Action.UNLOCK_ALL)
+
+
+func _on_unlock_achievements_pressed() -> void:
+	_confirm.show_for_action(OptionsMenuConfirm.Action.UNLOCK_ALL_ACHIEVEMENTS)
+
 
 ## Debug: unlocks every campaign level and shows a green status.
 func _do_unlock_all() -> void:
 	SaveManager.unlock_all_levels()
 	_show_status_message(tr("UI_UNLOCK_ALL_DONE"), Color(0.45, 1.0, 0.45))
+
+
+func _do_unlock_all_achievements() -> void:
+	var granted := AchievementManager.debug_unlock_all() if AchievementManager else 0
+	if granted > 0:
+		_show_status_message(tr("UI_UNLOCK_ACHIEVEMENTS_DONE"), Color(0.45, 1.0, 0.45))
 
 # Wipes the save file and emits save_deleted so callers (main menu) can react.
 func _do_delete_save() -> void:
@@ -948,25 +750,9 @@ func _do_delete_custom() -> void:
 
 ## Writes a coloured status line with the locale-correct pixel/default font.
 func _show_status_message(msg: String, color: Color) -> void:
-	if not status_label:
-		return
-	status_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	status_label.modulate = color
-	# Routes Latin/digits to Press Start even in ka/uk; native letters use Noto.
-	HudLayout.apply_raster_pixel_label(
-		status_label, msg, GameConstants.UI_BODY_FONT_SIZE, color
-	)
-	_sync_status_label_slot()
+	_debug_bar.show_status(msg, color)
 
 
-## Reserves space for the status line directly under the debug buttons.
 func _sync_status_label_slot() -> void:
-	if status_label == null:
-		return
-	var has_text := not status_label.text.strip_edges().is_empty()
-	status_label.visible = has_text
-	status_label.custom_minimum_size = (
-		Vector2(620, DEBUG_STATUS_MIN_H) if has_text else Vector2.ZERO
-	)
-	_refresh_debug_bar_visibility()
-	_layout_debug_bar()
+	if status_label and status_label.text.strip_edges().is_empty():
+		_debug_bar.clear_status()

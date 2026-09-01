@@ -36,6 +36,8 @@ UiSfx="*uid://c8uisfxclick001"
 SpaceBackground="*uid://bjs0g2pap4nsi"
 AdsManager="*uid://cadsmanager0001"
 GodotPlayGameServices="*uid://dwybtygm726ry"
+InAppReview="*res://scripts/in_app_review.gd"
+_mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
 [display]
 
@@ -51,7 +53,7 @@ project/assembly_name="project-taku"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/GodotPlayGameServices/plugin.cfg", "res://addons/admob/plugin.cfg", "res://addons/godot_ai/plugin.cfg", "res://addons/android_splash/plugin.cfg")
+enabled=PackedStringArray("res://addons/GodotPlayGameServices/plugin.cfg", "res://addons/admob/plugin.cfg", "res://addons/android_splash/plugin.cfg", "res://addons/play_review/plugin.cfg", "res://addons/godot_ai/plugin.cfg")
 
 [internationalization]
 

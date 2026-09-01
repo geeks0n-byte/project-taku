@@ -1,0 +1,23 @@
+FIRST CLEAR,Clear your first campaign puzzle,False,,Revealed,5,1
+ONE MORE LEVEL BRONZE,Keep clearing unique campaign puzzles,True,10,Revealed,5,2
+ONE MORE LEVEL SILVER,Keep clearing unique campaign puzzles,True,30,Revealed,10,3
+ONE MORE LEVEL GOLD,Keep clearing unique campaign puzzles,True,60,Revealed,25,4
+HARD START,Clear a hard campaign puzzle,False,,Revealed,10,5
+NO SPOILERS BRONZE,Clear unique campaign puzzles without hints,True,10,Revealed,10,6
+NO SPOILERS SILVER,Clear unique campaign puzzles without hints,True,30,Revealed,15,7
+NO SPOILERS GOLD,Clear unique campaign puzzles without hints,True,60,Revealed,30,8
+TICK TOCK BRONZE,Clear unique campaign puzzles in time,True,10,Revealed,5,9
+TICK TOCK SILVER,Clear unique campaign puzzles in time,True,30,Revealed,10,10
+TICK TOCK GOLD,Clear unique campaign puzzles in time,True,60,Revealed,25,11
+EASY DOES IT,Clear every easy campaign puzzle,False,,Revealed,15,12
+MIDDLE MAN,Clear every medium campaign puzzle,False,,Revealed,25,13
+HARD KNOCKS,Clear every hard campaign puzzle,False,,Revealed,40,14
+THREE STAR DEBUT,Earn all three stars on a campaign puzzle,False,,Revealed,10,15
+UNDO NOTHING,Clear a hard campaign puzzle without using undo,False,,Revealed,20,16
+AD FRIEND,Watch a rewarded ad for hints,False,,Revealed,5,17
+I'M BLUE,Fill every empty cell with blue,False,,Hidden,5,18
+YOU SHALL NOT PASS,Try to hop a shifter that cannot move,False,,Hidden,5,19
+RULES READER,Open the rules on ten different levels,False,,Hidden,5,20
+PURPLE RAIN,Make 30 shifter slides,False,,Hidden,5,21
+YELLOW SUBMARINE,Fill every empty cell with yellow,False,,Hidden,5,22
+PAUSE THINKER,Pause for three minutes in one run and still win,False,,Hidden,10,23

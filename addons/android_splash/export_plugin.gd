@@ -18,7 +18,6 @@ var _export_plugin: _AndroidSplashExportPlugin
 func _enter_tree() -> void:
 	_export_plugin = _AndroidSplashExportPlugin.new()
 	add_export_plugin(_export_plugin)
-	print("AndroidSplashFix: export plugin loaded")
 
 
 func _exit_tree() -> void:
@@ -75,7 +74,6 @@ class _AndroidSplashExportPlugin extends EditorExportPlugin:
 		if err != OK:
 			push_warning("AndroidSplashFix: copy splash_bg.xml failed (%s)" % err)
 			return
-		print("AndroidSplashFix: installed splash background resources for export")
 
 
 	func _install_splash_gradle_hook() -> void:
@@ -103,7 +101,6 @@ class _AndroidSplashExportPlugin extends EditorExportPlugin:
 				return
 			file.store_string(content)
 			file.close()
-			print("AndroidSplashFix: installed Gradle splash theme patch")
 
 
 	func _patch_splash_theme() -> void:
@@ -114,7 +111,6 @@ class _AndroidSplashExportPlugin extends EditorExportPlugin:
 		var text := FileAccess.get_file_as_string(path)
 		if text.is_empty():
 			return
-		var before := text
 		text = text.replace(
 			'<item name="android:windowSplashScreenBackground">@mipmap/icon_background</item>',
 			'<item name="android:windowSplashScreenBackground">%s</item>' % VOID_HEX
@@ -135,10 +131,6 @@ class _AndroidSplashExportPlugin extends EditorExportPlugin:
 		file.close()
 		if text.contains("@mipmap/icon_background"):
 			push_error("AndroidSplashFix: themes.xml still references @mipmap/icon_background")
-		elif text != before:
-			print("AndroidSplashFix: patched themes.xml with void splash background")
-		else:
-			print("AndroidSplashFix: themes.xml already uses void splash background")
 
 
 	func _upsert_theme_item(text: String, style_name: String, key: String, value: String) -> String:

@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://bemvpo81r0h05"]
 
 [ext_resource type="Script" path="res://scripts/achievement_toast.gd" id="1_script"]
-[ext_resource type="Texture2D" uid="uid://xoo8wd3mi3vj" path="res://resources/icons/icon_star_on.svg" id="2_icon"]
+[ext_resource type="Texture2D" path="res://resources/icons/icon_achievement_cup.svg" id="2_icon"]
 
 [node name="AchievementToast" type="CanvasLayer"]
 layer = 110
@@ -35,10 +35,10 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 16.0
-offset_top = 14.0
-offset_right = -16.0
-offset_bottom = -14.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -12.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -46,7 +46,7 @@ theme_override_constants/separation = 14
 alignment = 1
 
 [node name="IconWrap" type="Control" parent="Root/Panel/HBox"]
-custom_minimum_size = Vector2(56, 56)
+custom_minimum_size = Vector2(80, 80)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
@@ -63,7 +63,7 @@ texture = ExtResource("2_icon")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="TextColumn" type="VBoxContainer" parent="Root/Panel/HBox"]
+[node name="VBox" type="VBoxContainer" parent="Root/Panel/HBox"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
@@ -71,19 +71,33 @@ mouse_filter = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="SubtitleLabel" type="Label" parent="Root/Panel/HBox/TextColumn"]
+[node name="SubtitleLabel" type="Label" parent="Root/Panel/HBox/VBox"]
 clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 text = "ACH_UNLOCKED"
+horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="NameLabel" type="Label" parent="Root/Panel/HBox/TextColumn"]
+[node name="NameLabel" type="Label" parent="Root/Panel/HBox/VBox"]
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+text = "ACH_FIRST_CLEAR_NAME"
+horizontal_alignment = 1
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="TierLabel" type="Label" parent="Root/Panel/HBox/VBox"]
+visible = false
 clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
-text = "ACH_FIRST_CLEAR_NAME"
+text = "ACH_TIER_BRONZE"
+horizontal_alignment = 1
 vertical_alignment = 1
 text_overrun_behavior = 3

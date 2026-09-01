@@ -1,33 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
-  <!-- THREE STAR DEBUT -->
-  <rect x="20" y="30" width="24" height="24" fill="#1a1a1a"/>
-  <rect x="22" y="32" width="20" height="20" fill="#29adff"/>
-  <rect x="22" y="32" width="16" height="2" fill="#abffe6"/>
-  <g transform="translate(12,6)">
-    <rect x="4" y="4" width="2" height="2" fill="#ffec27"/>
-    <rect x="6" y="2" width="2" height="2" fill="#ffec27"/>
-    <rect x="8" y="4" width="2" height="2" fill="#ffec27"/>
-    <rect x="6" y="6" width="2" height="2" fill="#ffec27"/>
-    <rect x="6" y="8" width="2" height="4" fill="#ffec27"/>
-    <rect x="4" y="10" width="2" height="2" fill="#ffec27"/>
-    <rect x="8" y="10" width="2" height="2" fill="#ffec27"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- THREE STAR DEBUT — HUD star shape, three across (center tallest) -->
+  <g transform="translate(10,32) scale(0.38) translate(-32,-32)">
+    <path fill="#FFD54A" stroke="#1d2b53" stroke-width="5" stroke-linejoin="round"
+      d="M32 6 L39.5 24.5 L59 26.5 L44.5 39.5 L48.5 58.5 L32 48.5 L15.5 58.5 L19.5 39.5 L5 26.5 L24.5 24.5 Z"/>
   </g>
-  <g transform="translate(26,2)">
-    <rect x="4" y="4" width="2" height="2" fill="#ffec27"/>
-    <rect x="6" y="2" width="2" height="2" fill="#ffec27"/>
-    <rect x="8" y="4" width="2" height="2" fill="#ffec27"/>
-    <rect x="6" y="6" width="2" height="2" fill="#ffec27"/>
-    <rect x="6" y="8" width="2" height="4" fill="#ffec27"/>
-    <rect x="4" y="10" width="2" height="2" fill="#ffec27"/>
-    <rect x="8" y="10" width="2" height="2" fill="#ffec27"/>
+  <g transform="translate(32,31) scale(0.44) translate(-32,-32)">
+    <path fill="#FFD54A" stroke="#1d2b53" stroke-width="5" stroke-linejoin="round"
+      d="M32 6 L39.5 24.5 L59 26.5 L44.5 39.5 L48.5 58.5 L32 48.5 L15.5 58.5 L19.5 39.5 L5 26.5 L24.5 24.5 Z"/>
   </g>
-  <g transform="translate(40,6)">
-    <rect x="4" y="4" width="2" height="2" fill="#ffec27"/>
-    <rect x="6" y="2" width="2" height="2" fill="#ffec27"/>
-    <rect x="8" y="4" width="2" height="2" fill="#ffec27"/>
-    <rect x="6" y="6" width="2" height="2" fill="#ffec27"/>
-    <rect x="6" y="8" width="2" height="4" fill="#ffec27"/>
-    <rect x="4" y="10" width="2" height="2" fill="#ffec27"/>
-    <rect x="8" y="10" width="2" height="2" fill="#ffec27"/>
+  <g transform="translate(54,32) scale(0.38) translate(-32,-32)">
+    <path fill="#FFD54A" stroke="#1d2b53" stroke-width="5" stroke-linejoin="round"
+      d="M32 6 L39.5 24.5 L59 26.5 L44.5 39.5 L48.5 58.5 L32 48.5 L15.5 58.5 L19.5 39.5 L5 26.5 L24.5 24.5 Z"/>
   </g>
 </svg>

@@ -49,14 +49,22 @@
   <h2>2. Information we store on your device</h2>
   <p>The App may store locally:</p>
   <ul>
-    <li>Game progress (unlocked levels, star results)</li>
+    <li>Game progress (unlocked levels, star results, achievement unlocks)</li>
     <li>Settings (language, music/SFX, background mode)</li>
     <li>Optional saved mid-level session data</li>
     <li>Internal counters used for ad frequency (for example, wins since the last interstitial)</li>
   </ul>
   <p>
-    This data stays on your device unless you clear app storage or uninstall the App.
+    This data stays on your device unless you clear app storage, uninstall the App,
+    or choose to sync with Google Play Games (see section 6).
     We do not upload this save data to our own servers.
+  </p>
+  <p>
+  <strong>Local save format (summary):</strong> progress is stored in
+  <code>user://progression.cfg</code> (versioned sections for Meta, Progression,
+  Session, Ads, and Achievements). Cloud sync uses a JSON snapshot with
+  <code>progress</code>, <code>settings</code>, <code>achievements</code>, and a
+  <code>timestamp</code> field. Mid-level sessions are not included in cloud snapshots.
   </p>
 
   <h2>3. Advertising (Google AdMob)</h2>
@@ -99,13 +107,23 @@
     with third parties.
   </p>
 
-  <h2>6. Data retention</h2>
+  <h2>6. Google Play Games cloud save (optional)</h2>
+  <p>
+    On Android, you may sign in to Google Play Games and sync campaign progress.
+    When enabled, a JSON snapshot (progress, settings, achievements, and a timestamp)
+    is stored in your Play Games account by Google—not on servers operated by us.
+    Sync merges progress fields (for example, highest unlocked level and star bits)
+    and may ask you to choose between device and cloud copies when timestamps tie.
+    Mid-level session saves are not uploaded.
+  </p>
+
+  <h2>7. Data retention</h2>
   <ul>
     <li><strong>Local game data:</strong> until you clear app data or uninstall.</li>
     <li><strong>Ad-related data:</strong> retained by Google / partners according to their policies.</li>
   </ul>
 
-  <h2>7. Your choices</h2>
+  <h2>8. Your choices</h2>
   <ul>
     <li>Reset progress or clear app storage in Android system settings</li>
     <li>Limit ad tracking in your device advertising / privacy settings</li>
@@ -113,19 +131,19 @@
     <li>Uninstall the App at any time</li>
   </ul>
 
-  <h2>8. International users</h2>
+  <h2>9. International users</h2>
   <p>
     If you use the App outside your home country, advertising partners may process data
     in other countries as described in Google’s policies.
   </p>
 
-  <h2>9. Changes to this policy</h2>
+  <h2>10. Changes to this policy</h2>
   <p>
     We may update this Privacy Policy from time to time. The “Last updated” date at the top
     will change when we do. Continued use of the App after an update means you accept the revised policy.
   </p>
 
-  <h2>10. Contact</h2>
+  <h2>11. Contact</h2>
   <p>
     Questions about this Privacy Policy: contact via the Google Play store listing for Spaceblox,
     or the GitHub repository

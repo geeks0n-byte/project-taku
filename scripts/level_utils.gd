@@ -351,6 +351,40 @@ static func first_campaign_level_number() -> int:
 				return int(resource.level_number)
 	return 1
 
+# Highest campaign level_number across easy/medium/hard (excludes tutorials).
+static func highest_campaign_level_number() -> int:
+	var highest := 0
+	for folder in [
+		GameConstants.CAMPAIGN_EASY_DIR,
+		GameConstants.CAMPAIGN_MEDIUM_DIR,
+		GameConstants.CAMPAIGN_HARD_DIR,
+	]:
+		for path in scan_directory(folder):
+			var resource = load(path)
+			if resource is LevelData:
+				highest = maxi(highest, int(resource.level_number))
+	return highest
+
+# True for levels under the campaign tutorials directory (timer/hints disabled).
+static func is_campaign_tutorial(level: LevelData) -> bool:
+	if level == null:
+		return false
+	return String(level.resource_path).begins_with(GameConstants.CAMPAIGN_TUTORIALS_DIR)
+
+
+# Safe level lookup for interstitial skip checks.
+static func level_at_index(levels: Array, index: int) -> LevelData:
+	if levels.is_empty() or index < 0 or index >= levels.size():
+		return null
+	var level: Variant = levels[index]
+	return level as LevelData
+
+
+# Tutorial levels skip fullscreen interstitials between runs.
+static func should_skip_level_interstitial(levels: Array, index: int) -> bool:
+	return is_campaign_tutorial(level_at_index(levels, index))
+
+
 # Returns the player-visible level number, remapping campaign levels to start at 1
 # while keeping tutorial numbers as-is.
 static func get_display_level_number(level: LevelData) -> int:

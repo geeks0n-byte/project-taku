@@ -102,12 +102,10 @@ const _ICON_YELLOW_SUBMARINE := "res://resources/icons/ach_yellow_submarine.svg"
 const _ICON_PAUSE_THINKER := "res://resources/icons/ach_pause_thinker.svg"
 const _ICON_DEV_MODE := "res://resources/icons/ach_dev_mode.svg"
 
-const _MEDAL_BRONZE := "res://resources/icons/ach_medal_bronze.svg"
-const _MEDAL_SILVER := "res://resources/icons/ach_medal_silver.svg"
-const _MEDAL_GOLD := "res://resources/icons/ach_medal_gold.svg"
+const _CUP_BRONZE := "res://resources/icons/icon_achievement_cup_bronze.svg"
+const _CUP_SILVER := "res://resources/icons/icon_achievement_cup_silver.svg"
+const _CUP_GOLD := "res://resources/icons/icon_achievement_cup.svg"
 const _MEDAL_BRONZE_OUTLINE := "res://resources/icons/ach_medal_bronze_outline.svg"
-const _MEDAL_SILVER_OUTLINE := "res://resources/icons/ach_medal_silver_outline.svg"
-const _MEDAL_GOLD_OUTLINE := "res://resources/icons/ach_medal_gold_outline.svg"
 const _ICON_MYSTERY := _MEDAL_BRONZE_OUTLINE
 
 ## Per-id metadata. Keep old save ids so existing unlocks still count.
@@ -171,6 +169,37 @@ static func display_title_key(id: String, is_unlocked: bool) -> String:
 	if identity_visible(id, is_unlocked):
 		return title_key(family_display_id(id))
 	return "ACH_HIDDEN_NAME"
+
+
+## Cup icon for unlock toasts; ranked tiers use matching bronze/silver/gold cups.
+static func toast_cup_icon_path(id: String) -> String:
+	match tier(id):
+		TIER_BRONZE:
+			return _CUP_BRONZE
+		TIER_SILVER:
+			return _CUP_SILVER
+		TIER_GOLD:
+			return _CUP_GOLD
+		_:
+			return _CUP_GOLD
+
+
+## Toast-only tier label for bronze/silver/gold unlocks; empty when unranked.
+static func toast_tier_key(id: String) -> String:
+	match tier(id):
+		TIER_BRONZE:
+			return "ACH_TIER_BRONZE"
+		TIER_SILVER:
+			return "ACH_TIER_SILVER"
+		TIER_GOLD:
+			return "ACH_TIER_GOLD"
+		_:
+			return ""
+
+
+## Font tint for toast tier copy; white when unranked.
+static func toast_tier_color(id: String) -> Color:
+	return tier_modulate(id)
 
 
 ## i18n key for grid description — ranked families share the bronze tier blurb.
@@ -380,7 +409,7 @@ static func last_earned_tier_index(fam: String, unlocked_map: Dictionary) -> int
 	return last
 
 
-## Small filled medal for an earned tier id.
+## Small filled cup for an earned tier id.
 static func tier_badge_path(id: String) -> String:
 	return medal_overlay_path(id, true)
 
@@ -399,17 +428,9 @@ static func earned_tier_badge_path(id: String, unlocked_map: Dictionary) -> Stri
 	return tier_badge_path(earned_id)
 
 
-## Dim outline medal preview for the next unearned tier in a ranked family.
+## Cup preview for the next unearned tier in a ranked family.
 static func next_tier_badge_path(next_id: String) -> String:
-	match tier(next_id):
-		TIER_BRONZE:
-			return _MEDAL_BRONZE_OUTLINE
-		TIER_SILVER:
-			return _MEDAL_SILVER_OUTLINE
-		TIER_GOLD:
-			return _MEDAL_GOLD_OUTLINE
-		_:
-			return ""
+	return tier_badge_path(next_id)
 
 
 ## Dimmed next-tier medal preview for partially progressed ranked families.
@@ -426,20 +447,20 @@ static func display_tier_badge_path(id: String, unlocked_map: Dictionary) -> Str
 	return earned_tier_badge_path(id, unlocked_map)
 
 
-## Small medal overlay path, or empty when the id is not ranked.
+## Small cup overlay path, or empty when the id is not ranked.
 static func medal_overlay_path(id: String, is_unlocked: bool) -> String:
 	var t := tier(id)
 	if t == TIER_NONE or t.is_empty():
 		return ""
 	if not is_unlocked:
-		return _MEDAL_BRONZE_OUTLINE
+		return _CUP_BRONZE
 	match t:
 		TIER_BRONZE:
-			return _MEDAL_BRONZE
+			return _CUP_BRONZE
 		TIER_SILVER:
-			return _MEDAL_SILVER
+			return _CUP_SILVER
 		TIER_GOLD:
-			return _MEDAL_GOLD
+			return _CUP_GOLD
 		_:
 			return ""
 
@@ -465,6 +486,20 @@ static func display_id_for_family(fam: String, unlocked: Dictionary) -> String:
 		if unlocked.has(str(id)):
 			best = str(id)
 	return best
+
+
+## Unlocked catalog ids represented by one grid cell (all earned tiers in a family).
+static func seen_ids_for_grid_cell(grid_id: String, unlocked: Dictionary) -> Array:
+	var sid := str(grid_id)
+	var fam := family(sid)
+	if fam.is_empty():
+		return [sid] if unlocked.has(sid) else []
+	var out: Array = []
+	for member in family_members(fam):
+		var mid := str(member)
+		if unlocked.has(mid):
+			out.append(mid)
+	return out
 
 
 ## Grid display ids: catalog order, secrets omitted until unlock, families collapsed to one cell.
@@ -526,6 +561,31 @@ static func board_is_all_yellow(cells: Dictionary) -> bool:
 	return _board_is_all_tile_state(cells, GameConstants.TileState.YELLOW)
 
 
+## Returns YELLOW/BLUE when every fillable cell matches; otherwise TileState.EMPTY.
+static func uniform_fillable_color(cells: Dictionary) -> int:
+	var fillable := 0
+	var seen := GameConstants.TileState.EMPTY
+	for key in cells:
+		var cell: Variant = cells[key]
+		var playable := bool(_cell_field(cell, "is_playable", true))
+		var locked := bool(_cell_field(cell, "is_locked", false))
+		var state := int(_cell_field(cell, "state", GameConstants.TileState.EMPTY))
+		if not playable or locked:
+			continue
+		if state == GameConstants.TileState.WALL or state == GameConstants.TileState.SHIFTER:
+			continue
+		fillable += 1
+		if state != GameConstants.TileState.YELLOW and state != GameConstants.TileState.BLUE:
+			return GameConstants.TileState.EMPTY
+		if seen == GameConstants.TileState.EMPTY:
+			seen = state as GameConstants.TileState
+		elif seen != state:
+			return GameConstants.TileState.EMPTY
+	if fillable <= 0:
+		return GameConstants.TileState.EMPTY
+	return seen
+
+
 static func _board_is_all_tile_state(cells: Dictionary, want_state: int) -> bool:
 	var fillable := 0
 	for key in cells:
@@ -561,9 +621,9 @@ static func _cell_field(cell: Variant, key: String, fallback: Variant) -> Varian
 ## `state` keys:
 ##   campaign_clears (int, unique clears only — replays never count),
 ##   hard_clears (int), no_hint_clears (int), on_time_clears (int),
-##   shifter_slides (int), rules_opens (int),
+##   shifter_slides (int), rules_open_levels (int, unique campaign levels),
 ##   easy_complete / medium_complete / hard_complete (bool),
-##   three_star_debut / undo_nothing / ad_friend / pause_thinker (bool flags),
+##   three_star_debut / undo_nothing (hard, no undo) / ad_friend / pause_thinker (bool flags),
 ##   im_blue / yellow_submarine / shall_not_pass / dev_mode (bool flags; grant() bypasses collect)
 ## `already` maps unlocked id -> unix timestamp (or any truthy value).
 static func collect_unlocks(state: Dictionary, already: Dictionary = {}) -> Array:
@@ -595,7 +655,7 @@ static func collect_unlocks(state: Dictionary, already: Dictionary = {}) -> Arra
 		_maybe_add(out, ID_ON_TIME_GOLD, already)
 	if int(state.get("shifter_slides", 0)) >= PURPLE_RAIN_TARGET:
 		_maybe_add(out, ID_PURPLE_RAIN, already)
-	if int(state.get("rules_opens", 0)) >= RULES_READER_TARGET:
+	if int(state.get("rules_open_levels", 0)) >= RULES_READER_TARGET:
 		_maybe_add(out, ID_RULES_READER, already)
 	if bool(state.get("easy_complete", false)):
 		_maybe_add(out, ID_EASY_SET, already)

@@ -31,7 +31,6 @@ tasks.register("spacebloxPatchSplashTheme") {
 		patched = patched.replace("\t\t<item name=\"android:windowIsTranslucent\">true</item>", "\t\t<item name=\"android:windowIsTranslucent\">false</item>")
 		if (patched != text) {
 			themesFile.write(patched, "UTF-8")
-			println("spaceblox-splash: patched themes.xml with void splash background")
 		}
 	}
 }

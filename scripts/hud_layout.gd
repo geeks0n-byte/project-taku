@@ -639,6 +639,39 @@ static func ensure_top_bar_icon(button: Button, texture: Texture2D) -> void:
 	icon.texture = texture
 	icon.custom_minimum_size = Vector2(_TOP_BAR_ICON_PX, _TOP_BAR_ICON_PX)
 
+# Full setup for a close/back button aligned with SCREEN_HEADER_* title rows.
+static func style_screen_header_close_button(button: Button) -> void:
+	if button == null:
+		return
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.z_index = 20
+	button.focus_mode = Control.FOCUS_NONE
+	apply_top_bar_tile_styles(button)
+	ensure_top_bar_icon(button, _CLOSE_ICON_TEX)
+	apply_square_top_bar_button(button)
+	button.set_meta("_overlay_close_layout_mode", "screen_header")
+	_place_overlay_close_for_screen_header(button)
+	_register_overlay_close_layout(button)
+
+
+# Match level-select / achievements header chrome (not in-game HUD pause row).
+static func _place_overlay_close_for_screen_header(button: Button) -> void:
+	if button == null or not is_instance_valid(button):
+		return
+	if button.get_parent() is HBoxContainer:
+		return
+	var title_top := SafeInsets.padded_top(GameConstants.SCREEN_HEADER_TOP)
+	var title_h := GameConstants.SCREEN_HEADER_HEIGHT
+	var size := float(GameConstants.HUD_BUTTON_WIDTH)
+	var top := title_top + (title_h - size) * 0.5
+	var left := float(GameConstants.HUD_SIDE_MARGIN) + SafeInsets.left()
+	button.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	button.offset_left = left
+	button.offset_top = top
+	button.offset_right = left + size
+	button.offset_bottom = top + size
+
+
 # Full setup for a close/back button in the top bar: stops mouse events, puts it
 # on top of other controls (z_index 20), and gives it tile style + close icon.
 static func style_top_bar_close_button(button: Button) -> void:
@@ -650,6 +683,7 @@ static func style_top_bar_close_button(button: Button) -> void:
 	apply_top_bar_tile_styles(button)
 	ensure_top_bar_icon(button, _CLOSE_ICON_TEX)
 	apply_square_top_bar_button(button)
+	button.set_meta("_overlay_close_layout_mode", "pause")
 	_place_overlay_close_like_pause(button)
 	_register_overlay_close_layout(button)
 
@@ -681,7 +715,10 @@ static func _relayout_overlay_close_buttons(viewport: Viewport) -> void:
 			continue
 		kept.append(item)
 		if item is Button:
-			_place_overlay_close_like_pause(item)
+			if str(item.get_meta("_overlay_close_layout_mode", "pause")) == "screen_header":
+				_place_overlay_close_for_screen_header(item)
+			else:
+				_place_overlay_close_like_pause(item)
 	viewport.set_meta("_overlay_close_layout_buttons", kept)
 
 static func _unregister_overlay_close_layout(viewport: Viewport, button: Button) -> void:
@@ -1204,6 +1241,8 @@ static func apply_locale_font_to_control(node: Node) -> void:
 	# Status before forced-pixel meta — playtest errors follow locale font rules.
 	if is_status_label(node) and node is RichTextLabel:
 		apply_status_font(node as RichTextLabel)
+		return
+	if node.get_meta("_notification_badge", false):
 		return
 	# ka/uk: Noto only for native letters; digits/symbols/Latin → Press Start.
 	# Resolve i18n keys before sniffing — scene .text is often "UI_PLAY" while
@@ -2174,14 +2213,50 @@ static func _popup_prompt_with_title_gap(text: String, use_pixel_gap: bool = fal
 
 const NOTIFICATION_BADGE_TEXT := "!"
 const NOTIFICATION_BADGE_FONT := 24
+const NOTIFICATION_BADGE_RED := Color(0.92, 0.22, 0.18, 1.0)
 
-## Builds a red circular "!" badge panel + label for menu buttons and level cards.
+## Red "!" without a panel background (main menu buttons).
+static func build_plain_notification_badge(host_h: float = -1.0) -> Label:
+	var label := Label.new()
+	label.set_meta("_notification_badge", true)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.visible = false
+	var font_px := plain_notification_badge_font_size(host_h)
+	apply_raster_pixel_label(
+		label, NOTIFICATION_BADGE_TEXT, font_px, NOTIFICATION_BADGE_RED, 0, true
+	)
+	return label
+
+
+static func refresh_plain_notification_badge(label: Label, host_h: float = -1.0) -> void:
+	if label == null:
+		return
+	var font_px := plain_notification_badge_font_size(host_h)
+	apply_raster_pixel_label(
+		label, NOTIFICATION_BADGE_TEXT, font_px, NOTIFICATION_BADGE_RED, 0, true
+	)
+
+
+static func plain_notification_badge_font_size(host_h: float = -1.0) -> int:
+	if host_h > 1.0:
+		return int(clampf(host_h * 0.38, 28.0, 40.0))
+	return NOTIFICATION_BADGE_FONT
+
+
+static func plain_notification_badge_size(host_h: float) -> Vector2:
+	var px := plain_notification_badge_font_size(host_h)
+	return Vector2(px * 0.55, px)
+
+
+## Builds a red circular "!" badge panel + label for level cards.
 static func build_notification_badge() -> Dictionary:
 	var panel := Panel.new()
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.visible = false
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.92, 0.22, 0.18, 1.0)
+	style.bg_color = NOTIFICATION_BADGE_RED
 	style.set_corner_radius_all(999)
 	style.set_content_margin(SIDE_LEFT, 4)
 	style.set_content_margin(SIDE_RIGHT, 4)
@@ -2191,6 +2266,7 @@ static func build_notification_badge() -> Dictionary:
 	style.border_color = Color(0, 0, 0, 0.85)
 	panel.add_theme_stylebox_override("panel", style)
 	var label := Label.new()
+	label.set_meta("_notification_badge", true)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2199,6 +2275,18 @@ static func build_notification_badge() -> Dictionary:
 	label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	apply_raster_pixel_label(label, NOTIFICATION_BADGE_TEXT, NOTIFICATION_BADGE_FONT, Color.WHITE, 0, true)
 	return {"panel": panel, "label": label}
+
+
+## Keeps a menu/card notification badge showing "!" (never a numeric count).
+static func refresh_notification_badge(panel: Panel) -> void:
+	if panel == null:
+		return
+	for child in panel.get_children():
+		if child is Label:
+			apply_raster_pixel_label(
+				child as Label, NOTIFICATION_BADGE_TEXT, NOTIFICATION_BADGE_FONT, Color.WHITE, 0, true
+			)
+			return
 
 
 ## Badge width/height for a host control height (menu row or level card).

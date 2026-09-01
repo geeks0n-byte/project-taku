@@ -257,9 +257,20 @@ func _on_random_board_requested():
 	var gen_difficulty: int = editor_ui.get_generation_difficulty()
 	var layout_copy: Dictionary = current_layout.duplicate(true)
 	var generated: Variant = await _loading_overlay.run_async(self, func():
-		return PuzzleGenerator.generate_random_layout(
-			target_w, target_h, allowed_tiles, layout_copy, require_unique, lock_walls, gen_difficulty
+		var result := {}
+		var attempts := 25 if require_unique else 10
+		var deadline_msec := Time.get_ticks_msec() + int(
+			GameConstants.GENERATOR_WALL_CLOCK_SEC * 1000.0
 		)
+		for attempt in range(attempts):
+			if Time.get_ticks_msec() > deadline_msec:
+				break
+			result = PuzzleGenerator.generate_random_layout(
+				target_w, target_h, allowed_tiles, layout_copy, require_unique, lock_walls, gen_difficulty
+			)
+			if not result.is_empty():
+				break
+		return result
 	)
 	if not is_instance_valid(self) or not is_inside_tree():
 		return

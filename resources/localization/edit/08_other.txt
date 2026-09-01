@@ -109,7 +109,7 @@ Earn all three stars on a campaign puzzle
 UNDO NOTHING
 
 [ACH_UNDO_NOTHING_DESC]
-Clear a campaign puzzle without using undo
+Clear a hard campaign puzzle without using undo
 
 [ACH_AD_FRIEND_NAME]
 AD FRIEND
@@ -133,7 +133,7 @@ Try to hop a shifter that cannot move
 RULES READER
 
 [ACH_RULES_READER_DESC]
-Open the rules ten times
+Open the rules on ten different levels
 
 [ACH_PURPLE_RAIN_NAME]
 PURPLE RAIN

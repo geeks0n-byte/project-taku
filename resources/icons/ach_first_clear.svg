@@ -1,13 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
-  <!-- FIRST CLEAR — one solved board, first victory -->
-  <rect x="14" y="14" width="36" height="36" fill="#1a1a1a"/>
-  <rect x="16" y="16" width="14" height="14" fill="#29adff"/>
-  <rect x="16" y="16" width="11" height="2" fill="#abffe6"/>
-  <rect x="16" y="16" width="2" height="10" fill="#abffe6"/>
-  <rect x="34" y="16" width="14" height="14" fill="#00e436"/>
-  <rect x="34" y="16" width="11" height="2" fill="#a1ff00"/>
-  <rect x="16" y="34" width="14" height="14" fill="#c49c00"/>
-  <rect x="16" y="34" width="11" height="2" fill="#ffe066"/>
-  <rect x="34" y="34" width="14" height="14" fill="#29adff"/>
-  <rect x="34" y="34" width="11" height="2" fill="#abffe6"/>
+  <!-- FIRST CLEAR — 2x2 board with in-game tile shading -->
+  <g id="tile-blue" transform="translate(16,16)">
+    <rect width="14" height="13" fill="#29adff"/>
+    <rect width="13" height="1" fill="#abffe6"/>
+    <rect y="1" width="1" height="11" fill="#abffe6"/>
+    <rect x="1" y="12" width="13" height="1" fill="#1d2b53"/>
+    <rect x="13" y="1" width="1" height="12" fill="#1d2b53"/>
+    <rect x="2" y="2" width="10" height="7" fill="#abffe6"/>
+    <rect x="3" y="3" width="8" height="6" fill="#29adff"/>
+  </g>
+  <g id="tile-yellow-tr" transform="translate(34,16)">
+    <rect width="14" height="13" fill="#c49c00"/>
+    <rect width="13" height="1" fill="#ffe066"/>
+    <rect y="1" width="1" height="11" fill="#ffe066"/>
+    <rect x="1" y="12" width="13" height="1" fill="#704700"/>
+    <rect x="13" y="1" width="1" height="12" fill="#704700"/>
+    <rect x="2" y="2" width="10" height="7" fill="#ffe066"/>
+    <rect x="3" y="3" width="8" height="6" fill="#c49c00"/>
+  </g>
+  <g id="tile-yellow-bl" transform="translate(16,34)">
+    <rect width="14" height="13" fill="#c49c00"/>
+    <rect width="13" height="1" fill="#ffe066"/>
+    <rect y="1" width="1" height="11" fill="#ffe066"/>
+    <rect x="1" y="12" width="13" height="1" fill="#704700"/>
+    <rect x="13" y="1" width="1" height="12" fill="#704700"/>
+    <rect x="2" y="2" width="10" height="7" fill="#ffe066"/>
+    <rect x="3" y="3" width="8" height="6" fill="#c49c00"/>
+  </g>
+  <g id="tile-blue-br" transform="translate(34,34)">
+    <rect width="14" height="13" fill="#29adff"/>
+    <rect width="13" height="1" fill="#abffe6"/>
+    <rect y="1" width="1" height="11" fill="#abffe6"/>
+    <rect x="1" y="12" width="13" height="1" fill="#1d2b53"/>
+    <rect x="13" y="1" width="1" height="12" fill="#1d2b53"/>
+    <rect x="2" y="2" width="10" height="7" fill="#abffe6"/>
+    <rect x="3" y="3" width="8" height="6" fill="#29adff"/>
+  </g>
 </svg>

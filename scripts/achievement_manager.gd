@@ -100,11 +100,12 @@ func notify_shifter_slide() -> void:
 	_apply_state(false)
 
 
-## Rules overlay opened (rules_reader).
-func notify_rules_opened() -> void:
+## Rules overlay opened on a campaign level (rules_reader).
+func notify_rules_opened(level: LevelData = null) -> void:
 	if SaveManager == null or OS.has_feature("headless"):
 		return
-	SaveManager.rules_opens += 1
+	if level != null:
+		SaveManager.record_rules_opened(level)
 	_apply_state(false)
 
 
@@ -126,6 +127,20 @@ func grant(id: String) -> bool:
 	unlocked.emit(id)
 	_notify_unseen_changed()
 	_show_toast(id)
+	_refresh_open_list()
+	return true
+
+
+## Silent grant from Play Games pull merge. No toast and no [signal unlocked] (avoids re-push).
+func import_remote_unlock(id: String) -> bool:
+	if SaveManager == null:
+		return false
+	var now := int(Time.get_unix_time_from_system())
+	if not AchievementCatalog.apply_grant(SaveManager.achievements_unlocked, id, now):
+		return false
+	if not OS.has_feature("headless"):
+		SaveManager.save_progress()
+	_notify_unseen_changed()
 	_refresh_open_list()
 	return true
 
@@ -155,6 +170,29 @@ func notify_invalid_move(message: String) -> bool:
 	return grant(AchievementCatalog.ID_SHALL_NOT_PASS)
 
 
+## Debug: grants every catalog achievement with unlock toasts. Returns count newly unlocked.
+func debug_unlock_all() -> int:
+	if SaveManager == null or OS.has_feature("headless"):
+		return 0
+	var now := int(Time.get_unix_time_from_system())
+	var granted := 0
+	var delay := 0.0
+	const TOAST_GAP := 0.35
+	for id in AchievementCatalog.ORDERED_IDS:
+		var sid := str(id)
+		if not AchievementCatalog.apply_grant(SaveManager.achievements_unlocked, sid, now):
+			continue
+		granted += 1
+		unlocked.emit(sid)
+		_show_toast(sid, delay)
+		delay += TOAST_GAP
+	if granted > 0:
+		SaveManager.save_progress()
+		_notify_unseen_changed()
+		_refresh_open_list()
+	return granted
+
+
 ## Builds the current progress snapshot and grants any missing ids.
 func _apply_state(
 	show_toast: bool,
@@ -168,7 +206,7 @@ func _apply_state(
 		"no_hint_clears": SaveManager.no_hint_clears,
 		"on_time_clears": SaveManager.on_time_clears,
 		"shifter_slides": SaveManager.shifter_slides,
-		"rules_opens": SaveManager.rules_opens,
+		"rules_open_levels": SaveManager.rules_open_level_count(),
 		"easy_complete": _folder_complete(GameConstants.CAMPAIGN_EASY_DIR),
 		"medium_complete": _folder_complete(GameConstants.CAMPAIGN_MEDIUM_DIR),
 		"hard_complete": _folder_complete(GameConstants.CAMPAIGN_HARD_DIR),
@@ -245,10 +283,9 @@ func reset_local() -> void:
 	SaveManager.achievements_unlocked.clear()
 	SaveManager.achievements_seen.clear()
 	SaveManager.no_hint_clears = 0
-	SaveManager.campaign_wins = 0
 	SaveManager.on_time_clears = 0
 	SaveManager.shifter_slides = 0
-	SaveManager.rules_opens = 0
+	SaveManager.rules_open_levels.clear()
 
 
 ## Opens the achievements overlay. `on_close` is invoked after the player backs out.
@@ -257,9 +294,6 @@ func show_list(on_close: Callable = Callable()) -> void:
 	_ensure_list()
 	if _list == null:
 		return
-	if SaveManager:
-		SaveManager.mark_achievements_seen()
-	_notify_unseen_changed()
 	if _list.has_method("refresh"):
 		_list.refresh()
 	_list.visible = true
@@ -275,6 +309,7 @@ func hide_list() -> void:
 	list_closed.emit()
 	if cb.is_valid():
 		cb.call()
+	_notify_unseen_changed()
 
 
 ## True while the achievements list is on screen.

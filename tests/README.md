@@ -13,7 +13,10 @@
 # Headless logic tests:
 #   powershell -File tools/run_logic_tests.ps1
 #
+# Godot path: GODOT_EXE, PATH, .godot-ci cache, or GODOT_ALLOW_DOWNLOAD=1.
+# Pin: tools/godot.env
+#
 # Or:
 #   godot --headless --path . -s res://tests/run_logic_tests.gd
 #
-# CI: .github/workflows/logic-tests.yml
+# CI: tools/ensure_godot.sh -> $GODOT_EXE in .github/workflows/logic-tests.yml
