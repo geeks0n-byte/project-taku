@@ -25,16 +25,17 @@ const _ITEMS_PER_PAGE := _GRID_COLUMNS * _ROWS_PER_PAGE
 const _ROW_H := 276.0
 const _CELL_SEP_H := 24
 const _CELL_SEP_V := 24
-const _ICON_PX := 88.0
-const _ICON_ART_PX := 72.0
-const _BADGE_PX := 36.0
+const _ICON_PX := 84.0
+const _ICON_ART_PX := 68.0
+const _BADGE_PX := 34.0
 const _BADGE_INSET := 0.0
 const _NAME_SLOT_H := 56.0
 const _TIER_SLOT_H := 22.0
 ## Full 2-line pixel desc (22px) + pad. Do not shrink this to dodge the pager.
-const _DESC_SLOT_H := 82.0
+const _DESC_SLOT_H := 90.0
 const _TEXT_SLOT_PAD_TOP := 2.0
 const _TEXT_SLOT_PAD_BOTTOM := 2.0
+const _DESC_PAD_BOTTOM := 10.0
 const _BELOW_TITLE_GAP := 48.0
 const _RESERVE_MENU_BANNER_NAV := true
 const _LOCKED_ICON_MODULATE := Color(0.34, 0.34, 0.38, 1.0)
@@ -309,7 +310,7 @@ func _make_cell(id: String, unlocked_map: Dictionary) -> Control:
 	var cell := VBoxContainer.new()
 	cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cell.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	cell.add_theme_constant_override("separation", 6)
+	cell.add_theme_constant_override("separation", 5)
 	cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(_make_icon_row(id, unlocked, show_identity, unlocked_map))
 
@@ -361,9 +362,9 @@ func _make_cell(id: String, unlocked_map: Dictionary) -> Control:
 		desc.clip_text = false
 		desc.max_lines_visible = _DESC_MAX_LINES
 		desc.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
-		desc.custom_minimum_size.y = _DESC_SLOT_H - _TEXT_SLOT_PAD_TOP - _TEXT_SLOT_PAD_BOTTOM
+		desc.add_theme_constant_override("line_spacing", 8)
 		desc_slot.add_child(desc)
-		_anchor_slot_child(desc)
+		_anchor_desc_label(desc)
 		desc.set_meta("_ach_fit_base", _DESC_FONT_BASE)
 		desc.set_meta("_ach_fit_max_lines", _DESC_MAX_LINES)
 	cell.add_child(desc_slot)
@@ -388,6 +389,16 @@ func _anchor_slot_child(child: Control) -> void:
 	child.offset_top = _TEXT_SLOT_PAD_TOP
 	child.offset_right = 0.0
 	child.offset_bottom = -_TEXT_SLOT_PAD_BOTTOM
+	child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	child.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+
+func _anchor_desc_label(child: Control) -> void:
+	child.set_anchors_preset(Control.PRESET_FULL_RECT)
+	child.offset_left = 0.0
+	child.offset_top = _TEXT_SLOT_PAD_TOP
+	child.offset_right = 0.0
+	child.offset_bottom = -_DESC_PAD_BOTTOM
 	child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	child.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
@@ -625,6 +636,7 @@ func _apply_fitted_label_size(label: Label, size: int, max_lines: int) -> void:
 			else Color.WHITE
 		)
 		HudLayout.apply_live_pixel_label_settings(label, label.text, size, color)
+		label.add_theme_constant_override("line_spacing", 8)
 	else:
 		label.add_theme_font_size_override("font_size", size)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
