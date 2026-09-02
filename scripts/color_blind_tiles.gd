@@ -6,7 +6,11 @@ extends RefCounted
 const PATTERN_ALPHA := 0.42
 
 static func is_enabled() -> bool:
-	return SaveManager != null and SaveManager.color_blind_patterns
+	var tree := Engine.get_main_loop()
+	if tree == null:
+		return false
+	var sm := tree.root.get_node_or_null("/root/SaveManager")
+	return sm != null and bool(sm.get("color_blind_patterns"))
 
 
 static func sync_pattern(host: Control, state: int) -> void:
