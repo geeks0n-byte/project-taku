@@ -202,7 +202,6 @@ func _on_language_changed() -> void:
 # Called once by main.gd after the scene is ready. Hides all overlays, sets up
 # fonts, and defers top-bar button layout to the next frame so sizes are stable.
 func setup_ui(_show_debug_tools: bool, _cell_size: float) -> void:
-	_toolbar.connect_signals()
 	_ensure_safe_area_resize_hook()
 	set_overlays_hidden()
 	_hud_counters.hide_counters_on_setup()

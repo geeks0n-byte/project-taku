@@ -10,6 +10,20 @@ func setup(game: GameMain) -> void:
 	_game = game
 
 
+static func solve_layout(
+	layout: Dictionary,
+	tiles_list: Array,
+	constraints: Array,
+	dims: Vector2i,
+	shifter_pairs: Array = []
+) -> Dictionary:
+	var solve_layout := LevelUtils.layout_with_shifters_for_solve(layout, shifter_pairs)
+	var empty_cells: Array = LevelUtils.empty_cells_from_layout(solve_layout)
+	return LevelUtils.solve_reference(
+		solve_layout, empty_cells, dims.x, dims.y, tiles_list, constraints
+	)
+
+
 func generate_board() -> void:
 	if _game == null:
 		return
@@ -120,7 +134,7 @@ func generate_board() -> void:
 			_game.required_shifter_moves = current_level_resource.required_shifter_moves
 			if _game.required_shifter_moves <= 0 and _game._has_shifters:
 				_game.required_shifter_moves = LevelUtils.compute_required_shifter_moves(final_s_pairs)
-		_game.solved_solution_reference = _game._solve_layout(
+		_game.solved_solution_reference = GameBoardSetupController.solve_layout(
 			fresh_layout, tiles_list, solve_constraints, dims, final_s_pairs
 		)
 	else:
@@ -171,7 +185,7 @@ func generate_board() -> void:
 		_game.required_shifter_moves = maxi(0, int(generated_dict.get("required_shifter_moves", 0)))
 		if _game.required_shifter_moves <= 0 and _game._has_shifters:
 			_game.required_shifter_moves = LevelUtils.compute_required_shifter_moves(final_s_pairs)
-		_game.solved_solution_reference = _game._solve_layout(
+		_game.solved_solution_reference = GameBoardSetupController.solve_layout(
 			fresh_layout, tiles_list, solve_constraints, dims, final_s_pairs
 		)
 

@@ -139,6 +139,8 @@ func _ready() -> void:
 		SaveManager.language_changed.connect(_on_language_changed)
 	if SaveManager and not SaveManager.unseen_levels_changed.is_connected(_on_unseen_levels_changed):
 		SaveManager.unseen_levels_changed.connect(_on_unseen_levels_changed)
+	if SaveManager and not SaveManager.color_blind_patterns_changed.is_connected(_on_color_blind_patterns_changed):
+		SaveManager.color_blind_patterns_changed.connect(_on_color_blind_patterns_changed)
 	if not get_viewport().size_changed.is_connected(_on_viewport_resized):
 		get_viewport().size_changed.connect(_on_viewport_resized)
 
@@ -171,6 +173,12 @@ func _on_viewport_resized() -> void:
 
 ## Rebuilds level cards when a new-level badge is cleared.
 func _on_unseen_levels_changed(_count: int) -> void:
+	_tabs.refresh_page()
+
+
+## Re-rasterizes previews when color-blind tile patterns are toggled.
+func _on_color_blind_patterns_changed() -> void:
+	LevelPreview.clear_texture_cache()
 	_tabs.refresh_page()
 
 

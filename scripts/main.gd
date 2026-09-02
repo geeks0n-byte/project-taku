@@ -409,18 +409,6 @@ func run_validation_pass() -> void:
 func _run_validation_pass() -> void:
 	run_validation_pass()
 
-# Builds a flattened layout with shifters merged in and runs the backtracking solver.
-func _solve_layout(
-	layout: Dictionary,
-	tiles_list: Array,
-	constraints: Array,
-	dims: Vector2i,
-	shifter_pairs: Array = []
-) -> Dictionary:
-	var solve_layout := LevelUtils.layout_with_shifters_for_solve(layout, shifter_pairs)
-	var empty_cells: Array = LevelUtils.empty_cells_from_layout(solve_layout)
-	return LevelUtils.solve_reference(solve_layout, empty_cells, dims.x, dims.y, tiles_list, constraints)
-
 # Ends the run, computes stars/unlocks, records ad cadence, and opens victory UI.
 func trigger_victory() -> void:
 	_victory_ctrl.trigger_victory()

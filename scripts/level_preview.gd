@@ -22,6 +22,12 @@ static var _tile_image_cache: Dictionary = {}
 # Bounded to _PREVIEW_CACHE_MAX entries; oldest entry is evicted when full.
 static var _preview_texture_cache: Dictionary = {}
 const _PREVIEW_CACHE_MAX := 64
+const _CB_STRIPE_PERIOD := 5
+
+
+## Drops composed preview textures (e.g. after color-blind toggle).
+static func clear_texture_cache() -> void:
+	_preview_texture_cache.clear()
 
 ## Creates the dark bordered StyleBoxFlat used to frame preview thumbnails.
 static func make_frame_style() -> StyleBoxFlat:
@@ -154,6 +160,8 @@ static func make_texture_from_layout(
 				image.blend_rect(tile_img, Rect2i(Vector2i.ZERO, tile_img.get_size()), dst)
 			else:
 				image.fill_rect(Rect2i(dst.x, dst.y, cell, cell), _color_for_state(state))
+			if state == GameConstants.TileState.BLUE or state == GameConstants.TileState.YELLOW:
+				_blit_color_blind_pattern(image, dst, cell, state)
 			if state == GameConstants.TileState.SHIFTER and shifter_dirs.has(coord):
 				_blit_shifter_arrow(image, dst, cell, shifter_dirs[coord])
 
@@ -167,6 +175,7 @@ static func _layout_cache_key(layout: Dictionary, pixel_size: int, shifter_dirs:
 	var parts: PackedStringArray = []
 	parts.append("v5tiles")
 	parts.append(str(pixel_size))
+	parts.append("cb1" if _color_blind_enabled() else "cb0")
 	var coords: Array = layout.keys()
 	coords.sort_custom(func(a, b): return str(a) < str(b))
 	for coord in coords:
@@ -178,6 +187,41 @@ static func _layout_cache_key(layout: Dictionary, pixel_size: int, shifter_dirs:
 			var d: Vector2i = shifter_dirs[coord] as Vector2i
 			parts.append("d%s:%d,%d" % [str(coord), d.x, d.y])
 	return "|".join(parts)
+
+
+static func _color_blind_enabled() -> bool:
+	var tree := Engine.get_main_loop()
+	if tree == null:
+		return false
+	var sm := tree.root.get_node_or_null("/root/SaveManager")
+	return sm != null and bool(sm.get("color_blind_patterns"))
+
+
+## Diagonal stripe overlay on blue/yellow preview cells (matches live board patterns).
+static func _blit_color_blind_pattern(image: Image, dst: Vector2i, cell: int, state: int) -> void:
+	if not _color_blind_enabled():
+		return
+	if state != GameConstants.TileState.BLUE and state != GameConstants.TileState.YELLOW:
+		return
+	var margin := maxi(1, int(round(float(cell) * 0.12)))
+	var alpha := 0.28 if state == GameConstants.TileState.BLUE else 0.42
+	var slope := 1 if state == GameConstants.TileState.BLUE else -1
+	for y in cell:
+		for x in cell:
+			if x < margin or y < margin or x >= cell - margin or y >= cell - margin:
+				continue
+			var lx := x - margin
+			var ly := y - margin
+			var diag := lx + slope * ly
+			if int(abs(diag)) % _CB_STRIPE_PERIOD >= _CB_STRIPE_PERIOD / 2:
+				continue
+			var px := dst.x + x
+			var py := dst.y + y
+			if px < 0 or py < 0 or px >= image.get_width() or py >= image.get_height():
+				continue
+			var existing := image.get_pixel(px, py)
+			image.set_pixel(px, py, existing.lerp(Color(0, 0, 0, alpha), alpha))
+
 
 ## Inserts a generated texture into the preview cache, evicting the oldest entry
 ## (insertion order) when the cache has reached its capacity.
