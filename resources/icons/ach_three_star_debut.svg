@@ -1,15 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <!-- THREE STAR DEBUT — HUD star shape, three across (center tallest) -->
-  <g transform="translate(10,32) scale(0.38) translate(-32,-32)">
-    <path fill="#FFD54A" stroke="#1d2b53" stroke-width="5" stroke-linejoin="round"
-      d="M32 6 L39.5 24.5 L59 26.5 L44.5 39.5 L48.5 58.5 L32 48.5 L15.5 58.5 L19.5 39.5 L5 26.5 L24.5 24.5 Z"/>
+  <!-- THREE STAR DEBUT — HUD objective star -->
+  <g transform="translate(10,36) scale(0.38) translate(-32,-32)">
+    <path fill="#FFD54A" stroke="#000000" stroke-width="3" stroke-linejoin="round" d="M32 6 L39.5 24.5 L59 26.5 L44.5 39.5 L48.5 58.5 L32 48.5 L15.5 58.5 L19.5 39.5 L5 26.5 L24.5 24.5 Z"/>
   </g>
-  <g transform="translate(32,31) scale(0.44) translate(-32,-32)">
-    <path fill="#FFD54A" stroke="#1d2b53" stroke-width="5" stroke-linejoin="round"
-      d="M32 6 L39.5 24.5 L59 26.5 L44.5 39.5 L48.5 58.5 L32 48.5 L15.5 58.5 L19.5 39.5 L5 26.5 L24.5 24.5 Z"/>
+  <g transform="translate(32,30) scale(0.44) translate(-32,-32)">
+    <path fill="#FFD54A" stroke="#000000" stroke-width="3" stroke-linejoin="round" d="M32 6 L39.5 24.5 L59 26.5 L44.5 39.5 L48.5 58.5 L32 48.5 L15.5 58.5 L19.5 39.5 L5 26.5 L24.5 24.5 Z"/>
   </g>
-  <g transform="translate(54,32) scale(0.38) translate(-32,-32)">
-    <path fill="#FFD54A" stroke="#1d2b53" stroke-width="5" stroke-linejoin="round"
-      d="M32 6 L39.5 24.5 L59 26.5 L44.5 39.5 L48.5 58.5 L32 48.5 L15.5 58.5 L19.5 39.5 L5 26.5 L24.5 24.5 Z"/>
+  <g transform="translate(54,36) scale(0.38) translate(-32,-32)">
+    <path fill="#FFD54A" stroke="#000000" stroke-width="3" stroke-linejoin="round" d="M32 6 L39.5 24.5 L59 26.5 L44.5 39.5 L48.5 58.5 L32 48.5 L15.5 58.5 L19.5 39.5 L5 26.5 L24.5 24.5 Z"/>
   </g>
 </svg>

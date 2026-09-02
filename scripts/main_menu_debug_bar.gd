@@ -9,6 +9,8 @@ const _FX_COMET_1 := preload("res://resources/background/fx_comet_1.svg")
 const _FX_COMET_2 := preload("res://resources/background/fx_comet_2.svg")
 const _FX_COMET_3 := preload("res://resources/background/fx_comet_3.svg")
 const _DEBUG_BTN_SIZE := Vector2(96, 96)
+const _DEBUG_ICON_PAD_RATIO := 0.20
+const _DEBUG_MULTI_ICON_BASE_PX := 24.0
 
 var _show_debug_tools: bool = false
 var _editor_btn: Button
@@ -128,7 +130,7 @@ func _setup_debug_fx_button(button: Button, textures: Array) -> void:
 		return
 	var btn_px := _DEBUG_BTN_SIZE.x
 	if count == 1:
-		var pad := maxf(10.0, btn_px * 0.14)
+		var pad := maxf(12.0, btn_px * _DEBUG_ICON_PAD_RATIO)
 		var scale_i := maxi(2, int(floor((btn_px - pad * 2.0) / 16.0)))
 		var solo_px := float(16 * scale_i)
 		var inset := (btn_px - solo_px) * 0.5
@@ -143,11 +145,11 @@ func _setup_debug_fx_button(button: Button, textures: Array) -> void:
 		host.add_child(icon)
 		return
 	var s := btn_px / 72.0
-	var icon_px := 28.0 * s
+	var icon_px := _DEBUG_MULTI_ICON_BASE_PX * s
 	var offsets := [
-		Vector2(8, 10) * s,
-		Vector2(28, 22) * s,
-		Vector2(14, 34) * s,
+		Vector2(12, 14) * s,
+		Vector2(26, 20) * s,
+		Vector2(18, 32) * s,
 	]
 	for i in count:
 		var icon := TextureRect.new()

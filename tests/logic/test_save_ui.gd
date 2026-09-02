@@ -6,6 +6,7 @@ static func run(r: LogicTestRunner) -> void:
 	_test_font_locale_policy(r)
 	_test_save_migration_v1_to_v2(r)
 	_test_save_migration_v2_to_v3(r)
+	_test_save_migration_v3_to_v4(r)
 	_test_safe_insets(r)
 	_test_wide_ui_cap(r)
 	_test_pseudolocale(r)
@@ -55,6 +56,42 @@ static func _test_save_migration_v2_to_v3(r: LogicTestRunner) -> void:
 	r.ok(seeded_seen.has("first_clear"), "migrate v3: pre-existing unlock marked seen")
 	r.ok(seeded_seen.has("clears_bronze"), "migrate v3: all pre-existing unlocks marked seen")
 	r.ok(int(Migration.FORMAT_VERSION) >= 3, "migrate: format version is 3+")
+
+
+static func _test_save_migration_v3_to_v4(r: LogicTestRunner) -> void:
+	const Migration := preload("res://scripts/save_migration.gd")
+	var cfg := ConfigFile.new()
+	cfg.set_value("Progression", "max_unlocked_level", 75)
+	cfg.set_value("Progression", "level_star_bits", {"15": 7, "74": 4})
+	cfg.set_value("Progression", "levels_unseen", {"16": true})
+	cfg.set_value("Progression", "completed_tutorial_scripts", ["level_1"])
+	cfg.set_value("Achievements", "rules_open_levels", {"15": true, "20": true})
+	cfg.set_value(
+		"Session",
+		"data",
+		{
+			"level_path": "res://levels/easy/level_15.tres",
+			"level_number": 15,
+		}
+	)
+	Migration.migrate_config(cfg, 3)
+	r.ok(int(cfg.get_value("Progression", "max_unlocked_level", 0)) == 61, "migrate v4: max unlock remapped")
+	var bits: Dictionary = cfg.get_value("Progression", "level_star_bits", {})
+	r.ok(bits.has("1") and int(bits["1"]) == 7, "migrate v4: star bits key 15 -> 1")
+	r.ok(bits.has("60") and int(bits["60"]) == 4, "migrate v4: star bits key 74 -> 60")
+	var unseen: Dictionary = cfg.get_value("Progression", "levels_unseen", {})
+	r.ok(unseen.has("2"), "migrate v4: unseen key 16 -> 2")
+	var scripts: Array = cfg.get_value("Progression", "completed_tutorial_scripts", [])
+	r.ok(scripts.has("level_00"), "migrate v4: tutorial script id remapped")
+	var rules: Dictionary = cfg.get_value("Achievements", "rules_open_levels", {})
+	r.ok(rules.has("1") and rules.has("6"), "migrate v4: rules_open_levels remapped")
+	var session: Dictionary = cfg.get_value("Session", "data", {})
+	r.ok(
+		str(session.get("level_path", "")) == "res://levels/easy/level_01.tres",
+		"migrate v4: session path remapped"
+	)
+	r.ok(int(session.get("level_number", -1)) == 1, "migrate v4: session level_number remapped")
+	r.ok(int(Migration.FORMAT_VERSION) >= 4, "migrate: format version is 4+")
 
 static func _test_safe_insets(r: LogicTestRunner) -> void:
 	var none := SafeInsets.margins_from(

@@ -327,13 +327,13 @@ alignment = 1
 
 [node name="CustomTabButton" type="Button" parent="UILayer/CustomDebugBarHost"]
 modulate = Color(0.6, 0.6, 0.6, 1)
-custom_minimum_size = Vector2(280, 96)
+custom_minimum_size = Vector2(280, 110)
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 0
 theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")

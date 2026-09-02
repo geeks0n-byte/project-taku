@@ -150,7 +150,7 @@ static func _test_achievement_catalog(r: LogicTestRunner) -> void:
 		"ach: visible locked keeps real title key"
 	)
 	var locked_grid: Array = AchievementCatalog.grid_ids({})
-	r.ok(locked_grid.size() == 17, "ach: grid lists 17 cells (families collapsed, secret omitted)")
+	r.ok(locked_grid.size() == 20, "ach: grid lists 20 cells (families collapsed, secret omitted)")
 	r.ok(locked_grid.has(AchievementCatalog.ID_CLEARS_BRONZE), "ach: locked grid shows clears bronze")
 	var full_unlock := {}
 	for id in AchievementCatalog.ORDERED_IDS:
@@ -172,10 +172,10 @@ static func _test_achievement_catalog(r: LogicTestRunner) -> void:
 	})
 	r.ok(silver_grid.has(AchievementCatalog.ID_CLEARS_SILVER), "ach: family cell promotes to silver")
 	r.ok(not silver_grid.has(AchievementCatalog.ID_CLEARS_BRONZE), "ach: bronze sibling collapsed after silver")
-	r.ok(silver_grid.size() == 17, "ach: unlock does not duplicate family cells")
+	r.ok(silver_grid.size() == 20, "ach: unlock does not duplicate family cells")
 	var secret_grid: Array = AchievementCatalog.grid_ids({AchievementCatalog.ID_DEV_MODE: 1})
 	r.ok(secret_grid.has(AchievementCatalog.ID_DEV_MODE), "ach: secret listed after unlock")
-	r.ok(secret_grid.size() == 18, "ach: secret adds one cell")
+	r.ok(secret_grid.size() == 21, "ach: secret adds one cell")
 	var clears29 := AchievementCatalog.collect_unlocks({"campaign_clears": 29})
 	r.ok(clears29.has(AchievementCatalog.ID_FIRST_CLEAR), "ach: 29 clears is first_clear")
 	r.ok(clears29.has(AchievementCatalog.ID_CLEARS_BRONZE), "ach: 29 clears is bronze")
@@ -200,6 +200,14 @@ static func _test_achievement_catalog(r: LogicTestRunner) -> void:
 	r.ok(gold_hints.has(AchievementCatalog.ID_NO_HINT_GOLD), "ach: no_hint gold at 60")
 	var purple := AchievementCatalog.collect_unlocks({"shifter_slides": 30})
 	r.ok(purple.has(AchievementCatalog.ID_PURPLE_RAIN), "ach: purple_rain at 30 slides")
+	var ctrl_z := AchievementCatalog.collect_unlocks({"undo_uses": 50})
+	r.ok(ctrl_z.has(AchievementCatalog.ID_CTRL_Z), "ach: ctrl_z at 50 undos")
+	r.ok(
+		not AchievementCatalog.collect_unlocks({"undo_uses": 49}).has(AchievementCatalog.ID_CTRL_Z),
+		"ach: ctrl_z needs 50 undos"
+	)
+	var ctrl_y := AchievementCatalog.collect_unlocks({"redo_uses": 50})
+	r.ok(ctrl_y.has(AchievementCatalog.ID_CTRL_Y), "ach: ctrl_y at 50 redos")
 	var rules := AchievementCatalog.collect_unlocks({"rules_open_levels": 10})
 	r.ok(rules.has(AchievementCatalog.ID_RULES_READER), "ach: rules_reader at 10 levels")
 	r.ok(
@@ -214,10 +222,13 @@ static func _test_achievement_catalog(r: LogicTestRunner) -> void:
 	r.ok(not no_events.has(AchievementCatalog.ID_DEV_MODE), "ach: dev_mode not from collect")
 	var flagged := AchievementCatalog.collect_unlocks({
 		"im_blue": true,
+		"yellow_submarine": true,
+		"green_screen": true,
 		"shall_not_pass": true,
 		"dev_mode": true,
 	})
 	r.ok(flagged.has(AchievementCatalog.ID_IM_BLUE), "ach: im_blue from flag")
+	r.ok(flagged.has(AchievementCatalog.ID_GREEN_SCREEN), "ach: green_screen from flag")
 	r.ok(flagged.has(AchievementCatalog.ID_SHALL_NOT_PASS), "ach: shall_not_pass from flag")
 	r.ok(flagged.has(AchievementCatalog.ID_DEV_MODE), "ach: dev_mode from flag")
 	var bag := {}
@@ -356,6 +367,13 @@ static func _test_achievement_catalog(r: LogicTestRunner) -> void:
 	}
 	r.ok(AchievementCatalog.board_is_all_yellow(all_yellow), "ach: all fillable cells yellow")
 	r.ok(not AchievementCatalog.board_is_all_yellow(all_blue), "ach: blue board is not all yellow")
+	var joker := GameConstants.TileState.JOKER
+	var all_green := {
+		Vector2i(0, 0): {"state": joker, "is_playable": true, "is_locked": false},
+		Vector2i(1, 0): {"state": joker, "is_playable": true, "is_locked": false},
+	}
+	r.ok(AchievementCatalog.board_is_all_green(all_green), "ach: all fillable cells green")
+	r.ok(not AchievementCatalog.board_is_all_green(all_blue), "ach: blue board is not all green")
 	var mixed := {
 		Vector2i(0, 0): {"state": y, "is_playable": true, "is_locked": false},
 		Vector2i(1, 0): {"state": b, "is_playable": true, "is_locked": false},

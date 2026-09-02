@@ -2,7 +2,7 @@ extends RefCounted
 
 const LogicTestRunner := preload("res://tests/logic_test_runner.gd")
 const TranslationHygiene := preload("res://scripts/translation_hygiene.gd")
-const CampaignLevelAudit := preload("res://scripts/campaign_level_audit.gd")
+const CampaignLevelAudit := preload("res://tests/support/campaign_level_audit.gd")
 
 static func run(r: LogicTestRunner) -> void:
 	_test_cloud_save_logic(r)
@@ -60,13 +60,21 @@ static func _test_levels_unseen_badges(r: LogicTestRunner) -> void:
 	if save == null:
 		r.ok(true, "levels unseen: skip without SaveManager")
 		return
+	var first := LevelUtils.first_campaign_level_number()
+	var second := first + 1
+	r.ok(LevelUtils.campaign_level_exists(first), "levels unseen: sample level exists")
+	r.ok(LevelUtils.campaign_level_exists(second), "levels unseen: second sample exists")
 	var backup_unseen: Dictionary = (save.get("levels_unseen") as Dictionary).duplicate()
-	save.set("levels_unseen", {"7": true, "8": true})
+	save.set("levels_unseen", {str(first): true, str(second): true})
 	r.ok(int(save.call("unseen_level_count")) == 2, "levels unseen: count")
-	r.ok(bool(save.call("is_level_unseen", 7)), "levels unseen: query true")
-	save.call("mark_level_seen", 7)
-	r.ok(not bool(save.call("is_level_unseen", 7)), "levels unseen: mark seen clears")
-	r.ok(bool(save.call("is_level_unseen", 8)), "levels unseen: other level untouched")
+	r.ok(bool(save.call("is_level_unseen", first)), "levels unseen: query true")
+	save.call("mark_level_seen", first)
+	r.ok(not bool(save.call("is_level_unseen", first)), "levels unseen: mark seen clears")
+	r.ok(bool(save.call("is_level_unseen", second)), "levels unseen: other level untouched")
+	var highest := LevelUtils.highest_campaign_level_number()
+	r.ok(not LevelUtils.campaign_level_exists(highest + 1), "levels unseen: past last level missing")
+	save.set("levels_unseen", {str(highest + 1): true})
+	r.ok(int(save.call("unseen_level_count")) == 0, "levels unseen: phantom level ignored")
 	save.set("levels_unseen", backup_unseen)
 
 static func _test_cloud_save_stub(r: LogicTestRunner) -> void:

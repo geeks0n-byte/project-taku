@@ -8,7 +8,7 @@ extends RefCounted
 const ICON_SIZE := 44
 const LOCK_ICON_SIZE := 56
 
-## Basename of a level path without extension (e.g. levels/tutorials/level_1.tres → level_1).
+## Basename of a level path without extension (e.g. levels/tutorials/level_00.tres → level_00).
 static func script_id_from_path(path: String) -> String:
 	var p := path.strip_edges()
 	if p.is_empty():
@@ -25,12 +25,12 @@ static func has_script(script_id: String) -> bool:
 ## Ordered TutorialDirector steps for a script id; unknown ids return [].
 static func steps_for(script_id: String) -> Array:
 	match script_id:
-		"level_1":
-			return _level_1()
+		"level_00":
+			return _level_00()
 		_:
 			return []
 
-## Returns the tutorial level when its script is not yet complete, otherwise level_1 for replay.
+## Returns the tutorial level when its script is not yet complete, otherwise level_00 for replay.
 static func first_incomplete_level() -> LevelData:
 	var paths := LevelUtils.scan_directory(GameConstants.CAMPAIGN_TUTORIALS_DIR)
 	LevelUtils.sort_level_paths(paths)
@@ -79,7 +79,7 @@ static func _icon_path(token: String) -> String:
 
 # One continuous tutorial: the board rebuilds between phases while the player stays
 # in the same level. Phases — basics → Green → Purple → links → hold/stars/tools → solve.
-static func _level_1() -> Array:
+static func _level_00() -> Array:
 	var y := GameConstants.TileState.YELLOW
 	var b := GameConstants.TileState.BLUE
 	var g := GameConstants.TileState.JOKER
@@ -87,7 +87,7 @@ static func _level_1() -> Array:
 
 	var yb := ["yellow", "blue"]
 
-	# --- Phase 1: starter 4×4 (matches levels/tutorials/level_1.tres) ---
+	# --- Phase 1: starter 4×4 (matches levels/tutorials/level_00.tres) ---
 	var locked_p1 := [
 		Vector2i(0, 0), Vector2i(3, 0),
 		Vector2i(1, 1), Vector2i(2, 1),

@@ -20,6 +20,7 @@ const LANG_NAMES = ["ENGLISH", "ESPAÑOL", "DEUTSCH", "FRANÇAIS", "POLSKI", "�
 @onready var bgm_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/BgmButton
 @onready var sfx_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/SfxButton
 @onready var haptic_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/HapticButton
+@onready var color_blind_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/ColorBlindButton
 @onready var cloud_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/CloudSaveButton
 @onready var privacy_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/PrivacyPolicyButton
 @onready var privacy_options_btn: Button = $CenterContainer/OptionsPanel/ScrollContainer/VBoxContainer/PrivacyOptionsButton
@@ -65,6 +66,8 @@ func _ready() -> void:
 		sfx_btn.pressed.connect(_on_toggle_sfx)
 	if haptic_btn:
 		haptic_btn.pressed.connect(_on_toggle_haptic)
+	if color_blind_btn:
+		color_blind_btn.pressed.connect(_on_toggle_color_blind)
 	if cloud_btn:
 		cloud_btn.pressed.connect(_cloud.on_pressed)
 	_cloud.setup(cloud_btn, _confirm.show_cloud_choice, _show_status_message)
@@ -112,6 +115,7 @@ func _ready() -> void:
 	_update_bgm_label()
 	_update_sfx_label()
 	_update_haptic_label()
+	_update_color_blind_label()
 	_cloud.update_button()
 	_fit_option_buttons()
 	_style_debug_buttons()
@@ -147,6 +151,7 @@ func show_menu(from_main_menu: bool = false) -> void:
 	_update_bgm_label()
 	_update_sfx_label()
 	_update_haptic_label()
+	_update_color_blind_label()
 	_cloud.update_button()
 	_fit_option_buttons()
 	_style_debug_buttons()
@@ -319,7 +324,7 @@ func _fit_option_buttons() -> void:
 		HudLayout._bind_header_translation_key(title_label, "UI_OPTIONS")
 		HudLayout.apply_screen_header_style(title_label)
 	_bind_option_button_keys()
-	for btn in [del_save_btn, bg_btn, bgm_btn, sfx_btn, haptic_btn, cloud_btn, privacy_btn, privacy_options_btn]:
+	for btn in [del_save_btn, bg_btn, bgm_btn, sfx_btn, haptic_btn, color_blind_btn, cloud_btn, privacy_btn, privacy_options_btn]:
 		_apply_option_button(btn)
 	_style_debug_buttons()
 	_style_close_button()
@@ -586,6 +591,15 @@ func _update_haptic_label() -> void:
 		haptic_btn, tr("UI_HAPTIC_ON" if SaveManager.haptic_enabled else "UI_HAPTIC_OFF")
 	)
 
+## Caption for the color-blind patterns toggle.
+func _update_color_blind_label() -> void:
+	if not color_blind_btn:
+		return
+	_set_toggle_button_caption(
+		color_blind_btn,
+		tr("UI_COLOR_BLIND_ON" if SaveManager.color_blind_patterns else "UI_COLOR_BLIND_OFF")
+	)
+
 ## Refreshes toggle captions and button sizes for the new locale.
 func _on_language_changed() -> void:
 	if not visible:
@@ -595,6 +609,7 @@ func _on_language_changed() -> void:
 	_update_bgm_label()
 	_update_sfx_label()
 	_update_haptic_label()
+	_update_color_blind_label()
 	_cloud.update_button()
 	_fit_option_buttons()
 	_style_debug_buttons()
@@ -615,6 +630,7 @@ func _on_prev_lang() -> void:
 	_update_bgm_label()
 	_update_sfx_label()
 	_update_haptic_label()
+	_update_color_blind_label()
 	_cloud.update_button()
 	_fit_option_buttons()
 
@@ -631,6 +647,7 @@ func _on_next_lang() -> void:
 	_update_bgm_label()
 	_update_sfx_label()
 	_update_haptic_label()
+	_update_color_blind_label()
 	_cloud.update_button()
 	_fit_option_buttons()
 
@@ -653,6 +670,11 @@ func _on_toggle_sfx() -> void:
 func _on_toggle_haptic() -> void:
 	SaveManager.set_haptic_enabled(not SaveManager.haptic_enabled)
 	_update_haptic_label()
+
+## Flips color-blind tile patterns and updates the button caption.
+func _on_toggle_color_blind() -> void:
+	SaveManager.set_color_blind_patterns(not SaveManager.color_blind_patterns)
+	_update_color_blind_label()
 
 # Opens the privacy policy URL via AdsManager (which knows the canonical URL),
 # or falls back to OS.shell_open if AdsManager is unavailable (editor/desktop).

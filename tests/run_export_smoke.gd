@@ -2,7 +2,7 @@ extends SceneTree
 ## Headless Android export preset smoke checks.
 ## Run: godot --headless --path . -s res://tests/run_export_smoke.gd
 
-const ExportSmoke := preload("res://scripts/export_smoke.gd")
+const ExportSmoke := preload("res://tests/support/export_smoke.gd")
 
 func _init() -> void:
 	var issues := ExportSmoke.audit()

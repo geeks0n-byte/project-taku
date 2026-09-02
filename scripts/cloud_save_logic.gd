@@ -80,6 +80,8 @@ static func progress_score(blob: Dictionary) -> int:
 	score += int(ach.get("no_hint_clears", 0))
 	score += int(ach.get("on_time_clears", 0))
 	score += int(ach.get("shifter_slides", 0))
+	score += int(ach.get("undo_uses", 0))
+	score += int(ach.get("redo_uses", 0))
 	return score
 
 
@@ -195,6 +197,14 @@ static func merge_blobs(local: Dictionary, remote: Dictionary) -> Dictionary:
 		"shifter_slides": maxi(
 			int(local_a.get("shifter_slides", 0)),
 			int(remote_a.get("shifter_slides", 0))
+		),
+		"undo_uses": maxi(
+			int(local_a.get("undo_uses", 0)),
+			int(remote_a.get("undo_uses", 0))
+		),
+		"redo_uses": maxi(
+			int(local_a.get("redo_uses", 0)),
+			int(remote_a.get("redo_uses", 0))
 		),
 		"rules_open_levels": merge_rules_open_levels(
 			local_a.get("rules_open_levels", {}),

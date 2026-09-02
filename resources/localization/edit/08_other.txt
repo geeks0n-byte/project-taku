@@ -61,19 +61,19 @@ Clear unique campaign puzzles without hints
 ONE MORE LEVEL
 
 [ACH_CLEARS_BRONZE_DESC]
-Keep clearing unique campaign puzzles
+Clear unique campaign puzzles
 
 [ACH_CLEARS_SILVER_NAME]
 ONE MORE LEVEL
 
 [ACH_CLEARS_SILVER_DESC]
-Keep clearing unique campaign puzzles
+Clear unique campaign puzzles
 
 [ACH_CLEARS_GOLD_NAME]
 ONE MORE LEVEL
 
 [ACH_CLEARS_GOLD_DESC]
-Keep clearing unique campaign puzzles
+Clear unique campaign puzzles
 
 [ACH_NO_HINT_GOLD_NAME]
 NO SPOILERS

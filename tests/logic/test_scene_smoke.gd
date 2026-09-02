@@ -1,7 +1,7 @@
 extends RefCounted
 
 const LogicTestRunner := preload("res://tests/logic_test_runner.gd")
-const ExportSmoke := preload("res://scripts/export_smoke.gd")
+const ExportSmoke := preload("res://tests/support/export_smoke.gd")
 
 static func run(r: LogicTestRunner) -> void:
 	_test_main_menu_scene(r)

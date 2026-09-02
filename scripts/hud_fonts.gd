@@ -146,6 +146,36 @@ static func non_pixel_locale_scale() -> float:
 		else 1.0
 	)
 
+## Combined locale + default-font scale for pixel-font sizing paths.
+static func font_scale() -> float:
+	var scale := 1.0
+	if not uses_pixel_font():
+		scale = GameConstants.DEFAULT_FONT_SCALE
+	scale *= non_pixel_locale_scale()
+	return scale
+
+## Scales a font size by [method font_scale] and snaps on the Press Start grid.
+static func scaled_font_size(base: int) -> int:
+	var size := int(round(float(base) * font_scale()))
+	if uses_pixel_font():
+		return snap_pixel_font_size(size)
+	return size
+
+## Scales a font size for the non-pixel (scalable) font path.
+static func body_font_size(base: int) -> int:
+	var scale := GameConstants.DEFAULT_FONT_SCALE * non_pixel_locale_scale()
+	return int(round(float(base) * scale))
+
+## Press Start is an 8px grid font — odd sizes create uneven gaps between letters.
+static func snap_pixel_font_size(size: int) -> int:
+	if size <= 0:
+		return size
+	return maxi(8, int(round(float(size) / 8.0)) * 8)
+
+## True when the current locale uses Press Start; callers raster instead of theme font.
+static func needs_pixel_text_raster() -> bool:
+	return uses_pixel_font()
+
 ## True when [param c] is a Georgian or Cyrillic letter that needs Noto in ka/uk.
 static func char_needs_scalable_font(c: String) -> bool:
 	if c.length() != 1:

@@ -4,7 +4,7 @@ extends RefCounted
 ## Public call sites continue to use HudLayout.* wrappers.
 
 
-static func max_ui_content_width(extra_margin: float = HudLayout.UI_SAFE_SIDE_MARGIN) -> float:
+static func max_ui_content_width(extra_margin: float = 32.0) -> float:
 	var window_w := 0.0
 	var tree := Engine.get_main_loop()
 	if tree is SceneTree:
@@ -18,7 +18,7 @@ static func max_ui_content_width(extra_margin: float = HudLayout.UI_SAFE_SIDE_MA
 	return maxf(240.0, window_w - extra_margin * 2.0)
 
 
-static func clamp_ui_width(width: float, extra_margin: float = HudLayout.UI_SAFE_SIDE_MARGIN) -> float:
+static func clamp_ui_width(width: float, extra_margin: float = 32.0) -> float:
 	var max_w := max_ui_content_width(extra_margin)
 	var min_w := minf(HudLayout.UI_MIN_DIALOG_WIDTH, max_w)
 	return clampf(width, min_w, max_w)
@@ -37,7 +37,7 @@ static func dialog_content_width(
 	return maxf(120.0, clamp_dialog_panel_width(panel_width) - horizontal_inset)
 
 
-static func cap_ui_width(width: float, extra_margin: float = HudLayout.UI_SAFE_SIDE_MARGIN) -> float:
+static func cap_ui_width(width: float, extra_margin: float = 32.0) -> float:
 	return minf(width, max_ui_content_width(extra_margin))
 
 
@@ -47,7 +47,7 @@ static func extra_side_inset_for_cap(current_width: float, max_width: float) -> 
 	return (current_width - max_width) * 0.5
 
 
-static func cap_stretched_width(control: Control, max_width: float = HudLayout.UI_PHONE_CONTENT_WIDTH) -> void:
+static func cap_stretched_width(control: Control, max_width: float = 1032.0) -> void:
 	if control == null or max_width <= 0.0:
 		return
 	var span := control.anchor_right - control.anchor_left
@@ -64,7 +64,7 @@ static func cap_stretched_width(control: Control, max_width: float = HudLayout.U
 	control.offset_right -= extra
 
 
-static func cap_box_row_width(row: Control, max_width: float = HudLayout.UI_PHONE_EDITOR_ROW_WIDTH) -> void:
+static func cap_box_row_width(row: Control, max_width: float = 1040.0) -> void:
 	if row == null or max_width <= 0.0:
 		return
 	if not row.has_meta("_wide_cap_hflags"):
@@ -181,7 +181,7 @@ static func position_status_below_board(status: Control, board_y: float, board_h
 	position_top_wide(
 		status, board_y + board_height + GameConstants.HUD_STATUS_GAP, GameConstants.HUD_STATUS_MIN_HEIGHT
 	)
-	cap_stretched_width(status, HudLayout.UI_PHONE_CONTENT_WIDTH)
+	cap_stretched_width(status, 1032.0)
 
 
 static func position_editor_status_below_panel(control_panel: Control, status: Control) -> void:
@@ -195,7 +195,7 @@ static func position_editor_status_below_panel(control_panel: Control, status: C
 	status.offset_bottom = -bottom_margin
 	status.offset_top = status_top
 	control_panel.offset_bottom = 0.0
-	var phone_w := HudLayout.UI_PHONE_VIEWPORT_WIDTH - 2.0 * float(GameConstants.HUD_TOP_BAR_EDGE_MARGIN)
+	var phone_w := 1080.0 - 2.0 * float(GameConstants.HUD_TOP_BAR_EDGE_MARGIN)
 	cap_stretched_width(status, phone_w)
 
 

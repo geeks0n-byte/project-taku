@@ -97,6 +97,15 @@ static func _test_orchestration(r: LogicTestRunner) -> void:
 		}
 	r.ok(bool(mgr.call("check_all_yellow", yellow_cells)), "ach mgr orch: all-yellow board grants")
 
+	var green_cells := {}
+	for i in 4:
+		green_cells[Vector2i(i, 0)] = {
+			"state": GameConstants.TileState.JOKER,
+			"is_playable": true,
+			"is_locked": false,
+		}
+	r.ok(bool(mgr.call("check_all_green", green_cells)), "ach mgr orch: all-green board grants")
+
 	_restore_save(save, backup_unlocked, backup_seen, backup_no_hint, backup_slides)
 
 

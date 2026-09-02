@@ -3,22 +3,27 @@ extends Node
 
 const SAVE_PATH = "user://progression.cfg"
 const SAVE_TEMP_PATH = "user://progression.cfg.tmp"
-const SAVE_FORMAT_VERSION := 3
+const SAVE_FORMAT_VERSION := 4
 const SUPPORTED_LANGUAGES := ["en", "es", "de", "fr", "pl", "ka", "uk", Pseudolocale.LOCALE]
 const PSEUDO_LOCALE := Pseudolocale.LOCALE
 const _TranslationHygiene := preload("res://scripts/translation_hygiene.gd")
 const _PseudolocaleTranslation := preload("res://scripts/pseudolocale_translation.gd")
 const _SessionSerialization := preload("res://scripts/session_serialization.gd")
+const Migration := preload("res://scripts/save_migration.gd")
 
 signal language_changed
 signal unseen_levels_changed(count: int)
+signal color_blind_patterns_changed
 
 var max_unlocked_level: int = 1
+# Highest campaign level the player may open. After clearing the last level in a folder,
+# this may sit at last_level + 1 so folder-complete checks and the next tier unlock work.
 var current_language: String = "en"
 var background_static: bool = false
 var bgm_enabled: bool = true
 var sfx_enabled: bool = true
 var haptic_enabled: bool = true
+var color_blind_patterns: bool = false
 var tutorial_intro_answered: bool = false
 var completed_tutorial_scripts: Array = []
 # True once the player has tapped ACCEPT on the first-launch consent popup.
@@ -42,6 +47,9 @@ var no_hint_clears: int = 0
 var on_time_clears: int = 0
 # Lifetime shifter slides (purple_rain).
 var shifter_slides: int = 0
+# Lifetime undo/redo uses (ctrl_z / ctrl_y).
+var undo_uses: int = 0
+var redo_uses: int = 0
 # Campaign level numbers where the player opened rules (rules_reader).
 var rules_open_levels: Dictionary = {}
 # Last local save time (unix seconds) for cloud conflict resolution.
@@ -152,6 +160,7 @@ func load_progress() -> void:
 		bgm_enabled = bool(config.get_value("Progression", "bgm_enabled", true))
 		sfx_enabled = bool(config.get_value("Progression", "sfx_enabled", true))
 		haptic_enabled = bool(config.get_value("Progression", "haptic_enabled", true))
+		color_blind_patterns = bool(config.get_value("Progression", "color_blind_patterns", false))
 		if config.has_section_key("Progression", "tutorial_intro_answered"):
 			tutorial_intro_answered = bool(config.get_value("Progression", "tutorial_intro_answered", false))
 		else:
@@ -180,9 +189,12 @@ func load_progress() -> void:
 		levels_unseen = config.get_value("Progression", "levels_unseen", {})
 		if typeof(levels_unseen) != TYPE_DICTIONARY:
 			levels_unseen = {}
+		_prune_invalid_levels_unseen()
 		no_hint_clears = int(config.get_value("Achievements", "no_hint_clears", 0))
 		on_time_clears = int(config.get_value("Achievements", "on_time_clears", 0))
 		shifter_slides = int(config.get_value("Achievements", "shifter_slides", 0))
+		undo_uses = int(config.get_value("Achievements", "undo_uses", 0))
+		redo_uses = int(config.get_value("Achievements", "redo_uses", 0))
 		rules_open_levels = config.get_value("Achievements", "rules_open_levels", {})
 		if typeof(rules_open_levels) != TYPE_DICTIONARY:
 			rules_open_levels = {}
@@ -215,6 +227,8 @@ func _seed_new_save() -> void:
 	no_hint_clears = 0
 	on_time_clears = 0
 	shifter_slides = 0
+	undo_uses = 0
+	redo_uses = 0
 	rules_open_levels = {}
 	updated_unix = 0
 	max_unlocked_level = get_campaign_start_unlock()
@@ -222,7 +236,6 @@ func _seed_new_save() -> void:
 
 ## Migrates older progression.cfg shapes in-place before fields are read.
 func _migrate_save(config: ConfigFile, from_version: int) -> void:
-	const Migration := preload("res://scripts/save_migration.gd")
 	Migration.migrate_config(config, from_version)
 
 ## Maps OS locale to a supported language code; falls back to en.
@@ -254,6 +267,7 @@ func save_progress() -> void:
 	config.set_value("Progression", "bgm_enabled", bgm_enabled)
 	config.set_value("Progression", "sfx_enabled", sfx_enabled)
 	config.set_value("Progression", "haptic_enabled", haptic_enabled)
+	config.set_value("Progression", "color_blind_patterns", color_blind_patterns)
 	config.set_value("Progression", "tutorial_intro_answered", tutorial_intro_answered)
 	config.set_value("Progression", "completed_tutorial_scripts", completed_tutorial_scripts)
 	config.set_value("Progression", "privacy_accepted", privacy_accepted)
@@ -266,6 +280,8 @@ func save_progress() -> void:
 	config.set_value("Achievements", "no_hint_clears", no_hint_clears)
 	config.set_value("Achievements", "on_time_clears", on_time_clears)
 	config.set_value("Achievements", "shifter_slides", shifter_slides)
+	config.set_value("Achievements", "undo_uses", undo_uses)
+	config.set_value("Achievements", "redo_uses", redo_uses)
 	config.set_value("Achievements", "rules_open_levels", rules_open_levels)
 	if session_data.is_empty():
 		if config.has_section("Session"):
@@ -386,6 +402,14 @@ func set_haptic_enabled(enabled: bool) -> void:
 	haptic_enabled = enabled
 	save_progress()
 
+## Persists color-blind tile patterns and notifies listeners.
+func set_color_blind_patterns(enabled: bool) -> void:
+	if color_blind_patterns == enabled:
+		return
+	color_blind_patterns = enabled
+	save_progress()
+	color_blind_patterns_changed.emit()
+
 # Marks privacy as accepted and persists it. Called by consent_popup.gd via main_menu.gd.
 func accept_privacy() -> void:
 	privacy_accepted = true
@@ -406,7 +430,7 @@ func _apply_background_mode() -> void:
 func unlock_level(level_num: int, mark_unseen: bool = true) -> void:
 	if level_num > max_unlocked_level:
 		max_unlocked_level = level_num
-		if mark_unseen:
+		if mark_unseen and LevelUtils.campaign_level_exists(level_num):
 			levels_unseen[str(level_num)] = true
 		save_progress()
 		unseen_levels_changed.emit(unseen_level_count())
@@ -414,6 +438,8 @@ func unlock_level(level_num: int, mark_unseen: bool = true) -> void:
 
 ## True when this campaign level was unlocked but not yet viewed/played.
 func is_level_unseen(level_num: int) -> bool:
+	if not LevelUtils.campaign_level_exists(level_num):
+		return false
 	return levels_unseen.has(str(level_num))
 
 
@@ -461,7 +487,23 @@ static func rules_level_key(level: LevelData) -> String:
 
 ## Count of unlocked levels the player has not opened or played yet.
 func unseen_level_count() -> int:
-	return levels_unseen.size()
+	var count := 0
+	for key in levels_unseen:
+		if LevelUtils.campaign_level_exists(int(key)):
+			count += 1
+	return count
+
+
+## Drops unseen badges for campaign numbers that do not exist (e.g. after final level).
+func _prune_invalid_levels_unseen() -> void:
+	var changed := false
+	for key in levels_unseen.duplicate().keys():
+		if not LevelUtils.campaign_level_exists(int(key)):
+			levels_unseen.erase(key)
+			changed = true
+	if changed:
+		save_progress()
+		unseen_levels_changed.emit(unseen_level_count())
 
 ## Debug: unlocks through the highest campaign level number.
 func unlock_all_levels() -> void:
@@ -470,8 +512,16 @@ func unlock_all_levels() -> void:
 		var resource = load(path)
 		if resource and resource is LevelData:
 			highest = maxi(highest, int(resource.level_number))
+	var changed := false
 	if highest > max_unlocked_level:
 		max_unlocked_level = highest
+		changed = true
+	# Mirror beating the last level so folder-complete achievement checks pass.
+	var last := LevelUtils.highest_campaign_level_number()
+	if last > 0 and max_unlocked_level <= last:
+		max_unlocked_level = last + 1
+		changed = true
+	if changed:
 		save_progress()
 
 ## True when this campaign number is at or below max_unlocked_level.
@@ -577,6 +627,8 @@ func delete_save_file() -> void:
 	no_hint_clears = 0
 	on_time_clears = 0
 	shifter_slides = 0
+	undo_uses = 0
+	redo_uses = 0
 	rules_open_levels.clear()
 	updated_unix = 0
 	review_prompt_count = 0
@@ -632,12 +684,15 @@ func export_cloud_payload() -> Dictionary:
 			"bgm_enabled": bgm_enabled,
 			"sfx_enabled": sfx_enabled,
 			"haptic_enabled": haptic_enabled,
+			"color_blind_patterns": color_blind_patterns,
 		},
 		{
 			"unlocked": achievements_unlocked.duplicate(true),
 			"no_hint_clears": no_hint_clears,
 			"on_time_clears": on_time_clears,
 			"shifter_slides": shifter_slides,
+			"undo_uses": undo_uses,
+			"redo_uses": redo_uses,
 			"rules_open_levels": rules_open_levels.duplicate(true),
 		},
 		ts
@@ -651,14 +706,22 @@ func apply_cloud_payload(blob: Dictionary) -> void:
 	var progress: Dictionary = blob.get("progress", {})
 	var settings: Dictionary = blob.get("settings", {})
 	var ach: Dictionary = blob.get("achievements", {})
-	max_unlocked_level = int(progress.get("max_unlocked_level", max_unlocked_level))
+	max_unlocked_level = Migration.remap_legacy_level_number(
+		int(progress.get("max_unlocked_level", max_unlocked_level))
+	)
 	var bits = progress.get("level_star_bits", level_star_bits)
 	if typeof(bits) == TYPE_DICTIONARY:
-		level_star_bits = bits
+		level_star_bits = Migration.remap_level_dict(bits)
 	tutorial_intro_answered = bool(progress.get("tutorial_intro_answered", tutorial_intro_answered))
 	var scripts = progress.get("completed_tutorial_scripts", completed_tutorial_scripts)
 	if typeof(scripts) == TYPE_ARRAY:
-		completed_tutorial_scripts = scripts
+		completed_tutorial_scripts = []
+		for entry in scripts:
+			var id := str(entry)
+			if id == "level_1":
+				id = "level_00"
+			if not completed_tutorial_scripts.has(id):
+				completed_tutorial_scripts.append(id)
 	privacy_accepted = bool(progress.get("privacy_accepted", privacy_accepted))
 	var lang := str(settings.get("current_language", current_language))
 	if lang == PSEUDO_LOCALE:
@@ -670,15 +733,18 @@ func apply_cloud_payload(blob: Dictionary) -> void:
 	bgm_enabled = bool(settings.get("bgm_enabled", bgm_enabled))
 	sfx_enabled = bool(settings.get("sfx_enabled", sfx_enabled))
 	haptic_enabled = bool(settings.get("haptic_enabled", haptic_enabled))
+	color_blind_patterns = bool(settings.get("color_blind_patterns", color_blind_patterns))
 	var unlocked = ach.get("unlocked", achievements_unlocked)
 	if typeof(unlocked) == TYPE_DICTIONARY:
 		achievements_unlocked = unlocked
 	no_hint_clears = int(ach.get("no_hint_clears", no_hint_clears))
 	on_time_clears = int(ach.get("on_time_clears", on_time_clears))
 	shifter_slides = int(ach.get("shifter_slides", shifter_slides))
+	undo_uses = int(ach.get("undo_uses", undo_uses))
+	redo_uses = int(ach.get("redo_uses", redo_uses))
 	var rules_levels = ach.get("rules_open_levels", rules_open_levels)
 	if typeof(rules_levels) == TYPE_DICTIONARY:
-		rules_open_levels = rules_levels
+		rules_open_levels = Migration.remap_level_dict(rules_levels)
 	updated_unix = int(blob.get("timestamp", updated_unix))
 	_apply_background_mode()
 	if BgmManager and BgmManager.has_method("apply_enabled"):

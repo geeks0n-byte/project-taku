@@ -498,9 +498,6 @@ func update_visuals():
 				chevron_icon.texture = tex_chevron_down
 			elif shifter_direction == Vector2i(-1, 0):
 				chevron_icon.texture = tex_chevron_left
-				var shift_amount = -3
-				chevron_icon.offset_left = shift_amount
-				chevron_icon.offset_right = shift_amount
 			elif shifter_direction == Vector2i(1, 0):
 				chevron_icon.texture = tex_chevron_right
 		else:
@@ -537,6 +534,7 @@ func update_visuals():
 			tile_icon.texture = tex_shifter
 		_:
 			tile_icon.texture = null
+	ColorBlindTiles.sync_pattern(tile_icon, state)
 
 ## Turns on the red validation border and pauses breathe tweens.
 func set_error_highlight():

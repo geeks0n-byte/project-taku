@@ -12,6 +12,7 @@ var _toast: CanvasLayer = null
 var _list: CanvasLayer = null
 var _list_return: Callable = Callable()
 var _backfill_done: bool = false
+var _play_games_push_suppress_depth: int = 0
 
 ## Wires after SaveManager so existing progress can silently unlock starter ids.
 func _ready() -> void:
@@ -92,12 +93,34 @@ func record_level_clear(
 	return newly
 
 
-## Lifetime shifter slide counter (purple_rain).
+## Lifetime shifter slides (purple_rain).
 func notify_shifter_slide() -> void:
 	if SaveManager == null or OS.has_feature("headless"):
 		return
 	SaveManager.shifter_slides += 1
-	_apply_state(false)
+	var newly := _apply_state(true)
+	if not newly.is_empty():
+		SaveManager.save_progress()
+
+
+## Lifetime undo uses (ctrl_z).
+func notify_undo() -> void:
+	if SaveManager == null or OS.has_feature("headless"):
+		return
+	SaveManager.undo_uses += 1
+	var newly := _apply_state(true)
+	if not newly.is_empty():
+		SaveManager.save_progress()
+
+
+## Lifetime redo uses (ctrl_y).
+func notify_redo() -> void:
+	if SaveManager == null or OS.has_feature("headless"):
+		return
+	SaveManager.redo_uses += 1
+	var newly := _apply_state(true)
+	if not newly.is_empty():
+		SaveManager.save_progress()
 
 
 ## Rules overlay opened on a campaign level (rules_reader).
@@ -106,7 +129,9 @@ func notify_rules_opened(level: LevelData = null) -> void:
 		return
 	if level != null:
 		SaveManager.record_rules_opened(level)
-	_apply_state(false)
+	var newly := _apply_state(true)
+	if not newly.is_empty():
+		SaveManager.save_progress()
 
 
 ## Rewarded ad watched for hints (ad_friend).
@@ -163,6 +188,15 @@ func check_all_yellow(cells: Dictionary) -> bool:
 	return grant(AchievementCatalog.ID_YELLOW_SUBMARINE)
 
 
+## Grants green_screen when every player-fillable cell is a green (joker) tile.
+func check_all_green(cells: Dictionary) -> bool:
+	if cells.is_empty() or is_unlocked(AchievementCatalog.ID_GREEN_SCREEN):
+		return false
+	if not AchievementCatalog.board_is_all_green(cells):
+		return false
+	return grant(AchievementCatalog.ID_GREEN_SCREEN)
+
+
 ## Grants shall_not_pass when a shifter hop is blocked by another shifter.
 func notify_invalid_move(message: String) -> bool:
 	if str(message) != "ERR_SHIFTER_BLOCKED":
@@ -174,6 +208,7 @@ func notify_invalid_move(message: String) -> bool:
 func debug_unlock_all() -> int:
 	if SaveManager == null or OS.has_feature("headless"):
 		return 0
+	_push_play_games_push_suppressed(true)
 	var now := int(Time.get_unix_time_from_system())
 	var granted := 0
 	var delay := 0.0
@@ -190,7 +225,40 @@ func debug_unlock_all() -> int:
 		SaveManager.save_progress()
 		_notify_unseen_changed()
 		_refresh_open_list()
+	_push_play_games_push_suppressed(false)
 	return granted
+
+
+## Re-evaluates achievement eligibility from the current save (e.g. debug unlock all levels).
+func sync_from_progress(show_toast: bool = false, suppress_play_games_push: bool = false) -> Array:
+	if SaveManager == null or OS.has_feature("headless"):
+		return []
+	if suppress_play_games_push:
+		_push_play_games_push_suppressed(true)
+	_sync_no_hint_counter_from_stars()
+	_sync_on_time_counter_from_stars()
+	var newly := _apply_state(show_toast)
+	if newly.is_empty():
+		if suppress_play_games_push:
+			_push_play_games_push_suppressed(false)
+		return newly
+	SaveManager.save_progress()
+	_notify_unseen_changed()
+	if suppress_play_games_push:
+		_push_play_games_push_suppressed(false)
+	return newly
+
+
+## True while debug grants should not push to Play Games (see PlayGamesManager).
+func is_play_games_push_suppressed() -> bool:
+	return _play_games_push_suppress_depth > 0
+
+
+func _push_play_games_push_suppressed(enabled: bool) -> void:
+	if enabled:
+		_play_games_push_suppress_depth += 1
+	else:
+		_play_games_push_suppress_depth = maxi(0, _play_games_push_suppress_depth - 1)
 
 
 ## Builds the current progress snapshot and grants any missing ids.
@@ -206,6 +274,8 @@ func _apply_state(
 		"no_hint_clears": SaveManager.no_hint_clears,
 		"on_time_clears": SaveManager.on_time_clears,
 		"shifter_slides": SaveManager.shifter_slides,
+		"undo_uses": SaveManager.undo_uses,
+		"redo_uses": SaveManager.redo_uses,
 		"rules_open_levels": SaveManager.rules_open_level_count(),
 		"easy_complete": _folder_complete(GameConstants.CAMPAIGN_EASY_DIR),
 		"medium_complete": _folder_complete(GameConstants.CAMPAIGN_MEDIUM_DIR),
@@ -218,6 +288,7 @@ func _apply_state(
 		return []
 	var now := int(Time.get_unix_time_from_system())
 	var granted: Array = []
+	var toast_delay := toast_delay_sec
 	for id in newly:
 		var sid := str(id)
 		if not AchievementCatalog.apply_grant(already, sid, now):
@@ -225,7 +296,8 @@ func _apply_state(
 		granted.append(sid)
 		unlocked.emit(sid)
 		if show_toast:
-			_show_toast(sid, toast_delay_sec)
+			_show_toast(sid, toast_delay)
+			toast_delay += 0.35
 	if granted.is_empty():
 		return []
 	if show_toast:
@@ -285,6 +357,8 @@ func reset_local() -> void:
 	SaveManager.no_hint_clears = 0
 	SaveManager.on_time_clears = 0
 	SaveManager.shifter_slides = 0
+	SaveManager.undo_uses = 0
+	SaveManager.redo_uses = 0
 	SaveManager.rules_open_levels.clear()
 
 

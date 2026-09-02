@@ -24,6 +24,9 @@ const ID_SHALL_NOT_PASS := "shall_not_pass"
 const ID_RULES_READER := "rules_reader"
 const ID_PURPLE_RAIN := "purple_rain"
 const ID_YELLOW_SUBMARINE := "yellow_submarine"
+const ID_GREEN_SCREEN := "green_screen"
+const ID_CTRL_Z := "ctrl_z"
+const ID_CTRL_Y := "ctrl_y"
 const ID_PAUSE_THINKER := "pause_thinker"
 const ID_DEV_MODE := "dev_mode"
 
@@ -55,6 +58,9 @@ const ORDERED_IDS: Array[String] = [
 	ID_RULES_READER,
 	ID_PURPLE_RAIN,
 	ID_YELLOW_SUBMARINE,
+	ID_GREEN_SCREEN,
+	ID_CTRL_Z,
+	ID_CTRL_Y,
 	ID_PAUSE_THINKER,
 	ID_DEV_MODE,
 ]
@@ -71,6 +77,8 @@ const ON_TIME_SILVER_TARGET := 30
 const ON_TIME_GOLD_TARGET := 60
 const RULES_READER_TARGET := 10
 const PURPLE_RAIN_TARGET := 30
+const CTRL_Z_TARGET := 50
+const CTRL_Y_TARGET := 50
 const PAUSE_THINKER_SEC := 180.0
 
 const TIER_NONE := "none"
@@ -99,6 +107,9 @@ const _ICON_SHALL_NOT_PASS := "res://resources/icons/ach_shall_not_pass.svg"
 const _ICON_RULES_READER := "res://resources/icons/ach_rules_reader.svg"
 const _ICON_PURPLE_RAIN := "res://resources/icons/ach_purple_rain.svg"
 const _ICON_YELLOW_SUBMARINE := "res://resources/icons/ach_yellow_submarine.svg"
+const _ICON_GREEN_SCREEN := "res://resources/icons/ach_green_screen.svg"
+const _ICON_CTRL_Z := "res://resources/icons/ach_ctrl_z.svg"
+const _ICON_CTRL_Y := "res://resources/icons/ach_ctrl_y.svg"
 const _ICON_PAUSE_THINKER := "res://resources/icons/ach_pause_thinker.svg"
 const _ICON_DEV_MODE := "res://resources/icons/ach_dev_mode.svg"
 
@@ -133,6 +144,9 @@ const _META := {
 	"rules_reader": {"tier": "none", "family": "", "visibility": "hidden_desc"},
 	"purple_rain": {"tier": "none", "family": "", "visibility": "hidden_desc"},
 	"yellow_submarine": {"tier": "none", "family": "", "visibility": "hidden_desc"},
+	"green_screen": {"tier": "none", "family": "", "visibility": "hidden_desc"},
+	"ctrl_z": {"tier": "none", "family": "", "visibility": "hidden_desc"},
+	"ctrl_y": {"tier": "none", "family": "", "visibility": "hidden_desc"},
 	"pause_thinker": {"tier": "none", "family": "", "visibility": "hidden_desc"},
 	"dev_mode": {"tier": "none", "family": "", "visibility": "secret"},
 }
@@ -318,6 +332,12 @@ static func icon_path(id: String) -> String:
 			return _ICON_PURPLE_RAIN
 		ID_YELLOW_SUBMARINE:
 			return _ICON_YELLOW_SUBMARINE
+		ID_GREEN_SCREEN:
+			return _ICON_GREEN_SCREEN
+		ID_CTRL_Z:
+			return _ICON_CTRL_Z
+		ID_CTRL_Y:
+			return _ICON_CTRL_Y
 		ID_PAUSE_THINKER:
 			return _ICON_PAUSE_THINKER
 		ID_DEV_MODE:
@@ -561,6 +581,11 @@ static func board_is_all_yellow(cells: Dictionary) -> bool:
 	return _board_is_all_tile_state(cells, GameConstants.TileState.YELLOW)
 
 
+## True when every player-fillable cell on the board is a green (joker) tile.
+static func board_is_all_green(cells: Dictionary) -> bool:
+	return _board_is_all_tile_state(cells, GameConstants.TileState.JOKER)
+
+
 ## Returns YELLOW/BLUE when every fillable cell matches; otherwise TileState.EMPTY.
 static func uniform_fillable_color(cells: Dictionary) -> int:
 	var fillable := 0
@@ -621,10 +646,10 @@ static func _cell_field(cell: Variant, key: String, fallback: Variant) -> Varian
 ## `state` keys:
 ##   campaign_clears (int, unique clears only — replays never count),
 ##   hard_clears (int), no_hint_clears (int), on_time_clears (int),
-##   shifter_slides (int), rules_open_levels (int, unique campaign levels),
+##   shifter_slides (int), undo_uses (int), redo_uses (int), rules_open_levels (int, unique campaign levels),
 ##   easy_complete / medium_complete / hard_complete (bool),
 ##   three_star_debut / undo_nothing (hard, no undo) / ad_friend / pause_thinker (bool flags),
-##   im_blue / yellow_submarine / shall_not_pass / dev_mode (bool flags; grant() bypasses collect)
+##   im_blue / yellow_submarine / green_screen / shall_not_pass / dev_mode (bool flags; grant() bypasses collect)
 ## `already` maps unlocked id -> unix timestamp (or any truthy value).
 static func collect_unlocks(state: Dictionary, already: Dictionary = {}) -> Array:
 	var out: Array = []
@@ -655,6 +680,10 @@ static func collect_unlocks(state: Dictionary, already: Dictionary = {}) -> Arra
 		_maybe_add(out, ID_ON_TIME_GOLD, already)
 	if int(state.get("shifter_slides", 0)) >= PURPLE_RAIN_TARGET:
 		_maybe_add(out, ID_PURPLE_RAIN, already)
+	if int(state.get("undo_uses", 0)) >= CTRL_Z_TARGET:
+		_maybe_add(out, ID_CTRL_Z, already)
+	if int(state.get("redo_uses", 0)) >= CTRL_Y_TARGET:
+		_maybe_add(out, ID_CTRL_Y, already)
 	if int(state.get("rules_open_levels", 0)) >= RULES_READER_TARGET:
 		_maybe_add(out, ID_RULES_READER, already)
 	if bool(state.get("easy_complete", false)):
@@ -676,6 +705,8 @@ static func collect_unlocks(state: Dictionary, already: Dictionary = {}) -> Arra
 		_maybe_add(out, ID_IM_BLUE, already)
 	if bool(state.get(ID_YELLOW_SUBMARINE, false)):
 		_maybe_add(out, ID_YELLOW_SUBMARINE, already)
+	if bool(state.get(ID_GREEN_SCREEN, false)):
+		_maybe_add(out, ID_GREEN_SCREEN, already)
 	if bool(state.get(ID_SHALL_NOT_PASS, false)):
 		_maybe_add(out, ID_SHALL_NOT_PASS, already)
 	if bool(state.get(ID_DEV_MODE, false)):

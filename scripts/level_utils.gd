@@ -335,20 +335,8 @@ static func scan_campaign_levels() -> Array:
 		found.append_array(folder_paths)
 	return found
 
-# Finds the level_number of the first non-tutorial campaign level.
-# Used to offset display numbers so the player always sees "Level 1" for the first real level.
+# Finds the level_number of the first non-tutorial campaign level (always 1).
 static func first_campaign_level_number() -> int:
-	for folder in [
-		GameConstants.CAMPAIGN_EASY_DIR,
-		GameConstants.CAMPAIGN_MEDIUM_DIR,
-		GameConstants.CAMPAIGN_HARD_DIR,
-	]:
-		var paths := scan_directory(folder)
-		sort_level_paths(paths)
-		for path in paths:
-			var resource = load(path)
-			if resource is LevelData:
-				return int(resource.level_number)
 	return 1
 
 # Highest campaign level_number across easy/medium/hard (excludes tutorials).
@@ -364,6 +352,23 @@ static func highest_campaign_level_number() -> int:
 			if resource is LevelData:
 				highest = maxi(highest, int(resource.level_number))
 	return highest
+
+
+# True when a numbered easy/medium/hard campaign level exists on disk.
+static func campaign_level_exists(level_num: int) -> bool:
+	var n := int(level_num)
+	if n <= 0:
+		return false
+	for folder in [
+		GameConstants.CAMPAIGN_EASY_DIR,
+		GameConstants.CAMPAIGN_MEDIUM_DIR,
+		GameConstants.CAMPAIGN_HARD_DIR,
+	]:
+		for path in scan_directory(folder):
+			var resource = load(path)
+			if resource is LevelData and int(resource.level_number) == n:
+				return true
+	return false
 
 # True for levels under the campaign tutorials directory (timer/hints disabled).
 static func is_campaign_tutorial(level: LevelData) -> bool:
@@ -385,19 +390,10 @@ static func should_skip_level_interstitial(levels: Array, index: int) -> bool:
 	return is_campaign_tutorial(level_at_index(levels, index))
 
 
-# Returns the player-visible level number, remapping campaign levels to start at 1
-# while keeping tutorial numbers as-is.
+# Returns the player-visible level number (1–60 campaign; 0 for tutorial).
 static func get_display_level_number(level: LevelData) -> int:
 	if level == null:
 		return 0
-	var path := String(level.resource_path)
-	if path.begins_with(GameConstants.CAMPAIGN_TUTORIALS_DIR):
-		return int(level.level_number)
-	if (
-		path.begins_with(GameConstants.CAMPAIGN_EASY_DIR)
-		or path.begins_with(GameConstants.CAMPAIGN_MEDIUM_DIR)
-		or path.begins_with(GameConstants.CAMPAIGN_HARD_DIR)
-	):
-		# Subtract the internal offset so the first campaign level always displays as 1.
-		return maxi(1, int(level.level_number) - first_campaign_level_number() + 1)
+	if is_campaign_tutorial(level):
+		return 0
 	return int(level.level_number)

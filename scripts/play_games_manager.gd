@@ -98,6 +98,8 @@ func _bind_achievement_push() -> void:
 
 
 func _on_local_achievement_unlocked(catalog_id: String) -> void:
+	if AchievementManager != null and AchievementManager.is_play_games_push_suppressed():
+		return
 	push_catalog_unlock(catalog_id)
 
 

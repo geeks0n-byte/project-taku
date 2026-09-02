@@ -59,6 +59,12 @@ desktop.ini
 # Local scratch / review pads (source of truth is translations.csv)
 resources/localization/english_copy_review.txt
 
-# Play Games import — Godot CSV sidecars and release zips (regenerate from source CSVs)
+# Offline dev tooling — store graphics, Play Console packaging, one-off refactors (not shipped)
+/dev/
+/docs/
+
+# Play Games import — Godot CSV sidecars, release zips, and generated PNGs (regenerate via dev/play-store/)
 resources/play_games/achievement_import/*.translation
 resources/play_games/achievement_import/*.zip
+resources/play_games/achievement_import/*.png
+resources/play_games/achievement_icons_512/

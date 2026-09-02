@@ -39,7 +39,7 @@ CI uses `tools/ensure_godot.sh` and runs the same suites via `$GODOT_EXE` in `.g
 | `resources/` | Art, audio, localization CSV |
 | `tests/` | Headless test runner |
 | `addons/` | Android splash, Play Games, editor MCP (dev only) |
-| `docs/` | Design notes and code review |
+| `dev/` | Offline tooling, store assets, local docs (gitignored) |
 
 ## Localization
 
@@ -48,8 +48,3 @@ Source strings live in `resources/localization/translations.csv`. Supported loca
 ## Save data
 
 Player progress is stored in `user://progression.cfg` (unlocks, stars, settings, achievements). Cloud sync uses Google Play Games on Android exports.
-
-## Docs
-
-- `docs/CODE_REVIEW.md` — architecture notes and prioritized roadmap
-- `tests/README.md` — localization hygiene checklist

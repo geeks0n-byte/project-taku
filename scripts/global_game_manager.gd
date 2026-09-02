@@ -35,11 +35,13 @@ func _notification(what: int) -> void:
 		NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_WINDOW_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED:
 			_unpause_tree()
 
+
 ## Clears SceneTree.paused so boot tweens and incoming scenes are not stuck.
 func _unpause_tree() -> void:
 	var tree := get_tree()
 	if tree:
 		tree.paused = false
+
 
 # Releases GUI focus and hides the virtual keyboard to avoid banner/layout drift on Android.
 func _dismiss_soft_keyboard() -> void:
@@ -82,11 +84,11 @@ func capture_store_screenshot() -> void:
 		return
 	print("Screenshot saved: ", file_path)
 
-# In editor/desktop builds, saves to the tracked docs folder for store asset management.
+# In editor/desktop builds, saves to dev/store-assets (gitignored) for store asset management.
 # On device, falls back to the app's user:// directory.
 func _screenshot_dir() -> String:
 	if OS.has_feature("editor") or OS.get_name() in ["Windows", "Linux", "macOS"]:
-		var project_dir := ProjectSettings.globalize_path("res://docs/store-assets/screenshots")
+		var project_dir := ProjectSettings.globalize_path("res://dev/store-assets/screenshots")
 		if not project_dir.is_empty():
 			return project_dir
 	return ProjectSettings.globalize_path("user://screenshots")

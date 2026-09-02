@@ -1,4 +1,11 @@
 {
-	"_comment": "Play Console locale codes must match Play Games > Configuration > Manage translations exactly. Leave empty {} to import English-only ZIP. Example after enabling es/de/fr/pl/ka/uk in Console:",
-	"locales": {}
+	"_comment": "Play Console locale codes must match Play Games > Configuration > Manage translations exactly.",
+	"locales": {
+		"es": "es",
+		"de": "de",
+		"fr": "fr",
+		"pl": "pl",
+		"ka": "ka",
+		"uk": "uk"
+	}
 }

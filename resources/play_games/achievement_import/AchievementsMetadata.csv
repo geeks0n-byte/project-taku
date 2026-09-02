@@ -1,14 +1,14 @@
 FIRST CLEAR,Clear your first campaign puzzle,False,,Revealed,5,1
-ONE MORE LEVEL BRONZE,Keep clearing unique campaign puzzles,True,10,Revealed,5,2
-ONE MORE LEVEL SILVER,Keep clearing unique campaign puzzles,True,30,Revealed,10,3
-ONE MORE LEVEL GOLD,Keep clearing unique campaign puzzles,True,60,Revealed,25,4
+ONE MORE LEVEL BRONZE,Clear 10 unique campaign puzzles,True,10,Revealed,5,2
+ONE MORE LEVEL SILVER,Clear 30 unique campaign puzzles,True,30,Revealed,10,3
+ONE MORE LEVEL GOLD,Clear 60 unique campaign puzzles,True,60,Revealed,25,4
 HARD START,Clear a hard campaign puzzle,False,,Revealed,10,5
-NO SPOILERS BRONZE,Clear unique campaign puzzles without hints,True,10,Revealed,10,6
-NO SPOILERS SILVER,Clear unique campaign puzzles without hints,True,30,Revealed,15,7
-NO SPOILERS GOLD,Clear unique campaign puzzles without hints,True,60,Revealed,30,8
-TICK TOCK BRONZE,Clear unique campaign puzzles in time,True,10,Revealed,5,9
-TICK TOCK SILVER,Clear unique campaign puzzles in time,True,30,Revealed,10,10
-TICK TOCK GOLD,Clear unique campaign puzzles in time,True,60,Revealed,25,11
+NO SPOILERS BRONZE,Clear 10 unique campaign puzzles without hints,True,10,Revealed,10,6
+NO SPOILERS SILVER,Clear 30 unique campaign puzzles without hints,True,30,Revealed,15,7
+NO SPOILERS GOLD,Clear 60 unique campaign puzzles without hints,True,60,Revealed,30,8
+TICK TOCK BRONZE,Clear 10 unique campaign puzzles in time,True,10,Revealed,5,9
+TICK TOCK SILVER,Clear 30 unique campaign puzzles in time,True,30,Revealed,10,10
+TICK TOCK GOLD,Clear 60 unique campaign puzzles in time,True,60,Revealed,25,11
 EASY DOES IT,Clear every easy campaign puzzle,False,,Revealed,15,12
 MIDDLE MAN,Clear every medium campaign puzzle,False,,Revealed,25,13
 HARD KNOCKS,Clear every hard campaign puzzle,False,,Revealed,40,14
@@ -21,3 +21,6 @@ RULES READER,Open the rules on ten different levels,False,,Hidden,5,20
 PURPLE RAIN,Make 30 shifter slides,False,,Hidden,5,21
 YELLOW SUBMARINE,Fill every empty cell with yellow,False,,Hidden,5,22
 PAUSE THINKER,Pause for three minutes in one run and still win,False,,Hidden,10,23
+GREEN SCREEN,Fill every empty cell with green tiles,False,,Hidden,5,24
+CTRL+Z,Use undo 50 times total,True,50,Hidden,5,25
+CTRL+Y,Use redo 50 times total,True,50,Hidden,5,26
