@@ -159,6 +159,15 @@ func refresh_locale() -> void:
 		_populate_results(_star_result)
 	if is_visible():
 		_layout_panel(_star_result)
+	_apply_a11y_labels()
+
+
+func _apply_a11y_labels() -> void:
+	if _win_label:
+		_win_label.accessibility_name = String(_win_label.text).strip_edges()
+	A11yLabels.bind_button(_restart_button, "UI_NEXT_LEVEL")
+	A11yLabels.bind_button(_play_again_button, "UI_PLAY_AGAIN")
+	A11yLabels.bind_button(_main_menu_button, "UI_MAIN_MENU")
 
 
 func _all_levels_completed_text() -> String:

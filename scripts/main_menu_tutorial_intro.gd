@@ -77,6 +77,7 @@ func show_prompt() -> void:
 	if _no_btn:
 		_no_btn.text = tr("UI_NO")
 	_apply_button_styles()
+	apply_a11y_labels()
 	var panel := (
 		_blocker.get_node_or_null("CenterContainer/Panel") as Panel
 		if _blocker
@@ -94,6 +95,13 @@ func hide() -> void:
 	if _blocker:
 		_blocker.visible = false
 	MainMenuChrome.set_visible(_set_chrome_visible, true)
+
+
+func apply_a11y_labels() -> void:
+	if _label:
+		_label.accessibility_name = tr("TUTORIAL_INTRO_PROMPT")
+	A11yLabels.bind_button(_yes_btn, "UI_YES")
+	A11yLabels.bind_button(_no_btn, "UI_NO")
 
 
 func _apply_button_styles() -> void:

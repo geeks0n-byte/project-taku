@@ -109,6 +109,14 @@ func show_for_level(level: LevelData, earned_bits: int) -> void:
 		HudLayout.fit_dialog_panel(panel, PANEL_WIDTH, 420.0)
 	_blocker.visible = true
 	_blocker.move_to_front()
+	_apply_a11y_labels()
+
+
+func _apply_a11y_labels() -> void:
+	if _title:
+		_title.accessibility_name = A11yLabels.strip_bbcode(String(_title.text))
+	A11yLabels.bind_button(_play, "UI_PLAY")
+	A11yLabels.bind_button(_close, "UI_CLOSE")
 
 
 func _on_blocker_gui_input(event: InputEvent) -> void:

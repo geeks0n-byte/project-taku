@@ -130,6 +130,7 @@ func _ready() -> void:
 	_apply_editor_button_label()
 	_refresh_start_button_label()
 	_fit_menu_buttons()
+	_apply_a11y_labels()
 	HudLayout.apply_locale_fonts_to_tree(self)
 	_setup_title_under_fx()
 	if AdsManager:
@@ -338,9 +339,30 @@ func _style_title_label(title: Label) -> void:
 
 
 # Rebuilds menu fonts, HTP copy, and safe-area after a locale switch.
+func _apply_a11y_labels() -> void:
+	for btn in [
+		start_btn,
+		tutorial_btn,
+		levels_btn,
+		how_to_play_btn,
+		achievements_btn,
+		options_btn,
+		credits_btn,
+		editor_btn,
+	]:
+		A11yLabels.bind_button_meta(btn)
+	var title := get_node_or_null("TitleLayer/TitleHost/TitleCluster/TitleLabel") as Label
+	if title:
+		title.accessibility_name = String(title.text).strip_edges()
+	_htp.apply_a11y_labels()
+	_credits.apply_a11y_labels()
+	_tutorial.apply_a11y_labels()
+
+
 func _on_language_changed() -> void:
 	_refresh_start_button_label()
 	_fit_menu_buttons()
+	_apply_a11y_labels()
 	HudLayout.apply_locale_fonts_to_tree(self)
 	if _htp.is_blocking():
 		HudLayout.clear_how_to_play_nav_lock(_htp_host)

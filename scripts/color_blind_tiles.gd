@@ -1,6 +1,6 @@
 class_name ColorBlindTiles
 extends RefCounted
-## Remaps tile art to a color-blind-safe palette (blue / orange / teal / magenta).
+## Remaps tile art to a color-blind-safe palette (#003366 / #F5FF00 / #00CC88 / #D55E00).
 
 
 const _LUM_SHADOW := 0.28
@@ -26,7 +26,7 @@ static func resolve_tile_texture(source: Texture2D, state: int) -> Texture2D:
 	if source == null or not is_enabled() or not _is_remap_state(state):
 		return source
 	var path := source.resource_path if source.resource_path else str(source.get_instance_id())
-	var key := "%s|%d|cb3" % [path, state]
+	var key := "%s|%d|cb6" % [path, state]
 	if _texture_cache.has(key):
 		return _texture_cache[key]
 	var img := _texture_to_image(source)
@@ -86,31 +86,33 @@ static func _is_remap_state(state: int) -> bool:
 static func _palette_for_state(state: int) -> Array:
 	match state:
 		GameConstants.TileState.BLUE:
-			return [
-				Color(0.10, 0.18, 0.55),
-				Color(0.16, 0.44, 1.0),
-				Color(0.62, 0.82, 1.0),
-			]
+			return _palette_triplet(Color.html("003366"))
 		GameConstants.TileState.YELLOW:
-			return [
-				Color(0.48, 0.22, 0.0),
-				Color(1.0, 0.52, 0.0),
-				Color(1.0, 0.80, 0.35),
-			]
+			return _palette_triplet(Color.html("F5FF00"))
 		GameConstants.TileState.JOKER:
-			return [
-				Color(0.0, 0.26, 0.24),
-				Color(0.0, 0.72, 0.62),
-				Color(0.42, 0.98, 0.88),
-			]
+			return _palette_triplet(Color.html("00CC88"))
 		GameConstants.TileState.SHIFTER:
-			return [
-				Color(0.36, 0.05, 0.40),
-				Color(0.92, 0.12, 0.72),
-				Color(1.0, 0.50, 0.88),
-			]
+			return _palette_triplet(Color.html("D55E00"))
 		_:
 			return []
+
+
+static func _palette_triplet(mid: Color) -> Array:
+	return [
+		_blend_toward(mid, Color.BLACK, 0.52),
+		mid,
+		_blend_toward(mid, Color.WHITE, 0.38),
+	]
+
+
+static func _blend_toward(from: Color, to: Color, weight: float) -> Color:
+	var w := clampf(weight, 0.0, 1.0)
+	return Color(
+		lerpf(from.r, to.r, w),
+		lerpf(from.g, to.g, w),
+		lerpf(from.b, to.b, w),
+		from.a
+	)
 
 
 static func _remap_pixel(c: Color, state: int) -> Color:

@@ -52,6 +52,7 @@ const _DESC_MAX_LINES := 3
 const LOCK_ICON := preload("res://resources/tiles/tile_lock.svg")
 const LOCK_OVERLAY_PX := 64.0
 const _LOCK_SCRIM_RADIUS := 22.0
+const _LOCK_SCRIM_BORDER := Color(0.90, 0.23, 0.21, 0.92)
 
 const _NEW_BADGE_INSET := 2.0
 
@@ -106,6 +107,8 @@ func _apply_a11y_labels() -> void:
 		A11yLabels.bind_button(_page_prev_button, "UI_PREVIOUS")
 	if _page_next_button:
 		A11yLabels.bind_button(_page_next_button, "UI_NEXT")
+	if progress_label:
+		progress_label.accessibility_name = String(progress_label.text).strip_edges()
 
 
 func _style_header() -> void:
@@ -129,6 +132,8 @@ func _update_progress_label() -> void:
 		if AchievementCatalog.cell_is_unlocked(str(id), _unlocked_map):
 			unlocked += 1
 	progress_label.text = tr("UI_ACHIEVEMENTS_PROGRESS") % [unlocked, total]
+	if progress_label.text.length() > 0:
+		progress_label.accessibility_name = progress_label.text
 
 
 func _style_close() -> void:
@@ -369,6 +374,9 @@ func _make_cell(id: String, unlocked_map: Dictionary) -> Control:
 		desc.set_meta("_ach_fit_max_lines", _DESC_MAX_LINES)
 	cell.add_child(desc_slot)
 
+	A11yLabels.bind_achievement_cell(
+		cell, AchievementCatalog.display_title_key(id, unlocked), unlocked
+	)
 	return cell
 
 
@@ -565,7 +573,7 @@ func _make_lock_scrim() -> Panel:
 	style.bg_color = Color(0.03, 0.03, 0.07, 0.82)
 	style.set_corner_radius_all(int(_LOCK_SCRIM_RADIUS))
 	style.set_border_width_all(2)
-	style.border_color = Color(0.0, 0.0, 0.0, 0.55)
+	style.border_color = _LOCK_SCRIM_BORDER
 	scrim.add_theme_stylebox_override("panel", style)
 	return scrim
 

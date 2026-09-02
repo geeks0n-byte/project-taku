@@ -87,6 +87,14 @@ func show_prompt() -> void:
 		_blocker.color = Color(0, 0, 0, 0)
 		_blocker.visible = true
 		_blocker.move_to_front()
+	_apply_a11y_labels()
+
+
+func _apply_a11y_labels() -> void:
+	if _label:
+		_label.accessibility_name = TranslationServer.translate("TUTORIAL_INTRO_PROMPT")
+	A11yLabels.bind_button(_yes_btn, "UI_YES")
+	A11yLabels.bind_button(_no_btn, "UI_NO")
 
 
 func hide() -> void:

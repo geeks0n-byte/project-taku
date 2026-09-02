@@ -158,6 +158,16 @@ func refresh_texts() -> void:
 		var panel := _blocker.get_node_or_null("CenterContainer/Panel") as Panel
 		if panel:
 			HudLayout.fit_dialog_panel(panel, HudLayout.UI_DEFAULT_DIALOG_WIDTH)
+	apply_a11y_labels()
+
+
+func apply_a11y_labels() -> void:
+	if _label and _blocker and _blocker.visible:
+		_label.accessibility_name = String(_label.text).strip_edges()
+	if _yes_btn:
+		_yes_btn.accessibility_name = String(_yes_btn.text).strip_edges()
+	if _no_btn:
+		_no_btn.accessibility_name = String(_no_btn.text).strip_edges()
 
 
 func _on_no() -> void:

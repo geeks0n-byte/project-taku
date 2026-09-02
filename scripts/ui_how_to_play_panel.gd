@@ -110,6 +110,16 @@ func refresh_text() -> void:
 		HudLayout.refresh_button_icon_modulate(_next)
 	if _queue_layout.is_valid():
 		_queue_layout.call_deferred()
+	apply_a11y_labels()
+
+
+func apply_a11y_labels() -> void:
+	A11yLabels.bind_button(_prev, "UI_PREVIOUS")
+	A11yLabels.bind_button(_next, "UI_NEXT")
+	if _header:
+		A11yLabels.bind_label(_header, HowToPlayContent.get_page_title_key(_page))
+	if _rules:
+		A11yLabels.bind_rich_text(_rules)
 
 
 func layout_stack() -> void:

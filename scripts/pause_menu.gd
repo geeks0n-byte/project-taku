@@ -103,6 +103,10 @@ func _fit_menu_buttons() -> void:
 	if restart_btn:
 		restart_btn.text = _restart_label_key
 		restart_btn.set_meta("_tr_key", _restart_label_key)
+	if resume_btn:
+		resume_btn.set_meta("_tr_key", "UI_RESUME")
+	if settings_btn:
+		settings_btn.set_meta("_tr_key", "UI_OPTIONS")
 	if quit_btn:
 		quit_btn.text = "UI_MAIN_MENU"
 		quit_btn.set_meta("_tr_key", "UI_MAIN_MENU")
@@ -222,14 +226,12 @@ func _apply_a11y_labels() -> void:
 func _bind_a11y_button(btn: Button) -> void:
 	if btn == null or not btn.visible:
 		return
-	var key := String(btn.get_meta("_tr_key", "")).strip_edges()
-	if key.is_empty():
-		return
-	A11yLabels.bind_button(btn, key)
+	A11yLabels.bind_button_meta(btn)
 
 ## Refits rows and reapplies locale fonts after a language change.
 func _on_language_changed() -> void:
 	_fit_menu_buttons()
+	_apply_a11y_labels()
 	HudLayout.apply_locale_fonts_to_tree(self)
 
 ## Shows or hides Auto-Win, then refits the remaining rows.

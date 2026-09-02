@@ -35,7 +35,17 @@ func _on_viewport_resized() -> void:
 # Must run whenever the popup is shown after a language change (e.g. reset profile).
 func refresh_locale() -> void:
 	_apply_locale_texts()
+	_apply_a11y_labels()
 	call_deferred("_fit_layout")
+
+
+func _apply_a11y_labels() -> void:
+	A11yLabels.bind_label(_title, "UI_CONSENT_TITLE")
+	if _body:
+		_body.accessibility_name = tr("UI_CONSENT_BODY")
+	A11yLabels.bind_button(_read_btn, "UI_CONSENT_READ_POLICY")
+	A11yLabels.bind_button(_accept_btn, "UI_CONSENT_ACCEPT")
+
 
 ## Writes translated title/body/buttons and applies popup fonts.
 func _apply_locale_texts() -> void:

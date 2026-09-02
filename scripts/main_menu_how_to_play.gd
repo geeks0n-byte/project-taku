@@ -103,7 +103,18 @@ func refresh_text() -> void:
 		HudLayout.apply_nav_button(_htp_next)
 	if _htp_close:
 		HudLayout.style_top_bar_close_button(_htp_close)
+	apply_a11y_labels()
 	_layout_stack.call_deferred()
+
+
+func apply_a11y_labels() -> void:
+	A11yLabels.bind_button(_htp_close, "UI_CLOSE")
+	A11yLabels.bind_button(_htp_prev, "UI_PREVIOUS")
+	A11yLabels.bind_button(_htp_next, "UI_NEXT")
+	if _htp_header:
+		A11yLabels.bind_label(_htp_header, HowToPlayContent.get_page_title_key(_htp_page))
+	if _htp_rules:
+		A11yLabels.bind_rich_text(_htp_rules)
 
 
 func _layout_stack() -> void:

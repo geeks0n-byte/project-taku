@@ -187,6 +187,7 @@ func _ready() -> void:
 func _on_language_changed() -> void:
 	HudLayout.apply_locale_fonts_to_tree(self)
 	_apply_top_bar_buttons()
+	_apply_a11y_labels()
 	_hud_counters.on_locale_changed()
 	locale_refresh_requested.emit()
 	_htp_panel.on_locale_changed()
@@ -198,6 +199,10 @@ func _on_language_changed() -> void:
 		show_session_resume_prompt()
 	if _victory_panel.is_visible():
 		_victory_panel.refresh_locale()
+	if reset_confirm_panel and reset_confirm_panel.visible:
+		_end_dialogs.apply_a11y_labels()
+	if resume_panel and resume_panel.visible:
+		_end_dialogs.apply_a11y_labels()
 
 # Called once by main.gd after the scene is ready. Hides all overlays, sets up
 # fonts, and defers top-bar button layout to the next frame so sizes are stable.
@@ -265,6 +270,8 @@ func clear_hud_button_highlight() -> void:
 func set_reset_mode_restart(is_restart: bool) -> void:
 	_tutorial_hud.set_reset_mode_restart(is_restart)
 	_end_dialogs.set_reset_is_restart(is_restart)
+	if reset_button:
+		A11yLabels.bind_button(reset_button, "UI_RESTART" if is_restart else "UI_NEW_LAYOUT")
 
 func get_hud_button(button_id: String) -> Button:
 	return _tutorial_hud.get_hud_button(button_id)
@@ -286,7 +293,9 @@ func _apply_a11y_labels() -> void:
 		[hint_button, "UI_HINT"],
 		[undo_button, "UI_UNDO"],
 		[redo_button, "UI_REDO"],
+		[tutorial_back_button, "UI_BACK"],
 	])
+	_htp_panel.apply_a11y_labels()
 
 func update_joker_counter(current: int, required: int) -> void:
 	_hud_counters.update_joker_counter(current, required)

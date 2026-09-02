@@ -51,6 +51,7 @@ var _confirm := OptionsMenuConfirm.new()
 var _cloud := OptionsMenuCloud.new()
 # English scene authorship: title bottom at 412, options content starts at 500.
 const _OPTIONS_BELOW_TITLE_GAP := 88.0
+const _A11Y_LABELS := preload("res://scripts/a11y_labels.gd")
 
 ## Wires option buttons, confirm dialog, and safe-area resize, then applies initial labels.
 func _ready() -> void:
@@ -160,6 +161,7 @@ func show_menu(from_main_menu: bool = false) -> void:
 		_sync_status_label_slot()
 	_confirm.hide()
 	visible = true
+	_apply_a11y_labels()
 	if _screen_header_host:
 		_screen_header_host.move_to_front()
 	if _close_button_host:
@@ -336,6 +338,7 @@ func _fit_option_buttons() -> void:
 	_layout_content_below_title()
 	call_deferred("_layout_content_below_title")
 	_confirm.refresh_texts()
+	_apply_a11y_labels()
 
 # Re-binds i18n keys before sizing so locale changes re-translate correctly.
 func _bind_option_button_keys() -> void:
@@ -562,6 +565,7 @@ func _set_toggle_button_caption(button: Button, full_text: String) -> void:
 	else:
 		colored = "%s%s[color=#%s]%s[/color]" % [left, spaces, accent, value]
 	caption.text = "[center]%s[/center]" % colored
+	button.set_meta("_a11y_caption", full_text)
 	_apply_option_button(button)
 
 # Refreshes each toggle button to show the current setting value in gold accent text.
@@ -600,6 +604,32 @@ func _update_color_blind_label() -> void:
 		tr("UI_COLOR_BLIND_ON" if SaveManager.color_blind_patterns else "UI_COLOR_BLIND_OFF")
 	)
 
+
+func _apply_a11y_labels() -> void:
+	if title_label:
+		title_label.accessibility_name = tr("UI_OPTIONS")
+	_A11Y_LABELS.bind_button(close_btn, "UI_CLOSE")
+	_A11Y_LABELS.bind_button(prev_btn, "UI_PREVIOUS")
+	_A11Y_LABELS.bind_button(next_btn, "UI_NEXT")
+	if lang_label:
+		var current_locale := TranslationServer.get_locale().substr(0, 2)
+		var idx := LANGUAGES.find(current_locale)
+		if idx == -1:
+			idx = 0
+		lang_label.accessibility_name = tr("A11Y_LANGUAGE") % LANG_NAMES[idx]
+	for btn in [bg_btn, bgm_btn, sfx_btn, haptic_btn, color_blind_btn]:
+		if btn and btn.visible:
+			var caption := String(btn.get_meta("_a11y_caption", ""))
+			if caption.is_empty():
+				caption = _option_button_display_text(btn)
+			_A11Y_LABELS.bind_toggle_button(btn, caption)
+	for btn in [cloud_btn, privacy_btn, privacy_options_btn, del_save_btn]:
+		_A11Y_LABELS.bind_button_meta(btn)
+	for btn in [unlock_all_btn, unlock_achievements_btn, del_custom_btn]:
+		_A11Y_LABELS.bind_button_meta(btn)
+	_confirm.apply_a11y_labels()
+
+
 ## Refreshes toggle captions and button sizes for the new locale.
 func _on_language_changed() -> void:
 	if not visible:
@@ -613,6 +643,7 @@ func _on_language_changed() -> void:
 	_cloud.update_button()
 	_fit_option_buttons()
 	_style_debug_buttons()
+	_apply_a11y_labels()
 	if _confirm.is_visible():
 		_confirm.refresh_texts()
 

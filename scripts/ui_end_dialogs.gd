@@ -139,6 +139,7 @@ func show_reset_confirm() -> void:
 		_reset_panel.move_to_front()
 	if _set_hud_disabled.is_valid():
 		_set_hud_disabled.call(true)
+	apply_a11y_labels()
 
 
 func hide_reset_confirm() -> void:
@@ -200,6 +201,7 @@ func show_session_resume_prompt() -> void:
 		_resume_panel.visible = true
 	if _set_hud_disabled.is_valid():
 		_set_hud_disabled.call(true)
+	apply_a11y_labels()
 
 
 func hide_session_resume_prompt() -> void:
@@ -208,6 +210,23 @@ func hide_session_resume_prompt() -> void:
 	if _victory_panel == null or not _victory_panel.visible:
 		set_dimmer_visible(false)
 		set_dialog_raised(false)
+
+
+func apply_a11y_labels() -> void:
+	if _reset_panel and _reset_panel.visible:
+		if _reset_label:
+			_reset_label.accessibility_name = String(_reset_label.text).strip_edges()
+		A11yLabels.bind_button(_reset_yes, "UI_YES")
+		A11yLabels.bind_button(_reset_no, "UI_NO")
+	if _resume_panel and _resume_panel.visible:
+		if _resume_prompt:
+			_resume_prompt.accessibility_name = A11yLabels.strip_bbcode(String(_resume_prompt.text))
+		A11yLabels.bind_button(_resume_continue, "UI_CONTINUE")
+		A11yLabels.bind_button(
+			_resume_restart,
+			"UI_RESTART" if _reset_is_restart else "UI_NEW_LAYOUT"
+		)
+		A11yLabels.bind_button(_resume_back, "UI_BACK")
 
 
 func _style_resume_button(button: Button, text: String = "") -> void:

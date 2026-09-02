@@ -163,6 +163,7 @@ func _apply_a11y_labels() -> void:
 		[easy_tab_button, "DIFF_EASY"],
 		[medium_tab_button, "DIFF_MEDIUM"],
 		[hard_tab_button, "DIFF_HARD"],
+		[custom_tab_button, "UI_CUSTOM"],
 	])
 
 
@@ -209,6 +210,7 @@ func _on_language_changed() -> void:
 	_layout.fit_chrome_buttons(_configure_custom_tab)
 	_tabs.update_tab_button_visuals()
 	_tabs.populate_level_menu()
+	_apply_a11y_labels()
 	if _title_label:
 		HudLayout._bind_header_translation_key(_title_label, "UI_SELECT_LEVEL")
 		HudLayout.apply_screen_header_style(_title_label)
@@ -240,6 +242,14 @@ func _apply_level_button_content(btn: Button, level: LevelData, title: String, l
 		LOCK_ICON,
 		PREVIEW_SIZE,
 		LEVEL_LOCK_ICON_SIZE,
+		show_badge
+	)
+	A11yLabels.bind_level_button(
+		btn,
+		level,
+		title,
+		locked,
+		_tabs.current_view == LevelSelectTabs.ViewMode.CUSTOM,
 		show_badge
 	)
 

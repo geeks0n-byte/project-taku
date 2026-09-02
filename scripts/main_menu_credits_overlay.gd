@@ -43,6 +43,12 @@ func setup(
 func mount_close_button() -> void:
 	if _close_btn:
 		HudLayout.style_top_bar_close_button(_close_btn)
+		A11yLabels.bind_button(_close_btn, "UI_CLOSE")
+
+
+func apply_a11y_labels() -> void:
+	if _close_btn:
+		A11yLabels.bind_button(_close_btn, "UI_CLOSE")
 
 
 func bind_signals() -> void:
