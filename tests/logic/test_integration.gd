@@ -54,6 +54,16 @@ static func _test_cloud_save_logic(r: LogicTestRunner) -> void:
 	var bytes := CloudSaveLogic.blob_to_bytes(sample)
 	var roundtrip := CloudSaveLogic.blob_from_bytes(bytes)
 	r.ok(int(roundtrip.get("timestamp", 0)) == 42, "cloud: blob bytes roundtrip")
+	var local_ach := {"undo_uses": 10, "redo_uses": 30, "unlocked": {}}
+	var remote_ach := {"undo_uses": 25, "redo_uses": 15, "unlocked": {}}
+	var merged := CloudSaveLogic.merge_blobs(
+		CloudSaveLogic.build_blob({}, {}, local_ach, 100),
+		CloudSaveLogic.build_blob({}, {}, remote_ach, 200)
+	)
+	var merged_ach: Dictionary = merged.get("achievements", {})
+	r.ok(int(merged_ach.get("undo_uses", 0)) == 25, "cloud: merge max undo_uses")
+	r.ok(int(merged_ach.get("redo_uses", 0)) == 30, "cloud: merge max redo_uses")
+	_test_save_manager_cloud_roundtrip(r)
 
 static func _test_levels_unseen_badges(r: LogicTestRunner) -> void:
 	var save: Node = r.root.get_node_or_null("SaveManager") if r.root != null else null
@@ -76,6 +86,44 @@ static func _test_levels_unseen_badges(r: LogicTestRunner) -> void:
 	save.set("levels_unseen", {str(highest + 1): true})
 	r.ok(int(save.call("unseen_level_count")) == 0, "levels unseen: phantom level ignored")
 	save.set("levels_unseen", backup_unseen)
+
+static func _test_save_manager_cloud_roundtrip(r: LogicTestRunner) -> void:
+	var save: Node = r.root.get_node_or_null("SaveManager") if r.root != null else null
+	if save == null:
+		r.ok(true, "cloud save mgr: skip without SaveManager")
+		return
+	var backup_undo := int(save.get("undo_uses"))
+	var backup_redo := int(save.get("redo_uses"))
+	var backup_color_blind := bool(save.get("color_blind_patterns"))
+	save.set("color_blind_patterns", true)
+	save.set("undo_uses", 30)
+	save.set("redo_uses", 12)
+	var blob: Variant = save.call("export_cloud_payload")
+	save.set("color_blind_patterns", false)
+	save.set("undo_uses", 0)
+	save.set("redo_uses", 0)
+	save.call("apply_cloud_payload", blob)
+	r.ok(bool(save.get("color_blind_patterns")), "cloud save mgr: color_blind roundtrip")
+	r.ok(int(save.get("undo_uses")) == 30, "cloud save mgr: undo_uses roundtrip")
+	r.ok(int(save.get("redo_uses")) == 12, "cloud save mgr: redo_uses roundtrip")
+	save.set("color_blind_patterns", true)
+	var host := Control.new()
+	r.root.add_child(host)
+	host.custom_minimum_size = Vector2(64, 64)
+	host.size = Vector2(64, 64)
+	ColorBlindTiles.sync_pattern(host, GameConstants.TileState.BLUE)
+	var overlay := host.get_node_or_null("ColorBlindPattern") as Control
+	r.ok(overlay != null and overlay.visible, "colorblind: overlay on blue when enabled")
+	ColorBlindTiles.sync_pattern(host, GameConstants.TileState.JOKER)
+	r.ok(overlay == null or not overlay.visible, "colorblind: no overlay on joker")
+	save.set("color_blind_patterns", false)
+	ColorBlindTiles.sync_pattern(host, GameConstants.TileState.BLUE)
+	r.ok(overlay == null or not overlay.visible, "colorblind: overlay hidden when disabled")
+	r.root.remove_child(host)
+	host.free()
+	save.set("undo_uses", backup_undo)
+	save.set("redo_uses", backup_redo)
+	save.set("color_blind_patterns", backup_color_blind)
 
 static func _test_cloud_save_stub(r: LogicTestRunner) -> void:
 	r.ok(CloudSaveLogic.play_games_plugin_installed(), "cloud: Play Games addon installed")

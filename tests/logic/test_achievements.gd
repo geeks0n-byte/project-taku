@@ -208,6 +208,10 @@ static func _test_achievement_catalog(r: LogicTestRunner) -> void:
 	)
 	var ctrl_y := AchievementCatalog.collect_unlocks({"redo_uses": 50})
 	r.ok(ctrl_y.has(AchievementCatalog.ID_CTRL_Y), "ach: ctrl_y at 50 redos")
+	r.ok(
+		not AchievementCatalog.collect_unlocks({"redo_uses": 49}).has(AchievementCatalog.ID_CTRL_Y),
+		"ach: ctrl_y needs 50 redos"
+	)
 	var rules := AchievementCatalog.collect_unlocks({"rules_open_levels": 10})
 	r.ok(rules.has(AchievementCatalog.ID_RULES_READER), "ach: rules_reader at 10 levels")
 	r.ok(

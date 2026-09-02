@@ -52,7 +52,7 @@ anchor_bottom = 1.0
 offset_left = 24.0
 offset_top = 460.0
 offset_right = -24.0
-offset_bottom = -120.0
+offset_bottom = -278.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 8
@@ -66,14 +66,14 @@ mouse_filter = 2
 [node name="Grid" type="GridContainer" parent="ListHost/GridHost"]
 layout_mode = 0
 offset_right = 984.0
-offset_bottom = 400.0
+offset_bottom = 1176.0
 size_flags_horizontal = 3
 theme_override_constants/h_separation = 24
 theme_override_constants/v_separation = 24
 columns = 2
 
 [node name="PageNavGap" type="Control" parent="ListHost"]
-custom_minimum_size = Vector2(0, 28)
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 mouse_filter = 2
 size_flags_horizontal = 3
@@ -159,3 +159,4 @@ mouse_filter = 2
 texture = ExtResource("2_close")
 expand_mode = 1
 stretch_mode = 5
+

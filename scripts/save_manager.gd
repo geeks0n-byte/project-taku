@@ -733,7 +733,7 @@ func apply_cloud_payload(blob: Dictionary) -> void:
 	bgm_enabled = bool(settings.get("bgm_enabled", bgm_enabled))
 	sfx_enabled = bool(settings.get("sfx_enabled", sfx_enabled))
 	haptic_enabled = bool(settings.get("haptic_enabled", haptic_enabled))
-	color_blind_patterns = bool(settings.get("color_blind_patterns", color_blind_patterns))
+	set_color_blind_patterns(bool(settings.get("color_blind_patterns", color_blind_patterns)))
 	var unlocked = ach.get("unlocked", achievements_unlocked)
 	if typeof(unlocked) == TYPE_DICTIONARY:
 		achievements_unlocked = unlocked

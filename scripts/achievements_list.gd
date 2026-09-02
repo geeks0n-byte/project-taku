@@ -20,18 +20,21 @@ signal back_requested
 const _GRID_COLUMNS := 2
 const _ROWS_PER_PAGE := 4
 const _ITEMS_PER_PAGE := _GRID_COLUMNS * _ROWS_PER_PAGE
-const _ROW_H := 350.0
+## Max cell height. Fitted to ListHost so 4 rows stay above the pinned pager (HARD KNOCKS).
+## 276 * 4 + 24 * 3 = 1176, under the 1182px phone ListHost (bottom inset 278).
+const _ROW_H := 276.0
 const _CELL_SEP_H := 24
 const _CELL_SEP_V := 24
-const _ICON_PX := 120.0
-const _ICON_ART_PX := 96.0
-const _BADGE_PX := 48.0
+const _ICON_PX := 88.0
+const _ICON_ART_PX := 72.0
+const _BADGE_PX := 36.0
 const _BADGE_INSET := 0.0
-const _NAME_SLOT_H := 86.0
-const _TIER_SLOT_H := 28.0
-const _DESC_SLOT_H := 90.0
+const _NAME_SLOT_H := 56.0
+const _TIER_SLOT_H := 22.0
+## Full 2-line pixel desc (22px) + pad. Do not shrink this to dodge the pager.
+const _DESC_SLOT_H := 82.0
 const _TEXT_SLOT_PAD_TOP := 2.0
-const _TEXT_SLOT_PAD_BOTTOM := 6.0
+const _TEXT_SLOT_PAD_BOTTOM := 2.0
 const _BELOW_TITLE_GAP := 48.0
 const _RESERVE_MENU_BANNER_NAV := true
 const _LOCKED_ICON_MODULATE := Color(0.34, 0.34, 0.38, 1.0)
@@ -46,7 +49,7 @@ const _NAME_MAX_LINES := 2
 const _DESC_FONT_BASE := 22
 const _DESC_MAX_LINES := 3
 const LOCK_ICON := preload("res://resources/tiles/tile_lock.svg")
-const LOCK_OVERLAY_PX := 88.0
+const LOCK_OVERLAY_PX := 64.0
 const _LOCK_SCRIM_RADIUS := 22.0
 
 const _NEW_BADGE_INSET := 2.0
@@ -225,7 +228,7 @@ func _refresh_page() -> void:
 	var end := mini(start + _ITEMS_PER_PAGE, _all_ids.size())
 	for i in range(start, end):
 		var cell := _make_cell(str(_all_ids[i]), _unlocked_map)
-		cell.custom_minimum_size.y = _ROW_H
+		cell.custom_minimum_size.y = _page_row_height()
 		cell.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		_grid.add_child(cell)
 
@@ -233,7 +236,7 @@ func _refresh_page() -> void:
 	for _i in HudLayout.grid_row_pad_count(page_count, _GRID_COLUMNS):
 		var pad := Control.new()
 		pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pad.custom_minimum_size.y = _ROW_H
+		pad.custom_minimum_size.y = _page_row_height()
 		pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_grid.add_child(pad)
 
@@ -257,6 +260,19 @@ func _update_page_nav_visibility() -> void:
 		HudLayout.refresh_button_icon_modulate(_page_next_button)
 
 
+## Row height that fits four cells in ListHost so the pinned pager cannot overlap HARD KNOCKS.
+func _page_row_height() -> float:
+	var sep := _CELL_SEP_V
+	if _grid:
+		sep = _grid.get_theme_constant("v_separation")
+	var seps := float(maxi(0, _ROWS_PER_PAGE - 1) * sep)
+	var avail := _ROW_H * float(_ROWS_PER_PAGE) + seps
+	if _list_host and _list_host.size.y > 1.0:
+		avail = _list_host.size.y
+	var fitted := floorf((avail - seps) / float(_ROWS_PER_PAGE))
+	return maxf(1.0, minf(_ROW_H, fitted))
+
+
 ## Pins the grid to the top of its host and reserves a full 4-row page height.
 func _pin_grid_to_top() -> void:
 	if _grid == null or _grid_host == null or _grid.get_parent() != _grid_host:
@@ -271,12 +287,17 @@ func _pin_grid_to_top() -> void:
 	_grid.size_flags_vertical = 0
 	_grid.clip_contents = false
 	var sep := _grid.get_theme_constant("v_separation")
-	var reserved_h := _ROWS_PER_PAGE * _ROW_H + maxi(0, _ROWS_PER_PAGE - 1) * sep
+	var row_h := _page_row_height()
+	for child in _grid.get_children():
+		if child is Control:
+			(child as Control).custom_minimum_size.y = row_h
+	var reserved_h := float(_ROWS_PER_PAGE) * row_h + float(maxi(0, _ROWS_PER_PAGE - 1) * sep)
 	var grid_w := minf(host_w, HudLayout.UI_PHONE_CONTENT_WIDTH)
 	if grid_w < 1.0:
 		grid_w = host_w
 	_grid.size = Vector2(grid_w, reserved_h)
 	_grid.position = Vector2((host_w - grid_w) * 0.5, 0.0)
+	# Never force the host taller than ListHost; overflow would paint over PREV/NEXT.
 	_grid_host.custom_minimum_size = Vector2(0, reserved_h)
 	_grid_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
@@ -288,7 +309,7 @@ func _make_cell(id: String, unlocked_map: Dictionary) -> Control:
 	var cell := VBoxContainer.new()
 	cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cell.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	cell.add_theme_constant_override("separation", 8)
+	cell.add_theme_constant_override("separation", 6)
 	cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(_make_icon_row(id, unlocked, show_identity, unlocked_map))
 
@@ -304,8 +325,10 @@ func _make_cell(id: String, unlocked_map: Dictionary) -> Control:
 	HudLayout.apply_popup_label(name_label, _NAME_FONT_BASE)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_label.clip_contents = false
+	name_label.clip_text = false
 	name_label.max_lines_visible = _NAME_MAX_LINES
 	name_label.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+	name_label.custom_minimum_size.y = _NAME_SLOT_H - _TEXT_SLOT_PAD_TOP - _TEXT_SLOT_PAD_BOTTOM
 	name_slot.add_child(name_label)
 	_anchor_slot_child(name_label)
 	cell.add_child(name_slot)
@@ -320,7 +343,9 @@ func _make_cell(id: String, unlocked_map: Dictionary) -> Control:
 		_anchor_slot_child(tier_label)
 	cell.add_child(tier_slot)
 
+	# Description takes leftover cell height so pixel glyphs are never sliced at the baseline.
 	var desc_slot := _make_text_slot(_DESC_SLOT_H)
+	desc_slot.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	if AchievementCatalog.desc_visible(id, unlocked):
 		var desc := Label.new()
 		desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -333,8 +358,10 @@ func _make_cell(id: String, unlocked_map: Dictionary) -> Control:
 		HudLayout.apply_popup_label(desc, _DESC_FONT_BASE)
 		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		desc.clip_contents = false
+		desc.clip_text = false
 		desc.max_lines_visible = _DESC_MAX_LINES
 		desc.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+		desc.custom_minimum_size.y = _DESC_SLOT_H - _TEXT_SLOT_PAD_TOP - _TEXT_SLOT_PAD_BOTTOM
 		desc_slot.add_child(desc)
 		_anchor_slot_child(desc)
 		desc.set_meta("_ach_fit_base", _DESC_FONT_BASE)
@@ -349,7 +376,8 @@ func _make_text_slot(height: float) -> Control:
 	slot.custom_minimum_size = Vector2(0.0, height)
 	slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	slot.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	slot.clip_contents = true
+	# clip_contents sliced pixel descenders; labels use clip_text=false instead.
+	slot.clip_contents = false
 	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return slot
 
@@ -602,6 +630,7 @@ func _apply_fitted_label_size(label: Label, size: int, max_lines: int) -> void:
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.max_lines_visible = max_lines
 	label.clip_contents = false
+	label.clip_text = false
 
 
 ## Safe-area header, close button, and phone-width-capped paged grid region.

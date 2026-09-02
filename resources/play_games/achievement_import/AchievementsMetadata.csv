@@ -15,11 +15,11 @@ HARD KNOCKS,Clear every hard campaign puzzle,False,,Revealed,40,14
 THREE STAR DEBUT,Earn all three stars on a campaign puzzle,False,,Revealed,10,15
 UNDO NOTHING,Clear a hard campaign puzzle without using undo,False,,Revealed,20,16
 AD FRIEND,Watch a rewarded ad for hints,False,,Revealed,5,17
-I'M BLUE,Fill every empty cell with blue,False,,Hidden,5,18
+I'M BLUE,Fill every empty cell with blue tiles,False,,Hidden,5,18
 YOU SHALL NOT PASS,Try to hop a shifter that cannot move,False,,Hidden,5,19
 RULES READER,Open the rules on ten different levels,False,,Hidden,5,20
 PURPLE RAIN,Make 30 shifter slides,False,,Hidden,5,21
-YELLOW SUBMARINE,Fill every empty cell with yellow,False,,Hidden,5,22
+YELLOW SUBMARINE,Fill every empty cell with yellow tiles,False,,Hidden,5,22
 PAUSE THINKER,Pause for three minutes in one run and still win,False,,Hidden,10,23
 GREEN SCREEN,Fill every empty cell with green tiles,False,,Hidden,5,24
 CTRL+Z,Use undo 50 times total,True,50,Hidden,5,25

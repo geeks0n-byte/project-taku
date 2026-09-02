@@ -35,8 +35,10 @@ static func _test_orchestration(r: LogicTestRunner) -> void:
 	var backup_seen: Dictionary = (save.get("achievements_seen") as Dictionary).duplicate()
 	var backup_no_hint: int = int(save.get("no_hint_clears"))
 	var backup_slides: int = int(save.get("shifter_slides"))
+	var backup_undo: int = int(save.get("undo_uses"))
+	var backup_redo: int = int(save.get("redo_uses"))
 
-	_restore_save(save, {}, {}, 0, 0)
+	_restore_save(save, {}, {}, 0, 0, 0, 0)
 
 	r.ok(
 		not bool(mgr.call("is_unlocked", AchievementCatalog.ID_DEV_MODE)),
@@ -106,7 +108,22 @@ static func _test_orchestration(r: LogicTestRunner) -> void:
 		}
 	r.ok(bool(mgr.call("check_all_green", green_cells)), "ach mgr orch: all-green board grants")
 
-	_restore_save(save, backup_unlocked, backup_seen, backup_no_hint, backup_slides)
+	save.set("undo_uses", 0)
+	save.set("redo_uses", 0)
+	save.set("achievements_unlocked", {})
+	mgr.call("notify_undo")
+	r.ok(int(save.get("undo_uses")) == 1, "ach mgr orch: notify_undo increments")
+	mgr.call("notify_redo")
+	r.ok(int(save.get("redo_uses")) == 1, "ach mgr orch: notify_redo increments")
+	save.set("undo_uses", 49)
+	save.set("achievements_unlocked", {})
+	mgr.call("notify_undo")
+	r.ok(
+		bool(mgr.call("is_unlocked", AchievementCatalog.ID_CTRL_Z)),
+		"ach mgr orch: ctrl_z at 50th undo"
+	)
+
+	_restore_save(save, backup_unlocked, backup_seen, backup_no_hint, backup_slides, backup_undo, backup_redo)
 
 
 static func _autoload(name: String) -> Node:
@@ -121,9 +138,13 @@ static func _restore_save(
 	unlocked: Dictionary,
 	seen: Dictionary,
 	no_hint_clears: int,
-	shifter_slides: int
+	shifter_slides: int,
+	undo_uses: int = 0,
+	redo_uses: int = 0
 ) -> void:
 	save.set("achievements_unlocked", unlocked.duplicate())
 	save.set("achievements_seen", seen.duplicate())
 	save.set("no_hint_clears", no_hint_clears)
 	save.set("shifter_slides", shifter_slides)
+	save.set("undo_uses", undo_uses)
+	save.set("redo_uses", redo_uses)

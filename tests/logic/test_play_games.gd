@@ -50,6 +50,14 @@ static func _test_sync_logic(r: LogicTestRunner) -> void:
 		not PlayGamesAchievementSyncLogic.play_achievement_is_unlocked(2),
 		"pgach: hidden state is not unlocked"
 	)
+	r.ok(
+		not PlayGamesAchievementMap.play_id_for_catalog(AchievementCatalog.ID_GREEN_SCREEN).is_empty(),
+		"pgach: green_screen has a Play Games id"
+	)
+	r.ok(
+		not PlayGamesAchievementMap.play_id_for_catalog(AchievementCatalog.ID_CTRL_Z).is_empty(),
+		"pgach: ctrl_z has a Play Games id"
+	)
 
 
 static func _test_review_logic(r: LogicTestRunner) -> void:

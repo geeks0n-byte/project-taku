@@ -127,10 +127,11 @@ func notify_redo() -> void:
 func notify_rules_opened(level: LevelData = null) -> void:
 	if SaveManager == null or OS.has_feature("headless"):
 		return
+	var recorded := false
 	if level != null:
-		SaveManager.record_rules_opened(level)
+		recorded = SaveManager.record_rules_opened(level)
 	var newly := _apply_state(true)
-	if not newly.is_empty():
+	if recorded or not newly.is_empty():
 		SaveManager.save_progress()
 
 
