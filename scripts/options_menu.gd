@@ -591,7 +591,7 @@ func _update_haptic_label() -> void:
 		haptic_btn, tr("UI_HAPTIC_ON" if SaveManager.haptic_enabled else "UI_HAPTIC_OFF")
 	)
 
-## Caption for the color-blind patterns toggle.
+## Caption for the color-blind tile filter toggle.
 func _update_color_blind_label() -> void:
 	if not color_blind_btn:
 		return
@@ -671,7 +671,7 @@ func _on_toggle_haptic() -> void:
 	SaveManager.set_haptic_enabled(not SaveManager.haptic_enabled)
 	_update_haptic_label()
 
-## Flips color-blind tile patterns and updates the button caption.
+## Flips color-blind tile colors and updates the button caption.
 func _on_toggle_color_blind() -> void:
 	SaveManager.set_color_blind_patterns(not SaveManager.color_blind_patterns)
 	_update_color_blind_label()

@@ -22,7 +22,6 @@ static var _tile_image_cache: Dictionary = {}
 # Bounded to _PREVIEW_CACHE_MAX entries; oldest entry is evicted when full.
 static var _preview_texture_cache: Dictionary = {}
 const _PREVIEW_CACHE_MAX := 64
-const _CB_STRIPE_PERIOD := 5
 
 
 ## Drops composed preview textures (e.g. after color-blind toggle).
@@ -156,12 +155,12 @@ static func make_texture_from_layout(
 				continue
 			var dst := origin + Vector2i(x * cell, y * cell)
 			var tile_img := _resized_tile(_path_for_state(state), cell)
+			if tile_img and _color_blind_enabled():
+				tile_img = ColorBlindTiles.filter_tile_image(tile_img, state)
 			if tile_img:
 				image.blend_rect(tile_img, Rect2i(Vector2i.ZERO, tile_img.get_size()), dst)
 			else:
 				image.fill_rect(Rect2i(dst.x, dst.y, cell, cell), _color_for_state(state))
-			if state == GameConstants.TileState.BLUE or state == GameConstants.TileState.YELLOW:
-				_blit_color_blind_pattern(image, dst, cell, state)
 			if state == GameConstants.TileState.SHIFTER and shifter_dirs.has(coord):
 				_blit_shifter_arrow(image, dst, cell, shifter_dirs[coord])
 
@@ -193,34 +192,8 @@ static func _color_blind_enabled() -> bool:
 	var tree := Engine.get_main_loop()
 	if tree == null:
 		return false
-	var sm := tree.root.get_node_or_null("/root/SaveManager")
+	var sm: Node = tree.root.get_node_or_null("/root/SaveManager")
 	return sm != null and bool(sm.get("color_blind_patterns"))
-
-
-## Diagonal stripe overlay on blue/yellow preview cells (matches live board patterns).
-static func _blit_color_blind_pattern(image: Image, dst: Vector2i, cell: int, state: int) -> void:
-	if not _color_blind_enabled():
-		return
-	if state != GameConstants.TileState.BLUE and state != GameConstants.TileState.YELLOW:
-		return
-	var margin := maxi(1, int(round(float(cell) * 0.12)))
-	var alpha := 0.28 if state == GameConstants.TileState.BLUE else 0.42
-	var slope := 1 if state == GameConstants.TileState.BLUE else -1
-	for y in cell:
-		for x in cell:
-			if x < margin or y < margin or x >= cell - margin or y >= cell - margin:
-				continue
-			var lx := x - margin
-			var ly := y - margin
-			var diag := lx + slope * ly
-			if int(abs(diag)) % _CB_STRIPE_PERIOD >= _CB_STRIPE_PERIOD / 2:
-				continue
-			var px := dst.x + x
-			var py := dst.y + y
-			if px < 0 or py < 0 or px >= image.get_width() or py >= image.get_height():
-				continue
-			var existing := image.get_pixel(px, py)
-			image.set_pixel(px, py, existing.lerp(Color(0, 0, 0, alpha), alpha))
 
 
 ## Inserts a generated texture into the preview cache, evicting the oldest entry
@@ -413,16 +386,18 @@ static func _resized_tile(path: String, size: int) -> Image:
 
 ## Returns the solid fallback color for a tile state, used when the SVG tile cannot be loaded.
 static func _color_for_state(state: int) -> Color:
+	var base: Color
 	match state:
 		GameConstants.TileState.WALL:
-			return COLOR_WALL
+			base = COLOR_WALL
 		GameConstants.TileState.YELLOW:
-			return COLOR_YELLOW
+			base = COLOR_YELLOW
 		GameConstants.TileState.BLUE:
-			return COLOR_BLUE
+			base = COLOR_BLUE
 		GameConstants.TileState.JOKER:
-			return COLOR_JOKER
+			base = COLOR_JOKER
 		GameConstants.TileState.SHIFTER:
-			return COLOR_SHIFTER
+			base = COLOR_SHIFTER
 		_:
-			return COLOR_EMPTY
+			base = COLOR_EMPTY
+	return ColorBlindTiles.preview_fallback_color(state, base)

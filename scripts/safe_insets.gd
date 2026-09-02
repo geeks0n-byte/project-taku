@@ -9,6 +9,8 @@ extends RefCounted
 
 ## Viewport-pixel insets as Vector4(left, top, right, bottom).
 static func viewport_margins() -> Vector4:
+	if GameConstants.is_store_asset_capture():
+		return Vector4.ZERO
 	var window_size := Vector2(DisplayServer.window_get_size())
 	var viewport_size := _viewport_size()
 	var safe := Rect2(DisplayServer.get_display_safe_area())

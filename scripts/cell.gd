@@ -525,16 +525,16 @@ func update_visuals():
 			else:
 				tile_icon.texture = tex_empty
 		GameConstants.TileState.YELLOW:
-			tile_icon.texture = tex_yellow
+			tile_icon.texture = ColorBlindTiles.resolve_tile_texture(tex_yellow, state)
 		GameConstants.TileState.BLUE:
-			tile_icon.texture = tex_blue
+			tile_icon.texture = ColorBlindTiles.resolve_tile_texture(tex_blue, state)
 		GameConstants.TileState.JOKER:
-			tile_icon.texture = tex_joker
+			tile_icon.texture = ColorBlindTiles.resolve_tile_texture(tex_joker, state)
 		GameConstants.TileState.SHIFTER:
-			tile_icon.texture = tex_shifter
+			tile_icon.texture = ColorBlindTiles.resolve_tile_texture(tex_shifter, state)
 		_:
 			tile_icon.texture = null
-	ColorBlindTiles.sync_pattern(tile_icon, state)
+	ColorBlindTiles.finish_tile_icon(tile_icon)
 
 ## Turns on the red validation border and pauses breathe tweens.
 func set_error_highlight():

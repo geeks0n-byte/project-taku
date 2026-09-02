@@ -107,20 +107,23 @@ static func _test_save_manager_cloud_roundtrip(r: LogicTestRunner) -> void:
 	r.ok(int(save.get("undo_uses")) == 30, "cloud save mgr: undo_uses roundtrip")
 	r.ok(int(save.get("redo_uses")) == 12, "cloud save mgr: redo_uses roundtrip")
 	save.set("color_blind_patterns", true)
-	var host := Control.new()
-	r.root.add_child(host)
-	host.custom_minimum_size = Vector2(64, 64)
-	host.size = Vector2(64, 64)
-	ColorBlindTiles.sync_pattern(host, GameConstants.TileState.BLUE)
-	var overlay := host.get_node_or_null("ColorBlindPattern") as Control
-	r.ok(overlay != null and overlay.visible, "colorblind: overlay on blue when enabled")
-	ColorBlindTiles.sync_pattern(host, GameConstants.TileState.JOKER)
-	r.ok(overlay == null or not overlay.visible, "colorblind: no overlay on joker")
+	var tex: Texture2D = load(GameConstants.TILE_BLUE) as Texture2D
+	var filtered := ColorBlindTiles.resolve_tile_texture(tex, GameConstants.TileState.BLUE)
+	r.ok(filtered != tex, "colorblind: blue texture remapped when enabled")
+	var joker_tex: Texture2D = load(GameConstants.TILE_GREEN) as Texture2D
+	var joker_filtered := ColorBlindTiles.resolve_tile_texture(
+		joker_tex, GameConstants.TileState.JOKER
+	)
+	r.ok(joker_filtered != joker_tex, "colorblind: joker texture remapped when enabled")
+	var shifter_tex: Texture2D = load(GameConstants.TILE_SHIFTER) as Texture2D
+	var shifter_filtered := ColorBlindTiles.resolve_tile_texture(
+		shifter_tex, GameConstants.TileState.SHIFTER
+	)
+	r.ok(shifter_filtered != shifter_tex, "colorblind: shifter texture remapped when enabled")
 	save.set("color_blind_patterns", false)
-	ColorBlindTiles.sync_pattern(host, GameConstants.TileState.BLUE)
-	r.ok(overlay == null or not overlay.visible, "colorblind: overlay hidden when disabled")
-	r.root.remove_child(host)
-	host.free()
+	ColorBlindTiles.clear_texture_cache()
+	var passthrough := ColorBlindTiles.resolve_tile_texture(tex, GameConstants.TileState.BLUE)
+	r.ok(passthrough == tex, "colorblind: source texture when disabled")
 	save.set("undo_uses", backup_undo)
 	save.set("redo_uses", backup_redo)
 	save.set("color_blind_patterns", backup_color_blind)

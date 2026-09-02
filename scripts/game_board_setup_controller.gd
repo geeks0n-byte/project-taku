@@ -17,10 +17,10 @@ static func solve_layout(
 	dims: Vector2i,
 	shifter_pairs: Array = []
 ) -> Dictionary:
-	var solve_layout := LevelUtils.layout_with_shifters_for_solve(layout, shifter_pairs)
-	var empty_cells: Array = LevelUtils.empty_cells_from_layout(solve_layout)
+	var layout_for_solve := LevelUtils.layout_with_shifters_for_solve(layout, shifter_pairs)
+	var empty_cells: Array = LevelUtils.empty_cells_from_layout(layout_for_solve)
 	return LevelUtils.solve_reference(
-		solve_layout, empty_cells, dims.x, dims.y, tiles_list, constraints
+		layout_for_solve, empty_cells, dims.x, dims.y, tiles_list, constraints
 	)
 
 

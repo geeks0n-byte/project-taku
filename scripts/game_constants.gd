@@ -301,3 +301,16 @@ static func is_headless_run() -> bool:
 		if arg.begins_with("--display-driver=") and arg.get_slice("=", 1) == "headless":
 			return true
 	return false
+
+
+## True during `dev/capture_store_trailer.gd` runs (`SPACEBLOX_TRAILER_CAPTURE=1`).
+static func is_trailer_capture() -> bool:
+	return OS.get_environment("SPACEBLOX_TRAILER_CAPTURE") == "1"
+
+
+## True during store trailer or Play listing screenshot capture on desktop.
+static func is_store_asset_capture() -> bool:
+	return (
+		is_trailer_capture()
+		or OS.get_environment("SPACEBLOX_STORE_SHOTS") == "1"
+	)

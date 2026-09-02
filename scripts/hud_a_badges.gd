@@ -5,6 +5,7 @@ extends RefCounted
 const NOTIFICATION_BADGE_TEXT := "!"
 const NOTIFICATION_BADGE_FONT := 24
 const NOTIFICATION_BADGE_RED := Color(0.92, 0.22, 0.18, 1.0)
+const LEVEL_CARD_BADGE_HOST_H := 240.0
 
 ## Red "!" without a panel background (main menu buttons).
 static func build_plain_notification_badge(host_h: float = -1.0) -> Label:
@@ -43,20 +44,32 @@ static func plain_notification_badge_size(host_h: float) -> Vector2:
 
 ## Pins a plain red "!" badge to the top-right corner (achievements, level cards).
 static func attach_plain_notification_badge_corner(
-	parent: Control, host_h: float, inset: float = 2.0
+	parent: Control,
+	host_h: float,
+	inset_right: float = 2.0,
+	inset_top: float = 2.0
 ) -> Label:
 	var badge := build_plain_notification_badge(host_h)
 	badge.name = "NewBadge"
 	var dims := plain_notification_badge_size(host_h)
 	parent.add_child(badge)
 	badge.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	badge.offset_left = -dims.x - inset
-	badge.offset_top = inset
-	badge.offset_right = -inset
-	badge.offset_bottom = inset + dims.y
+	badge.offset_left = -dims.x - inset_right
+	badge.offset_top = inset_top
+	badge.offset_right = -inset_right
+	badge.offset_bottom = inset_top + dims.y
 	badge.z_index = 2
 	badge.visible = true
 	return badge
+
+
+## Red "!" pinned to the top-right inside a level card (campaign unseen badge).
+static func attach_level_new_badge(
+	content: Control, inset_right: float, inset_top: float
+) -> Label:
+	return attach_plain_notification_badge_corner(
+		content, LEVEL_CARD_BADGE_HOST_H, inset_right, inset_top
+	)
 
 
 ## Builds a red circular "!" badge panel + label for level cards.

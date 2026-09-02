@@ -148,10 +148,10 @@ VIBRATION: ON
 VIBRATION: OFF
 
 [UI_COLOR_BLIND_ON]
-COLOR PATTERNS: ON
+COLORBLIND: ON
 
 [UI_COLOR_BLIND_OFF]
-COLOR PATTERNS: OFF
+COLORBLIND: OFF
 
 [UI_CONSENT_TITLE]
 WELCOME
@@ -518,6 +518,12 @@ Tap stars for goals
 
 [TUT6_RESET]
 %s Reset restarts the level from the beginning.
+
+[TUT6_PAUSE]
+%s Pause opens the game menu.
+
+[TUT6_NEW_PUZZLE]
+%s New Puzzle shuffles the board for a fresh layout.
 
 [TUT6_RULES]
 %s How to Play opens the full rule guide anytime.
@@ -1012,7 +1018,7 @@ They must differ. Place %s [color=#4DA6FF]Blue[/color] to satisfy ×.
 Correct - different colors for ×.
 
 [TUT6_TOOLS_INTRO]
-These top-bar buttons help while you play. We will highlight each one — tap it or press Next.
+Top-bar buttons help while you play. Press Next.
 
 [TUT2_RULE_INTRO_2]
 [color=#E53935]Rule of Two[/color] also blocks three %s [color=#4DA6FF]Blue[/color] in a row. Two Blues already sit here.

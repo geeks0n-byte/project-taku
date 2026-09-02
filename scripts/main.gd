@@ -23,11 +23,13 @@ var star_time_limit: int = 0
 var elapsed_seconds: int = 0
 var shifter_move_count: int = 0
 var required_shifter_moves: int = 0
+@warning_ignore("unused_private_class_variable")
 var _has_shifters: bool = false
 # True for campaign tutorial levels — disables timer, move counter, and hint quota.
 var _challenges_disabled: bool = false
 var is_game_active: bool = true
 var is_paused: bool = false
+@warning_ignore("unused_private_class_variable")
 var _run_used_undo: bool = false
 var _pause_accumulated_sec: float = 0.0
 var _pause_started_msec: int = 0
@@ -44,6 +46,7 @@ var hints_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED
 var hints_used: int = 0
 var game_undo := UndoStack.new()
 # Guards against recording multiple snapshots for a single cell interaction.
+@warning_ignore("unused_private_class_variable")
 var _is_recording_action: bool = false
 # True while a fullscreen ad is visible so the timer stays paused.
 var _timer_paused_for_ad: bool = false
@@ -51,8 +54,11 @@ var _timer_paused_for_ad: bool = false
 var _is_generating_board: bool = false
 var tutorial_director: TutorialDirector
 # The layout and tile data used for the current run (saved for session autosave).
+@warning_ignore("unused_private_class_variable")
 var _run_layout: Dictionary = {}
+@warning_ignore("unused_private_class_variable")
 var _run_shifter_pairs: Array = []
+@warning_ignore("unused_private_class_variable")
 var _run_available_tiles: Array = []
 # When true, cancelling a reset from inside the pause menu returns to the pause menu.
 var _reset_confirm_return_to_pause: bool = false
@@ -157,7 +163,7 @@ func _ready():
 		SaveManager.color_blind_patterns_changed.connect(_on_color_blind_patterns_changed)
 	_begin_level_entry()
 
-## Refreshes color-blind overlays on the live board after an options toggle.
+## Refreshes color-blind tile colors on the live board after an options toggle.
 func _on_color_blind_patterns_changed() -> void:
 	if board_manager == null or board_manager.board_cells.is_empty():
 		return

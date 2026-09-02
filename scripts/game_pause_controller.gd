@@ -13,6 +13,8 @@ func setup(game: GameMain) -> void:
 func on_pause() -> void:
 	if _game == null:
 		return
+	if _game.tutorial_director and _game.tutorial_director.consume_hud_action("pause"):
+		return
 	if _game._is_generating_board or (_game._loading_overlay and _game._loading_overlay.is_busy()):
 		return
 	if not _game.is_game_active or _game.is_paused:

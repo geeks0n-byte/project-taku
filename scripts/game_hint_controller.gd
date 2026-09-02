@@ -29,7 +29,7 @@ func can_use_hint() -> bool:
 	var board_manager := _game.board_manager
 	var board_ok := HintController.has_usable_hints(
 		board_manager.board_cells if board_manager else {},
-		board_manager.active_constraint_pairs if board_manager else {},
+		board_manager.active_constraint_pairs if board_manager else [],
 		_game.solved_solution_reference,
 		_game.hidden_reference_constraints,
 		Vector2i.ZERO,

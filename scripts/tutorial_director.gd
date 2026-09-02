@@ -374,6 +374,8 @@ func _apply_step(step: Dictionary) -> void:
 			_update_practice_feedback(step)
 		"hud_button":
 			_highlight_button_id = String(step.get("button", ""))
+			if _highlight_button_id == "reset" and ui_manager:
+				ui_manager.set_reset_mode_restart(true)
 			var hud_next := bool(step.get("show_next", true))
 			_show_message_from_step(step, hud_next)
 			_clear_board_gates(false)

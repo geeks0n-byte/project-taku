@@ -74,6 +74,8 @@ static func _icon_path(token: String) -> String:
 		"hint":   return GameConstants.ICON_HINT_ON
 		"undo":   return "res://resources/icons/icon_undo.svg"
 		"redo":   return "res://resources/icons/icon_redo.svg"
+		"pause":  return "res://resources/icons/icon_pause.svg"
+		"random": return "res://resources/icons/icon_random.svg"
 		"star":   return "res://resources/icons/icon_star_on.svg"
 		_:        return ""
 
@@ -412,9 +414,45 @@ static func _level_00() -> Array:
 			"show_next": true,
 		},
 		{
-			"type": "message",
-			"text_key": "TUT_UI_OVERVIEW",
-			"icons": ["reset", "rules", "hint", "undo", "redo"],
+			"type": "hud_button",
+			"button": "pause",
+			"text_key": "TUT6_PAUSE",
+			"icons": ["pause"],
+			"show_next": true,
+		},
+		{
+			"type": "hud_button",
+			"button": "reset",
+			"text_key": "TUT6_NEW_PUZZLE",
+			"icons": ["random"],
+			"show_next": true,
+		},
+		{
+			"type": "hud_button",
+			"button": "how_to_play",
+			"text_key": "TUT6_RULES",
+			"icons": ["rules"],
+			"show_next": true,
+		},
+		{
+			"type": "hud_button",
+			"button": "hint",
+			"text_key": "TUT6_HINT",
+			"icons": ["hint"],
+			"show_next": true,
+		},
+		{
+			"type": "hud_button",
+			"button": "undo",
+			"text_key": "TUT6_UNDO",
+			"icons": ["undo"],
+			"show_next": true,
+		},
+		{
+			"type": "hud_button",
+			"button": "redo",
+			"text_key": "TUT6_REDO",
+			"icons": ["redo"],
 			"show_next": true,
 		},
 		{

@@ -81,6 +81,10 @@ func is_title_intro_started() -> bool:
 	return _title_intro_started
 
 
+func is_splash_impact_handled() -> bool:
+	return _splash_physics_impact_handled
+
+
 func can_skip(needs_privacy: bool) -> bool:
 	if not _boot_intro_active:
 		return false
@@ -338,10 +342,19 @@ func _wait_for_splash_tiles_cleared() -> void:
 	var tiles_clear := true
 	if SpaceBackground and SpaceBackground.has_method("boot_intro_tiles_offscreen"):
 		tiles_clear = SpaceBackground.boot_intro_tiles_offscreen()
-	if elapsed >= SPLASH_POST_IMPACT_MIN and tiles_clear:
+	var trailer := GameConstants.is_trailer_capture()
+	var clear_min := SPLASH_POST_IMPACT_MIN
+	var max_wait := SPLASH_TILES_CLEAR_MAX_WAIT
+	if trailer:
+		clear_min = 0.55
+		max_wait = 14.0
+	if elapsed >= clear_min and tiles_clear:
 		_continue_after_splash_tiles_cleared()
 		return
-	if elapsed >= SPLASH_TILES_CLEAR_MAX_WAIT:
+	if elapsed >= max_wait:
+		if trailer:
+			_continue_after_splash_tiles_cleared()
+			return
 		if not tiles_clear and SpaceBackground and SpaceBackground.has_method("explode_boot_intro_tiles_remaining"):
 			SpaceBackground.explode_boot_intro_tiles_remaining()
 			if UiSfx:
@@ -376,6 +389,8 @@ func _cancel_splash_deferred_timer() -> void:
 
 func _continue_after_splash_tiles_cleared() -> void:
 	if not _boot_intro_active:
+		return
+	if GameConstants.is_trailer_capture():
 		return
 	if _boot_intro_waiting_on_consent and _menu.needs_privacy_consent():
 		_cancel_boot_intro_failsafe()

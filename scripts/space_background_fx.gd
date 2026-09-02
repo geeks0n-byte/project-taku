@@ -250,6 +250,7 @@ func _spawn_debug_asteroid_standard_motion(
 	var rb := _pool.acquire()
 	if rb == null:
 		return
+	_pool.configure_collision_layer(rb, target_layer == _fg_asteroids)
 	rb.set_meta("spawn_msec", Time.get_ticks_msec())
 	rb.set_meta("entered_view", false)
 	rb.freeze = false
@@ -316,9 +317,12 @@ func _on_asteroid_collided(body: Node, self_entity: RigidBody2D) -> void:
 		return
 	if self_entity.get_instance_id() > body.get_instance_id():
 		return
+	if self_entity.collision_layer != body.collision_layer:
+		return
+	var burst_parent := _fg_asteroids if self_entity.get_parent() == _fg_asteroids else _parallax.dyn_layer_asteroids
 	spawn_asteroid_impact_burst(
 		(self_entity.global_position + body.global_position) * 0.5,
-		_parallax.dyn_layer_asteroids
+		burst_parent
 	)
 
 
@@ -345,6 +349,7 @@ func _spawn_entity(
 		var rb := _pool.acquire()
 		if rb == null:
 			return
+		_pool.configure_collision_layer(rb, target_layer == _fg_asteroids)
 		rb.set_meta("spawn_msec", Time.get_ticks_msec())
 		rb.set_meta("entered_view", false)
 		rb.freeze = false

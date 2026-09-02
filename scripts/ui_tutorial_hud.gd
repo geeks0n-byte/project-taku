@@ -97,7 +97,7 @@ func apply_tool_state() -> void:
 	var hint_remaining := 0
 	if _get_hint_remaining.is_valid():
 		hint_remaining = int(_get_hint_remaining.call())
-	var ids := ["reset", "how_to_play", "hint", "undo", "redo"]
+	var ids := ["pause", "reset", "how_to_play", "hint", "undo", "redo"]
 	for id in ids:
 		var button := get_hud_button(id)
 		if button == null:
@@ -110,6 +110,13 @@ func apply_tool_state() -> void:
 			HudLayout.stop_toggle_mask_breathe(button)
 		if id == "reset" or id == "how_to_play":
 			button.disabled = false
+			HudLayout.refresh_button_icon_modulate(button)
+			continue
+		if id == "pause":
+			if not _tutorial_tools_locked:
+				button.disabled = false
+			else:
+				button.disabled = not is_focus
 			HudLayout.refresh_button_icon_modulate(button)
 			continue
 		if not _tutorial_tools_locked:

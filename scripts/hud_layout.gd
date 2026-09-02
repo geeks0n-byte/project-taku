@@ -472,9 +472,11 @@ static func plain_notification_badge_size(host_h: float) -> Vector2:
 	return HudBadges.plain_notification_badge_size(host_h)
 
 static func attach_plain_notification_badge_corner(
-	parent: Control, host_h: float, inset: float = 2.0
+	parent: Control, host_h: float, inset_right: float = 2.0, inset_top: float = 2.0
 ) -> Label:
-	return HudBadges.attach_plain_notification_badge_corner(parent, host_h, inset)
+	return HudBadges.attach_plain_notification_badge_corner(
+		parent, host_h, inset_right, inset_top
+	)
 
 static func build_notification_badge() -> Dictionary:
 	return HudBadges.build_notification_badge()

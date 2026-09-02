@@ -176,7 +176,7 @@ func _on_unseen_levels_changed(_count: int) -> void:
 	_tabs.refresh_page()
 
 
-## Re-rasterizes previews when color-blind tile patterns are toggled.
+## Re-rasterizes previews when color-blind tile colors are toggled.
 func _on_color_blind_patterns_changed() -> void:
 	LevelPreview.clear_texture_cache()
 	_tabs.refresh_page()

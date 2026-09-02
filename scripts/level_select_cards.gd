@@ -21,6 +21,10 @@ static func apply_button_content(
 	btn.clip_text = true
 	btn.clip_contents = false
 
+	const TITLE_FONT := 32
+	const TITLE_INSET_X := 10.0
+	const TITLE_INSET_Y := 8.0
+
 	var content := Control.new()
 	content.name = "LevelContent"
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -37,11 +41,10 @@ static func apply_button_content(
 	label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	label.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	label.offset_left = 10.0
-	label.offset_top = 8.0
+	label.offset_left = TITLE_INSET_X
+	label.offset_top = TITLE_INSET_Y
 	label.grow_horizontal = Control.GROW_DIRECTION_END
 	label.grow_vertical = Control.GROW_DIRECTION_END
-	const TITLE_FONT := 32
 	var title_color := Color(0.55, 0.55, 0.55, 1.0) if locked else Color.WHITE
 	HudLayout.apply_raster_pixel_label(label, title, TITLE_FONT, title_color, 0, true)
 	content.add_child(label)
@@ -106,4 +109,4 @@ static func apply_button_content(
 	btn.add_child(content)
 
 	if show_unseen_badge and not locked and not is_custom_view:
-		HudLayout.attach_plain_notification_badge_corner(btn, btn.custom_minimum_size.y)
+		HudBadges.attach_level_new_badge(content, TITLE_INSET_X, TITLE_INSET_Y)

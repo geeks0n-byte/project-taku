@@ -3,6 +3,8 @@ extends RefCounted
 
 const ASTEROID_POOL_SIZE := 16
 const ASTEROID_OFFSCREEN_MARGIN := 64.0
+const BG_COLLISION_LAYER := 2
+const FG_COLLISION_LAYER := 4
 
 var _host: Node
 var _boot_intro: SpaceBackgroundBootIntro
@@ -31,6 +33,12 @@ func setup(
 
 func bind_boot_intro(boot_intro: SpaceBackgroundBootIntro) -> void:
 	_boot_intro = boot_intro
+
+
+func configure_collision_layer(rb: RigidBody2D, foreground: bool) -> void:
+	var layer := FG_COLLISION_LAYER if foreground else BG_COLLISION_LAYER
+	rb.collision_layer = layer
+	rb.collision_mask = layer
 
 
 func init_pool_if_needed() -> void:
@@ -77,6 +85,7 @@ func release(rb: RigidBody2D) -> void:
 		_boot_intro.clear_boot_intro_asteroid_ref()
 	if rb.has_meta("boot_intro_asteroid"):
 		rb.remove_meta("boot_intro_asteroid")
+	configure_collision_layer(rb, false)
 	if rb.get_parent() == _asteroid_pool_root or _asteroid_pool.has(rb):
 		return
 	for conn in rb.body_entered.get_connections():
@@ -142,8 +151,7 @@ func _make_pooled_asteroid() -> RigidBody2D:
 	rb.angular_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
 	rb.angular_damp = 0.0
 	rb.physics_material_override = _asteroid_phys_mat
-	rb.collision_layer = 2
-	rb.collision_mask = 2
+	configure_collision_layer(rb, false)
 	rb.contact_monitor = true
 	rb.max_contacts_reported = 2
 	rb.freeze = true
