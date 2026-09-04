@@ -27,7 +27,7 @@ Play Store release after live **1.0.0**.
 ### Fixed
 - Cloud sync dismiss when Play Games pull/merge finishes
 - Pause menu NEW badge position on first open
-- Foreground asteroids colliding with the main menu; shifter direction arrows
+- Shifter direction arrows; Undo Nothing unlocking on easy/medium campaign clears
 - Save writes use a temp file then atomic rename
 
 ## [1.0.0] — 2026 (Play Store live)

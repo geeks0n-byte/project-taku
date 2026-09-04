@@ -2,7 +2,7 @@ class_name SaveMigration
 extends RefCounted
 ## progression.cfg format helpers (kept free of autoload deps for headless tests).
 
-const FORMAT_VERSION := 4
+const FORMAT_VERSION := 5
 const LEGACY_LEVEL_OFFSET := 14
 const LEGACY_LEVEL_MIN := 15
 const LEGACY_LEVEL_MAX := 74
@@ -35,6 +35,9 @@ static func migrate_config(config: ConfigFile, from_version: int) -> void:
 		_migrate_v4_progression(config)
 		_migrate_v4_achievements(config)
 		_migrate_v4_session(config)
+	# v4 → v5: undo_nothing was granted on any no-undo clear; keep only after a hard clear.
+	if from_version < 5:
+		_migrate_v5_undo_nothing(config)
 
 
 ## Remaps legacy internal campaign level numbers (15–74) to 1–60.
@@ -115,3 +118,22 @@ static func _migrate_v4_session(config: ConfigFile) -> void:
 	if session.has("level_number"):
 		session["level_number"] = remap_legacy_level_number(int(session.get("level_number", 0)))
 	config.set_value("Session", "data", session)
+
+
+## Drops undo_nothing unless campaign progress has cleared at least one hard level.
+static func _migrate_v5_undo_nothing(config: ConfigFile) -> void:
+	var unlocked = config.get_value("Achievements", "unlocked", {})
+	if typeof(unlocked) != TYPE_DICTIONARY:
+		return
+	if not unlocked.has(AchievementCatalog.ID_UNDO_NOTHING):
+		return
+	var max_unlocked := int(config.get_value("Progression", "max_unlocked_level", 1))
+	var hard_first := AchievementCatalog.first_level_number_in_dir(GameConstants.CAMPAIGN_HARD_DIR)
+	if hard_first > 0 and max_unlocked > hard_first:
+		return
+	unlocked.erase(AchievementCatalog.ID_UNDO_NOTHING)
+	config.set_value("Achievements", "unlocked", unlocked)
+	var seen = config.get_value("Achievements", "seen", {})
+	if typeof(seen) == TYPE_DICTIONARY:
+		seen.erase(AchievementCatalog.ID_UNDO_NOTHING)
+		config.set_value("Achievements", "seen", seen)

@@ -7,6 +7,7 @@ static func run(r: LogicTestRunner) -> void:
 	_test_save_migration_v1_to_v2(r)
 	_test_save_migration_v2_to_v3(r)
 	_test_save_migration_v3_to_v4(r)
+	_test_save_migration_v4_to_v5(r)
 	_test_safe_insets(r)
 	_test_wide_ui_cap(r)
 	_test_pseudolocale(r)
@@ -92,6 +93,42 @@ static func _test_save_migration_v3_to_v4(r: LogicTestRunner) -> void:
 	)
 	r.ok(int(session.get("level_number", -1)) == 1, "migrate v4: session level_number remapped")
 	r.ok(int(Migration.FORMAT_VERSION) >= 4, "migrate: format version is 4+")
+
+
+static func _test_save_migration_v4_to_v5(r: LogicTestRunner) -> void:
+	const Migration := preload("res://scripts/save_migration.gd")
+	var hard_first := AchievementCatalog.first_level_number_in_dir(GameConstants.CAMPAIGN_HARD_DIR)
+	r.ok(hard_first > 0, "migrate v5: hard folder is detectable")
+	var easy_cfg := ConfigFile.new()
+	easy_cfg.set_value("Progression", "max_unlocked_level", 3)
+	easy_cfg.set_value(
+		"Achievements",
+		"unlocked",
+		{AchievementCatalog.ID_UNDO_NOTHING: 1, AchievementCatalog.ID_FIRST_CLEAR: 1}
+	)
+	easy_cfg.set_value("Achievements", "seen", {AchievementCatalog.ID_UNDO_NOTHING: true})
+	Migration.migrate_config(easy_cfg, 4)
+	var easy_unlocked: Dictionary = easy_cfg.get_value("Achievements", "unlocked", {})
+	r.ok(
+		not easy_unlocked.has(AchievementCatalog.ID_UNDO_NOTHING),
+		"migrate v5: strips undo_nothing without a hard clear"
+	)
+	r.ok(easy_unlocked.has(AchievementCatalog.ID_FIRST_CLEAR), "migrate v5: keeps other unlocks")
+	var easy_seen: Dictionary = easy_cfg.get_value("Achievements", "seen", {})
+	r.ok(
+		not easy_seen.has(AchievementCatalog.ID_UNDO_NOTHING),
+		"migrate v5: strips undo_nothing from seen"
+	)
+	var hard_cfg := ConfigFile.new()
+	hard_cfg.set_value("Progression", "max_unlocked_level", hard_first + 1)
+	hard_cfg.set_value("Achievements", "unlocked", {AchievementCatalog.ID_UNDO_NOTHING: 1})
+	Migration.migrate_config(hard_cfg, 4)
+	var hard_unlocked: Dictionary = hard_cfg.get_value("Achievements", "unlocked", {})
+	r.ok(
+		hard_unlocked.has(AchievementCatalog.ID_UNDO_NOTHING),
+		"migrate v5: keeps undo_nothing after a hard clear"
+	)
+	r.ok(int(Migration.FORMAT_VERSION) >= 5, "migrate: format version is 5+")
 
 static func _test_safe_insets(r: LogicTestRunner) -> void:
 	var none := SafeInsets.margins_from(

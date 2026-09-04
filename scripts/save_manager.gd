@@ -3,7 +3,7 @@ extends Node
 
 const SAVE_PATH = "user://progression.cfg"
 const SAVE_TEMP_PATH = "user://progression.cfg.tmp"
-const SAVE_FORMAT_VERSION := 4
+const SAVE_FORMAT_VERSION := 5
 const SUPPORTED_LANGUAGES := ["en", "es", "de", "fr", "pl", "ka", "uk", Pseudolocale.LOCALE]
 const PSEUDO_LOCALE := Pseudolocale.LOCALE
 const _TranslationHygiene := preload("res://scripts/translation_hygiene.gd")

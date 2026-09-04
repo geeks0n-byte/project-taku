@@ -123,7 +123,61 @@ static func _test_orchestration(r: LogicTestRunner) -> void:
 		"ach mgr orch: ctrl_z at 50th undo"
 	)
 
+	var dummy_level := LevelData.new()
+	save.set("achievements_unlocked", {})
+	var easy_clear: Array = mgr.call(
+		"record_level_clear",
+		dummy_level,
+		0,
+		PuzzleGenerator.Difficulty.EASY,
+		false,
+		false,
+		0,
+		true,
+		false,
+		0.0
+	)
+	r.ok(
+		not easy_clear.has(AchievementCatalog.ID_UNDO_NOTHING),
+		"ach mgr orch: undo_nothing not from easy no-undo clear"
+	)
+	save.set("achievements_unlocked", {})
+	var hard_undo: Array = mgr.call(
+		"record_level_clear",
+		dummy_level,
+		0,
+		PuzzleGenerator.Difficulty.HARD,
+		false,
+		false,
+		0,
+		true,
+		true,
+		0.0
+	)
+	r.ok(
+		not hard_undo.has(AchievementCatalog.ID_UNDO_NOTHING),
+		"ach mgr orch: undo_nothing not from hard clear that used undo"
+	)
+	save.set("achievements_unlocked", {})
+	var hard_clear: Array = mgr.call(
+		"record_level_clear",
+		dummy_level,
+		0,
+		PuzzleGenerator.Difficulty.HARD,
+		false,
+		false,
+		0,
+		true,
+		false,
+		0.0
+	)
+	r.ok(
+		hard_clear.has(AchievementCatalog.ID_UNDO_NOTHING),
+		"ach mgr orch: undo_nothing from hard no-undo clear"
+	)
+
 	_restore_save(save, backup_unlocked, backup_seen, backup_no_hint, backup_slides, backup_undo, backup_redo)
+	save.call("save_progress")
 
 
 static func _autoload(name: String) -> Node:

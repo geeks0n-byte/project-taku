@@ -649,6 +649,10 @@ static func _cell_field(cell: Variant, key: String, fallback: Variant) -> Varian
 ##   three_star_debut / undo_nothing (hard, no undo) / ad_friend / pause_thinker (bool flags),
 ##   im_blue / yellow_submarine / green_screen / shall_not_pass / dev_mode (bool flags; grant() bypasses collect)
 ## `already` maps unlocked id -> unix timestamp (or any truthy value).
+static func qualifies_undo_nothing(difficulty: int, run_used_undo: bool) -> bool:
+	return not run_used_undo and difficulty == PuzzleGenerator.Difficulty.HARD
+
+
 static func collect_unlocks(state: Dictionary, already: Dictionary = {}) -> Array:
 	var out: Array = []
 	var unique_clears := int(state.get("campaign_clears", 0))

@@ -223,7 +223,34 @@ static func _test_achievement_catalog(r: LogicTestRunner) -> void:
 	var no_events := AchievementCatalog.collect_unlocks({"campaign_clears": 60})
 	r.ok(not no_events.has(AchievementCatalog.ID_IM_BLUE), "ach: im_blue not from collect")
 	r.ok(not no_events.has(AchievementCatalog.ID_SHALL_NOT_PASS), "ach: shall_not_pass not from collect")
-	r.ok(not no_events.has(AchievementCatalog.ID_DEV_MODE), "ach: dev_mode not from collect")
+	r.ok(
+		not AchievementCatalog.collect_unlocks({"campaign_clears": 60}).has(
+			AchievementCatalog.ID_UNDO_NOTHING
+		),
+		"ach: undo_nothing not from clears"
+	)
+	r.ok(
+		AchievementCatalog.collect_unlocks({AchievementCatalog.ID_UNDO_NOTHING: true}).has(
+			AchievementCatalog.ID_UNDO_NOTHING
+		),
+		"ach: undo_nothing from flag"
+	)
+	r.ok(
+		AchievementCatalog.qualifies_undo_nothing(PuzzleGenerator.Difficulty.HARD, false),
+		"ach: undo_nothing qualifies on hard without undo"
+	)
+	r.ok(
+		not AchievementCatalog.qualifies_undo_nothing(PuzzleGenerator.Difficulty.EASY, false),
+		"ach: undo_nothing does not qualify on easy"
+	)
+	r.ok(
+		not AchievementCatalog.qualifies_undo_nothing(PuzzleGenerator.Difficulty.MEDIUM, false),
+		"ach: undo_nothing does not qualify on medium"
+	)
+	r.ok(
+		not AchievementCatalog.qualifies_undo_nothing(PuzzleGenerator.Difficulty.HARD, true),
+		"ach: undo_nothing does not qualify when undo was used"
+	)
 	var flagged := AchievementCatalog.collect_unlocks({
 		"im_blue": true,
 		"yellow_submarine": true,

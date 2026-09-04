@@ -33,8 +33,9 @@ func _backfill_from_save() -> void:
 		return
 	_sync_no_hint_counter_from_stars()
 	_sync_on_time_counter_from_stars()
+	var stripped := _strip_unearned_undo_nothing()
 	var newly := _apply_state(false)
-	if not newly.is_empty():
+	if stripped or not newly.is_empty():
 		SaveManager.save_progress()
 
 
@@ -67,7 +68,7 @@ func _count_star_bit(bit: int) -> int:
 func record_level_clear(
 	level: LevelData,
 	_hints_used: int,
-	_difficulty: int,
+	difficulty: int,
 	is_tutorial: bool,
 	is_custom: bool,
 	star_bits: int = 0,
@@ -84,7 +85,7 @@ func record_level_clear(
 	var event_flags := {}
 	if challenges_enabled and LevelStars.count_earned_bits(star_bits) >= 3:
 		event_flags[AchievementCatalog.ID_THREE_STAR_DEBUT] = true
-	if not run_used_undo:
+	if AchievementCatalog.qualifies_undo_nothing(difficulty, run_used_undo):
 		event_flags[AchievementCatalog.ID_UNDO_NOTHING] = true
 	if pause_seconds >= AchievementCatalog.PAUSE_THINKER_SEC:
 		event_flags[AchievementCatalog.ID_PAUSE_THINKER] = true
@@ -160,6 +161,11 @@ func grant(id: String) -> bool:
 ## Silent grant from Play Games pull merge. No toast and no [signal unlocked] (avoids re-push).
 func import_remote_unlock(id: String) -> bool:
 	if SaveManager == null:
+		return false
+	if (
+		id == AchievementCatalog.ID_UNDO_NOTHING
+		and not _has_cleared_any_in_dir(GameConstants.CAMPAIGN_HARD_DIR)
+	):
 		return false
 	var now := int(Time.get_unix_time_from_system())
 	if not AchievementCatalog.apply_grant(SaveManager.achievements_unlocked, id, now):
@@ -335,6 +341,20 @@ func _has_cleared_any_in_dir(dir: String) -> bool:
 	if first <= 0:
 		return false
 	return SaveManager.max_unlocked_level > first
+
+
+## Drops undo_nothing if it was granted before Hard-only was enforced.
+func _strip_unearned_undo_nothing() -> bool:
+	if SaveManager == null:
+		return false
+	if not SaveManager.achievements_unlocked.has(AchievementCatalog.ID_UNDO_NOTHING):
+		return false
+	if _has_cleared_any_in_dir(GameConstants.CAMPAIGN_HARD_DIR):
+		return false
+	SaveManager.achievements_unlocked.erase(AchievementCatalog.ID_UNDO_NOTHING)
+	SaveManager.achievements_seen.erase(AchievementCatalog.ID_UNDO_NOTHING)
+	_notify_unseen_changed()
+	return true
 
 
 ## True when this id is in the save.
