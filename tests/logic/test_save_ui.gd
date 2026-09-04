@@ -11,6 +11,7 @@ static func run(r: LogicTestRunner) -> void:
 	_test_safe_insets(r)
 	_test_wide_ui_cap(r)
 	_test_pseudolocale(r)
+	_test_tutorial_pause_and_restart_label(r)
 
 static func _approx4(r: LogicTestRunner, got: Vector4, expected: Vector4, name: String) -> void:
 	r.ok(
@@ -219,3 +220,44 @@ static func _test_pseudolocale(r: LogicTestRunner) -> void:
 	r.ok(expanded.begins_with("⟦"), "pseudolocale: wraps with brackets")
 	r.ok(expanded.length() > 4, "pseudolocale: expands text")
 	r.ok(Pseudolocale.LOCALE == "qa", "pseudolocale: qa locale supported")
+
+
+static func _test_tutorial_pause_and_restart_label(r: LogicTestRunner) -> void:
+	var tutorial: LevelData = load("res://levels/tutorials/level_00.tres")
+	r.ok(tutorial != null, "tutorial pause: level_00 loads")
+	r.ok(
+		LevelUtils.pause_action_label_key(tutorial) == "UI_RESTART",
+		"tutorial pause: campaign tutorial uses Restart"
+	)
+	var generated := LevelData.new()
+	generated.layout = {Vector2i(0, 0): GameConstants.TileState.EMPTY}
+	r.ok(
+		LevelUtils.pause_action_label_key(generated) == "UI_NEW_LAYOUT",
+		"tutorial pause: generated shape uses New Puzzle"
+	)
+	var preset := LevelData.new()
+	preset.layout = {Vector2i(0, 0): GameConstants.TileState.YELLOW}
+	r.ok(
+		LevelUtils.pause_action_label_key(preset) == "UI_RESTART",
+		"tutorial pause: preset tiles use Restart"
+	)
+	const TutorialHud := preload("res://scripts/ui_tutorial_hud.gd")
+	var hud = TutorialHud.new()
+	var pause := Button.new()
+	var reset := Button.new()
+	var how_to := Button.new()
+	var hint := Button.new()
+	var undo := Button.new()
+	var redo := Button.new()
+	hud.bind(reset, how_to, hint, undo, redo, pause, func(): return 0, Callable())
+	hud.set_tutorial_tools_locked(true)
+	r.ok(not pause.disabled, "tutorial pause: pause stays enabled while tools locked")
+	r.ok(not reset.disabled, "tutorial pause: reset stays enabled while tools locked")
+	r.ok(hint.disabled, "tutorial pause: hint stays locked")
+	r.ok(undo.disabled, "tutorial pause: undo stays locked")
+	pause.free()
+	reset.free()
+	how_to.free()
+	hint.free()
+	undo.free()
+	redo.free()

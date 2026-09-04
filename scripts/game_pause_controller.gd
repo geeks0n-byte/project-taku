@@ -13,8 +13,8 @@ func setup(game: GameMain) -> void:
 func on_pause() -> void:
 	if _game == null:
 		return
-	if _game.tutorial_director and _game.tutorial_director.consume_hud_action("pause"):
-		return
+	if _game.tutorial_director:
+		_game.tutorial_director.consume_hud_action("pause")
 	if _game._is_generating_board or (_game._loading_overlay and _game._loading_overlay.is_busy()):
 		return
 	if not _game.is_game_active or _game.is_paused:
@@ -30,16 +30,11 @@ func on_pause() -> void:
 	_game.ui_manager.set_hud_buttons_disabled(true)
 	if _game.pause_menu:
 		if _game.pause_menu.has_method("set_restart_label_key"):
-			var restart_label := "UI_RESTART"
-			if (
-				_game.levels.is_empty()
-				or _game.current_level_index < 0
-				or _game.current_level_index >= _game.levels.size()
-			):
-				restart_label = "UI_NEW_LAYOUT"
-			elif not LevelUtils.level_has_preset_tiles(_game.levels[_game.current_level_index]):
-				restart_label = "UI_NEW_LAYOUT"
-			_game.pause_menu.set_restart_label_key(restart_label)
+			_game.pause_menu.set_restart_label_key(
+				LevelUtils.pause_action_label_key(
+					LevelUtils.level_at_index(_game.levels, _game.current_level_index)
+				)
+			)
 		_game.pause_menu.show()
 		if _game.pause_menu.has_method("on_shown"):
 			_game.pause_menu.on_shown()

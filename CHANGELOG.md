@@ -13,7 +13,7 @@ Play Store release after live **1.0.0**.
 - Cloud save with progress-based merge and a tie-breaker prompt when both copies look valid
 - Colorblind tile patterns (options toggle; live board and level-select previews)
 - TalkBack / screen-reader labels across menus, HUD, pause, level select, achievements, and dialogs
-- Tutorial HUD walkthrough (pause, new puzzle, rules, hint, undo, redo)
+- Tutorial HUD walkthrough (pause, restart, rules, hint, undo, redo)
 - In-app review prompt after a campaign victory
 - Campaign levels renumbered into continuous easy / medium / hard ranges
 
@@ -28,6 +28,7 @@ Play Store release after live **1.0.0**.
 - Cloud sync dismiss when Play Games pull/merge finishes
 - Pause menu NEW badge position on first open
 - Shifter direction arrows; Undo Nothing unlocking on easy/medium campaign clears
+- Tutorial pause button locked until the last steps; pause menu saying New Puzzle on tutorial
 - Save writes use a temp file then atomic rename
 
 ## [1.0.0] — 2026 (Play Store live)

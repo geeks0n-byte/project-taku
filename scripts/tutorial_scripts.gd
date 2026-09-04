@@ -423,8 +423,8 @@ static func _level_00() -> Array:
 		{
 			"type": "hud_button",
 			"button": "reset",
-			"text_key": "TUT6_NEW_PUZZLE",
-			"icons": ["random"],
+			"text_key": "TUT6_RESET",
+			"icons": ["reset"],
 			"show_next": true,
 		},
 		{

@@ -517,13 +517,13 @@ STAR GOALS
 Tap stars for goals
 
 [TUT6_RESET]
-%s Reset restarts the level from the beginning.
+%s Restart puts the board back to the starting layout.
 
 [TUT6_PAUSE]
 %s Pause opens the game menu.
 
 [TUT6_NEW_PUZZLE]
-%s New Puzzle shuffles the board for a fresh layout.
+%s Restart puts the board back to the starting layout.
 
 [TUT6_RULES]
 %s How to Play opens the full rule guide anytime.
@@ -538,7 +538,7 @@ Tap stars for goals
 %s Redo restores a move you undid.
 
 [TUT6_COMPLETE]
-Tools unlocked! Fix any mistakes and fill the remaining empties — Reset, Rules, Hint, Undo, and Redo are ready.
+Tools unlocked! Fix any mistakes and fill the remaining empties — Restart, Rules, Hint, Undo, and Redo are ready.
 
 [UI_USED]
 USED

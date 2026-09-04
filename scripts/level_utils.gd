@@ -24,6 +24,13 @@ static func level_has_preset_tiles(level: LevelData) -> bool:
 	var layout: Dictionary = level.layout if "layout" in level else {}
 	return layout_has_preset_tiles(layout)
 
+
+## Pause/reset copy: Restart when the board will replay, New Puzzle when it regenerates.
+static func pause_action_label_key(level: LevelData) -> String:
+	if is_campaign_tutorial(level) or level_has_preset_tiles(level):
+		return "UI_RESTART"
+	return "UI_NEW_LAYOUT"
+
 # Validates and de-duplicates a raw tile array from a LevelData resource.
 # Falls back to the default yellow/blue/joker set if the array is empty or entirely invalid.
 static func normalize_available_tiles(raw: Array) -> Array[int]:

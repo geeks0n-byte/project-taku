@@ -62,10 +62,7 @@ func set_tutorial_tools_locked(locked: bool) -> void:
 
 func highlight_hud_button(button_id: String) -> void:
 	_highlighted_hud_button = button_id
-	if button_id == "reset":
-		_set_reset_button_texture(ICON_RANDOM)
-	else:
-		_apply_reset_button_icon()
+	_apply_reset_button_icon()
 	apply_tool_state()
 
 
@@ -108,15 +105,8 @@ func apply_tool_state() -> void:
 			HudLayout.start_toggle_mask_breathe(button)
 		else:
 			HudLayout.stop_toggle_mask_breathe(button)
-		if id == "reset" or id == "how_to_play":
+		if id == "pause" or id == "reset" or id == "how_to_play":
 			button.disabled = false
-			HudLayout.refresh_button_icon_modulate(button)
-			continue
-		if id == "pause":
-			if not _tutorial_tools_locked:
-				button.disabled = false
-			else:
-				button.disabled = not is_focus
 			HudLayout.refresh_button_icon_modulate(button)
 			continue
 		if not _tutorial_tools_locked:

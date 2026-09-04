@@ -241,13 +241,13 @@ Use = and × links from lesson 1 — fill the remaining empties without breaking
 Finish this links puzzle on your own.
 
 [TUT6_RESET]
-%s Reset restarts the level from the beginning.
+%s Restart puts the board back to the starting layout.
 
 [TUT6_PAUSE]
 %s Pause opens the game menu.
 
 [TUT6_NEW_PUZZLE]
-%s New Puzzle shuffles the board for a fresh layout.
+%s Restart puts the board back to the starting layout.
 
 [TUT6_RULES]
 %s How to Play opens the full rule guide anytime.
@@ -262,7 +262,7 @@ Finish this links puzzle on your own.
 %s Redo restores a move you undid.
 
 [TUT6_COMPLETE]
-Tools unlocked! Fix any mistakes and fill the remaining empties — Reset, Rules, Hint, Undo, and Redo are ready.
+Tools unlocked! Fix any mistakes and fill the remaining empties — Restart, Rules, Hint, Undo, and Redo are ready.
 
 [TUTORIAL]
 TUTORIAL
