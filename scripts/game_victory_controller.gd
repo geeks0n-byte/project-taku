@@ -67,6 +67,8 @@ func trigger_victory() -> void:
 			_game._pause_accumulated_sec
 		)
 	_game._set_board_and_hud_visible(false)
+	if board_manager.has_method("sync_shifter_directions"):
+		board_manager.sync_shifter_directions()
 	var solved_preview := LevelPreview.make_texture_from_board_cells(board_manager.board_cells, 320)
 	if AdsManager:
 		AdsManager.record_level_win(won_tutorial)

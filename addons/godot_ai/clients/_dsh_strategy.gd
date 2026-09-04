@@ -595,18 +595,18 @@ static func _remove_lines(lines: PackedStringArray, block: Dictionary) -> String
 		if has_other_entries or row_start < 0:
 			## Only our block goes; sibling entries and any trailing
 			## comments in the same row survive.
-			for line_i in range(lines.size()):
-				if line_i >= start and line_i < end:
+			for i in range(lines.size()):
+				if i >= start and i < end:
 					continue
-				parts.append(lines[line_i])
+				parts.append(lines[i])
 		else:
 			## The row held only our entry: drop the `- insert:` header and
 			## our block, but keep trailing blank/comment lines — a comment
 			## the user wrote above the next row must survive (#867 review).
-			for keep_i in range(lines.size()):
-				if keep_i >= row_start and keep_i < end:
+			for i in range(lines.size()):
+				if i >= row_start and i < end:
 					continue
-				parts.append(lines[keep_i])
+				parts.append(lines[i])
 			parts = _trim_trailing_blanks(parts)
 	else:
 		## Plain top-level row for our id: drop the whole block.

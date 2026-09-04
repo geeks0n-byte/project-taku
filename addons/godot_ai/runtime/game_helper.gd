@@ -99,23 +99,6 @@ var _last_frames_advance_msec: int = -1
 var _last_eval_liveness_reply: Dictionary = {}
 
 
-static func _is_headless_run() -> bool:
-	if OS.has_feature("headless"):
-		return true
-	if DisplayServer.get_name().to_lower() == "headless":
-		return true
-	var args := OS.get_cmdline_args()
-	for i in range(args.size()):
-		var arg: String = args[i]
-		if arg == "--headless":
-			return true
-		if arg == "--display-driver" and i + 1 < args.size() and args[i + 1] == "headless":
-			return true
-		if arg.begins_with("--display-driver=") and arg.get_slice("=", 1) == "headless":
-			return true
-	return false
-
-
 func _ready() -> void:
 	## Only run in the game process, not in the editor. Use is_editor_hint
 	## — NOT OS.has_feature("editor"), which is a BUILD-config check
@@ -125,9 +108,6 @@ func _ready() -> void:
 	## in play-from-editor. The earlier has_feature check was causing us
 	## to skip registration in the game and time out every capture.
 	if Engine.is_editor_hint():
-		return
-	## Logic tests and CI export pipelines run headless — skip MCP/logger setup.
-	if _is_headless_run():
 		return
 	## Keep ticking while the tree is paused: _process both ferries game logs
 	## and timestamps main-loop liveness for the stalled-loop screenshot
@@ -224,7 +204,7 @@ func _on_debug_message(message: String, data: Array) -> bool:
 ## capture can still run while a backgrounded/frozen game's main loop cannot,
 ## so the _process beacon is the liveness signal that matters for game_eval.
 func _reply_eval_liveness(data: Array) -> void:
-	var request_id: String = str(data[0]) if data.size() > 0 else ""
+	var request_id: String = data[0] if data.size() > 0 else ""
 	var loop_live := not _main_loop_appears_stalled()
 	_last_eval_liveness_reply = {"request_id": request_id, "loop_live": loop_live}
 	if EngineDebugger.is_active():
@@ -232,7 +212,7 @@ func _reply_eval_liveness(data: Array) -> void:
 
 
 func _handle_take_screenshot(data: Array) -> void:
-	var request_id: String = str(data[0]) if data.size() > 0 else ""
+	var request_id: String = data[0] if data.size() > 0 else ""
 	var max_resolution: int = int(data[1]) if data.size() > 1 else 0
 
 	var tree := get_tree()
@@ -370,9 +350,9 @@ func _reply_error(request_id: String, message: String) -> void:
 ## --- game_command: curated runtime inspection and input ---
 
 func _handle_game_command(data: Array) -> void:
-	var request_id: String = str(data[0]) if data.size() > 0 else ""
-	var op: String = str(data[1]) if data.size() > 1 else ""
-	var params_json: String = str(data[2]) if data.size() > 2 else "{}"
+	var request_id: String = data[0] if data.size() > 0 else ""
+	var op: String = data[1] if data.size() > 1 else ""
+	var params_json: String = data[2] if data.size() > 2 else "{}"
 
 	if request_id.is_empty():
 		return
@@ -850,9 +830,9 @@ func _run_input_sequence(request_id: String, params: Dictionary) -> void:
 
 	## Resolve action names against the *game's* InputMap up front — the server
 	## can't see it, so this is the first place unknown actions surface.
-	for plan_step in steps:
-		if not InputMap.has_action(plan_step["action"]):
-			_reply_input_sequence_error(request_id, "Unknown action: %s" % plan_step["action"])
+	for step in steps:
+		if not InputMap.has_action(step["action"]):
+			_reply_input_sequence_error(request_id, "Unknown action: %s" % step["action"])
 			return
 
 	var tree := get_tree()
@@ -994,8 +974,8 @@ const EVAL_TIMEOUT_SEC := 8.0
 
 
 func _handle_eval(data: Array) -> void:
-	var request_id: String = str(data[0]) if data.size() > 0 else ""
-	var code: String = str(data[1]) if data.size() > 1 else ""
+	var request_id: String = data[0] if data.size() > 0 else ""
+	var code: String = data[1] if data.size() > 1 else ""
 
 	if code.is_empty():
 		_reply_eval_error(request_id, "No code provided")
@@ -1206,7 +1186,7 @@ func _try_report_eval_runtime_error(request_id: String) -> bool:
 ## aborted the eval. Report if one is detected for this request, else stay
 ## silent (the editor keeps polling until the real reply or the hang timeout).
 func _handle_eval_check(data: Array) -> void:
-	var request_id: String = str(data[0]) if data.size() > 0 else ""
+	var request_id: String = data[0] if data.size() > 0 else ""
 	if request_id.is_empty():
 		return
 	_try_report_eval_runtime_error(request_id)

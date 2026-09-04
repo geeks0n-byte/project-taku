@@ -138,6 +138,9 @@ static func pin_page_nav_row(
 ) -> void:
 	HudPageNav.pin_page_nav_row(nav, host, reserve_menu_banner, horizontal_inset)
 
+static func sync_page_nav_slots(prev_button: Button, next_button: Button) -> void:
+	HudPageNav.sync_page_nav_slots(prev_button, next_button)
+
 static func layout_how_to_play_stack(
 	host: Control,
 	panel: Control,

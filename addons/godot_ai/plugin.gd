@@ -406,6 +406,7 @@ func _enter_tree() -> void:
 	_dispatcher.register_lazy("game_command", "editor", &"game_command")
 	_dispatcher.register_lazy("get_project_setting", "project", &"get_project_setting")
 	_dispatcher.register_lazy("set_project_setting", "project", &"set_project_setting")
+	_dispatcher.register_lazy("set_main_scene", "project", &"set_main_scene")
 	_dispatcher.register_lazy("run_project", "project", &"run_project")
 	_dispatcher.register_lazy("stop_project", "project", &"stop_project")
 	_dispatcher.register_lazy("search_filesystem", "project", &"search_filesystem")
@@ -622,6 +623,10 @@ func _exit_tree() -> void:
 	if _headless_disabled:
 		_server_started_this_session = false
 		_headless_disabled = false
+		## `_lifecycle` is built in _init(), before the headless guard in
+		## _enter_tree() runs, so it exists even on this path — null it here
+		## too (the full teardown below is skipped).
+		_lifecycle = null
 		return
 
 	if _custom_tool_registry != null:
@@ -679,6 +684,12 @@ func _exit_tree() -> void:
 	## same-session disable/enable cycle) to adopt. Explicit stops (dock
 	## Restart, update reload) still kill via _stop_server.
 	_lifecycle.teardown_for_editor_exit()
+	## Match the nulling every sibling field gets above. `_lifecycle` was built
+	## as ServerLifecycleManager.new(self), so it holds the plugin back —
+	## leaving the field set keeps the manager and its scripts alive past
+	## plugin teardown (surfaces as leaked ObjectDB instances / "resource still
+	## in use" for server_lifecycle.gd + server_version_check.gd at editor exit).
+	_lifecycle = null
 	## Symmetric with prepare_for_update_reload: the static guard persists
 	## across disable/enable within a single editor session, so the re-enabled
 	## plugin instance's _start_server would short-circuit and never respawn.
@@ -723,8 +734,8 @@ func _cleanup_legacy_logger_scripts() -> void:
 		"res://addons/godot_ai/runtime/loggers",
 		"res://addons/godot_ai/testing/loggers",
 	]
-	for res_dir in legacy_dirs:
-		var absolute := ProjectSettings.globalize_path(res_dir)
+	for res_path in legacy_dirs:
+		var absolute := ProjectSettings.globalize_path(res_path)
 		if DirAccess.dir_exists_absolute(absolute):
 			_remove_dir_recursive_absolute(absolute)
 
@@ -734,14 +745,14 @@ static func _remove_dir_recursive_absolute(path: String) -> void:
 	if dir == null:
 		return
 	dir.list_dir_begin()
-	var entry_name := dir.get_next()
-	while not entry_name.is_empty():
-		var child := path.path_join(entry_name)
+	var name := dir.get_next()
+	while not name.is_empty():
+		var child := path.path_join(name)
 		if dir.current_is_dir():
 			_remove_dir_recursive_absolute(child)
 		else:
 			DirAccess.remove_absolute(child)
-		entry_name = dir.get_next()
+		name = dir.get_next()
 	dir.list_dir_end()
 	DirAccess.remove_absolute(path)
 
@@ -846,13 +857,13 @@ func _startup_trace_count(counter: String, amount: int = 1) -> void:
 	_startup_trace_mutex.unlock()
 
 
-func _startup_trace_phase(phase_name: String) -> void:
+func _startup_trace_phase(name: String) -> void:
 	if not _startup_trace_enabled:
 		return
 	var now := Time.get_ticks_msec()
 	print(
 		"MCP startup trace | phase=%s delta_ms=%d total_ms=%d"
-		% [phase_name, now - _startup_trace_last_ms, now - _startup_trace_start_ms]
+		% [name, now - _startup_trace_last_ms, now - _startup_trace_start_ms]
 	)
 	_startup_trace_last_ms = now
 
@@ -1019,6 +1030,11 @@ static func _project_status_payload(parsed: Dictionary) -> Dictionary:
 		## skew. Older servers omit it; treat the missing field as "".
 		"package_path": str(parsed.get("package_path", "")),
 	}
+	## #913: live server telemetry state. Absent on older backends so the
+	## dock can tell "too old to publish" from an explicit false.
+	var telemetry_enabled: Variant = parsed.get("telemetry_enabled")
+	if telemetry_enabled is bool:
+		projected["telemetry_enabled"] = telemetry_enabled
 	## #824: advisory attach-lease count, consumed by teardown to decide
 	## detach-vs-kill. Absent stays absent rather than defaulting to 0, so
 	## `ServerLifecycleManager.active_lease_count` keeps distinguishing "backend
@@ -2051,17 +2067,17 @@ func _kill_processes_and_windows_spawn_children(pids: Array[int], verify_brand: 
 			if not unique.has(child_pid):
 				unique.append(child_pid)
 	var killed: Array[int] = []
-	for target_pid in unique:
+	for pid in unique:
 		if OS.get_name() == "Windows":
 			var output: Array = []
-			var exit_code := OS.execute("taskkill", ["/PID", str(target_pid), "/T", "/F"], output, true)
-			if exit_code == 0 or not _pid_alive(target_pid):
-				killed.append(target_pid)
+			var exit_code := OS.execute("taskkill", ["/PID", str(pid), "/T", "/F"], output, true)
+			if exit_code == 0 or not _pid_alive(pid):
+				killed.append(pid)
 		else:
 			## Mirror the Windows branch: only report the PID as killed if
 			## the kill succeeded or the process is verifiably gone.
-			if OS.kill(target_pid) == OK or not _pid_alive(target_pid):
-				killed.append(target_pid)
+			if OS.kill(pid) == OK or not _pid_alive(pid):
+				killed.append(pid)
 	return killed
 
 

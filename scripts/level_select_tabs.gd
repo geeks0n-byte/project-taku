@@ -266,6 +266,7 @@ func _update_page_nav_visibility() -> void:
 		_page_next_button.disabled = false
 		HudLayout.apply_nav_button(_page_next_button)
 		HudLayout.refresh_button_icon_modulate(_page_next_button)
+	HudLayout.sync_page_nav_slots(_page_prev_button, _page_next_button)
 	if _apply_close_button.is_valid():
 		_apply_close_button.call()
 

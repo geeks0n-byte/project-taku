@@ -129,8 +129,8 @@ static func _test_achievement_catalog(r: LogicTestRunner) -> void:
 		"ach: hidden locked uses mystery title key"
 	)
 	r.ok(
-		AchievementCatalog.hidden_locked_icon_path().ends_with("ach_medal_bronze_outline.svg"),
-		"ach: hidden locked uses mystery icon"
+		AchievementCatalog.hidden_locked_icon_path() == "",
+		"ach: hidden locked uses no mystery icon"
 	)
 	r.ok(AchievementCatalog.display_icon_path(AchievementCatalog.ID_IM_BLUE, false) == "", "ach: hidden locked display icon empty")
 	r.ok(

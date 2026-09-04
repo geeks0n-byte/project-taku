@@ -474,9 +474,9 @@ static func _frames_from_error_children(children: Array[Dictionary]) -> Array[Di
 			start = i
 			break
 	if start < 0:
-		for j in children.size():
-			if str(children[j].label).is_empty() and not str(children[j].path).is_empty():
-				start = maxi(j - 1, 0)
+		for i in children.size():
+			if str(children[i].label).is_empty() and not str(children[i].path).is_empty():
+				start = maxi(i - 1, 0)
 				break
 	if start < 0:
 		return []

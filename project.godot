@@ -53,7 +53,7 @@ project/assembly_name="project-taku"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/GodotPlayGameServices/plugin.cfg", "res://addons/admob/plugin.cfg", "res://addons/android_splash/plugin.cfg", "res://addons/play_review/plugin.cfg", "res://addons/godot_ai/plugin.cfg")
+enabled=PackedStringArray("res://addons/GodotPlayGameServices/plugin.cfg", "res://addons/admob/plugin.cfg", "res://addons/android_splash/plugin.cfg", "res://addons/godot_ai/plugin.cfg", "res://addons/play_review/plugin.cfg")
 
 [internationalization]
 

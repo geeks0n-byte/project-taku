@@ -10,7 +10,8 @@ static func clear_how_to_play_nav_lock(host: Control) -> void:
 
 static func page_nav_bottom_inset(reserve_menu_banner: bool = false) -> float:
 	var inset := GameConstants.SCREEN_PAGE_NAV_BOTTOM_INSET
-	if reserve_menu_banner:
+	# Store screenshots hide ads; keep the pager at the same low position as levels/HTP shots.
+	if reserve_menu_banner and not GameConstants.is_store_asset_capture():
 		inset += GameConstants.AD_BANNER_RESERVE
 	return inset
 
@@ -54,6 +55,12 @@ static func pin_page_nav_row(
 	nav.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	nav.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	nav.z_index = maxi(nav.z_index, 4)
+
+
+## Kept for call-site compatibility. Slots stay sized so a lone NEXT/PREV keeps its
+## paired horizontal position (space reserved for the hidden sibling).
+static func sync_page_nav_slots(_prev_button: Button, _next_button: Button) -> void:
+	pass
 
 
 static func layout_how_to_play_stack(

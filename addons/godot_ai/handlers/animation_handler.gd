@@ -531,8 +531,8 @@ func create_simple(params: Dictionary) -> Dictionary:
 			return ErrorCodes.make(ErrorCodes.VALUE_OUT_OF_RANGE,
 				"'length' must be > 0 when provided (got %s)" % str(params.get("length")))
 	else:
-		for tween_spec in tweens:
-			var end_time: float = float(tween_spec.get("delay", 0.0)) + float(tween_spec.get("duration", 0.0))
+		for spec in tweens:
+			var end_time: float = float(spec.get("delay", 0.0)) + float(spec.get("duration", 0.0))
 			if end_time > computed_length:
 				computed_length = end_time
 		if computed_length <= 0.0:

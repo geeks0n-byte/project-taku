@@ -120,7 +120,7 @@ func _style_header() -> void:
 		HudLayout.apply_popup_label(progress_label, 22)
 		progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		progress_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		progress_label.add_theme_color_override("font_color", GameConstants.SCREEN_HEADER_COLOR)
+		progress_label.add_theme_color_override("font_color", Color.WHITE)
 
 
 func _update_progress_label() -> void:
@@ -264,6 +264,7 @@ func _update_page_nav_visibility() -> void:
 		_page_next_button.disabled = false
 		HudLayout.apply_nav_button(_page_next_button)
 		HudLayout.refresh_button_icon_modulate(_page_next_button)
+	HudLayout.sync_page_nav_slots(_page_prev_button, _page_next_button)
 
 
 ## Row height that fits four cells in ListHost so the pinned pager cannot overlap HARD KNOCKS.
@@ -527,9 +528,7 @@ func _make_icon_stack(id: String, unlocked: bool, show_identity: bool) -> Contro
 	art.offset_right = art_half
 	art.offset_bottom = art_half
 
-	var icon_path := AchievementCatalog.icon_path(id)
-	if not show_identity:
-		icon_path = AchievementCatalog.hidden_locked_icon_path()
+	var icon_path := AchievementCatalog.display_icon_path(id, unlocked)
 
 	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
 		var icon := _make_full_rect_icon(icon_path)

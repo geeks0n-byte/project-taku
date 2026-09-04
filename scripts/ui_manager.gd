@@ -404,3 +404,10 @@ func show_victory(
 	_victory_panel.show(
 		display_num, is_last_level, star_result, is_custom, is_tutorial, solved_preview
 	)
+
+
+## Rebuilds the victory board thumbnail (used when store capture forces default tile colors).
+func refresh_victory_preview(solved_preview: Texture2D) -> void:
+	if not _victory_panel.is_visible():
+		return
+	_victory_panel.set_preview_texture(solved_preview)

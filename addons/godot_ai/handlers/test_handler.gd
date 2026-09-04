@@ -334,8 +334,8 @@ func _discover_suites(
 		file_name = dir.get_next()
 
 	## Sort by suite name for deterministic order.
-	suites.sort_custom(func(_a, _b) -> bool:
-		return _a.suite_name() < _b.suite_name()
+	suites.sort_custom(func(a, b) -> bool:
+		return a.suite_name() < b.suite_name()
 	)
 	return {"suites": suites, "errors": errors, "outcome": ""}
 

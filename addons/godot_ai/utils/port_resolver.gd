@@ -41,11 +41,10 @@ static func is_port_in_use(port: int) -> bool:
 ## a wrapping caller's startup trace sees a genuine PowerShell fallback
 ## as `powershell`, not as a silent extra second under `netstat`.
 static func is_port_in_use_via_scrape(port: int, trace: Callable = Callable()) -> bool:
-	var exit_code := 0
 	var output: Array = []
 	if OS.get_name() == "Windows":
 		_trace(trace, "netstat")
-		exit_code = OS.execute("netstat", ["-ano"], output, true)
+		var exit_code := OS.execute("netstat", ["-ano"], output, true)
 		if exit_code == 0 and output.size() > 0:
 			var stdout := str(output[0])
 			if parse_windows_netstat_listening(stdout, port):
@@ -60,7 +59,7 @@ static func is_port_in_use_via_scrape(port: int, trace: Callable = Callable()) -
 		_trace(trace, "powershell")
 		return not find_listener_pids_windows(port).is_empty()
 	_trace(trace, "lsof")
-	exit_code = OS.execute("lsof", ["-ti:%d" % port, "-sTCP:LISTEN"], output, true)
+	var exit_code := OS.execute("lsof", ["-ti:%d" % port, "-sTCP:LISTEN"], output, true)
 	return exit_code == 0 and output.size() > 0 and not output[0].strip_edges().is_empty()
 
 
@@ -82,11 +81,10 @@ static func find_pid_on_port(port: int, trace: Callable = Callable()) -> int:
 ## through netstat → PowerShell, and a wrapping caller can't see which
 ## scraper actually ran without the hook.
 static func find_all_pids_on_port(port: int, trace: Callable = Callable()) -> Array[int]:
-	var output: Array = []
-	var exit_code := 0
 	if OS.get_name() == "Windows":
+		var output: Array = []
 		_trace(trace, "netstat")
-		exit_code = OS.execute("netstat", ["-ano"], output, true)
+		var exit_code := OS.execute("netstat", ["-ano"], output, true)
 		if exit_code == 0 and not output.is_empty():
 			var stdout := str(output[0])
 			var netstat_pids := parse_windows_netstat_pids(stdout, port)
@@ -104,8 +102,9 @@ static func find_all_pids_on_port(port: int, trace: Callable = Callable()) -> Ar
 				return no_listeners
 		_trace(trace, "powershell")
 		return find_listener_pids_windows(port)
+	var output: Array = []
 	_trace(trace, "lsof")
-	exit_code = OS.execute("lsof", ["-ti:%d" % port, "-sTCP:LISTEN"], output, true)
+	var exit_code := OS.execute("lsof", ["-ti:%d" % port, "-sTCP:LISTEN"], output, true)
 	if exit_code != 0 or output.is_empty():
 		var empty: Array[int] = []
 		return empty
@@ -288,19 +287,19 @@ static func clear_pid_file() -> void:
 ## the spawn-failure branch in check_server_health from firing. Use
 ## `ps -o stat=` instead. State codes: R/S/D/I/T (live), Z (zombie). #172.
 static func pid_alive(pid: int) -> bool:
-	var output: Array = []
-	var exit_code := 0
 	if pid <= 0:
 		return false
 	if OS.get_name() == "Windows":
-		exit_code = OS.execute("tasklist", ["/FI", "PID eq %d" % pid, "/NH", "/FO", "CSV"], output, true)
+		var output: Array = []
+		var exit_code := OS.execute("tasklist", ["/FI", "PID eq %d" % pid, "/NH", "/FO", "CSV"], output, true)
 		if exit_code != 0 or output.is_empty():
 			return false
 		for line in output:
 			if str(line).find("\"%d\"" % pid) >= 0:
 				return true
 		return false
-	exit_code = OS.execute("ps", ["-p", str(pid), "-o", "stat="], output, true)
+	var output: Array = []
+	var exit_code := OS.execute("ps", ["-p", str(pid), "-o", "stat="], output, true)
 	if exit_code != 0 or output.is_empty():
 		return false
 	var stat := str(output[0]).strip_edges()

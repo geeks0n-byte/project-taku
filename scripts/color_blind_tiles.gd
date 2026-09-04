@@ -11,6 +11,9 @@ static var _texture_cache: Dictionary = {}
 
 
 static func is_enabled() -> bool:
+	# Store screenshots/trailers always use the default palette.
+	if GameConstants.is_store_asset_capture():
+		return false
 	var tree := Engine.get_main_loop()
 	if tree == null:
 		return false

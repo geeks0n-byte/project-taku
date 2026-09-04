@@ -28,10 +28,10 @@ static func rank(
 			score += substring_bonus
 		if score >= threshold:
 			scored.append([score, candidate])
-	scored.sort_custom(func(_a, _b):
-		if _a[0] == _b[0]:
-			return _a[1] < _b[1]
-		return _a[0] > _b[0]
+	scored.sort_custom(func(a, b):
+		if a[0] == b[0]:
+			return a[1] < b[1]
+		return a[0] > b[0]
 	)
 	var result: Array[String] = []
 	for index in range(min(limit, scored.size())):

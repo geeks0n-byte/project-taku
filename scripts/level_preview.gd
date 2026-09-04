@@ -109,15 +109,17 @@ static func make_texture(level: LevelData, pixel_size: int = GameConstants.LEVEL
 ## Rasterizes a coord→TileState layout dict into a square preview image.
 ## Tiles are rendered using SVG assets when available, falling back to solid colors.
 ## `shifter_dirs` maps shifter coords to their direction vector so an arrow overlay is drawn.
+## `locked_coords` is a set (coord → true) of fixed tiles that should show the lock icon.
 static func make_texture_from_layout(
 	layout: Dictionary,
 	pixel_size: int = GameConstants.LEVEL_PREVIEW_SIZE,
-	shifter_dirs: Dictionary = {}
+	shifter_dirs: Dictionary = {},
+	locked_coords: Dictionary = {}
 ) -> ImageTexture:
 	if layout == null or layout.is_empty():
 		return ImageTexture.create_from_image(Image.create(pixel_size, pixel_size, false, Image.FORMAT_RGBA8))
 
-	var cache_key := _layout_cache_key(layout, pixel_size, shifter_dirs)
+	var cache_key := _layout_cache_key(layout, pixel_size, shifter_dirs, locked_coords)
 	if _preview_texture_cache.has(cache_key):
 		return _preview_texture_cache[cache_key]
 
@@ -163,16 +165,23 @@ static func make_texture_from_layout(
 				image.fill_rect(Rect2i(dst.x, dst.y, cell, cell), _color_for_state(state))
 			if state == GameConstants.TileState.SHIFTER and shifter_dirs.has(coord):
 				_blit_shifter_arrow(image, dst, cell, shifter_dirs[coord])
+			if locked_coords.has(coord):
+				_blit_lock_icon(image, dst, cell)
 
 	var tex := ImageTexture.create_from_image(image)
 	_store_preview_texture(cache_key, tex)
 	return tex
 
 ## Produces a stable string fingerprint for a layout + pixel_size combination.
-## The "v5tiles" prefix allows cache invalidation if the tile rendering logic changes.
-static func _layout_cache_key(layout: Dictionary, pixel_size: int, shifter_dirs: Dictionary) -> String:
+## The "v6tiles" prefix allows cache invalidation if the tile rendering logic changes.
+static func _layout_cache_key(
+	layout: Dictionary,
+	pixel_size: int,
+	shifter_dirs: Dictionary,
+	locked_coords: Dictionary = {}
+) -> String:
 	var parts: PackedStringArray = []
-	parts.append("v5tiles")
+	parts.append("v6tiles")
 	parts.append(str(pixel_size))
 	parts.append("cb1" if _color_blind_enabled() else "cb0")
 	var coords: Array = layout.keys()
@@ -185,15 +194,16 @@ static func _layout_cache_key(layout: Dictionary, pixel_size: int, shifter_dirs:
 		for coord in dir_coords:
 			var d: Vector2i = shifter_dirs[coord] as Vector2i
 			parts.append("d%s:%d,%d" % [str(coord), d.x, d.y])
+	if not locked_coords.is_empty():
+		var lock_coords: Array = locked_coords.keys()
+		lock_coords.sort_custom(func(a, b): return str(a) < str(b))
+		for coord in lock_coords:
+			parts.append("L%s" % str(coord))
 	return "|".join(parts)
 
 
 static func _color_blind_enabled() -> bool:
-	var tree := Engine.get_main_loop()
-	if tree == null:
-		return false
-	var sm: Node = tree.root.get_node_or_null("/root/SaveManager")
-	return sm != null and bool(sm.get("color_blind_patterns"))
+	return ColorBlindTiles.is_enabled()
 
 
 ## Inserts a generated texture into the preview cache, evicting the oldest entry
@@ -212,7 +222,8 @@ static func make_texture_from_board_cells(
 	return make_texture_from_layout(
 		layout_from_board_cells(board_cells),
 		pixel_size,
-		shifter_dirs_from_board_cells(board_cells)
+		shifter_dirs_from_board_cells(board_cells),
+		locked_from_board_cells(board_cells)
 	)
 
 ## Extracts a plain coord→int state map from live Cell nodes for use with make_texture_from_layout.
@@ -239,6 +250,20 @@ static func shifter_dirs_from_board_cells(board_cells: Dictionary) -> Dictionary
 		if dir != Vector2i.ZERO:
 			dirs[coord] = dir
 	return dirs
+
+## Extracts a set of locked (fixed) non-wall cells from live board cells.
+static func locked_from_board_cells(board_cells: Dictionary) -> Dictionary:
+	var locked := {}
+	for coord in board_cells:
+		var cell = board_cells[coord]
+		if cell == null:
+			continue
+		if not bool(cell.is_locked):
+			continue
+		if int(cell.state) == GameConstants.TileState.WALL:
+			continue
+		locked[coord] = true
+	return locked
 
 ## Renders a shape-only layout (no color data) as a flat silhouette: all non-wall
 ## cells are filled with COLOR_EMPTY. Used for levels whose layout has no tile states yet.
@@ -354,6 +379,17 @@ static func _blit_shifter_arrow(image: Image, cell_pos: Vector2i, cell: int, dir
 		arrow_img,
 		Rect2i(Vector2i.ZERO, arrow_img.get_size()),
 		cell_pos + Vector2i(inset, inset)
+	)
+
+## Blends the fixed-tile lock icon over a cell (full-cell, matching in-board LockIcon).
+static func _blit_lock_icon(image: Image, cell_pos: Vector2i, cell: int) -> void:
+	var lock_img := _resized_tile(GameConstants.TILE_LOCK, cell)
+	if lock_img == null:
+		return
+	image.blend_rect(
+		lock_img,
+		Rect2i(Vector2i.ZERO, lock_img.get_size()),
+		cell_pos
 	)
 
 ## Loads and nearest-neighbor-resizes a tile SVG to `size` × `size` pixels.

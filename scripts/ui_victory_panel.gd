@@ -216,6 +216,13 @@ func _set_preview(texture: Texture2D) -> void:
 		frame.visible = should_show
 
 
+## Replaces the solved-board thumbnail (e.g. after store-capture palette switch).
+func set_preview_texture(texture: Texture2D) -> void:
+	_set_preview(texture)
+	if _panel and _panel.visible:
+		_layout_panel(_star_result)
+
+
 func _populate_results(star_result: Dictionary) -> void:
 	if not _results_host:
 		return
@@ -225,46 +232,76 @@ func _populate_results(star_result: Dictionary) -> void:
 
 
 func _layout_panel(star_result: Dictionary) -> void:
-	if not _panel:
+	if not _panel or not _results_host or not _preview:
+		return
+	_raise_buttons()
+	if _play_again_button:
+		_play_again_button.visible = true
+	layout_stack(
+		_panel,
+		_win_label,
+		_results_host,
+		_preview,
+		star_result,
+		[_restart_button, _play_again_button, _main_menu_button],
+		bool(star_result.get("untimed", false))
+	)
+
+
+## Shared victory geometry for campaign HUD and editor playtest.
+static func layout_stack(
+	panel: Control,
+	title: Control,
+	results_host: Control,
+	preview: TextureRect,
+	star_result: Dictionary,
+	action_buttons: Array = [],
+	untimed: bool = false,
+	buttons_vbox: Control = null
+) -> void:
+	if panel == null:
 		return
 	var goal_count := int(star_result.get("total_count", 0))
-	var untimed := bool(star_result.get("untimed", false))
 	var panel_w := HudLayout.UI_MAX_DIALOG_WIDTH
 	var title_top := 28.0
 	var title_side := 24.0
 	var title_h := 82.0
-	if _win_label:
-		_win_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if title is Label:
+		var label := title as Label
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		title_h = maxf(
 			82.0,
-			HudDialogs.measure_label_height(_win_label, panel_w - title_side * 2.0)
+			HudDialogs.measure_label_height(label, panel_w - title_side * 2.0)
 		)
-		_win_label.offset_left = title_side
-		_win_label.offset_right = -title_side
-		_win_label.offset_top = title_top
-		_win_label.offset_bottom = title_top + title_h
+		label.offset_left = title_side
+		label.offset_right = -title_side
+		label.offset_top = title_top
+		label.offset_bottom = title_top + title_h
 	var title_bottom := title_top + title_h
 	var results_h := 0.0
 	if not untimed:
 		results_h = float(maxi(1, goal_count)) * (LevelStars.ROW_HEIGHT + 14.0) + 24.0
-	if not _results_host or not _preview:
-		return
-	_raise_buttons()
-	_results_host.offset_top = title_bottom + 8.0
-	_results_host.offset_bottom = title_bottom + 8.0 + results_h
+	if results_host:
+		results_host.offset_top = title_bottom + 8.0
+		results_host.offset_bottom = title_bottom + 8.0 + results_h
 
 	var cursor := title_bottom + 8.0 + results_h
 	var preview_h := 0.0
-	var frame := LevelPreview.ensure_preview_frame(_preview)
-	var show_preview := _preview.visible and _preview.texture != null
+	var frame: PanelContainer = null
+	if preview:
+		frame = LevelPreview.ensure_preview_frame(preview)
+	var show_preview := (
+		preview != null
+		and preview.visible
+		and preview.texture != null
+	)
 	if show_preview:
-		var inner := 320.0
-		preview_h = LevelPreview.frame_outer_size(inner)
+		preview_h = LevelPreview.frame_outer_size(320.0)
 		cursor += 24.0 if results_h > 0.0 else 16.0
 		var half := preview_h * 0.5
 		var target: Control = frame
 		if target == null:
-			target = _preview
+			target = preview
 		target.offset_left = -half
 		target.offset_right = half
 		target.offset_top = cursor
@@ -274,24 +311,37 @@ func _layout_panel(star_result: Dictionary) -> void:
 		frame.visible = false
 
 	var buttons_top := cursor + 28.0
-	var row := 0
-	if _restart_button and _restart_button.visible:
-		_place_button(_restart_button, buttons_top, row)
-		row += 1
-	if _play_again_button:
-		_play_again_button.visible = true
-		_place_button(_play_again_button, buttons_top, row)
-		row += 1
-	if _main_menu_button:
-		_place_button(_main_menu_button, buttons_top, row)
-		row += 1
-	var buttons_bottom := buttons_top + float(row) * 130.0
+	var buttons_bottom := buttons_top
+	if buttons_vbox:
+		var buttons_w := GameConstants.UI_BTN_PANEL_SIZE.x
+		for child in buttons_vbox.get_children():
+			if child is Control and (child as Control).visible:
+				buttons_w = maxf(buttons_w, (child as Control).custom_minimum_size.x)
+		var buttons_h := maxf(
+			260.0,
+			HudDialogs.measure_control_height(buttons_vbox, buttons_w)
+		)
+		var half_w := buttons_w * 0.5
+		buttons_vbox.offset_left = -half_w
+		buttons_vbox.offset_right = half_w
+		buttons_vbox.offset_top = buttons_top
+		buttons_vbox.offset_bottom = buttons_top + buttons_h
+		buttons_bottom = buttons_top + buttons_h
+	else:
+		var row := 0
+		for item in action_buttons:
+			var button := item as Button
+			if button == null or not button.visible:
+				continue
+			_place_action_button(button, buttons_top, row)
+			row += 1
+		buttons_bottom = buttons_top + float(row) * 130.0
 	var height := buttons_bottom + 40.0 + HudDialogs.DIALOG_EXTRA_PAD_V
 	var soft_min := 560.0 if preview_h > 0.0 else (400.0 if untimed else 520.0)
-	_panel.custom_minimum_size = Vector2(panel_w, maxf(soft_min, height))
+	panel.custom_minimum_size = Vector2(panel_w, maxf(soft_min, height))
 
 
-func _place_button(button: Button, buttons_top: float, row: int) -> void:
+static func _place_action_button(button: Button, buttons_top: float, row: int) -> void:
 	if not button:
 		return
 	var top := buttons_top + float(row) * 130.0

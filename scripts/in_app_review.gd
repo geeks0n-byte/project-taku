@@ -1,7 +1,8 @@
 extends Node
 ## Schedules Google Play in-app review after positive campaign victories.
 
-const PLUGIN_SINGLETON := "GodotGooglePlayInAppReview"
+## Vendored plugin registers `PlayReview`; keep the upstream name as a fallback.
+const PLUGIN_CANDIDATES := ["PlayReview", "GodotGooglePlayInAppReview"]
 
 var _plugin_ready: bool = false
 var _review_info_ready: bool = false
@@ -53,10 +54,17 @@ func _should_prompt(
 	})
 
 
+func _plugin() -> Object:
+	for singleton_name in PLUGIN_CANDIDATES:
+		if Engine.has_singleton(singleton_name):
+			var plugin: Object = Engine.get_singleton(singleton_name)
+			if plugin != null:
+				return plugin
+	return null
+
+
 func _bind_plugin() -> void:
-	if not Engine.has_singleton(PLUGIN_SINGLETON):
-		return
-	var plugin: Object = Engine.get_singleton(PLUGIN_SINGLETON)
+	var plugin: Object = _plugin()
 	_plugin_ready = plugin != null
 	if not _plugin_ready:
 		return
@@ -75,7 +83,7 @@ func _bind_plugin() -> void:
 func _begin_review_flow() -> void:
 	if not _plugin_ready or SaveManager == null:
 		return
-	var plugin: Object = Engine.get_singleton(PLUGIN_SINGLETON)
+	var plugin: Object = _plugin()
 	if plugin == null:
 		return
 	_review_info_ready = false
@@ -92,7 +100,7 @@ func _on_review_info_ready(_unused: Variant = null) -> void:
 	if _review_info_ready:
 		return
 	_review_info_ready = true
-	var plugin: Object = Engine.get_singleton(PLUGIN_SINGLETON)
+	var plugin: Object = _plugin()
 	if plugin == null:
 		return
 	if plugin.has_method("launchReviewFlow"):

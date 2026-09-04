@@ -45,11 +45,12 @@ signal resume_from_tutorial_requested  ## Player closed the How-To-Play overlay;
 @onready var _return_button: Button = $"../PlaytestEndLayer/CenterContainer/VictoryPanel/VictoryButtons/ReturnButton"
 
 var _test_label_breathe_tween: Tween       # Looping alpha tween on the "TEST MODE" label.
-var _htp_page: int = 0                     # Current zero-based How-To-Play page index.
 var _hint_remaining: int = GameConstants.HINT_LIMIT_UNLIMITED  # -1 = unlimited; 0 = ad required.
 var _hint_forced_disabled: bool = false    # True while the board is solved or overlay is open.
 var _button_style_source: Button           # Reference button whose StyleBoxes are copied to end-screen buttons.
 const _ICON_RESET: Texture2D = preload("res://resources/icons/icon_reset.svg")
+
+var _htp := UiHowToPlayPanel.new()
 
 # Hold-to-repeat undo/redo (same timing as main-game HUD).
 var _hold_repeat := HoldRepeat.new()
@@ -61,9 +62,19 @@ func _ready() -> void:
 	_connect_signals()
 	if test_mode_label:
 		test_mode_label.text = HudLayout.format_mode_label("UI_TEST_MODE", true)
-	_layout_how_to_play()
-	_setup_how_to_play_font()
-	_refresh_how_to_play_text()
+	_htp.bind(
+		how_to_play_container,
+		how_to_play_panel,
+		_htp_header,
+		how_to_play_nav,
+		htp_prev_button,
+		htp_next_button,
+		rules_label,
+		tutorial_back_button,
+		false
+	)
+	_htp.setup()
+	_htp.bind_nav_signals()
 	call_deferred("_apply_top_bar_buttons")
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
@@ -77,9 +88,7 @@ func _on_safe_area_viewport_resized() -> void:
 # Rebuilds playtest + HTP fonts after SaveManager.language_changed.
 func _on_language_changed() -> void:
 	_apply_top_bar_buttons()
-	HudLayout.clear_how_to_play_nav_lock(how_to_play_container)
-	_refresh_how_to_play_text()
-	_setup_how_to_play_font()
+	_htp.on_locale_changed()
 	# Editor playtest HUD stays Press Start; How-To-Play keeps locale fonts.
 	var editor_root := get_node_or_null("../EditorUI")
 	if editor_root:
@@ -90,20 +99,6 @@ func _on_language_changed() -> void:
 	# Re-apply victory button fonts after the tree walk (Latin → Press Start caption).
 	if _victory_panel and _victory_panel.visible:
 		_style_end_buttons()
-
-# Styles HTP prev/next/close. Page header is authored in level_editor.tscn.
-func _layout_how_to_play() -> void:
-	for btn in [htp_prev_button, htp_next_button]:
-		HudLayout.apply_nav_button(btn)
-	if tutorial_back_button:
-		HudLayout.style_top_bar_close_button(tutorial_back_button)
-
-# HTP body uses the locale font (not Press Start) so ka/uk rules stay readable.
-func _setup_how_to_play_font() -> void:
-	if not rules_label:
-		return
-	rules_label.set_meta("_use_default_font", true)
-	HudLayout.apply_locale_font_to_control(rules_label)
 
 # Sizes playtest top-bar clusters, counters, and safe-area padding.
 func _apply_top_bar_buttons() -> void:
@@ -168,15 +163,10 @@ func _connect_signals() -> void:
 		redo_button.button_up.connect(_on_redo_button_up)
 	if tutorial_back_button:
 		tutorial_back_button.pressed.connect(func():
-			if how_to_play_container:
-				how_to_play_container.visible = false
+			_htp.hide_panel()
 			_set_playtest_buttons_disabled(false)
 			resume_from_tutorial_requested.emit()
 		)
-	if htp_prev_button:
-		htp_prev_button.pressed.connect(_on_htp_prev_pressed)
-	if htp_next_button:
-		htp_next_button.pressed.connect(_on_htp_next_pressed)
 	if _try_again_button and not _try_again_button.pressed.is_connected(_on_try_again_pressed):
 		_try_again_button.pressed.connect(_on_try_again_pressed)
 	if _return_button and not _return_button.pressed.is_connected(_on_return_pressed):
@@ -284,76 +274,18 @@ func _style_end_button(btn: Button, display: String) -> void:
 	)
 	HudLayout.grow_panel_button_to_text(btn)
 
-## Calculates and applies offsets for all children of the victory panel based on how
-## many star-goal rows the result contains and whether a board preview is shown.
-## Heights follow title/results/preview/buttons so long copy keeps top/bottom margin.
 # Sizes and stacks playtest victory header, stars, preview, and buttons.
 func _layout_victory_panel(star_result: Dictionary) -> void:
-	if not _victory_panel or not _victory_results_host:
-		return
-	var goal_count := int(star_result.get("total_count", 0))
-	var panel_w := HudLayout.UI_MAX_DIALOG_WIDTH
-	var title_top := 28.0
-	var title_side := 24.0
-	var title_h := 82.0
-	if _victory_title:
-		_victory_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		title_h = maxf(
-			82.0,
-			HudDialogs.measure_label_height(_victory_title, panel_w - title_side * 2.0)
-		)
-		_victory_title.offset_left = title_side
-		_victory_title.offset_right = -title_side
-		_victory_title.offset_top = title_top
-		_victory_title.offset_bottom = title_top + title_h
-	var title_bottom := title_top + title_h
-	var results_h := float(maxi(1, goal_count)) * (LevelStars.ROW_HEIGHT + 14.0) + 24.0
-	_victory_results_host.offset_top = title_bottom + 8.0
-	_victory_results_host.offset_bottom = title_bottom + 8.0 + results_h
-	var cursor := title_bottom + 8.0 + results_h
-	var preview_h := 0.0
-	var frame: PanelContainer = null
-	if _victory_preview:
-		frame = LevelPreview.ensure_preview_frame(_victory_preview)
-	var show_preview := (
-		_victory_preview
-		and _victory_preview.visible
-		and _victory_preview.texture != null
+	UiVictoryPanel.layout_stack(
+		_victory_panel,
+		_victory_title,
+		_victory_results_host,
+		_victory_preview,
+		star_result,
+		[],
+		false,
+		_victory_buttons
 	)
-	if show_preview:
-		var inner := 320.0
-		preview_h = LevelPreview.frame_outer_size(inner)
-		cursor += 24.0
-		var half := preview_h * 0.5
-		var target: Control = frame
-		if target == null:
-			target = _victory_preview
-		target.offset_left = -half
-		target.offset_right = half
-		target.offset_top = cursor
-		target.offset_bottom = cursor + preview_h
-		cursor += preview_h
-	elif frame:
-		frame.visible = false
-	var buttons_top := cursor + 28.0
-	var buttons_h := 260.0
-	if _victory_buttons:
-		var buttons_w := GameConstants.UI_BTN_PANEL_SIZE.x
-		for child in _victory_buttons.get_children():
-			if child is Control and (child as Control).visible:
-				buttons_w = maxf(buttons_w, (child as Control).custom_minimum_size.x)
-		buttons_h = maxf(
-			260.0,
-			HudDialogs.measure_control_height(_victory_buttons, buttons_w)
-		)
-		var half_w := buttons_w * 0.5
-		_victory_buttons.offset_left = -half_w
-		_victory_buttons.offset_right = half_w
-		_victory_buttons.offset_top = buttons_top
-		_victory_buttons.offset_bottom = buttons_top + buttons_h
-	var height := buttons_top + buttons_h + 40.0 + HudDialogs.DIALOG_EXTRA_PAD_V
-	var soft_min := 560.0 if preview_h > 0.0 else 520.0
-	_victory_panel.custom_minimum_size = Vector2(panel_w, maxf(soft_min, height))
 
 ## Disables (or re-enables) all playtest action buttons, including restart.
 func _set_playtest_buttons_disabled(disabled: bool) -> void:
@@ -478,58 +410,8 @@ func hide_end_overlays() -> void:
 func hide_victory_overlay() -> void:
 	hide_end_overlays()
 
-# HTP page navigation handlers (bounded to valid page range).
-func _on_htp_prev_pressed() -> void:
-	_htp_page = maxi(_htp_page - 1, 0)
-	_refresh_how_to_play_text()
-
-# Advances HTP one page, clamped to PAGE_COUNT-1.
-func _on_htp_next_pressed() -> void:
-	_htp_page = mini(_htp_page + 1, HowToPlayContent.PAGE_COUNT - 1)
-	_refresh_how_to_play_text()
-
-# Refreshes HTP header, body, and prev/next visibility for the current page.
-func _refresh_how_to_play_text() -> void:
-	if _htp_header:
-		HudLayout._bind_header_translation_key(
-			_htp_header, HowToPlayContent.get_page_title_key(_htp_page)
-		)
-		HudLayout.apply_screen_header_style(_htp_header)
-	if rules_label:
-		rules_label.text = HowToPlayContent.get_page_text(_htp_page)
-		_setup_how_to_play_font()
-	if htp_prev_button:
-		htp_prev_button.visible = _htp_page > 0
-		htp_prev_button.disabled = false
-		HudLayout.apply_nav_button(htp_prev_button)
-		HudLayout.refresh_button_icon_modulate(htp_prev_button)
-	if tutorial_back_button:
-		HudLayout.style_top_bar_close_button(tutorial_back_button)
-	if htp_next_button:
-		htp_next_button.visible = _htp_page < HowToPlayContent.PAGE_COUNT - 1
-		htp_next_button.disabled = false
-		HudLayout.apply_nav_button(htp_next_button)
-		HudLayout.refresh_button_icon_modulate(htp_next_button)
-	call_deferred("_layout_how_to_play_stack")
-
-# Applies final panel/nav placement after rules_label measured its content height.
-func _layout_how_to_play_stack() -> void:
-	HudLayout.layout_how_to_play_stack(
-		how_to_play_container,
-		how_to_play_panel,
-		rules_label,
-		how_to_play_nav,
-		_htp_page == 0,
-		false
-	)
-
-# Opens the HTP overlay from page 0 and disables playtest HUD controls.
 func show_how_to_play() -> void:
-	_htp_page = 0
-	HudLayout.clear_how_to_play_nav_lock(how_to_play_container)
-	_refresh_how_to_play_text()
-	if how_to_play_container:
-		how_to_play_container.visible = true
+	_htp.show_panel()
 	_set_playtest_buttons_disabled(true)
 
 # Shows or hides HUD + counters + status without tearing down playtest mode.

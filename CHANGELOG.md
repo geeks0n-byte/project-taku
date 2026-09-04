@@ -4,7 +4,7 @@ All notable changes to Spaceblox are documented here.
 
 ## [1.1.0] — Unreleased
 
-*Next Play Store release. Skips 1.0.2. Integration polish and Play Games services — daily puzzle and stats are **1.2.0**.*
+*Next Play Store release after live **1.0.0**. 1.0.1 and 1.0.2 were skipped. Integration polish and Play Games services — daily puzzle and stats are **1.2.0**.*
 
 ### Added
 - Local achievements (catalog, tiers, hidden/secret, cup icons, toasts, list UI)
@@ -50,7 +50,7 @@ All notable changes to Spaceblox are documented here.
 - Stats screen
 - Play Games leaderboards (if a competitive metric is defined)
 
-## [1.0.1] — 2026 (Play Store)
+## [1.0.0] — 2026 (Play Store live)
 
 - Campaign puzzle gameplay (easy / medium / hard), tutorials, custom level editor
 - Stars, level unlocks, mid-level session save/restore
@@ -60,4 +60,5 @@ All notable changes to Spaceblox are documented here.
 
 ## Skipped
 
+- **1.0.1** — Play Console review canceled; not shipped. Path is **1.0.0 → 1.1.0**.
 - **1.0.2** — separate branch abandoned; changes folded into 1.1.0

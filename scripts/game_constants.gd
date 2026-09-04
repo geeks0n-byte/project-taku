@@ -22,7 +22,7 @@ const PRIVACY_POLICY_URL := "https://geeks0n-byte.github.io/project-taku/privacy
 
 ## Deep space void (#00123a) — boot splash, Android window background, parallax base.
 const BOOT_VOID_COLOR := Color(0, 0.0705882, 0.227451, 1)
-## Android export splash_screen/icon asset width (splash_app_icon_256.png).
+## Logical boot-splash icon texel width (export splash uses splash_app_icon_432.png).
 const BOOT_SPLASH_ICON_TEX_PX := 256
 ## Android 12 splash icon slot with a separate windowSplashScreenBackground (no icon bg layer).
 const ANDROID_SPLASH_ICON_DP := 288.0
@@ -303,12 +303,12 @@ static func is_headless_run() -> bool:
 	return false
 
 
-## True during `dev/capture_store_trailer.gd` runs (`SPACEBLOX_TRAILER_CAPTURE=1`).
+## True during `dev/scripts/capture/capture_store_trailer.gd` (`SPACEBLOX_TRAILER_CAPTURE=1`).
 static func is_trailer_capture() -> bool:
 	return OS.get_environment("SPACEBLOX_TRAILER_CAPTURE") == "1"
 
 
-## True during store trailer or Play listing screenshot capture on desktop.
+## True while store phone-shot / trailer capture scripts are driving the game.
 static func is_store_asset_capture() -> bool:
 	return (
 		is_trailer_capture()

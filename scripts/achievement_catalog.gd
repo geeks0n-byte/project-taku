@@ -116,8 +116,6 @@ const _ICON_DEV_MODE := "res://resources/icons/ach_dev_mode.svg"
 const _CUP_BRONZE := "res://resources/icons/icon_achievement_cup_bronze.svg"
 const _CUP_SILVER := "res://resources/icons/icon_achievement_cup_silver.svg"
 const _CUP_GOLD := "res://resources/icons/icon_achievement_cup.svg"
-const _MEDAL_BRONZE_OUTLINE := "res://resources/icons/ach_medal_bronze_outline.svg"
-const _ICON_MYSTERY := _MEDAL_BRONZE_OUTLINE
 
 ## Per-id metadata. Keep old save ids so existing unlocks still count.
 ## Keys: tier (none/bronze/silver/gold), family ("" or shared family id), visibility.
@@ -258,9 +256,9 @@ static func display_icon_path(id: String, is_unlocked: bool) -> String:
 	return ""
 
 
-## Generic mystery outline for hidden locked grid cells (dimmed like other locked icons).
+## Hidden locked cells use no art (lock overlay + ??? only).
 static func hidden_locked_icon_path() -> String:
-	return _ICON_MYSTERY
+	return ""
 
 
 ## Multiplicative tint for ranked-family icons (bronze/silver/gold). White when unranked.

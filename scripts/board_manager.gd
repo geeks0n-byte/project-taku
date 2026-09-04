@@ -198,6 +198,44 @@ func _on_shifter_tile_toggled(clicked_coord: Vector2i):
 	cell_changed.emit(clicked_coord)
 	trigger_redraw()
 
+## Recomputes shifter_direction from pair endpoints for every currently-active SHIFTER.
+## Use before victory previews so arrow overlays stay correct even if state was bulk-written.
+func sync_shifter_directions() -> void:
+	for pair in active_shifter_pairs:
+		if typeof(pair) != TYPE_DICTIONARY:
+			continue
+		if not pair.has("a") or not pair.has("b"):
+			continue
+		var a: Vector2i = pair["a"]
+		var b: Vector2i = pair["b"]
+		if not board_cells.has(a) or not board_cells.has(b):
+			continue
+		var cell_a = board_cells[a]
+		var cell_b = board_cells[b]
+		var a_shifter := int(cell_a.state) == GameConstants.TileState.SHIFTER
+		var b_shifter := int(cell_b.state) == GameConstants.TileState.SHIFTER
+		if a_shifter and not b_shifter:
+			cell_a.shifter_direction = b - a
+			cell_b.shifter_direction = Vector2i.ZERO
+			cell_a.update_visuals()
+			cell_b.update_visuals()
+		elif b_shifter and not a_shifter:
+			cell_b.shifter_direction = a - b
+			cell_a.shifter_direction = Vector2i.ZERO
+			cell_a.update_visuals()
+			cell_b.update_visuals()
+		elif a_shifter and b_shifter:
+			# Both occupied: keep existing non-zero dirs, or fall back to pair active/home.
+			if cell_a.shifter_direction == Vector2i.ZERO:
+				cell_a.shifter_direction = b - a
+			if cell_b.shifter_direction == Vector2i.ZERO:
+				cell_b.shifter_direction = a - b
+			cell_a.update_visuals()
+			cell_b.update_visuals()
+		else:
+			cell_a.shifter_direction = Vector2i.ZERO
+			cell_b.shifter_direction = Vector2i.ZERO
+
 ## Clears cell highlights and error-bridge overlays.
 func clear_highlights():
 	BoardRenderer.clear_highlights(board_cells)

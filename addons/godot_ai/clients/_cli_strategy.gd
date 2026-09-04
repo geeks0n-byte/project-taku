@@ -64,7 +64,7 @@ static func configure(
 		return {
 			"status": "error",
 			"message": "Configure %s timed out after %ds — see 'Run this manually' below to retry by hand" % [
-				client.display_name, int(_CONFIGURE_TIMEOUT_MS / 1000.0),
+				client.display_name, _CONFIGURE_TIMEOUT_MS / 1000,
 			],
 		}
 	if result.get("spawn_failed", false):
@@ -172,7 +172,7 @@ static func remove(client: McpClient, server_name: String) -> Dictionary:
 		return {
 			"status": "error",
 			"message": "Remove %s timed out after %ds — see 'Run this manually' below to retry by hand" % [
-				client.display_name, int(_REMOVE_TIMEOUT_MS / 1000.0),
+				client.display_name, _REMOVE_TIMEOUT_MS / 1000,
 			],
 		}
 	if result.get("spawn_failed", false):
