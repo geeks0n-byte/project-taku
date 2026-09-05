@@ -69,6 +69,7 @@ func setup(
 	_on_session_restart = on_session_restart
 	_on_session_back = on_session_back
 	_set_hud_disabled = set_hud_disabled
+	HudLayout.register_modal_blocker(_end_dimmer)
 	if _end_center:
 		_end_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if _reset_yes and not _reset_yes.pressed.is_connected(_on_reset_yes_pressed):

@@ -17,6 +17,23 @@ static func is_shape_only_layout(layout: Dictionary) -> bool:
 static func layout_has_preset_tiles(layout: Dictionary) -> bool:
 	return not is_shape_only_layout(layout)
 
+## Empty string allows save. Shape-only boards skip the solver (play generates a fill).
+static func editor_save_reject_key(
+	analysis: Dictionary,
+	layout: Dictionary,
+	require_unique: bool
+) -> String:
+	if is_shape_only_layout(layout):
+		return ""
+	if bool(analysis.get("timed_out", false)) or int(analysis.get("solution_count", 0)) == PuzzleSolver.SOLUTIONS_UNKNOWN:
+		return "ED_MSG_SOLVE_TIMEOUT"
+	if not bool(analysis.get("solvable", false)):
+		return "ED_MSG_UNSOLVABLE"
+	if require_unique and not bool(analysis.get("unique", false)):
+		return "ED_MSG_NOT_UNIQUE"
+	return ""
+
+
 # Same as layout_has_preset_tiles, reading the layout off a LevelData resource.
 static func level_has_preset_tiles(level: LevelData) -> bool:
 	if level == null:

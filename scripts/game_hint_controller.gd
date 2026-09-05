@@ -13,7 +13,7 @@ func setup(game: GameMain) -> void:
 func reset_quota(level: LevelData) -> void:
 	if _game == null:
 		return
-	if GlobalGameManager.debug_tools_enabled or _game._is_campaign_tutorial(level):
+	if _game._is_campaign_tutorial(level):
 		_game.hints_remaining = GameConstants.HINT_LIMIT_UNLIMITED
 	else:
 		_game.hints_remaining = GameConstants.hint_limit_for_difficulty(

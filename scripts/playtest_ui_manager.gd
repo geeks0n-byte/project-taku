@@ -241,6 +241,7 @@ func _on_return_pressed() -> void:
 
 # End-layer starts hidden; victory opts in when the board is solved.
 func _setup_end_layer() -> void:
+	HudLayout.register_modal_blocker(_end_dimmer)
 	if _center:
 		_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if _victory_panel:

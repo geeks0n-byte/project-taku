@@ -17,6 +17,8 @@ const MENU_BTN_SEP := 14
 # Same font size as main menu buttons (main_menu.gd MENU_BTN_FONT).
 const MENU_BTN_FONT := 64
 const PAUSE_TITLE_FONT_SIZE := GameConstants.SCREEN_HEADER_FONT_SIZE + 2
+# Same 3s hold as the credits version label (main_menu_credits_overlay.gd).
+const _AUTO_WIN_HOLD_SEC := 3.0
 
 @onready var resume_btn: Button = $CenterContainer/VBoxContainer/ResumeButton
 @onready var restart_btn: Button = $CenterContainer/VBoxContainer/RestartButton
@@ -32,9 +34,12 @@ const PAUSE_TITLE_FONT_SIZE := GameConstants.SCREEN_HEADER_FONT_SIZE + 2
 # The restart button label changes depending on game mode (restart vs new layout).
 var _restart_label_key: String = "UI_NEW_LAYOUT"
 var _menu_badges := MainMenuBadges.new()
+var _auto_win_hold_active: bool = false
+var _auto_win_hold_started_msec: int = 0
 
 ## Wires pause buttons and language refresh, then styles the header and rows.
 func _ready() -> void:
+	HudLayout.register_modal_blocker(self)
 	if resume_btn:
 		resume_btn.pressed.connect(_on_resume)
 	if restart_btn:
@@ -46,7 +51,7 @@ func _ready() -> void:
 	if level_select_btn:
 		level_select_btn.pressed.connect(_on_level_select)
 	if auto_win_btn:
-		auto_win_btn.pressed.connect(_on_auto_win)
+		auto_win_btn.gui_input.connect(_on_auto_win_input)
 	if quit_btn:
 		quit_btn.pressed.connect(_on_quit)
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
@@ -63,6 +68,7 @@ func _ready() -> void:
 	# our overrides must be applied last to win.
 	call_deferred("_style_header")
 	call_deferred("_fit_menu_buttons")
+	set_process(false)
 
 ## Applies the shared screen-header style to the PAUSED header.
 func _style_header() -> void:
@@ -144,7 +150,7 @@ func _refresh_notification_badges(_count: int = -1) -> void:
 	_menu_badges.refresh_achievements(_count)
 	_menu_badges.refresh_levels(_count)
 
-# Keeps Auto Win in the same pause-menu slot, but fully invisible while still clickable.
+# Keeps Auto Win in the same pause-menu slot, fully invisible; fires after a 3s hold.
 func _style_auto_win_button(row_h: float = MENU_BTN_ROW_H) -> void:
 	if not auto_win_btn or not auto_win_btn.visible:
 		return
@@ -238,14 +244,19 @@ func _on_language_changed() -> void:
 func set_debug_tools_visible(visible_state: bool) -> void:
 	if auto_win_btn:
 		auto_win_btn.visible = visible_state
+	if not visible_state:
+		_stop_auto_win_hold()
 	_fit_menu_buttons()
 
 ## Refits button rows when this control is resized or shown.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		call_deferred("_fit_menu_buttons")
-	elif what == NOTIFICATION_VISIBILITY_CHANGED and visible:
-		call_deferred("_fit_menu_buttons")
+	elif what == NOTIFICATION_VISIBILITY_CHANGED:
+		if visible:
+			call_deferred("_fit_menu_buttons")
+		else:
+			_stop_auto_win_hold()
 
 ## Forwards Resume to the game scene.
 func _on_resume() -> void:
@@ -266,6 +277,31 @@ func _on_achievements() -> void:
 ## Forwards Level Select to the game scene.
 func _on_level_select() -> void:
 	level_select_pressed.emit()
+
+func _on_auto_win_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_auto_win_hold_active = true
+			_auto_win_hold_started_msec = Time.get_ticks_msec()
+			set_process(true)
+		else:
+			_stop_auto_win_hold()
+
+
+func _process(_delta: float) -> void:
+	if not _auto_win_hold_active:
+		set_process(false)
+		return
+	if Time.get_ticks_msec() - _auto_win_hold_started_msec >= int(_AUTO_WIN_HOLD_SEC * 1000.0):
+		_stop_auto_win_hold()
+		_on_auto_win()
+
+
+func _stop_auto_win_hold() -> void:
+	_auto_win_hold_active = false
+	_auto_win_hold_started_msec = 0
+	set_process(false)
+
 
 ## Forwards debug Auto-Win to the game scene.
 func _on_auto_win() -> void:

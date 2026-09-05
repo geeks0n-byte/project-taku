@@ -109,6 +109,8 @@ func _ready() -> void:
 		_do_unlock_all_achievements
 	)
 	_confirm.setup_panel()
+	HudLayout.register_modal_blocker(get_node_or_null("OverlayBlocker"))
+	HudLayout.register_modal_blocker(_confirm_blocker)
 	_configure_main_menu_buttons()
 	_style_header()
 	_update_lang_label()

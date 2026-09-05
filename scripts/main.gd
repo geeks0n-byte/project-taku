@@ -93,8 +93,8 @@ func _difficulty_for_level(level: LevelData) -> int:
 		return PuzzleGenerator.Difficulty.MEDIUM
 	return PuzzleGenerator.Difficulty.MEDIUM
 
-# Sets hints_remaining based on level type. Tutorials and debug-tools sessions
-# get unlimited hints; campaign levels get a difficulty-based quota.
+# Sets hints_remaining based on level type. Tutorials get unlimited hints;
+# campaign levels get a difficulty-based quota. Editor playtest is unlimited separately.
 func _reset_hint_quota(level: LevelData) -> void:
 	if _hint_ctrl:
 		_hint_ctrl.reset_quota(level)
@@ -454,7 +454,11 @@ func _on_auto_win() -> void:
 	is_paused = false
 	if pause_menu:
 		pause_menu.hide()
+	if AchievementManager:
+		AchievementManager.push_play_games_push_suppressed(true)
 	trigger_victory()
+	if AchievementManager:
+		AchievementManager.push_play_games_push_suppressed(false)
 
 # Leaves gameplay to main menu, persisting session first.
 func _on_quit_to_menu():

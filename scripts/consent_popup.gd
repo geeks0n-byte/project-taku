@@ -18,6 +18,7 @@ const _TILE_TEX := preload("res://resources/buttons/button_tile_gray_dark.svg")
 
 ## Wires buttons, locale refresh, and viewport resize so the panel stays fitted.
 func _ready() -> void:
+	HudLayout.register_modal_blocker(self)
 	_read_btn.pressed.connect(_on_read_policy)
 	_accept_btn.pressed.connect(_on_accepted)
 	refresh_locale()

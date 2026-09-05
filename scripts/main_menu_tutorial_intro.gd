@@ -31,8 +31,8 @@ func setup(
 func setup_panel() -> void:
 	if _blocker:
 		_blocker.visible = false
-		_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
 		_blocker.color = Color(0, 0, 0, 0)
+		HudLayout.register_modal_blocker(_blocker)
 	var center := (
 		_blocker.get_node_or_null("CenterContainer") as Control
 		if _blocker

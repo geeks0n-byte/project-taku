@@ -261,6 +261,10 @@ func is_play_games_push_suppressed() -> bool:
 	return _play_games_push_suppress_depth > 0
 
 
+func push_play_games_push_suppressed(enabled: bool) -> void:
+	_push_play_games_push_suppressed(enabled)
+
+
 func _push_play_games_push_suppressed(enabled: bool) -> void:
 	if enabled:
 		_play_games_push_suppress_depth += 1

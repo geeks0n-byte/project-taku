@@ -40,6 +40,7 @@ func bind(
 
 func setup(queue_layout: Callable = Callable()) -> void:
 	_queue_layout = queue_layout if queue_layout.is_valid() else Callable(self, "layout_stack")
+	HudLayout.register_modal_blocker(_container)
 	layout_chrome()
 	setup_rules_font()
 	refresh_text()

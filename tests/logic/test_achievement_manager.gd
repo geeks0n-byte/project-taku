@@ -41,6 +41,21 @@ static func _test_orchestration(r: LogicTestRunner) -> void:
 	_restore_save(save, {}, {}, 0, 0, 0, 0)
 
 	r.ok(
+		not bool(mgr.call("is_play_games_push_suppressed")),
+		"ach mgr orch: play games push starts allowed"
+	)
+	mgr.call("push_play_games_push_suppressed", true)
+	r.ok(
+		bool(mgr.call("is_play_games_push_suppressed")),
+		"ach mgr orch: debug suppress blocks play games push"
+	)
+	mgr.call("push_play_games_push_suppressed", false)
+	r.ok(
+		not bool(mgr.call("is_play_games_push_suppressed")),
+		"ach mgr orch: debug suppress releases play games push"
+	)
+
+	r.ok(
 		not bool(mgr.call("is_unlocked", AchievementCatalog.ID_DEV_MODE)),
 		"ach mgr orch: dev_mode starts locked"
 	)

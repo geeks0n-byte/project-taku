@@ -275,6 +275,8 @@ func _gui_input(event):
 	# Editor placement uses canvas interceptors / brush input — never cycle here.
 	if is_editor_mode:
 		return
+	if HudLayout.is_modal_input_blocked(get_tree()):
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			if event.position.x > CLICK_MARGIN and event.position.x < (size.x - CLICK_MARGIN) and \

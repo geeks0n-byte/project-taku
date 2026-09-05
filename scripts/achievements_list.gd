@@ -68,6 +68,7 @@ func _ready() -> void:
 	layer = 22
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
+	HudLayout.register_modal_blocker(self)
 	if close_btn and not close_btn.pressed.is_connected(_on_close):
 		close_btn.pressed.connect(_on_close)
 	if _page_prev_button and not _page_prev_button.pressed.is_connected(_on_page_prev):

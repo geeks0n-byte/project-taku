@@ -496,6 +496,14 @@ static func attach_notification_badge_corner(parent: Control, host_h: float = -1
 static func make_dialog_panel_style() -> StyleBoxFlat:
 	return HudDialogs.make_dialog_panel_style()
 
+
+static func register_modal_blocker(node: Node) -> void:
+	HudDialogs.register_modal_blocker(node)
+
+
+static func is_modal_input_blocked(tree: SceneTree) -> bool:
+	return HudDialogs.is_modal_input_blocked(tree)
+
 # Biases a full-rect CenterContainer upward by shrinking it from the bottom.
 # Visual raise ≈ raise_px because children are re-centered in the shorter host.
 static func raise_centered_dialog_host(

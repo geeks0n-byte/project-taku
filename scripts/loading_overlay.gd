@@ -22,6 +22,9 @@ func _ready() -> void:
 	layer = 100
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
+	HudLayout.register_modal_blocker(self)
+	var root := get_node_or_null("Root") as Control
+	HudLayout.register_modal_blocker(root)
 	if _dot_timer and not _dot_timer.timeout.is_connected(_on_dot_tick):
 		_dot_timer.timeout.connect(_on_dot_tick)
 

@@ -143,7 +143,12 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 				interceptor.gui_input.disconnect(conn.callable)
 
 			interceptor.gui_input.connect(func(event):
+				if HudLayout.is_modal_input_blocked(interceptor.get_tree()):
+					if event is InputEvent:
+						interceptor.accept_event()
+					return
 				if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+					interceptor.accept_event()
 					canvas_cell_clicked.emit(coord)
 			)
 

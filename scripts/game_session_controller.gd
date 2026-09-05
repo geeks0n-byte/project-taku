@@ -140,8 +140,6 @@ func restore() -> void:
 		)
 	else:
 		_game._reset_hint_quota(current_level_resource)
-	if GlobalGameManager.debug_tools_enabled:
-		_game.hints_remaining = GameConstants.HINT_LIMIT_UNLIMITED
 	_game.hidden_reference_constraints = data.get(
 		"hidden_reference_constraints", []
 	).duplicate(true)

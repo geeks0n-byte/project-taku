@@ -53,6 +53,14 @@ func _ready():
 func _input(event: InputEvent) -> void:
 	if playtest_controller and playtest_controller.is_active:
 		return
+	if _is_board_pointer_blocked():
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+			_is_painting = false
+		elif event is InputEventScreenTouch and event.index == 0 and not event.pressed:
+			_is_painting = false
+		else:
+			_is_painting = false
+		return
 	if _is_link_brush():
 		# Never leave a paint stroke armed while using two-click link tools.
 		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
@@ -91,6 +99,15 @@ func _input(event: InputEvent) -> void:
 
 # Link brushes (shifter, equals, not-equals) require selecting two cells rather than painting,
 # so they are handled separately via canvas_cell_clicked rather than the drag input path.
+func _is_board_pointer_blocked() -> bool:
+	if HudLayout.is_modal_input_blocked(get_tree()):
+		return true
+	var hovered := get_viewport().gui_get_hovered_control() if get_viewport() else null
+	if hovered == null or canvas_manager == null:
+		return false
+	return not canvas_manager.is_ancestor_of(hovered)
+
+
 func _is_link_brush() -> bool:
 	return (
 		current_brush_state == GameConstants.TileState.SHIFTER
@@ -625,22 +642,22 @@ func _on_save_level():
 func _execute_save():
 	var level_num = editor_ui.get_level_number()
 	var tiles: Array = editor_ui.get_allowed_tiles()
-	var analysis := PuzzleSolver.analyze_board_cells(
-		canvas_manager.board_cells,
-		canvas_manager.grid_width,
-		canvas_manager.grid_height,
-		tiles,
-		canvas_manager.loaded_constraint_pairs,
-		canvas_manager.loaded_shifter_pairs,
-		editor_ui.is_unique_solution_required()
-	)
-	if not _accept_save_analysis(analysis):
-		return
-
 	var output_layout := {}
 	for coord in canvas_manager.board_cells:
 		var current_state = canvas_manager.board_cells[coord].state
 		output_layout[coord] = GameConstants.TileState.EMPTY if current_state == GameConstants.TileState.SHIFTER else current_state
+	if not LevelUtils.is_shape_only_layout(output_layout):
+		var analysis := PuzzleSolver.analyze_board_cells(
+			canvas_manager.board_cells,
+			canvas_manager.grid_width,
+			canvas_manager.grid_height,
+			tiles,
+			canvas_manager.loaded_constraint_pairs,
+			canvas_manager.loaded_shifter_pairs,
+			editor_ui.is_unique_solution_required()
+		)
+		if not _accept_save_analysis(analysis, output_layout):
+			return
 
 	var new_level_resource: LevelData = LevelData.new()
 	new_level_resource.level_number = level_num
@@ -671,17 +688,14 @@ func _execute_save():
 # Validates a solver analysis result before allowing a save.
 # Blocks saving if the solver timed out (result is ambiguous), the puzzle is unsolvable,
 # or a unique-solution requirement is active but multiple solutions were found.
-func _accept_save_analysis(analysis: Dictionary) -> bool:
-	if bool(analysis.get("timed_out", false)) or int(analysis.get("solution_count", 0)) == PuzzleSolver.SOLUTIONS_UNKNOWN:
-		editor_ui.update_status(HudLayout.english("ED_MSG_SOLVE_TIMEOUT"), Color(1.0, 0.4, 0.4), false)
-		return false
-	if not bool(analysis.get("solvable", false)):
-		editor_ui.update_status(HudLayout.english("ED_MSG_UNSOLVABLE"), Color(1.0, 0.4, 0.4), false)
-		return false
-	if editor_ui.is_unique_solution_required() and not bool(analysis.get("unique", false)):
-		editor_ui.update_status(HudLayout.english("ED_MSG_NOT_UNIQUE"), Color(1.0, 0.4, 0.4), false)
-		return false
-	return true
+func _accept_save_analysis(analysis: Dictionary, layout: Dictionary) -> bool:
+	var reject_key := LevelUtils.editor_save_reject_key(
+		analysis, layout, editor_ui.is_unique_solution_required()
+	)
+	if reject_key.is_empty():
+		return true
+	editor_ui.update_status(HudLayout.english(reject_key), Color(1.0, 0.4, 0.4), false)
+	return false
 
 ## Loads user://level_N.tres for the number in the editor field.
 func _on_load_level():

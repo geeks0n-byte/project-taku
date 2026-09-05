@@ -114,6 +114,7 @@ func _ready() -> void:
 	)
 	_tutorial.setup_panel()
 	_tutorial.bind_signals()
+	HudLayout.register_modal_blocker(overlay_blocker)
 
 	_consent.setup(
 		self,

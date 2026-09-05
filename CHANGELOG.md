@@ -23,12 +23,15 @@ Play Store release after live **1.0.0**.
 - Main menu notification badges: plain red `!` (no circular background)
 - Tutorial and how-to-play HUD layout; achievement cell descriptions no longer clip descenders
 - Level-select NEW badges and card margins
+- Secret pause auto-win requires a 3-second hold (same as the credits version hold); does not push to Play Games
 
 ### Fixed
 - Cloud sync dismiss when Play Games pull/merge finishes
 - Pause menu NEW badge position on first open
 - Shifter direction arrows; Undo Nothing unlocking on easy/medium campaign clears
 - Tutorial pause button locked until the last steps; pause menu saying New Puzzle on tutorial
+- Popup clicks reaching the board (editor overwrite and other modal overlays)
+- Custom editor save rejecting shape-only boards as unsolvable
 - Save writes use a temp file then atomic rename
 
 ## [1.0.0] — 2026 (Play Store live)

@@ -116,6 +116,7 @@ func setup_ui(grid_width: int, grid_height: int) -> void:
 	call_deferred("_apply_star_time_label")
 	call_deferred("_disable_editor_hint_button")
 	call_deferred("_refresh_editor_pixel_fonts")
+	HudLayout.register_modal_blocker(overwrite_blocker)
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
 	if not get_viewport().size_changed.is_connected(_on_safe_area_viewport_resized):

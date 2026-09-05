@@ -7,6 +7,48 @@ extends RefCounted
 const DIALOG_EDGE_INSET := 36.0
 ## Extra breathing room above/below content after fitting to text.
 const DIALOG_EXTRA_PAD_V := 20.0
+const MODAL_BLOCKER_GROUP := "modal_input_blocker"
+
+
+## Marks a full-screen overlay or layer so board / editor input ignores presses underneath.
+static func register_modal_blocker(node: Node) -> void:
+	if node == null:
+		return
+	if not node.is_in_group(MODAL_BLOCKER_GROUP):
+		node.add_to_group(MODAL_BLOCKER_GROUP)
+	if node is Control:
+		var control := node as Control
+		control.mouse_filter = Control.MOUSE_FILTER_STOP
+		if bool(control.get_meta("_modal_blocker_armed", false)):
+			return
+		control.set_meta("_modal_blocker_armed", true)
+		control.gui_input.connect(func(event: InputEvent) -> void:
+			if control.visible and (
+				event is InputEventMouseButton
+				or event is InputEventMouseMotion
+				or event is InputEventScreenTouch
+				or event is InputEventScreenDrag
+			):
+				control.accept_event()
+		)
+
+
+## True when any registered popup / dimmer is visible in this tree.
+static func is_modal_input_blocked(tree: SceneTree) -> bool:
+	if tree == null:
+		return false
+	for node in tree.get_nodes_in_group(MODAL_BLOCKER_GROUP):
+		if _modal_node_is_showing(node):
+			return true
+	return false
+
+
+static func _modal_node_is_showing(node: Node) -> bool:
+	if node is CanvasItem:
+		return (node as CanvasItem).is_visible_in_tree()
+	if node is CanvasLayer:
+		return (node as CanvasLayer).visible
+	return false
 
 ## Dark rounded StyleBoxFlat used by centered confirm / consent panels.
 static func make_dialog_panel_style() -> StyleBoxFlat:

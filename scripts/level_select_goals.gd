@@ -42,8 +42,8 @@ func setup(play_pressed: Callable, close_pressed: Callable) -> void:
 	if _blocker == null:
 		return
 	_blocker.visible = false
-	_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
 	_blocker.color = Color(0, 0, 0, 0.45)
+	HudLayout.register_modal_blocker(_blocker)
 	_blocker.z_index = _overlay_z
 	if not _blocker.gui_input.is_connected(_on_blocker_gui_input):
 		_blocker.gui_input.connect(_on_blocker_gui_input)

@@ -12,6 +12,7 @@ static func run(r: LogicTestRunner) -> void:
 	_test_wide_ui_cap(r)
 	_test_pseudolocale(r)
 	_test_tutorial_pause_and_restart_label(r)
+	_test_editor_save_rules_and_modal_blockers(r)
 
 static func _approx4(r: LogicTestRunner, got: Vector4, expected: Vector4, name: String) -> void:
 	r.ok(
@@ -261,3 +262,66 @@ static func _test_tutorial_pause_and_restart_label(r: LogicTestRunner) -> void:
 	hint.free()
 	undo.free()
 	redo.free()
+
+
+static func _test_editor_save_rules_and_modal_blockers(r: LogicTestRunner) -> void:
+	var shape := {Vector2i(0, 0): GameConstants.TileState.EMPTY, Vector2i(1, 0): GameConstants.TileState.WALL}
+	r.ok(
+		LevelUtils.editor_save_reject_key({"solvable": false, "unique": false}, shape, true).is_empty(),
+		"save rules: shape-only skips solver"
+	)
+	var preset := {Vector2i(0, 0): GameConstants.TileState.YELLOW}
+	r.ok(
+		LevelUtils.editor_save_reject_key(
+			{"solvable": false, "timed_out": false, "solution_count": 0, "unique": false},
+			preset,
+			true
+		) == "ED_MSG_UNSOLVABLE",
+		"save rules: preset unsolvable is blocked"
+	)
+	r.ok(
+		LevelUtils.editor_save_reject_key(
+			{"solvable": true, "timed_out": false, "solution_count": 2, "unique": false},
+			preset,
+			true
+		) == "ED_MSG_NOT_UNIQUE",
+		"save rules: preset non-unique is blocked"
+	)
+	r.ok(
+		LevelUtils.editor_save_reject_key(
+			{"solvable": true, "timed_out": false, "solution_count": 1, "unique": true},
+			preset,
+			true
+		).is_empty(),
+		"save rules: unique solvable preset is allowed"
+	)
+	r.ok(
+		LevelUtils.editor_save_reject_key(
+			{
+				"solvable": false,
+				"timed_out": true,
+				"solution_count": PuzzleSolver.SOLUTIONS_UNKNOWN,
+				"unique": false,
+			},
+			preset,
+			true
+		) == "ED_MSG_SOLVE_TIMEOUT",
+		"save rules: timeout is blocked"
+	)
+	if r.root == null:
+		return
+	var blocker := ColorRect.new()
+	blocker.visible = false
+	r.root.add_child(blocker)
+	HudLayout.register_modal_blocker(blocker)
+	r.ok(
+		not HudLayout.is_modal_input_blocked(r.root.get_tree()),
+		"modal: hidden popup does not block board input"
+	)
+	blocker.visible = true
+	r.ok(
+		HudLayout.is_modal_input_blocked(r.root.get_tree()),
+		"modal: visible popup blocks board input"
+	)
+	blocker.visible = false
+	blocker.queue_free()
