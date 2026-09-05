@@ -20,10 +20,10 @@ func _init():
 func load(
 	ad_unit_id: String,
 	ad_request: AdRequest,
-	interstitial_ad_load_callback := InterstitialAdLoadCallback.new()
+	p_interstitial_ad_load_callback := InterstitialAdLoadCallback.new()
 ) -> void:
 	if _plugin:
-		self.interstitial_ad_load_callback = interstitial_ad_load_callback
+		self.interstitial_ad_load_callback = p_interstitial_ad_load_callback
 		safe_connect(
 			_plugin, "on_interstitial_ad_loaded", _on_interstitial_ad_loaded, CONNECT_DEFERRED
 		)

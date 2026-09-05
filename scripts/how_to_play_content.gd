@@ -14,15 +14,15 @@ static func get_page_title_key(page_index: int) -> String:
 	var page := clampi(page_index, 0, PAGE_COUNT - 1)
 	match page:
 		0:
-			return "HTP_TITLE"
+			return "UI_HTP_TITLE"
 		1:
-			return "HTP_EXAMPLES_TITLE"
+			return "UI_HTP_EXAMPLES_TITLE"
 		2:
-			return "HTP_PURPLE_TITLE"
+			return "UI_HTP_PURPLE_TITLE"
 		3:
-			return "HTP_LINKS_TITLE"
+			return "UI_HTP_LINKS_TITLE"
 		_:
-			return "HTP_STARS_TITLE"
+			return "UI_HTP_STARS_TITLE"
 
 # Builds the full BBCode string for a given page, then post-processes it with
 # glue_tile_icon_color_labels to prevent word-wrap between icons and their color labels.
@@ -182,6 +182,8 @@ static func _page_stars(force_english: bool) -> String:
 			_t("HTP_STARS_TIME_LABEL", force_english),
 			_t("HTP_STARS_TIME_DESC", force_english),
 		],
+		"",
+		"• %s" % _t("HTP_ACHIEVEMENTS_BLURB", force_english),
 		"[/font_size]",
 	]
 	return "\n".join(lines)

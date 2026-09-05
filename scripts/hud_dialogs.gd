@@ -7,7 +7,50 @@ extends RefCounted
 const DIALOG_EDGE_INSET := 36.0
 ## Extra breathing room above/below content after fitting to text.
 const DIALOG_EXTRA_PAD_V := 20.0
+const MODAL_BLOCKER_GROUP := "modal_input_blocker"
 
+
+## Marks a full-screen overlay or layer so board / editor input ignores presses underneath.
+static func register_modal_blocker(node: Node) -> void:
+	if node == null:
+		return
+	if not node.is_in_group(MODAL_BLOCKER_GROUP):
+		node.add_to_group(MODAL_BLOCKER_GROUP)
+	if node is Control:
+		var control := node as Control
+		control.mouse_filter = Control.MOUSE_FILTER_STOP
+		if bool(control.get_meta("_modal_blocker_armed", false)):
+			return
+		control.set_meta("_modal_blocker_armed", true)
+		control.gui_input.connect(func(event: InputEvent) -> void:
+			if control.visible and (
+				event is InputEventMouseButton
+				or event is InputEventMouseMotion
+				or event is InputEventScreenTouch
+				or event is InputEventScreenDrag
+			):
+				control.accept_event()
+		)
+
+
+## True when any registered popup / dimmer is visible in this tree.
+static func is_modal_input_blocked(tree: SceneTree) -> bool:
+	if tree == null:
+		return false
+	for node in tree.get_nodes_in_group(MODAL_BLOCKER_GROUP):
+		if _modal_node_is_showing(node):
+			return true
+	return false
+
+
+static func _modal_node_is_showing(node: Node) -> bool:
+	if node is CanvasItem:
+		return (node as CanvasItem).is_visible_in_tree()
+	if node is CanvasLayer:
+		return (node as CanvasLayer).visible
+	return false
+
+## Dark rounded StyleBoxFlat used by centered confirm / consent panels.
 static func make_dialog_panel_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.08, 0.08, 0.1, 0.98)
@@ -176,6 +219,11 @@ static func fit_content_column(
 		var viewport_w := HudLayout.max_ui_content_width(CONSENT_SIDE_MARGIN)
 		column_w = minf(viewport_w, maxf(width, measured_min + 32.0))
 		column_w = maxf(column_w, minf(HudLayout.UI_MIN_DIALOG_WIDTH, viewport_w))
+		# Consent body is a long autowrap Label; unwrapped measure equals the
+		# viewport on tablets. Cap to phone content width (same constant as
+		# cap_stretched_width / cap_box_row_width). No-op on phones: viewport_w
+		# is already <= UI_PHONE_CONTENT_WIDTH (1080 minus 24px each side).
+		column_w = minf(column_w, HudLayout.UI_PHONE_CONTENT_WIDTH)
 	content.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	for child in content.get_children():
 		if not (child is Control) or not (child as Control).visible:
@@ -213,6 +261,7 @@ static func fit_content_column_buttons(
 			continue
 		_fit_content_column_button(btn as Button, column_w, min_height, min_width)
 
+## Unwrapped caption width for a content-column button, floored at min_width.
 static func _natural_content_column_button_width(
 	button: Button, _column_w: float, min_width: float = 280.0
 ) -> float:
@@ -228,6 +277,7 @@ static func _natural_content_column_button_width(
 		display, font, font_size, min_width
 	).x
 
+## Applies tile-button size to one button in a fitted content column.
 static func _fit_content_column_button(
 	button: Button,
 	_column_w: float,
@@ -250,9 +300,11 @@ static func _fit_content_column_button(
 		button, display, font, font_size, min_height, min_width
 	)
 
+## Public wrapper for a panel stylebox's left+right content margins.
 static func panel_style_horizontal_insets(panel: Panel) -> float:
 	return _panel_style_horizontal_insets(panel)
 
+## Left+right content margins from the panel's theme StyleBox.
 static func _panel_style_horizontal_insets(panel: Panel) -> float:
 	if panel == null:
 		return 0.0
@@ -261,14 +313,17 @@ static func _panel_style_horizontal_insets(panel: Panel) -> float:
 		return 0.0
 	return style.get_content_margin(SIDE_LEFT) + style.get_content_margin(SIDE_RIGHT)
 
+## Panel stylebox insets plus the inner VBox's authored offsets.
 static func _dialog_horizontal_insets(panel: Panel, vbox: Control) -> float:
 	return _panel_style_horizontal_insets(panel) + _vbox_horizontal_insets(vbox)
 
+## VBox left offset plus |right offset|, or 2× DIALOG_EDGE_INSET when missing.
 static func _vbox_horizontal_insets(vbox: Control) -> float:
 	if vbox == null:
 		return DIALOG_EDGE_INSET * 2.0
 	return maxf(0.0, vbox.offset_left) + maxf(0.0, -vbox.offset_right)
 
+## Sets both custom_minimum_size and size so centered panels relayout immediately.
 static func _apply_panel_size(panel: Control, width: float, height: float) -> void:
 	if panel == null:
 		return
@@ -277,6 +332,7 @@ static func _apply_panel_size(panel: Control, width: float, height: float) -> vo
 	panel.size = size
 	_sync_center_anchor_offsets(panel)
 
+## Caps visible VBox children to the dialog's inner content width.
 static func _constrain_vbox_content_width(vbox: VBoxContainer, content_w: float) -> void:
 	if vbox == null:
 		return
@@ -300,6 +356,7 @@ static func _constrain_vbox_content_width(vbox: VBoxContainer, content_w: float)
 		else:
 			ctrl.custom_minimum_size.x = content_w
 
+## Sizes each dialog button row to the inner content width.
 static func _fit_vbox_dialog_buttons(vbox: VBoxContainer, content_w: float) -> void:
 	if vbox == null:
 		return
@@ -332,6 +389,7 @@ static func _fit_vbox_dialog_buttons(vbox: VBoxContainer, content_w: float) -> v
 				content_w
 			)
 
+## True when a box's visible children are all buttons (a Yes/No row).
 static func _box_is_dialog_button_row(box: BoxContainer) -> bool:
 	if box == null:
 		return false
@@ -346,6 +404,7 @@ static func _box_is_dialog_button_row(box: BoxContainer) -> bool:
 			has_other = true
 	return has_button and not has_other
 
+## Minimum unwrapped width for a label, box, or generic Control.
 static func _measure_control_min_width(control: Control) -> float:
 	if control == null:
 		return 0.0
@@ -361,6 +420,7 @@ static func _measure_control_min_width(control: Control) -> float:
 		return child_w
 	return maxf(control.custom_minimum_size.x, control.get_combined_minimum_size().x)
 
+## Sum of button min widths plus separation for a horizontal dialog row.
 static func _measure_button_row_min_width(box: BoxContainer) -> float:
 	if box == null:
 		return 0.0
@@ -379,6 +439,7 @@ static func _measure_button_row_min_width(box: BoxContainer) -> float:
 		return sum_w + sep * maxi(visible_n - 1, 0)
 	return max_w
 
+## Recenters PRESET_CENTER panels after their size changes.
 static func _sync_center_anchor_offsets(panel: Control) -> void:
 	# Panels placed with PRESET_CENTER + fixed offsets need offsets refreshed when size changes.
 	if panel == null:
@@ -401,18 +462,23 @@ static func _sync_center_anchor_offsets(panel: Control) -> void:
 	panel.offset_top = -size.y * 0.5
 	panel.offset_bottom = size.y * 0.5
 
+## Public wrapper: fitted height of a control at the given width.
 static func measure_control_height(control: Control, width: float) -> float:
 	return _measure_control_height(control, width)
 
+## Public wrapper: wrapped height of a label at the given width.
 static func measure_label_height(label: Label, width: float) -> float:
 	return _measure_wrapped_label_height(label, width)
 
+## Public wrapper: unwrapped single-line width of a label.
 static func measure_label_min_width(label: Label) -> float:
 	return _measure_label_min_width(label)
 
+## Public wrapper: widest line in a string at font_size.
 static func measure_text_max_line_width(font: Font, text: String, font_size: int) -> float:
 	return _measure_text_max_line_width(font, text, font_size)
 
+## How many lines a string occupies when wrapped to width.
 static func count_wrapped_text_lines(
 	font: Font, text: String, width: float, font_size: int
 ) -> int:
@@ -424,6 +490,7 @@ static func count_wrapped_text_lines(
 	var line_h := maxf(1.0, font.get_height(font_size))
 	return maxi(1, ceili(measured.y / line_h))
 
+## Unwrapped label width including outline padding.
 static func _measure_label_min_width(label: Label) -> float:
 	if label == null:
 		return 0.0
@@ -441,6 +508,7 @@ static func _measure_label_min_width(label: Label) -> float:
 		return 0.0
 	return _measure_text_max_line_width(font, text, font_size) + _label_measure_horizontal_padding(label)
 
+## Horizontal padding implied by a label's outline size.
 static func _label_measure_horizontal_padding(label: Label) -> float:
 	var outline := 0
 	if label.label_settings:
@@ -449,6 +517,7 @@ static func _label_measure_horizontal_padding(label: Label) -> float:
 		outline = label.get_theme_constant("outline_size")
 	return float(outline) * 2.0 + 32.0
 
+## Widest stripped line in text at font_size.
 static func _measure_text_max_line_width(font: Font, text: String, font_size: int) -> float:
 	if text.is_empty() or font == null:
 		return 0.0
@@ -464,6 +533,7 @@ static func _measure_text_max_line_width(font: Font, text: String, font_size: in
 		max_w = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	return max_w
 
+## HBox sums children; VBox takes the max child min width.
 static func _measure_box_container_min_width(box: BoxContainer) -> float:
 	if box == null:
 		return 0.0
@@ -492,6 +562,7 @@ static func _measure_box_container_min_width(box: BoxContainer) -> float:
 		return max_w
 	return max_w
 
+## Wrapped label height at width, including outline.
 static func _measure_wrapped_label_height(label: Label, width: float) -> float:
 	if label == null:
 		return 0.0
@@ -521,6 +592,7 @@ static func _measure_wrapped_label_height(label: Label, width: float) -> float:
 	# get_multiline_string_size already includes glyph height; add a little for outline/spacing.
 	return maxf(float(font_size), measured.y + maxf(0.0, line_spacing) * 0.5)
 
+## Recursive fitted height for boxes, labels, and generic controls.
 static func _measure_control_height(control: Control, width: float) -> float:
 	if control == null:
 		return 0.0

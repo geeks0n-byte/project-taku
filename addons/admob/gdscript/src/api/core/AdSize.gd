@@ -21,36 +21,36 @@ var width: int
 var height: int
 
 
-func _init(width: int, height: int):
-	self.width = width
-	self.height = height
+func _init(p_width: int, p_height: int):
+	self.width = p_width
+	self.height = p_height
 
 
 
-static func get_current_orientation_anchored_adaptive_banner_ad_size(width: int) -> AdSize:
+static func get_current_orientation_anchored_adaptive_banner_ad_size(p_width: int) -> AdSize:
 	if _plugin:
 		var ad_size_dictionary: Dictionary = (
-			_plugin.getCurrentOrientationAnchoredAdaptiveBannerAdSize(width)
+			_plugin.getCurrentOrientationAnchoredAdaptiveBannerAdSize(p_width)
 		)
 		return _create(ad_size_dictionary)
 	return AdSize.new(0, 0)
 
 
-static func get_portrait_anchored_adaptive_banner_ad_size(width: int) -> AdSize:
+static func get_portrait_anchored_adaptive_banner_ad_size(p_width: int) -> AdSize:
 	if _plugin:
-		var ad_size_dictionary: Dictionary = _plugin.getPortraitAnchoredAdaptiveBannerAdSize(width)
+		var ad_size_dictionary: Dictionary = _plugin.getPortraitAnchoredAdaptiveBannerAdSize(p_width)
 		return _create(ad_size_dictionary)
 	return AdSize.new(0, 0)
 
 
-static func get_landscape_anchored_adaptive_banner_ad_size(width: int) -> AdSize:
+static func get_landscape_anchored_adaptive_banner_ad_size(p_width: int) -> AdSize:
 	if _plugin:
-		var ad_size_dictionary: Dictionary = _plugin.getLandscapeAnchoredAdaptiveBannerAdSize(width)
+		var ad_size_dictionary: Dictionary = _plugin.getLandscapeAnchoredAdaptiveBannerAdSize(p_width)
 		return _create(ad_size_dictionary)
 	return AdSize.new(0, 0)
 
 
 static func _create(ad_size_dictionary: Dictionary) -> AdSize:
-	var width = ad_size_dictionary["width"]
-	var height = ad_size_dictionary["height"]
-	return AdSize.new(width, height)
+	var p_width = ad_size_dictionary["width"]
+	var p_height = ad_size_dictionary["height"]
+	return AdSize.new(p_width, p_height)

@@ -1,5 +1,7 @@
 class_name BoardManager
 extends Node2D
+## Owns the in-game Cell grid, shifter hops, and tutorial highlight plumbing.
+## Drawing is delegated to BoardRenderer; this node pools cells and wires input.
 
 signal cell_changed(coord: Vector2i)
 # Emitted when a tile is removed via the hold-to-clear gesture. 
@@ -23,6 +25,7 @@ var focus_bridge_drawer: Node2D
 var _focus_bridge_coords: Array = []
 var _error_bridge_coords: Array = []
 
+## Creates grid, constraint, and focus-bridge drawers used by BoardRenderer.
 func _ready():
 	# Grid lines sit behind tiles so hold-to-clear shrink animations aren't
 	# crossed by the static border (tile art already leaves an edge margin).
@@ -42,6 +45,7 @@ func _ready():
 	focus_bridge_drawer.draw.connect(_draw_highlight_bridges)
 	add_child(focus_bridge_drawer)
 
+## Queues a redraw on this node and every overlay drawer.
 func trigger_redraw():
 	queue_redraw()
 	if grid_drawer:
@@ -51,6 +55,7 @@ func trigger_redraw():
 	if focus_bridge_drawer:
 		focus_bridge_drawer.queue_redraw()
 
+## Rebuilds the cell pool from layout data and recenters the board in the viewport.
 func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shifter_pairs: Array = [], constraint_pairs: Array = []):
 	board_cells.clear()
 	var pool_index = 0
@@ -86,6 +91,7 @@ func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shi
 
 		cell.coord = coord
 		cell.position = Vector2(float(coord.x * GameConstants.CELL_SIZE), float(coord.y * GameConstants.CELL_SIZE))
+		cell.size = Vector2(GameConstants.CELL_SIZE, GameConstants.CELL_SIZE)
 
 		cell.allowed_cycle_tiles = int_allowed_tiles.duplicate()
 
@@ -158,6 +164,7 @@ func build_grid(layout_data: Dictionary, available_tiles: Array = [0, 1, 2], shi
 	cached_lines = BoardRenderer.cache_board_lines(board_cells)
 	trigger_redraw()
 
+## Hops a shifter into its partner cell, or shakes if that cell is already a shifter.
 func _on_shifter_tile_toggled(clicked_coord: Vector2i):
 	clear_highlights()
 
@@ -191,12 +198,52 @@ func _on_shifter_tile_toggled(clicked_coord: Vector2i):
 	cell_changed.emit(clicked_coord)
 	trigger_redraw()
 
+## Recomputes shifter_direction from pair endpoints for every currently-active SHIFTER.
+## Use before victory previews so arrow overlays stay correct even if state was bulk-written.
+func sync_shifter_directions() -> void:
+	for pair in active_shifter_pairs:
+		if typeof(pair) != TYPE_DICTIONARY:
+			continue
+		if not pair.has("a") or not pair.has("b"):
+			continue
+		var a: Vector2i = pair["a"]
+		var b: Vector2i = pair["b"]
+		if not board_cells.has(a) or not board_cells.has(b):
+			continue
+		var cell_a = board_cells[a]
+		var cell_b = board_cells[b]
+		var a_shifter := int(cell_a.state) == GameConstants.TileState.SHIFTER
+		var b_shifter := int(cell_b.state) == GameConstants.TileState.SHIFTER
+		if a_shifter and not b_shifter:
+			cell_a.shifter_direction = b - a
+			cell_b.shifter_direction = Vector2i.ZERO
+			cell_a.update_visuals()
+			cell_b.update_visuals()
+		elif b_shifter and not a_shifter:
+			cell_b.shifter_direction = a - b
+			cell_a.shifter_direction = Vector2i.ZERO
+			cell_a.update_visuals()
+			cell_b.update_visuals()
+		elif a_shifter and b_shifter:
+			# Both occupied: keep existing non-zero dirs, or fall back to pair active/home.
+			if cell_a.shifter_direction == Vector2i.ZERO:
+				cell_a.shifter_direction = b - a
+			if cell_b.shifter_direction == Vector2i.ZERO:
+				cell_b.shifter_direction = a - b
+			cell_a.update_visuals()
+			cell_b.update_visuals()
+		else:
+			cell_a.shifter_direction = Vector2i.ZERO
+			cell_b.shifter_direction = Vector2i.ZERO
+
+## Clears cell highlights and error-bridge overlays.
 func clear_highlights():
 	BoardRenderer.clear_highlights(board_cells)
 	_error_bridge_coords.clear()
 	if focus_bridge_drawer:
 		focus_bridge_drawer.queue_redraw()
 
+## Rebuilds the error-bridge coord list from cells currently in a validation error.
 func refresh_error_bridges() -> void:
 	_error_bridge_coords.clear()
 	for coord in board_cells:
@@ -206,6 +253,7 @@ func refresh_error_bridges() -> void:
 	if focus_bridge_drawer:
 		focus_bridge_drawer.queue_redraw()
 
+## Tutorial gate: only listed coords accept taps; others set tutorial_blocked.
 func set_click_whitelist(coords: Array) -> void:
 	var allowed := {}
 	for c in coords:
@@ -214,10 +262,12 @@ func set_click_whitelist(coords: Array) -> void:
 		var cell = board_cells[coord]
 		cell.tutorial_blocked = not allowed.has(coord)
 
+## Clears tutorial_blocked on every cell.
 func clear_click_whitelist() -> void:
 	for coord in board_cells:
 		board_cells[coord].tutorial_blocked = false
 
+## Turns on the white hint/guide overlay for the given coords (skips walls).
 func set_guide_cells(coords: Array) -> void:
 	clear_guide_cells()
 	for c in coords:
@@ -227,11 +277,13 @@ func set_guide_cells(coords: Array) -> void:
 			continue
 		board_cells[c].set_guide_highlight(true)
 
+## Turns off guide highlight on every cell that still has it.
 func clear_guide_cells() -> void:
 	for coord in board_cells:
 		if board_cells[coord].guide_active:
 			board_cells[coord].set_guide_highlight(false)
 
+## Turns on the tutorial focus border and draws bridges between those cells.
 func set_focus_cells(coords: Array) -> void:
 	clear_focus_cells()
 	_focus_bridge_coords.clear()
@@ -246,6 +298,7 @@ func set_focus_cells(coords: Array) -> void:
 	if focus_bridge_drawer:
 		focus_bridge_drawer.queue_redraw()
 
+## Clears focus highlight and the focus-bridge overlay.
 func clear_focus_cells() -> void:
 	for coord in board_cells:
 		if board_cells[coord].focus_active:
@@ -254,16 +307,19 @@ func clear_focus_cells() -> void:
 	if focus_bridge_drawer:
 		focus_bridge_drawer.queue_redraw()
 
+## Restricts one cell's tap-cycle to the given tile list (tutorial practice).
 func set_cell_cycle_tiles(coord: Vector2i, tiles: Array) -> void:
 	if not board_cells.has(coord):
 		return
 	board_cells[coord].allowed_cycle_tiles = LevelUtils.normalize_available_tiles(tiles)
 
+## Restores every cell's tap-cycle to the level's available tiles.
 func restore_cell_cycle_tiles(tiles: Array) -> void:
 	var typed: Array[int] = LevelUtils.normalize_available_tiles(tiles)
 	for coord in board_cells:
 		board_cells[coord].allowed_cycle_tiles = typed.duplicate()
 
+## Writes tile states from a tutorial rebuild without reallocating the cell pool.
 func apply_locked_layout(layout: Dictionary) -> void:
 	for coord in layout.keys():
 		if not board_cells.has(coord):
@@ -287,15 +343,19 @@ func apply_locked_layout(layout: Dictionary) -> void:
 	clear_focus_cells()
 	trigger_redraw()
 
+## True when every playable cell is filled.
 func is_board_full() -> bool:
 	return BoardRenderer.is_board_full(board_cells)
 
+## Draw callback: grid lines via BoardRenderer.
 func _draw_grid():
 	BoardRenderer.draw_grid(grid_drawer, board_cells, GameConstants.CELL_SIZE)
 
+## Draw callback: equals / not-equals symbols via BoardRenderer.
 func _draw_constraints():
 	BoardRenderer.draw_constraints(constraint_drawer, board_cells, active_constraint_pairs, GameConstants.CELL_SIZE)
 
+## Draw callback: focus then error highlight bridges.
 func _draw_highlight_bridges() -> void:
 	BoardRenderer.draw_highlight_bridges(
 		focus_bridge_drawer,

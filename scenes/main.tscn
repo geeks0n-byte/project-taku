@@ -5,6 +5,7 @@
 [ext_resource type="Script" uid="uid://dcrkhyr8vhs3g" path="res://scripts/ui_manager.gd" id="13_og1vs"]
 [ext_resource type="PackedScene" uid="uid://cg2j384x0y4o8" path="res://scenes/pause_menu.tscn" id="14_a8y0u"]
 [ext_resource type="PackedScene" uid="uid://c8m3k2v1" path="res://scenes/options_menu.tscn" id="15_options"]
+[ext_resource type="PackedScene" path="res://scenes/loading_overlay.tscn" id="16_loading"]
 [ext_resource type="FontFile" uid="uid://ckwxng7tlmws7" path="res://resources/fonts/PressStart2P-vaV7.ttf" id="font_ps2p"]
 [ext_resource type="Texture2D" uid="uid://d2ql5f4tsvnk8" path="res://resources/buttons/button_tile_gray_dark.svg" id="tex_btn_bg"]
 [ext_resource type="Texture2D" uid="uid://duph5sjcrwtwc" path="res://resources/icons/icon_hint_on.svg" id="tex_hint"]
@@ -77,6 +78,8 @@ script = ExtResource("12_y6deb")
 
 [node name="Timer" type="Timer" parent="." unique_id=741453753]
 autostart = true
+
+[node name="LoadingOverlay" parent="." unique_id=548679920 instance=ExtResource("16_loading")]
 
 [node name="HUDLayer" type="CanvasLayer" parent="." unique_id=1031285283]
 
@@ -526,7 +529,7 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 0
 theme_override_font_sizes/normal_font_size = 48
 bbcode_enabled = true
-text = "[center]Fill the empty spaces on the board.[/center]"
+text = "[center]MSG_FILL_EMPTY[/center]"
 fit_content = true
 scroll_active = false
 
@@ -586,6 +589,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
 
 [node name="WinLabel" type="Label" parent="EndLayer/CenterContainer/VictoryPanel" unique_id=1448388007]
 layout_mode = 1
+custom_minimum_size = Vector2(792, 0)
 anchors_preset = 10
 anchor_right = 1.0
 offset_left = 24.0
@@ -595,7 +599,7 @@ offset_bottom = 110.0
 grow_horizontal = 2
 theme_override_colors/font_color = Color(1, 0.84, 0, 1)
 theme_override_font_sizes/font_size = 24
-text = "PUZZLE SOLVED!"
+text = "UI_PUZZLE_SOLVED"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
@@ -603,6 +607,7 @@ autowrap_mode = 3
 [node name="TimeResultLabel" type="Label" parent="EndLayer/CenterContainer/VictoryPanel" unique_id=1250829313]
 visible = false
 layout_mode = 1
+custom_minimum_size = Vector2(792, 0)
 anchors_preset = 10
 anchor_right = 1.0
 offset_left = 24.0
@@ -669,7 +674,7 @@ alignment = 1
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 28
-text = "PLAY AGAIN"
+text = "UI_PLAY_AGAIN"
 vertical_alignment = 1
 
 [node name="RestartButton" type="Button" parent="EndLayer/CenterContainer/VictoryPanel" unique_id=22368695]
@@ -705,7 +710,7 @@ alignment = 1
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 28
-text = "NEXT LEVEL"
+text = "UI_NEXT_LEVEL"
 vertical_alignment = 1
 
 [node name="MainMenuButton" type="Button" parent="EndLayer/CenterContainer/VictoryPanel" unique_id=684748410]
@@ -742,7 +747,7 @@ alignment = 1
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 28
-text = "MAIN MENU"
+text = "UI_MAIN_MENU"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -754,6 +759,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
 
 [node name="PromptLabel" type="Label" parent="EndLayer/CenterContainer/SessionResumePanel"]
 layout_mode = 1
+custom_minimum_size = Vector2(724, 0)
 anchors_preset = 10
 anchor_right = 1.0
 offset_left = 48.0
@@ -763,7 +769,7 @@ offset_bottom = 240.0
 grow_horizontal = 2
 theme_override_colors/font_color = Color(1, 0.84, 0, 1)
 theme_override_font_sizes/font_size = 24
-text = "SESSION_RESUME_PROMPT"
+text = "UI_SESSION_RESUME_PROMPT"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
@@ -831,6 +837,7 @@ alignment = 1
 [node name="PromptLabel" type="Label" parent="EndLayer/CenterContainer/ResetConfirmPanel/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+custom_minimum_size = Vector2(568, 0)
 theme_override_colors/font_color = Color(1, 0.45, 0.45, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 0

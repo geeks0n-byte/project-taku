@@ -34,10 +34,13 @@ var hidden_constraint_pairs: Array = []
 # Separate draw nodes so grid lines and constraint symbols have independent z-order and redraw.
 var grid_drawer: Node2D
 var constraint_drawer: Node2D
+var focus_bridge_drawer: Node2D
+var _error_bridge_coords: Array = []
 
 # When true, cells are configured for play (locked tiles, no editor chrome).
 var is_playtesting: bool = false
 
+## Creates grid and constraint drawers; grid sits above cells in edit mode.
 func _ready():
 	# Edit mode: grid above cells so opaque editor-empty tiles don't hide borders.
 	# Playtest switches this to -1 in set_playtest_input_mode (hold-to-clear).
@@ -49,9 +52,14 @@ func _ready():
 
 	# constraint_drawer is at maximum z so symbols always render on top of everything.
 	constraint_drawer = Node2D.new()
-	constraint_drawer.z_index = 4096
+	constraint_drawer.z_index = 4095
 	constraint_drawer.draw.connect(_draw_constraints)
 	add_child(constraint_drawer)
+
+	focus_bridge_drawer = Node2D.new()
+	focus_bridge_drawer.z_index = 4096
+	focus_bridge_drawer.draw.connect(_draw_highlight_bridges)
+	add_child(focus_bridge_drawer)
 
 # Forces all draw nodes to re-emit their draw signals on the next frame.
 func trigger_redraw():
@@ -60,6 +68,8 @@ func trigger_redraw():
 		grid_drawer.queue_redraw()
 	if constraint_drawer:
 		constraint_drawer.queue_redraw()
+	if focus_bridge_drawer:
+		focus_bridge_drawer.queue_redraw()
 
 # Resets the canvas to an empty grid of the given size. Reuses pooled cells where possible
 # to avoid the cost of instantiating and destroying nodes on every grid resize.
@@ -102,6 +112,8 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 
 			cell.coord = coord
 			cell.position = Vector2(float(x * GameConstants.CELL_SIZE), float(y * GameConstants.CELL_SIZE))
+			if cell is Control:
+				(cell as Control).size = Vector2(GameConstants.CELL_SIZE, GameConstants.CELL_SIZE)
 			cell.state = GameConstants.TileState.EMPTY
 			cell.is_playable = true
 			cell.is_locked = false
@@ -113,6 +125,7 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 					Control.MOUSE_FILTER_IGNORE if not is_playtesting else Control.MOUSE_FILTER_STOP
 				)
 			cell.update_visuals()
+			cell.call_deferred("update_visuals")
 
 			# Full-cell hit target so border clicks cannot fall through to Cell
 			# (which would cycle EMPTY → YELLOW while a link brush is active).
@@ -130,7 +143,12 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 				interceptor.gui_input.disconnect(conn.callable)
 
 			interceptor.gui_input.connect(func(event):
+				if HudLayout.is_modal_input_blocked(interceptor.get_tree()):
+					if event is InputEvent:
+						interceptor.accept_event()
+					return
 				if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+					interceptor.accept_event()
 					canvas_cell_clicked.emit(coord)
 			)
 
@@ -152,6 +170,8 @@ func generate_blank_canvas(new_width: int = 3, new_height: int = 3):
 	# Keep draw nodes on top of all cells at all times.
 	move_child(grid_drawer, -1)
 	move_child(constraint_drawer, -1)
+	if focus_bridge_drawer:
+		move_child(focus_bridge_drawer, -1)
 
 	cached_lines = BoardRenderer.cache_board_lines(board_cells)
 	trigger_redraw()
@@ -180,6 +200,7 @@ func set_playtest_input_mode(enabled: bool) -> void:
 			)
 
 
+## Connects a pooled cell's playtest signals once (click, hold-clear, shifter).
 func _wire_playtest_cell_signals(cell: Node) -> void:
 	if cell == null:
 		return
@@ -191,16 +212,19 @@ func _wire_playtest_cell_signals(cell: Node) -> void:
 		cell.shifter_toggled.connect(_on_pool_shifter_toggled)
 
 
+## Forwards a playtest tap to LevelEditor; ignored while editing.
 func _on_pool_cell_clicked(coord: Vector2i) -> void:
 	if is_playtesting:
 		canvas_cell_played.emit(coord)
 
 
+## Forwards a playtest hold-clear; ignored while editing.
 func _on_pool_cell_hold_cleared(coord: Vector2i) -> void:
 	if is_playtesting:
 		canvas_cell_hold_cleared.emit(coord)
 
 
+## Forwards a playtest shifter hop; ignored while editing.
 func _on_pool_shifter_toggled(coord: Vector2i) -> void:
 	if is_playtesting:
 		canvas_shifter_toggled.emit(coord)
@@ -249,12 +273,29 @@ func load_layout(new_width: int, new_height: int, layout_data: Dictionary, shift
 
 	move_child(grid_drawer, -1)
 	move_child(constraint_drawer, -1)
+	if focus_bridge_drawer:
+		move_child(focus_bridge_drawer, -1)
 
 	trigger_redraw()
 
+## Clears cell highlights and error-bridge overlays.
 func clear_highlights():
 	BoardRenderer.clear_highlights(board_cells)
+	_error_bridge_coords.clear()
+	if focus_bridge_drawer:
+		focus_bridge_drawer.queue_redraw()
 
+## Rebuilds the error-bridge coord list from cells currently in a validation error.
+func refresh_error_bridges() -> void:
+	_error_bridge_coords.clear()
+	for coord in board_cells:
+		var cell = board_cells[coord]
+		if cell.validation_error_active and cell.state != GameConstants.TileState.WALL:
+			_error_bridge_coords.append(coord)
+	if focus_bridge_drawer:
+		focus_bridge_drawer.queue_redraw()
+
+## True when every playable cell is filled.
 func is_board_full() -> bool:
 	return BoardRenderer.is_board_full(board_cells)
 
@@ -266,4 +307,15 @@ func _draw_grid():
 func _draw_constraints():
 	BoardRenderer.draw_constraints(
 		constraint_drawer, board_cells, loaded_constraint_pairs, GameConstants.CELL_SIZE
+	)
+
+## Playtest-only: draws error bridges over the canvas.
+func _draw_highlight_bridges() -> void:
+	if not is_playtesting:
+		return
+	BoardRenderer.draw_highlight_bridges(
+		focus_bridge_drawer,
+		board_cells,
+		_error_bridge_coords,
+		GameConstants.CELL_SIZE
 	)

@@ -4,61 +4,36 @@ extends CanvasLayer
 ## Runs at process mode ALWAYS so it ticks even when the tree is paused.
 ## Hides visible scene children while active to reduce GPU overdraw and visual confusion.
 
-# How long each dot-animation step lasts (cycles through 1, 2, 3 dots).
+# How long each dot-animation step lasts (cycles 1, 2, 3, then 0 dots).
 const DOT_INTERVAL_SEC := 0.45
 
-var _root: Control          # Full-rect control that blocks all pointer events while loading.
-var _label: Label           # The "LOADING..." text label, rebuilt each tick.
+# The "LOADING..." text label; text is rebuilt each tick, node is authored.
+@onready var _label: Label = $Root/CenterContainer/Label
+# Drives the animated dots; wait_time authored, signal wired in _ready.
+@onready var _dot_timer: Timer = $DotTimer
 var _busy: bool = false     # True while a loading operation is in progress.
 var _base_text: String = "LOADING"  # Translated message with trailing dots stripped.
-var _dot_count: int = 0    # Current dot count (1–3), advanced by _dot_timer.
-var _dot_timer: Timer      # Drives the animated dots; restarted on each show_loading call.
+var _dot_count: int = 1    # Current visible dots (1, 2, 3, then 0), advanced by _dot_timer.
 var _hidden_nodes: Array = []  # Scene children hidden during loading; restored on hide_loading.
 
+## Pins this overlay above other CanvasLayers and wires the authored dot timer.
 func _ready() -> void:
 	# Layer 100 puts this above all regular UI CanvasLayers.
 	layer = 100
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	_build()
 	visible = false
-
-func _build() -> void:
-	_root = Control.new()
-	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_root.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(_root)
-
-	var dim := ColorRect.new()
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.color = Color(0, 0, 0, 0.35)
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	_root.add_child(dim)
-
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_root.add_child(center)
-
-	_label = Label.new()
-	# Left-align inside a fixed-width box so growing dots don't re-center/jitter.
-	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_label.add_theme_font_size_override("font_size", 36)
-	_label.add_theme_color_override("font_color", Color.WHITE)
-	_label.text = "LOADING"
-	center.add_child(_label)
-
-	_dot_timer = Timer.new()
-	_dot_timer.wait_time = DOT_INTERVAL_SEC
-	_dot_timer.one_shot = false
-	_dot_timer.timeout.connect(_on_dot_tick)
-	add_child(_dot_timer)
+	HudLayout.register_modal_blocker(self)
+	var root := get_node_or_null("Root") as Control
+	HudLayout.register_modal_blocker(root)
+	if _dot_timer and not _dot_timer.timeout.is_connected(_on_dot_tick):
+		_dot_timer.timeout.connect(_on_dot_tick)
 
 ## Shows the overlay with an animated loading message.
 ## Hides scene content beneath to reduce visual noise while work is in progress.
 func show_loading(message_key: String = "UI_LOADING") -> void:
 	_hide_scene_underlay()
 	_base_text = _loading_base_text(message_key)
-	_dot_count = 0
+	_dot_count = 1
 	_refresh_loading_label()
 	if _dot_timer:
 		_dot_timer.start()
@@ -73,6 +48,7 @@ func hide_loading() -> void:
 	_busy = false
 	_restore_scene_underlay()
 
+## True while show_loading / run_async is displaying the overlay.
 func is_busy() -> bool:
 	return _busy
 
@@ -117,10 +93,12 @@ func _loading_base_text(message_key: String) -> String:
 		return "LOADING"
 	return raw
 
+## Advances 1-2-3-blank dots and refreshes the label. Do not change the cycle.
 func _on_dot_tick() -> void:
-	_dot_count = (_dot_count % 3) + 1
+	_dot_count = (_dot_count + 1) % 4
 	_refresh_loading_label()
 
+## Rebuilds the label as base text plus the current 1-2-3-blank dots.
 func _refresh_loading_label() -> void:
 	if _label == null:
 		return

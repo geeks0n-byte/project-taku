@@ -105,14 +105,14 @@ func _on_ad_muted_pressed(is_muted: bool) -> void:
 func _on_open_ad_inspector_pressed() -> void:
 	_log("Opening Ad Inspector...")
 	var listener := AdInspectorClosedListener.new()
-	listener.on_ad_inspector_closed = func(error: Dictionary):
-		if error.is_empty():
+	listener.on_ad_inspector_closed = func(_error: Dictionary):
+		if _error.is_empty():
 			_log("Ad Inspector closed. Result: OK")
 		else:
 			_log("Ad Inspector closed. Error code: %d | message: %s | domain: %s" % [
-				error.get("code", -1),
-				error.get("message", ""),
-				error.get("domain", "")
+				_error.get("code", -1),
+				_error.get("message", ""),
+				_error.get("domain", "")
 			])
 	MobileAds.open_ad_inspector(listener)
 

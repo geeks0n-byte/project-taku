@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- ON TIME — original clock, stem only -->
+  <rect x="20" y="24" width="28" height="28" fill="#1d2b53"/>
+  <rect x="32" y="20" width="4" height="4" fill="#1d2b53"/>
+  <rect x="32" y="52" width="4" height="4" fill="#1d2b53"/>
+  <rect x="16" y="36" width="4" height="4" fill="#1d2b53"/>
+  <rect x="48" y="36" width="4" height="4" fill="#1d2b53"/>
+  <rect x="32" y="16" width="4" height="4" fill="#1d2b53"/>
+  <rect x="28" y="12" width="8" height="4" fill="#7587a8"/>
+  <rect x="30" y="14" width="4" height="2" fill="#c2c3c7"/>
+  <rect x="16" y="20" width="32" height="32" fill="#3d4466"/>
+  <rect x="18" y="22" width="28" height="28" fill="#5f6790"/>
+  <rect x="20" y="24" width="24" height="24" fill="#7587a8"/>
+  <rect x="22" y="26" width="8" height="8" fill="#abffe6"/>
+  <rect x="30" y="18" width="4" height="4" fill="#c2c3c7"/>
+  <rect x="30" y="50" width="4" height="4" fill="#c2c3c7"/>
+  <rect x="14" y="34" width="4" height="4" fill="#c2c3c7"/>
+  <rect x="46" y="34" width="4" height="4" fill="#c2c3c7"/>
+  <rect x="31" y="30" width="2" height="10" fill="#000000"/>
+  <rect x="32" y="36" width="9" height="2" fill="#000000"/>
+  <rect x="31" y="35" width="4" height="4" fill="#29adff"/>
+</svg>

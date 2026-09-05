@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- Classic trophy — normalized to the debug icon content box -->
+  <g transform="translate(0,2)">
+    <rect x="10" y="14" width="6" height="22" fill="#c49c00"/>
+    <rect x="48" y="14" width="6" height="22" fill="#c49c00"/>
+    <rect x="16" y="10" width="32" height="4" fill="#ffec27"/>
+    <rect x="16" y="10" width="28" height="2" fill="#fff1a8"/>
+    <rect x="16" y="14" width="32" height="18" fill="#ffec27"/>
+    <rect x="16" y="14" width="6" height="18" fill="#fff1a8"/>
+    <rect x="42" y="22" width="6" height="10" fill="#c49c00"/>
+    <rect x="29" y="32" width="6" height="12" fill="#c49c00"/>
+    <rect x="29" y="32" width="3" height="10" fill="#ffe066"/>
+    <rect x="22" y="44" width="20" height="2" fill="#c49c00"/>
+    <rect x="18" y="46" width="28" height="8" fill="#ffec27"/>
+    <rect x="18" y="46" width="24" height="2" fill="#fff1a8"/>
+    <rect x="18" y="52" width="28" height="2" fill="#704700"/>
+  </g>
+</svg>

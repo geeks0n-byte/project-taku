@@ -12,6 +12,42 @@ static func is_shape_only_layout(layout: Dictionary) -> bool:
 			return false
 	return true
 
+# True when the authored layout includes placed tiles (not only walls/empty).
+# Those boards replay the same starting tiles; shape-only boards generate a new fill.
+static func layout_has_preset_tiles(layout: Dictionary) -> bool:
+	return not is_shape_only_layout(layout)
+
+## Empty string allows save. Shape-only boards skip the solver (play generates a fill).
+static func editor_save_reject_key(
+	analysis: Dictionary,
+	layout: Dictionary,
+	require_unique: bool
+) -> String:
+	if is_shape_only_layout(layout):
+		return ""
+	if bool(analysis.get("timed_out", false)) or int(analysis.get("solution_count", 0)) == PuzzleSolver.SOLUTIONS_UNKNOWN:
+		return "ED_MSG_SOLVE_TIMEOUT"
+	if not bool(analysis.get("solvable", false)):
+		return "ED_MSG_UNSOLVABLE"
+	if require_unique and not bool(analysis.get("unique", false)):
+		return "ED_MSG_NOT_UNIQUE"
+	return ""
+
+
+# Same as layout_has_preset_tiles, reading the layout off a LevelData resource.
+static func level_has_preset_tiles(level: LevelData) -> bool:
+	if level == null:
+		return false
+	var layout: Dictionary = level.layout if "layout" in level else {}
+	return layout_has_preset_tiles(layout)
+
+
+## Pause/reset copy: Restart when the board will replay, New Puzzle when it regenerates.
+static func pause_action_label_key(level: LevelData) -> String:
+	if is_campaign_tutorial(level) or level_has_preset_tiles(level):
+		return "UI_RESTART"
+	return "UI_NEW_LAYOUT"
+
 # Validates and de-duplicates a raw tile array from a LevelData resource.
 # Falls back to the default yellow/blue/joker set if the array is empty or entirely invalid.
 static func normalize_available_tiles(raw: Array) -> Array[int]:
@@ -179,6 +215,7 @@ static func layout_with_shifters_for_solve(layout: Dictionary, shifter_pairs: Ar
 	return solve_layout
 
 # Returns the first found solution layout, or an empty dict if the puzzle is unsolvable.
+# Delegates to PuzzleSolver so board/hint code does not poke generator privates.
 static func solve_reference(
 	layout: Dictionary,
 	empty_cells: Array,
@@ -187,14 +224,11 @@ static func solve_reference(
 	tiles: Array,
 	constraints: Array
 ) -> Dictionary:
-	var test_layout = layout.duplicate()
-	var test_empty = empty_cells.duplicate()
-	if PuzzleGenerator._solve(test_layout, test_empty, width, height, tiles, constraints, {"count": 0}):
-		return test_layout
-	return {}
+	return PuzzleSolver.solve_reference(layout, empty_cells, width, height, tiles, constraints)
 
 # Counts all valid solutions up to the solver's internal cap.
 # Pass an existing tracker dict as `iter` to chain multiple calls (e.g. batched counting).
+# Delegates to PuzzleSolver so uniqueness checks share one public façade.
 static func count_solutions(
 	layout: Dictionary,
 	empty_cells: Array,
@@ -204,13 +238,8 @@ static func count_solutions(
 	constraints: Array,
 	iter: Variant = null
 ) -> int:
-	var test_layout = layout.duplicate()
-	var test_empty = empty_cells.duplicate()
-	var tracker: Dictionary = iter if typeof(iter) == TYPE_DICTIONARY else {"count": 0}
-	if not tracker.has("count"):
-		tracker["count"] = 0
-	return PuzzleGenerator._count_solutions(
-		test_layout, test_empty, width, height, tiles, constraints, tracker
+	return PuzzleSolver.count_solutions(
+		layout, empty_cells, width, height, tiles, constraints, iter
 	)
 
 # Extracts a list of EMPTY-state coordinates from a layout dictionary.
@@ -233,10 +262,15 @@ static func is_constraint_in_list(a: Vector2i, b: Vector2i, list: Array) -> bool
 # of the screen for small grids, but pinned just below the HUD for larger ones.
 static func center_board_y(grid_height: int, cell_size: float, screen_height: float) -> float:
 	var board_pixel_height := grid_height * cell_size
+	var min_y := (
+		GameConstants.TOP_HUD_BOTTOM
+		+ GameConstants.BOARD_GAP
+		+ SafeInsets.extra_top(GameConstants.HUD_TOP_BAR_EDGE_MARGIN)
+	)
 	if grid_height <= 7:
 		var centered := (screen_height / 3.0) - (board_pixel_height / 2.0)
-		return maxf(centered, GameConstants.TOP_HUD_BOTTOM + GameConstants.BOARD_GAP)
-	return GameConstants.TOP_HUD_BOTTOM + GameConstants.BOARD_GAP
+		return maxf(centered, min_y)
+	return min_y
 
 # Centers the board horizontally within the screen.
 static func center_board_x(grid_width: int, cell_size: float, screen_width: float) -> float:
@@ -249,6 +283,21 @@ static func get_shifter_pairs(level: LevelData) -> Array:
 	if "shifter_pairs" in level:
 		return level.shifter_pairs
 	return []
+
+## True when two shifter pairs currently sit on the same active cell.
+## Pairs may share a cell (A–B and B–C); they must not both be active on B.
+static func shifter_pairs_share_active_cell(shifter_pairs: Array) -> bool:
+	var actives: Dictionary = {}
+	for raw in shifter_pairs:
+		if typeof(raw) != TYPE_DICTIONARY:
+			continue
+		if not raw.has("active"):
+			continue
+		var active: Vector2i = raw["active"]
+		if actives.has(active):
+			return true
+		actives[active] = true
+	return false
 
 # Applies lock/playability flags to a cell as if it were being loaded for playtesting.
 # Walls block interaction entirely; pre-placed coloured tiles are locked in place;
@@ -310,35 +359,65 @@ static func scan_campaign_levels() -> Array:
 		found.append_array(folder_paths)
 	return found
 
-# Finds the level_number of the first non-tutorial campaign level.
-# Used to offset display numbers so the player always sees "Level 1" for the first real level.
+# Finds the level_number of the first non-tutorial campaign level (always 1).
 static func first_campaign_level_number() -> int:
+	return 1
+
+# Highest campaign level_number across easy/medium/hard (excludes tutorials).
+static func highest_campaign_level_number() -> int:
+	var highest := 0
 	for folder in [
 		GameConstants.CAMPAIGN_EASY_DIR,
 		GameConstants.CAMPAIGN_MEDIUM_DIR,
 		GameConstants.CAMPAIGN_HARD_DIR,
 	]:
-		var paths := scan_directory(folder)
-		sort_level_paths(paths)
-		for path in paths:
+		for path in scan_directory(folder):
 			var resource = load(path)
 			if resource is LevelData:
-				return int(resource.level_number)
-	return 1
+				highest = maxi(highest, int(resource.level_number))
+	return highest
 
-# Returns the player-visible level number, remapping campaign levels to start at 1
-# while keeping tutorial numbers as-is.
+
+# True when a numbered easy/medium/hard campaign level exists on disk.
+static func campaign_level_exists(level_num: int) -> bool:
+	var n := int(level_num)
+	if n <= 0:
+		return false
+	for folder in [
+		GameConstants.CAMPAIGN_EASY_DIR,
+		GameConstants.CAMPAIGN_MEDIUM_DIR,
+		GameConstants.CAMPAIGN_HARD_DIR,
+	]:
+		for path in scan_directory(folder):
+			var resource = load(path)
+			if resource is LevelData and int(resource.level_number) == n:
+				return true
+	return false
+
+# True for levels under the campaign tutorials directory (timer/hints disabled).
+static func is_campaign_tutorial(level: LevelData) -> bool:
+	if level == null:
+		return false
+	return String(level.resource_path).begins_with(GameConstants.CAMPAIGN_TUTORIALS_DIR)
+
+
+# Safe level lookup for interstitial skip checks.
+static func level_at_index(levels: Array, index: int) -> LevelData:
+	if levels.is_empty() or index < 0 or index >= levels.size():
+		return null
+	var level: Variant = levels[index]
+	return level as LevelData
+
+
+# Tutorial levels skip fullscreen interstitials between runs.
+static func should_skip_level_interstitial(levels: Array, index: int) -> bool:
+	return is_campaign_tutorial(level_at_index(levels, index))
+
+
+# Returns the player-visible level number (1–60 campaign; 0 for tutorial).
 static func get_display_level_number(level: LevelData) -> int:
 	if level == null:
 		return 0
-	var path := String(level.resource_path)
-	if path.begins_with(GameConstants.CAMPAIGN_TUTORIALS_DIR):
-		return int(level.level_number)
-	if (
-		path.begins_with(GameConstants.CAMPAIGN_EASY_DIR)
-		or path.begins_with(GameConstants.CAMPAIGN_MEDIUM_DIR)
-		or path.begins_with(GameConstants.CAMPAIGN_HARD_DIR)
-	):
-		# Subtract the internal offset so the first campaign level always displays as 1.
-		return maxi(1, int(level.level_number) - first_campaign_level_number() + 1)
+	if is_campaign_tutorial(level):
+		return 0
 	return int(level.level_number)

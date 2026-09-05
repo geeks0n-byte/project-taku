@@ -6,5 +6,5 @@
 
 # Section: Victory, pause, completion messages
 
-[ALL_COMPLETED]
+[UI_ALL_COMPLETED]
 ALL LEVELS COMPLETED

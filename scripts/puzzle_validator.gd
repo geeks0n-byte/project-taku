@@ -185,6 +185,8 @@ static func starting_layout_is_clean(
 	shifter_pairs: Array = []
 ) -> bool:
 	var result := validate_layout_states(layout, width, height, constraint_pairs, shifter_pairs)
+	if LevelUtils.shifter_pairs_share_active_cell(shifter_pairs):
+		return false
 	return bool(result.get("valid", false))
 
 ## Builds the same cached_lines format used by validate_board, but from a raw state dict.

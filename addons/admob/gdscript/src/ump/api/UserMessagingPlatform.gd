@@ -18,8 +18,8 @@ static var _on_privacy_options_form_dismissed_callback
 
 
 static func load_consent_form(
-	on_consent_form_load_success_listener := func(consent_form: ConsentForm): pass,
-	on_consent_form_load_failure_listener := func(form_error: FormError): pass
+	on_consent_form_load_success_listener := func(_consent_form: ConsentForm): pass,
+	on_consent_form_load_failure_listener := func(_form_error: FormError): pass
 ) -> void:
 	if _plugin:
 		_on_consent_form_load_success_listener_callback = on_consent_form_load_success_listener
@@ -40,7 +40,7 @@ static func load_consent_form(
 
 
 static func show_privacy_options_form(
-	on_privacy_options_form_dismissed := func(form_error: FormError): pass
+	on_privacy_options_form_dismissed := func(_form_error: FormError): pass
 ) -> void:
 	if _plugin:
 		_on_privacy_options_form_dismissed_callback = on_privacy_options_form_dismissed

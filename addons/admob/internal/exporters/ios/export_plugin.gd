@@ -35,7 +35,7 @@ func _get_enabled_libs() -> Array[Library]:
 	return enabled_libs
 
 
-func _export_begin(features: PackedStringArray, is_debug: bool, path: String, flags: int) -> void:
+func _export_begin(features: PackedStringArray, is_debug: bool, path: String, _flags: int) -> void:
 	_spm_applied = false
 	_pending_export_path = path
 	_spm_dependencies.clear()

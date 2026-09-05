@@ -1,4 +1,5 @@
 extends Control
+## Main menu: boot intro, campaign/tutorial entry, how-to-play, achievements, options, and credits.
 
 @export var show_debug_tools: bool = false
 
@@ -7,6 +8,7 @@ extends Control
 @onready var tutorial_btn = $UILayer/CenterContainer/VBoxContainer/TutorialButton
 @onready var levels_btn = $UILayer/CenterContainer/VBoxContainer/LevelSelectButton
 @onready var how_to_play_btn = $UILayer/CenterContainer/VBoxContainer/HowToPlayButton
+@onready var achievements_btn = $UILayer/CenterContainer/VBoxContainer/AchievementsButton
 @onready var options_btn = $UILayer/CenterContainer/VBoxContainer/OptionsButton
 @onready var credits_btn = $UILayer/CenterContainer/VBoxContainer/CreditsButton
 @onready var editor_btn = $UILayer/CenterContainer/VBoxContainer/EditorButton
@@ -17,101 +19,161 @@ extends Control
 @onready var debug_comet_btn = $UILayer/DebugBar/DebugCometButton
 @onready var debug_comet_shower_btn = $UILayer/DebugBar/DebugCometShowerButton
 
-const _FX_STAR := preload("res://resources/background/fx_shooting_star.svg")
-const _FX_AST_1 := preload("res://resources/background/fx_asteroid_1.svg")
-const _FX_AST_2 := preload("res://resources/background/fx_asteroid_2.svg")
-const _FX_AST_3 := preload("res://resources/background/fx_asteroid_3.svg")
-const _FX_COMET_1 := preload("res://resources/background/fx_comet_1.svg")
-const _FX_COMET_2 := preload("res://resources/background/fx_comet_2.svg")
-const _FX_COMET_3 := preload("res://resources/background/fx_comet_3.svg")
-const _DEBUG_BTN_SIZE := Vector2(96, 96)
-
 @onready var options_menu = $UILayer/OptionsMenu
-@onready var overlay_blocker = $UILayer/OverlayBlocker
-@onready var credits_panel = $UILayer/OverlayBlocker/CreditsPanel
-@onready var credits_version_label: Label = $UILayer/OverlayBlocker/CreditsPanel/VersionLabel
-@onready var close_credits_btn = $UILayer/OverlayBlocker/CloseCreditsButton
-@onready var _htp_host: Control = $UILayer/HowToPlayHost
-@onready var _htp_panel: Control = $UILayer/HowToPlayHost/HowToPlayPanel
-@onready var _htp_nav: HBoxContainer = $UILayer/HowToPlayHost/NavRow
-@onready var _htp_rules: RichTextLabel = $UILayer/HowToPlayHost/HowToPlayPanel/RulesLabel
-@onready var _htp_prev: Button = $UILayer/HowToPlayHost/NavRow/PrevSlot/PrevButton
-@onready var _htp_close: Button = $UILayer/HowToPlayHost/CloseButton
-@onready var _htp_next: Button = $UILayer/HowToPlayHost/NavRow/NextSlot/NextButton
-@onready var _tutorial_intro_blocker: ColorRect = $UILayer/TutorialIntroBlocker
+@onready var overlay_blocker = $OverlayLayer/OverlayBlocker
+@onready var credits_panel = $OverlayLayer/OverlayBlocker/CreditsPanel
+@onready var credits_version_label: Label = $OverlayLayer/OverlayBlocker/CreditsPanel/VersionLabel
+@onready var close_credits_btn = $OverlayLayer/OverlayBlocker/CloseCreditsButton
+@onready var _htp_host: Control = $OverlayLayer/HowToPlayHost
+@onready var _htp_header: Label = $OverlayLayer/HowToPlayHost/HowToPlayPageHeader
+@onready var _htp_panel: Control = $OverlayLayer/HowToPlayHost/HowToPlayPanel
+@onready var _htp_nav: HBoxContainer = $OverlayLayer/HowToPlayHost/NavRow
+@onready var _htp_rules: RichTextLabel = $OverlayLayer/HowToPlayHost/HowToPlayPanel/RulesLabel
+@onready var _htp_prev: Button = $OverlayLayer/HowToPlayHost/NavRow/PrevSlot/PrevButton
+@onready var _htp_close: Button = $OverlayLayer/HowToPlayHost/CloseButton
+@onready var _htp_next: Button = $OverlayLayer/HowToPlayHost/NavRow/NextSlot/NextButton
+@onready var _tutorial_intro_blocker: ColorRect = $OverlayLayer/TutorialIntroBlocker
 @onready var _tutorial_intro_label: Label = (
-	$UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/PromptLabel
+	$OverlayLayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/PromptLabel
 )
 @onready var _tutorial_intro_yes: Button = (
-	$UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/YesButton
+	$OverlayLayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/YesButton
 )
 @onready var _tutorial_intro_no: Button = (
-	$UILayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/NoButton
+	$OverlayLayer/TutorialIntroBlocker/CenterContainer/Panel/VBoxContainer/HBoxContainer/NoButton
 )
 
 const TITLE_FONT_SIZE := 96
 const TITLE_OUTLINE := 14
 const MENU_BTN_FONT := 64
 const MENU_BTN_OUTLINE := GameConstants.MENU_TEXT_OUTLINE
-const CREDITS_BODY_SIZE := 48
-const CREDITS_HEADER_SIZE := 42
-const CREDITS_NAME_SIZE := 34
-const CREDITS_HEADER_LOCALE_SIZE := 52
-const CREDITS_NAME_LOCALE_SIZE := 42
-const MENU_FADE_IN := 0.65
 
-var _htp_header: Label
-var _htp_page: int = 0
+var _boot_intro: BootIntroController
+var _debug_bar_helper: MainMenuDebugBar = MainMenuDebugBar.new()
+var _htp: MainMenuHowToPlay = MainMenuHowToPlay.new()
+var _credits: MainMenuCreditsOverlay = MainMenuCreditsOverlay.new()
+var _tutorial: MainMenuTutorialIntro = MainMenuTutorialIntro.new()
+var _consent: MainMenuConsentController = MainMenuConsentController.new()
+var _menu_badges: MainMenuBadges = MainMenuBadges.new()
 
-# Instance of consent_popup.tscn. Kept as a reference so we can check
-# its visibility for the back-button handler.
-var _consent_blocker: ColorRect
 
-# Dev mode is unlocked by holding the version label in credits for _VERSION_HOLD_SEC seconds.
-# This gives the developer access to debug tools in production builds without exposing them
-# to players, and without storing the flag in the save file.
-var _version_hold_active: bool = false
-var _version_hold_elapsed: float = 0.0
-const _VERSION_HOLD_SEC := 3.0
-
+# Wires menu buttons, overlays, ads, and optionally starts the boot intro.
 func _ready() -> void:
+	_boot_intro = BootIntroController.new()
+	add_child(_boot_intro)
+	_boot_intro.setup(self)
+	_boot_intro.privacy_consent_requested.connect(_consent.show_if_needed.bind(false))
+
+	_debug_bar_helper.setup(
+		show_debug_tools,
+		editor_btn,
+		debug_bar,
+		debug_star_btn,
+		debug_asteroid_btn,
+		debug_asteroid_cloud_btn,
+		debug_comet_btn,
+		debug_comet_shower_btn
+	)
+	_debug_bar_helper.bind_signals()
+
+	_htp.setup(
+		_htp_host,
+		_htp_header,
+		_htp_panel,
+		_htp_nav,
+		_htp_rules,
+		_htp_prev,
+		_htp_close,
+		_htp_next,
+		set_menu_chrome_visible
+	)
+	_htp.setup_overlay()
+	_htp.bind_signals()
+
+	_credits.setup(
+		self,
+		show_debug_tools,
+		overlay_blocker,
+		credits_panel,
+		credits_version_label,
+		close_credits_btn,
+		set_menu_chrome_visible
+	)
+	_credits.on_closed = _on_credits_closed
+	_credits.mount_close_button()
+	_credits.bind_signals()
+
+	_tutorial.setup(
+		_tutorial_intro_blocker,
+		_tutorial_intro_label,
+		_tutorial_intro_yes,
+		_tutorial_intro_no,
+		set_menu_chrome_visible,
+		_launch_tutorial_from_intro,
+		_start_easy_campaign_from_intro
+	)
+	_tutorial.setup_panel()
+	_tutorial.bind_signals()
+	HudLayout.register_modal_blocker(overlay_blocker)
+
+	_consent.setup(
+		self,
+		get_node_or_null("OverlayLayer") as CanvasLayer,
+		options_menu,
+		_boot_intro,
+		set_menu_chrome_visible,
+		_set_button_ui_alpha,
+		_apply_debug_tools_visibility,
+		_set_boot_menu_input_enabled
+	)
+
 	_apply_debug_tools_visibility()
 	_apply_editor_button_label()
 	_refresh_start_button_label()
 	_fit_menu_buttons()
+	_apply_a11y_labels()
 	HudLayout.apply_locale_fonts_to_tree(self)
 	_setup_title_under_fx()
-	_setup_tutorial_intro_panel()
-	_setup_how_to_play_overlay()
 	if AdsManager:
 		AdsManager.ensure_started()
 		AdsManager.show_menu_banner()
 		AdsManager.warm_rewarded_hint()
 	if SpaceBackground and SpaceBackground.has_method("set_foreground_events_enabled"):
-		SpaceBackground.set_foreground_events_enabled(true)
+		if not _boot_intro.is_active():
+			SpaceBackground.set_foreground_events_enabled(true)
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
-	if start_btn: start_btn.pressed.connect(_on_start_pressed)
-	if tutorial_btn: tutorial_btn.pressed.connect(_on_tutorial_pressed)
-	if levels_btn: levels_btn.pressed.connect(_on_levels_pressed)
-	if how_to_play_btn: how_to_play_btn.pressed.connect(_on_how_to_play_pressed)
-	if options_btn: options_btn.pressed.connect(_on_options_pressed)
-	if credits_btn: credits_btn.pressed.connect(_on_credits_pressed)
-	if editor_btn: editor_btn.pressed.connect(_on_editor_pressed)
-	if debug_star_btn: debug_star_btn.pressed.connect(_on_debug_star_pressed)
-	if debug_comet_btn: debug_comet_btn.pressed.connect(_on_debug_comet_pressed)
-	if debug_asteroid_btn: debug_asteroid_btn.pressed.connect(_on_debug_asteroid_pressed)
-	if debug_asteroid_cloud_btn: debug_asteroid_cloud_btn.pressed.connect(_on_debug_asteroid_cloud_pressed)
-	if debug_comet_shower_btn: debug_comet_shower_btn.pressed.connect(_on_debug_comet_shower_pressed)
+	if start_btn:
+		start_btn.pressed.connect(_on_start_pressed)
+	if tutorial_btn:
+		tutorial_btn.pressed.connect(_on_tutorial_pressed)
+	if levels_btn:
+		levels_btn.pressed.connect(_on_levels_pressed)
+	if how_to_play_btn:
+		how_to_play_btn.pressed.connect(_on_how_to_play_pressed)
+	if achievements_btn:
+		achievements_btn.pressed.connect(_on_achievements_pressed)
+	_menu_badges.setup(menu_center, achievements_btn, levels_btn)
+	_menu_badges.setup_panels()
+	_menu_badges.bind_resize_hooks()
+	if AchievementManager:
+		if not AchievementManager.unseen_count_changed.is_connected(_refresh_achievements_badge):
+			AchievementManager.unseen_count_changed.connect(_refresh_achievements_badge)
+	_refresh_achievements_badge()
+	if SaveManager and not SaveManager.unseen_levels_changed.is_connected(_refresh_levels_badge):
+		SaveManager.unseen_levels_changed.connect(_refresh_levels_badge)
+	_refresh_levels_badge()
+	if options_btn:
+		options_btn.pressed.connect(_on_options_pressed)
+	if credits_btn:
+		credits_btn.pressed.connect(_on_credits_pressed)
+	if editor_btn:
+		editor_btn.pressed.connect(_on_editor_pressed)
 
-	if close_credits_btn: close_credits_btn.pressed.connect(_on_close_credits)
-	if _htp_prev: _htp_prev.pressed.connect(_on_htp_prev)
-	if _htp_close: _htp_close.pressed.connect(_on_htp_close)
-	if _htp_next: _htp_next.pressed.connect(_on_htp_next)
-	if _tutorial_intro_yes: _tutorial_intro_yes.pressed.connect(_on_tutorial_intro_yes)
-	if _tutorial_intro_no: _tutorial_intro_no.pressed.connect(_on_tutorial_intro_no)
-	_mount_credits_close_button()
-	_build_consent_popup()
+	_consent.build_popup()
+	_apply_safe_area_layout()
+	if not get_viewport().size_changed.is_connected(_on_safe_area_viewport_resized):
+		get_viewport().size_changed.connect(_on_safe_area_viewport_resized)
 
 	if options_menu:
 		options_menu.back_requested.connect(_on_options_back)
@@ -120,23 +182,94 @@ func _ready() -> void:
 
 	if GlobalGameManager.main_menu_should_fade_in:
 		GlobalGameManager.main_menu_should_fade_in = false
-		_set_menu_ui_alpha(0.0)
-		call_deferred("_fade_in_menu_ui")
-		get_tree().create_timer(MENU_FADE_IN + 0.75).timeout.connect(_ensure_menu_ui_visible)
+		process_mode = Node.PROCESS_MODE_ALWAYS
+		_boot_intro.begin(needs_privacy_consent())
+	elif not _boot_intro.is_active():
+		_consent.show_if_needed(false)
 
-func _ensure_menu_ui_visible() -> void:
-	_set_menu_ui_alpha(1.0)
 
+func needs_privacy_consent() -> bool:
+	return SaveManager != null and not SaveManager.privacy_accepted
+
+
+func set_menu_chrome_visible(should_show: bool, preserve_title_on_hide: bool = false) -> void:
+	if menu_center:
+		menu_center.visible = should_show
+	_debug_bar_helper.set_bar_visible(should_show)
+	var title_layer := get_node_or_null("TitleLayer") as CanvasLayer
+	if title_layer:
+		if should_show:
+			title_layer.visible = true
+		elif preserve_title_on_hide and _boot_intro.is_active():
+			title_layer.visible = true
+		else:
+			title_layer.visible = false
+
+
+# True for left-click or touch down (intro skip).
+func _is_primary_pointer_press(event: InputEvent) -> bool:
+	if event is InputEventMouseButton:
+		var mouse := event as InputEventMouseButton
+		return mouse.pressed and mouse.button_index == MOUSE_BUTTON_LEFT
+	if event is InputEventScreenTouch:
+		return (event as InputEventScreenTouch).pressed
+	return false
+
+
+# True for left-click or touch up (intro skip).
+func _is_primary_pointer_release(event: InputEvent) -> bool:
+	if event is InputEventMouseButton:
+		var mouse := event as InputEventMouseButton
+		return not mouse.pressed and mouse.button_index == MOUSE_BUTTON_LEFT
+	if event is InputEventScreenTouch:
+		return not (event as InputEventScreenTouch).pressed
+	return false
+
+
+# Ignores menu buttons during the boot intro so they cannot be pressed early.
+func _set_boot_menu_input_enabled(enabled: bool) -> void:
+	var filter := Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
+	for btn in [start_btn, tutorial_btn, levels_btn, how_to_play_btn, achievements_btn, options_btn, credits_btn, editor_btn]:
+		if btn:
+			btn.mouse_filter = filter
+	_debug_bar_helper.set_boot_menu_input_enabled(enabled)
+
+
+# Skip-intro tap: eat the press/release so it does not hit a menu button.
+func _input(event: InputEvent) -> void:
+	if _boot_intro.get_eat_intro_pointer():
+		get_viewport().set_input_as_handled()
+		if _is_primary_pointer_release(event):
+			_boot_intro.set_eat_intro_pointer(false)
+			call_deferred("_set_boot_menu_input_enabled", true)
+		return
+	if not _boot_intro.is_active():
+		return
+	if _consent.is_blocking():
+		return
+	if _tutorial.is_blocking():
+		return
+	if not _boot_intro.can_skip(needs_privacy_consent()):
+		return
+	if not _is_primary_pointer_press(event):
+		return
+	_boot_intro.set_eat_intro_pointer(true)
+	get_viewport().set_input_as_handled()
+	_boot_intro.skip_to_end()
+
+
+# Android back: close overlays first, then quit.
 func _notification(what: int) -> void:
 	if what != NOTIFICATION_WM_GO_BACK_REQUEST:
 		return
 	if GlobalGameManager == null or not GlobalGameManager.consume_system_back():
 		return
-	if _htp_host and _htp_host.visible:
-		_on_htp_close()
+	if AchievementManager and AchievementManager.is_list_open():
+		AchievementManager.hide_list()
 		return
-	if credits_panel and credits_panel.visible:
-		_on_close_credits()
+	if _htp.handle_back():
+		return
+	if _credits.handle_back():
 		return
 	if options_menu and options_menu.visible:
 		if options_menu.has_method("handle_system_back"):
@@ -144,49 +277,39 @@ func _notification(what: int) -> void:
 		elif options_menu.has_method("hide_menu"):
 			options_menu.hide_menu()
 		return
-	if _consent_blocker and _consent_blocker.visible:
-		GlobalGameManager.quit_app()
+	if _consent.handle_back():
 		return
-	if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
-		_hide_tutorial_intro_prompt()
+	if _tutorial.handle_back():
 		return
 	GlobalGameManager.quit_app()
 
+
+# Disables space-background foreground FX when leaving the menu.
 func _exit_tree() -> void:
 	if SpaceBackground and SpaceBackground.has_method("set_foreground_events_enabled"):
 		SpaceBackground.set_foreground_events_enabled(false)
 
-func _menu_fade_targets() -> Array[CanvasItem]:
+
+# Menu chrome faded in after the title intro (center column + debug bar).
+func _button_fade_targets() -> Array[CanvasItem]:
 	var nodes: Array[CanvasItem] = []
-	var title_host := get_node_or_null("TitleLayer/TitleHost") as CanvasItem
-	if title_host:
-		nodes.append(title_host)
 	var center := menu_center as CanvasItem
 	if center:
 		nodes.append(center)
-	var bar := debug_bar as CanvasItem
-	if bar and debug_bar.visible:
+	var bar := _debug_bar_helper.fade_target()
+	if bar:
 		nodes.append(bar)
 	return nodes
 
-func _set_menu_ui_alpha(alpha: float) -> void:
-	for node in _menu_fade_targets():
+
+# Sets modulate.a on every boot-intro fade target.
+func _set_button_ui_alpha(alpha: float) -> void:
+	for node in _button_fade_targets():
 		if node:
 			node.modulate.a = alpha
 
-func _fade_in_menu_ui() -> void:
-	var nodes := _menu_fade_targets()
-	if nodes.is_empty():
-		_set_menu_ui_alpha(1.0)
-		return
-	_set_menu_ui_alpha(0.0)
-	var tween := create_tween()
-	tween.set_parallel(true)
-	for node in nodes:
-		tween.tween_property(node, "modulate:a", 1.0, MENU_FADE_IN).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	if not tween.finished.is_connected(_ensure_menu_ui_visible):
-		tween.finished.connect(_ensure_menu_ui_visible)
 
+# Keeps title + UI on layer 0 so space FX can draw above the wordmark.
 func _setup_title_under_fx() -> void:
 	var ui_layer := $UILayer as CanvasLayer
 	if ui_layer:
@@ -199,25 +322,15 @@ func _setup_title_under_fx() -> void:
 	if title:
 		_style_title_label(title)
 
-func _ensure_overlays_above_fx() -> void:
-	var ui_layer := $UILayer as CanvasLayer
-	if ui_layer == null:
-		return
-	var overlay_layer := get_node_or_null("OverlayLayer") as CanvasLayer
-	if overlay_layer == null:
-		overlay_layer = CanvasLayer.new()
-		overlay_layer.name = "OverlayLayer"
-		overlay_layer.layer = 5
-		add_child(overlay_layer)
-	for node_name in ["OverlayBlocker", "HowToPlayHost", "TutorialIntroBlocker"]:
-		var node := ui_layer.get_node_or_null(node_name) as Node
-		if node == null:
-			continue
-		if node.get_parent() == overlay_layer:
-			continue
-		ui_layer.remove_child(node)
-		overlay_layer.add_child(node)
 
+# OverlayLayer is authored in main_menu.tscn at layer 5 so HTP/credits sit above FX.
+func _ensure_overlays_above_fx() -> void:
+	var overlay_layer := get_node_or_null("OverlayLayer") as CanvasLayer
+	if overlay_layer:
+		overlay_layer.layer = 5
+
+
+# Brands the TAKU title as a screen header (Press Start / locale).
 func _style_title_label(title: Label) -> void:
 	title.set_meta("_brand_title", true)
 	title.set_meta("_screen_header", true)
@@ -225,21 +338,55 @@ func _style_title_label(title: Label) -> void:
 	title.set_meta("_screen_header_outline", TITLE_OUTLINE)
 	HudLayout.apply_screen_header_style(title)
 
-func _mount_credits_close_button() -> void:
-	if close_credits_btn:
-		HudLayout.style_top_bar_close_button(close_credits_btn)
+
+# Rebuilds menu fonts, HTP copy, and safe-area after a locale switch.
+func _apply_a11y_labels() -> void:
+	for btn in [
+		start_btn,
+		tutorial_btn,
+		levels_btn,
+		how_to_play_btn,
+		achievements_btn,
+		options_btn,
+		credits_btn,
+		editor_btn,
+	]:
+		A11yLabels.bind_button_meta(btn)
+	var title := get_node_or_null("TitleLayer/TitleHost/TitleCluster/TitleLabel") as Label
+	if title:
+		title.accessibility_name = String(title.text).strip_edges()
+	_htp.apply_a11y_labels()
+	_credits.apply_a11y_labels()
+	_tutorial.apply_a11y_labels()
+
 
 func _on_language_changed() -> void:
 	_refresh_start_button_label()
 	_fit_menu_buttons()
+	_apply_a11y_labels()
 	HudLayout.apply_locale_fonts_to_tree(self)
-	HudLayout.clear_how_to_play_nav_lock(_htp_host)
-	_refresh_how_to_play_text()
-	if _consent_blocker and _consent_blocker.visible and _consent_blocker.has_method("refresh_locale"):
-		_consent_blocker.refresh_locale()
-	if _tutorial_intro_blocker and _tutorial_intro_blocker.visible:
-		_show_tutorial_intro_prompt()
+	if _htp.is_blocking():
+		HudLayout.clear_how_to_play_nav_lock(_htp_host)
+	_htp.refresh_text()
+	_apply_safe_area_layout()
+	_consent.refresh_locale_if_visible()
+	if _tutorial.is_blocking():
+		_tutorial.show_prompt()
 
+
+# Viewport resized: recompute menu + debug-bar safe-area padding.
+func _on_safe_area_viewport_resized() -> void:
+	_apply_safe_area_layout()
+	_boot_intro.layout_splash()
+
+
+# Pads the menu column and debug bar away from notches / nav bars.
+func _apply_safe_area_layout() -> void:
+	HudLayout.apply_content_edge_safe_area(menu_center)
+	_debug_bar_helper.apply_safe_area_layout()
+
+
+# PLAY vs RESUME depending on whether a session autosave exists.
 func _refresh_start_button_label() -> void:
 	if not start_btn:
 		return
@@ -249,26 +396,32 @@ func _refresh_start_button_label() -> void:
 		start_btn.text = "UI_PLAY"
 	start_btn.set_meta("_tr_key", start_btn.text)
 
+
+# Profile reset: refresh PLAY/RESUME and re-show consent if needed.
 func _on_save_deleted() -> void:
 	_refresh_start_button_label()
 	_fit_menu_buttons()
-	# Privacy agreement is cleared with the profile — show consent immediately
-	# (not only after a later main-menu reload via Level Select).
-	_show_privacy_consent_if_needed(true)
+	_refresh_achievements_badge()
+	_refresh_levels_badge()
+	_consent.show_if_needed(true)
 
+
+# Sizes/fonts menu buttons, title, debug bar, and credits text.
 func _fit_menu_buttons() -> void:
-	for btn in [start_btn, tutorial_btn, levels_btn, how_to_play_btn, options_btn, credits_btn, editor_btn]:
+	for btn in [start_btn, tutorial_btn, levels_btn, how_to_play_btn, achievements_btn, options_btn, credits_btn, editor_btn]:
 		_apply_main_menu_button(btn)
-	_fit_debug_bar_buttons()
-	if close_credits_btn:
-		HudLayout.style_top_bar_close_button(close_credits_btn)
+	_debug_bar_helper.fit_buttons()
+	_credits.mount_close_button()
 	var title = get_node_or_null("TitleLayer/TitleHost/TitleCluster/TitleLabel") as Label
 	if title:
 		_style_title_label(title)
 	var credits_text_node = credits_panel.get_node_or_null("CreditsText") if credits_panel else null
 	if credits_text_node:
-		_apply_credits_fonts(credits_text_node)
+		_credits.apply_credits_fonts(credits_text_node)
+	_menu_badges.layout.call_deferred()
 
+
+# Flat menu row: Press Start for Latin, locale font otherwise.
 func _apply_main_menu_button(button: Button) -> void:
 	if not button:
 		return
@@ -276,12 +429,10 @@ func _apply_main_menu_button(button: Button) -> void:
 	for style_name in ["normal", "pressed", "hover", "disabled", "focus"]:
 		button.add_theme_stylebox_override(style_name, empty)
 	button.flat = true
-	# Font path decided below from translated display (Latin → Press Start even in ka/uk).
 	button.set_meta("_force_pixel_font", false)
 	var is_play: bool = button == start_btn
 	var row_h := 148.0 if is_play else 118.0
 	var row_w := 780.0 if is_play else 720.0
-	# Fixed sizes — PLAY/RESUME one step above the rest (64 → 72).
 	var font_size := 72 if is_play else MENU_BTN_FONT
 	button.custom_minimum_size = Vector2(row_w, row_h)
 	button.clip_text = false
@@ -294,8 +445,6 @@ func _apply_main_menu_button(button: Button) -> void:
 	if display.is_empty():
 		display = key
 	if HudFonts.should_use_press_start_font(display):
-		# Natural advances + geometric centering (Label captions can shift long titles).
-		# Also covers Latin-only chrome while the game language is ka/uk.
 		HudLayout.apply_pixel_mono_button(button, display, font_size, Color.WHITE)
 	else:
 		HudLayout._clear_pixel_raster(button)
@@ -308,274 +457,21 @@ func _apply_main_menu_button(button: Button) -> void:
 		button.add_theme_font_size_override("font_size", HudLayout.body_font_size(font_size))
 		HudLayout.apply_safe_outline(button, MENU_BTN_OUTLINE)
 
-func _fit_debug_bar_buttons() -> void:
-	_setup_debug_fx_button(debug_star_btn, [_FX_STAR])
-	_setup_debug_fx_button(debug_asteroid_btn, [_FX_AST_1])
-	_setup_debug_fx_button(debug_asteroid_cloud_btn, [_FX_AST_1, _FX_AST_2, _FX_AST_3])
-	_setup_debug_fx_button(debug_comet_btn, [_FX_COMET_1])
-	_setup_debug_fx_button(debug_comet_shower_btn, [_FX_COMET_1, _FX_COMET_2, _FX_COMET_3])
 
-func _setup_debug_fx_button(button: Button, textures: Array) -> void:
-	if button == null:
-		return
-	button.text = ""
-	button.custom_minimum_size = _DEBUG_BTN_SIZE
-	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	button.focus_mode = Control.FOCUS_NONE
-	var host := button.get_node_or_null("IconHost") as Control
-	if host == null:
-		host = Control.new()
-		host.name = "IconHost"
-		host.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		button.add_child(host)
-	for child in host.get_children():
-		child.queue_free()
-	var count := textures.size()
-	if count <= 0:
-		return
-	var btn_px := _DEBUG_BTN_SIZE.x
-	if count == 1:
-		var pad := maxf(10.0, btn_px * 0.14)
-		var scale_i := maxi(2, int(floor((btn_px - pad * 2.0) / 16.0)))
-		var solo_px := float(16 * scale_i)
-		var inset := (btn_px - solo_px) * 0.5
-		var icon := TextureRect.new()
-		icon.texture = textures[0]
-		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		icon.position = Vector2(inset, inset)
-		icon.size = Vector2(solo_px, solo_px)
-		host.add_child(icon)
-		return
-	var s := btn_px / 72.0
-	var icon_px := 28.0 * s
-	var offsets := [
-		Vector2(8, 10) * s,
-		Vector2(28, 22) * s,
-		Vector2(14, 34) * s,
-	]
-	for i in count:
-		var icon := TextureRect.new()
-		icon.texture = textures[i]
-		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		icon.position = offsets[mini(i, offsets.size() - 1)]
-		icon.size = Vector2(icon_px, icon_px)
-		host.add_child(icon)
+# Shows Editor + debug bar when export flag or session dev mode is on.
+func _apply_debug_tools_visibility() -> void:
+	_debug_bar_helper.apply_visibility()
 
-func _set_main_menu_chrome_visible(should_show: bool) -> void:
-	if menu_center:
-		menu_center.visible = should_show
-	var title_layer := get_node_or_null("TitleLayer") as CanvasLayer
-	if title_layer:
-		title_layer.visible = should_show
 
-func _apply_credits_fonts(credits_text_node: RichTextLabel) -> void:
-	if not credits_text_node:
-		return
-	# Don't expand-fill the panel — that + a huge theme font size stretches blank lines.
-	credits_text_node.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	credits_text_node.fit_content = true
-	credits_text_node.scroll_active = false
-	credits_text_node.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-
-	var bbcode := String(TranslationServer.translate("CREDITS_TEXT"))
-	var locale_mul := HudFonts.non_pixel_locale_scale()
-	if HudFonts.uses_pixel_font():
-		var header_sz := int(round(float(CREDITS_HEADER_SIZE) * locale_mul))
-		var body_sz := int(round(float(CREDITS_NAME_SIZE) * locale_mul))
-		# Normalize authored BBCode sizes so the name stays on one line.
-		bbcode = bbcode.replace("[font_size=48]", "[font_size=%d]" % header_sz)
-		bbcode = bbcode.replace("[font_size=42]", "[font_size=%d]" % header_sz)
-		bbcode = bbcode.replace("[font_size=40]", "[font_size=%d]" % body_sz)
-		bbcode = bbcode.replace("[font_size=36]", "[font_size=%d]" % header_sz)
-		bbcode = bbcode.replace("[font_size=34]", "[font_size=%d]" % body_sz)
-		bbcode = bbcode.replace("[font_size=28]", "[font_size=%d]" % body_sz)
-		credits_text_node.set_meta("_use_default_font", false)
-		HudLayout.apply_live_pixel_richtext(credits_text_node, CREDITS_BODY_SIZE)
-		credits_text_node.text = bbcode
-	else:
-		# Default fonts read smaller than Press Start at the same nominal size.
-		var header_sz := int(round(float(CREDITS_HEADER_LOCALE_SIZE) * locale_mul))
-		var body_sz := int(round(float(CREDITS_NAME_LOCALE_SIZE) * locale_mul))
-		bbcode = bbcode.replace("[font_size=48]", "[font_size=%d]" % header_sz)
-		bbcode = bbcode.replace("[font_size=42]", "[font_size=%d]" % header_sz)
-		bbcode = bbcode.replace("[font_size=40]", "[font_size=%d]" % body_sz)
-		bbcode = bbcode.replace("[font_size=36]", "[font_size=%d]" % header_sz)
-		bbcode = bbcode.replace("[font_size=34]", "[font_size=%d]" % body_sz)
-		bbcode = bbcode.replace("[font_size=28]", "[font_size=%d]" % body_sz)
-		var pixel_sz := int(round(float(CREDITS_NAME_SIZE) * locale_mul))
-		bbcode = _wrap_credits_author_pixel_font(bbcode, body_sz, pixel_sz)
-		credits_text_node.set_meta("_use_default_font", true)
-		HudLayout.apply_locale_font_to_control(credits_text_node)
-		for size_name in [
-			"normal_font_size",
-			"bold_font_size",
-			"italics_font_size",
-			"bold_italics_font_size",
-			"mono_font_size",
-		]:
-			credits_text_node.add_theme_font_size_override(size_name, body_sz)
-		credits_text_node.text = bbcode
-		HudLayout.apply_safe_outline(credits_text_node, GameConstants.MENU_TEXT_OUTLINE)
-	_refresh_credits_version()
-
-# ka credits: Georgian name/surname in locale font; Press Start only for "gix0n".
-# uk credits: full Latin author name in Press Start (no Georgian script to localize).
-const CREDITS_NICKNAME := "\"gix0n\""
-
-func _credits_author_single_line(text: String) -> String:
-	return text.replace(" ", "\u00a0")
-
-func _wrap_credits_nickname_pixel_font(text: String, pixel_sz: int) -> String:
-	if not text.contains(CREDITS_NICKNAME):
-		return text
-	var pixel := "[font=%s][font_size=%d]%s[/font_size][/font]" % [
-		HudLayout.PIXEL_FONT_PATH, pixel_sz, CREDITS_NICKNAME
-	]
-	return text.replace(CREDITS_NICKNAME, pixel)
-
-func _wrap_credits_full_name_pixel_font(text: String, pixel_sz: int) -> String:
-	return "[font=%s][font_size=%d]%s[/font_size][/font]" % [
-		HudLayout.PIXEL_FONT_PATH, pixel_sz, text
-	]
-
-func _wrap_credits_author_name_display(author: String, pixel_sz: int) -> String:
-	var single_line := _credits_author_single_line(author)
-	if HudFonts.locale_code() == "ka":
-		return _wrap_credits_nickname_pixel_font(single_line, pixel_sz)
-	return _wrap_credits_full_name_pixel_font(single_line, pixel_sz)
-
-func _wrap_credits_author_pixel_font(bbcode: String, body_sz: int, pixel_sz: int) -> String:
-	var author := String(TranslationServer.translate("SPLASH_AUTHOR"))
-	var author_display := _wrap_credits_author_name_display(author, pixel_sz)
-	var author_single := _credits_author_single_line(author)
-	if author_display == author_single and HudFonts.locale_code() == "ka":
-		return bbcode
-	var name_mixed: String
-	if HudFonts.locale_code() == "ka":
-		name_mixed = "[font_size=%d]%s[/font_size]" % [body_sz, author_display]
-	else:
-		name_mixed = author_display
-	for name_plain in [
-		"[font_size=%d]%s[/font_size]" % [body_sz, author_single],
-		"[font_size=%d]%s[/font_size]" % [body_sz, author],
-	]:
-		if bbcode.contains(name_plain):
-			return bbcode.replace(name_plain, name_mixed)
-	var normalized := bbcode.replace("\u00a0", " ")
-	for name_plain in [
-		"[font_size=%d]%s[/font_size]" % [body_sz, author],
-	]:
-		if normalized.contains(name_plain):
-			return normalized.replace(name_plain, name_mixed)
-	return bbcode
-
-func _app_version_string() -> String:
-	var version := String(ProjectSettings.get_setting("application/config/version", "1.0.0"))
-	# Guard against mangled/non-ASCII version strings from export tooling.
-	var cleaned := ""
-	for i in version.length():
-		var ch := version.substr(i, 1)
-		var code := version.unicode_at(i)
-		var ok := (
-			(code >= 48 and code <= 57) # 0-9
-			or ch == "."
-			or ch == "-"
-			or ch == "+"
-			or (code >= 65 and code <= 90) # A-Z
-			or (code >= 97 and code <= 122) # a-z
-		)
-		if ok:
-			cleaned += ch
-	if cleaned.is_empty():
-		cleaned = "1.0.0"
-	return cleaned
-
-func _refresh_credits_version() -> void:
-	if not credits_version_label:
-		return
-	credits_version_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	var dev_on := SaveManager != null and SaveManager.dev_mode_enabled
-	var version_text := "v%s%s" % [_app_version_string(), " [DEV]" if dev_on else ""]
-	credits_version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	credits_version_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	HudLayout.apply_raster_pixel_label(
-		credits_version_label,
-		version_text,
-		28,
-		Color(0.67, 0.67, 0.67, 1),
-		0,
-		true
-	)
-	credits_version_label.mouse_filter = Control.MOUSE_FILTER_STOP
-	if not credits_version_label.gui_input.is_connected(_on_version_label_input):
-		credits_version_label.gui_input.connect(_on_version_label_input)
-
-# Detects press/release on the version label to start/stop the hold timer.
-func _on_version_label_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed:
-			_version_hold_active = true
-			_version_hold_elapsed = 0.0
-			set_process(true)
-		else:
-			_version_hold_active = false
-
-# Counts hold time; fires _toggle_dev_mode once the threshold is reached.
-func _process(delta: float) -> void:
-	if not _version_hold_active:
-		set_process(false)
-		return
-	_version_hold_elapsed += delta
-	if _version_hold_elapsed >= _VERSION_HOLD_SEC:
-		_version_hold_active = false
-		set_process(false)
-		_toggle_dev_mode()
-
-# Toggles dev mode via SaveManager and flashes the version label green (on) or red (off).
-# Does NOT change debug_bar visibility here — the bar must only appear in the main menu,
-# not inside the credits overlay where this label lives.
-func _toggle_dev_mode() -> void:
-	if SaveManager == null:
-		return
-	var now_on := SaveManager.toggle_dev_mode()
-	GlobalGameManager.debug_tools_enabled = _is_debug_enabled()
-	_refresh_credits_version()
-	if credits_version_label:
-		var tw := create_tween()
-		var target_color := Color(0.2, 1.0, 0.4, 1.0) if now_on else Color(1.0, 0.3, 0.3, 1.0)
-		tw.tween_property(credits_version_label, "modulate", target_color, 0.15)
-		tw.tween_property(credits_version_label, "modulate", Color.WHITE, 0.4)
-
+# Sets the Editor row translation key.
 func _apply_editor_button_label() -> void:
 	if not editor_btn:
 		return
 	editor_btn.text = "UI_EDITOR"
 	editor_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
 
-# Debug tools are enabled either via the export flag (editor/testing builds)
-# or via the in-game dev mode unlock (runtime, session-only).
-func _is_debug_enabled() -> bool:
-	return show_debug_tools or (SaveManager != null and SaveManager.dev_mode_enabled)
 
-func _apply_debug_tools_visibility() -> void:
-	var enabled := _is_debug_enabled()
-	GlobalGameManager.debug_tools_enabled = enabled
-	if editor_btn:
-		editor_btn.visible = enabled
-	if debug_bar:
-		debug_bar.visible = enabled
-
-func _set_debug_bar_visible(should_show: bool) -> void:
-	if debug_bar:
-		debug_bar.visible = _is_debug_enabled() and should_show
-
+# Tutorial row: skip the intro prompt and launch the first incomplete lesson.
 func _on_tutorial_pressed() -> void:
 	_apply_debug_tools_visibility()
 	if SaveManager:
@@ -583,23 +479,44 @@ func _on_tutorial_pressed() -> void:
 	_ensure_easy_unlocked()
 	_launch_tutorial()
 
+
+# PLAY/RESUME: tutorial prompt if unanswered, else start the campaign.
 func _on_start_pressed() -> void:
 	_apply_debug_tools_visibility()
 	_ensure_easy_unlocked()
 	if SaveManager and not SaveManager.tutorial_intro_answered:
-		_show_tutorial_intro_prompt()
+		_tutorial.show_prompt()
 		return
 	_start_game()
 
+
+# Loads the main puzzle scene.
 func _start_game() -> void:
 	GlobalGameManager.go_to_scene("res://scenes/main.tscn")
 
+
+# Selects the first incomplete tutorial level, then starts the game.
 func _launch_tutorial() -> void:
 	var tutorial := TutorialScripts.first_incomplete_level()
 	if tutorial:
 		GlobalGameManager.selected_level_resource = tutorial
 	_start_game()
 
+
+func _launch_tutorial_from_intro() -> void:
+	_ensure_easy_unlocked()
+	_launch_tutorial()
+
+
+func _start_easy_campaign_from_intro() -> void:
+	_ensure_easy_unlocked()
+	var easy := _first_level_in_dir(GameConstants.CAMPAIGN_EASY_DIR)
+	if easy:
+		GlobalGameManager.selected_level_resource = easy
+	_start_game()
+
+
+# First LevelData in a campaign directory, or null.
 func _first_level_in_dir(dir_path: String) -> LevelData:
 	var paths := LevelUtils.scan_directory(dir_path)
 	LevelUtils.sort_level_paths(paths)
@@ -609,264 +526,81 @@ func _first_level_in_dir(dir_path: String) -> LevelData:
 			return resource
 	return null
 
-func _setup_how_to_play_overlay() -> void:
-	if _htp_host:
-		_htp_host.visible = false
-		_htp_host.mouse_filter = Control.MOUSE_FILTER_STOP
-	if _htp_rules:
-		_htp_rules.set_meta("_use_default_font", true)
-		_htp_rules.add_theme_color_override("default_color", Color.WHITE)
-		HudLayout.apply_safe_outline(_htp_rules, GameConstants.MENU_TEXT_OUTLINE)
-	for btn in [_htp_prev, _htp_next]:
-		HudLayout.apply_nav_button(btn)
-	if _htp_close:
-		HudLayout.style_top_bar_close_button(_htp_close)
-	_htp_header = HudLayout.ensure_how_to_play_page_header(_htp_host)
-	_refresh_how_to_play_text()
 
-func _refresh_how_to_play_text() -> void:
-	if _htp_header == null and _htp_host:
-		_htp_header = HudLayout.ensure_how_to_play_page_header(_htp_host)
-	if _htp_header:
-		HudLayout._bind_header_translation_key(
-			_htp_header, HowToPlayContent.get_page_title_key(_htp_page)
-		)
-		HudLayout.apply_screen_header_style(_htp_header)
-	if _htp_rules:
-		_htp_rules.text = HowToPlayContent.get_page_text(_htp_page)
-		HudLayout.apply_locale_font_to_control(_htp_rules)
-	if _htp_prev:
-		_htp_prev.visible = _htp_page > 0
-		HudLayout.apply_nav_button(_htp_prev)
-	if _htp_next:
-		_htp_next.visible = _htp_page < HowToPlayContent.PAGE_COUNT - 1
-		HudLayout.apply_nav_button(_htp_next)
-	if _htp_close:
-		HudLayout.style_top_bar_close_button(_htp_close)
-	call_deferred("_layout_how_to_play_stack")
-
-func _layout_how_to_play_stack() -> void:
-	HudLayout.layout_how_to_play_stack(
-		_htp_host, _htp_panel, _htp_rules, _htp_nav, _htp_page == 0
-	)
-
-func _on_htp_prev() -> void:
-	_htp_page = maxi(_htp_page - 1, 0)
-	_refresh_how_to_play_text()
-
-func _on_htp_next() -> void:
-	_htp_page = mini(_htp_page + 1, HowToPlayContent.PAGE_COUNT - 1)
-	_refresh_how_to_play_text()
-
-func _on_htp_close() -> void:
-	if _htp_host:
-		_htp_host.visible = false
-	_set_main_menu_chrome_visible(true)
-	_set_debug_bar_visible(true)
-
-const _CONSENT_POPUP_SCENE := preload("res://scenes/consent_popup.tscn")
-
-# Instantiates the consent popup scene and shows it on first launch.
-# The popup blocks interaction with the main menu until the player accepts.
-# On subsequent launches, privacy_accepted is true so the popup stays hidden.
-func _build_consent_popup() -> void:
-	var ui_layer := get_node_or_null("UILayer") as CanvasLayer
-	if ui_layer == null:
-		return
-	var popup := _CONSENT_POPUP_SCENE.instantiate()
-	ui_layer.add_child(popup)
-	_consent_blocker = popup as ColorRect
-	popup.accepted.connect(_on_consent_accepted)
-	_bias_consent_popup_up()
-	_show_privacy_consent_if_needed(false)
-
-# Raises the consent card above true center for easier reach on tall phones.
-func _bias_consent_popup_up() -> void:
-	if _consent_blocker == null:
-		return
-	var top := _consent_blocker.get_node_or_null("Outer/SpacerTop") as Control
-	var bot := _consent_blocker.get_node_or_null("Outer/SpacerBot") as Control
-	if top:
-		top.size_flags_stretch_ratio = 1.0
-	if bot:
-		bot.size_flags_stretch_ratio = 1.0 + GameConstants.UI_DIALOG_RAISE_PX / 480.0
-
-# Shows the privacy consent overlay when the profile has not accepted it yet.
-# If close_options is true, closes Options first so the consent is unobstructed.
-func _show_privacy_consent_if_needed(close_options: bool = false) -> void:
-	if SaveManager == null or SaveManager.privacy_accepted:
-		return
-	if _consent_blocker == null:
-		return
-	if close_options and options_menu and options_menu.visible:
-		options_menu.visible = false
-	_set_main_menu_chrome_visible(false)
-	_set_debug_bar_visible(false)
-	# Refresh copy/fonts for the current locale (reset can reopen after a language change).
-	if _consent_blocker.has_method("refresh_locale"):
-		_consent_blocker.refresh_locale()
-	_consent_blocker.visible = true
-	_consent_blocker.move_to_front()
-
-# Called when the player taps ACCEPT on the consent popup.
-# Saves acceptance, restores the main menu UI, and applies debug visibility.
-func _on_consent_accepted() -> void:
-	if SaveManager:
-		SaveManager.accept_privacy()
-	_set_main_menu_chrome_visible(true)
-	_apply_debug_tools_visibility()
-
-func _setup_tutorial_intro_panel() -> void:
-	if _tutorial_intro_blocker:
-		_tutorial_intro_blocker.visible = false
-		_tutorial_intro_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
-		# Match other popups: no dim overlay — menu chrome is hidden instead.
-		_tutorial_intro_blocker.color = Color(0, 0, 0, 0)
-	var center := (
-		_tutorial_intro_blocker.get_node_or_null("CenterContainer") as Control
-		if _tutorial_intro_blocker
-		else null
-	)
-	if center:
-		HudLayout.raise_centered_dialog_host(center)
-	var panel := _tutorial_intro_blocker.get_node_or_null("CenterContainer/Panel") as Panel if _tutorial_intro_blocker else null
-	if panel:
-		panel.add_theme_stylebox_override("panel", HudLayout.make_dialog_panel_style())
-	if _tutorial_intro_label:
-		_tutorial_intro_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.55, 1.0))
-		HudLayout.apply_popup_label(_tutorial_intro_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
-	_copy_menu_button_styles(_tutorial_intro_yes)
-	_copy_menu_button_styles(_tutorial_intro_no)
-
-func _copy_menu_button_styles(target: Button) -> void:
-	var source: Button = start_btn if start_btn else options_btn
-	if not source or not target:
-		return
-	for style_name in ["normal", "pressed", "hover", "disabled"]:
-		var style := source.get_theme_stylebox(style_name)
-		if style and not (style is StyleBoxEmpty):
-			target.add_theme_stylebox_override(style_name, style)
-	target.add_theme_color_override("font_outline_color", Color.BLACK)
-	HudLayout.apply_safe_outline(target, GameConstants.MENU_TEXT_OUTLINE)
-
-func _show_tutorial_intro_prompt() -> void:
-	_set_main_menu_chrome_visible(false)
-	_set_debug_bar_visible(false)
-	if _tutorial_intro_label:
-		_tutorial_intro_label.text = tr("TUTORIAL_INTRO_PROMPT")
-		HudLayout.apply_popup_label(_tutorial_intro_label, GameConstants.UI_BODY_FONT_SIZE_LARGE)
-	if _tutorial_intro_yes:
-		_tutorial_intro_yes.text = tr("UI_YES")
-	if _tutorial_intro_no:
-		_tutorial_intro_no.text = tr("UI_NO")
-	var panel := (
-		_tutorial_intro_blocker.get_node_or_null("CenterContainer/Panel") as Panel
-		if _tutorial_intro_blocker
-		else null
-	)
-	if panel:
-		HudLayout.fit_dialog_panel(panel, HudLayout.UI_DEFAULT_DIALOG_WIDTH)
-	if _tutorial_intro_blocker:
-		_tutorial_intro_blocker.color = Color(0, 0, 0, 0)
-		_tutorial_intro_blocker.visible = true
-		_tutorial_intro_blocker.move_to_front()
-
-func _hide_tutorial_intro_prompt() -> void:
-	if _tutorial_intro_blocker:
-		_tutorial_intro_blocker.visible = false
-	_set_main_menu_chrome_visible(true)
-	_set_debug_bar_visible(true)
-
-func _on_tutorial_intro_yes() -> void:
-	_hide_tutorial_intro_prompt()
-	SaveManager.set_tutorial_intro_answered(true)
-	_ensure_easy_unlocked()
-	_launch_tutorial()
-
-func _on_tutorial_intro_no() -> void:
-	_hide_tutorial_intro_prompt()
-	SaveManager.set_tutorial_intro_answered(true)
-	_ensure_easy_unlocked()
-	var easy := _first_level_in_dir(GameConstants.CAMPAIGN_EASY_DIR)
-	if easy:
-		GlobalGameManager.selected_level_resource = easy
-	_start_game()
-
+# Unlocks campaign level 1 so PLAY cannot land on a locked slot.
 func _ensure_easy_unlocked() -> void:
 	if SaveManager == null:
 		return
 	SaveManager.unlock_level(LevelUtils.first_campaign_level_number())
 
+
+# Opens level select.
 func _on_levels_pressed() -> void:
 	_apply_debug_tools_visibility()
 	_ensure_easy_unlocked()
 	GlobalGameManager.go_to_scene("res://scenes/level_select.tscn")
 
-func _on_how_to_play_pressed() -> void:
-	_set_main_menu_chrome_visible(false)
-	_set_debug_bar_visible(false)
-	_htp_page = 0
-	HudLayout.clear_how_to_play_nav_lock(_htp_host)
-	_refresh_how_to_play_text()
-	if _htp_host:
-		_htp_host.visible = true
-		_htp_host.move_to_front()
 
+# Hides menu chrome and opens HTP at page 0.
+func _on_how_to_play_pressed() -> void:
+	_htp.open()
+
+
+# Hides menu chrome and shows the achievements overlay.
+func _on_achievements_pressed() -> void:
+	set_menu_chrome_visible(false)
+	if AchievementManager:
+		AchievementManager.show_list(_on_achievements_closed)
+	else:
+		set_menu_chrome_visible(true)
+
+
+## Restores menu after the achievements list closes.
+func _on_achievements_closed() -> void:
+	set_menu_chrome_visible(true)
+	_refresh_achievements_badge()
+	_refresh_levels_badge()
+	_fit_menu_buttons()
+
+
+func _refresh_achievements_badge(_count: int = -1) -> void:
+	_menu_badges.refresh_achievements(_count)
+
+
+func _refresh_levels_badge(_count: int = -1) -> void:
+	_menu_badges.refresh_levels(_count)
+
+
+# Hides menu chrome and shows the options overlay.
 func _on_options_pressed() -> void:
-	_set_main_menu_chrome_visible(false)
-	_set_debug_bar_visible(false)
+	set_menu_chrome_visible(false)
 	if options_menu:
 		options_menu.show_menu(true)
 
+
+# Restores menu after Options; may re-show consent after a profile reset.
 func _on_options_back() -> void:
-	_set_main_menu_chrome_visible(true)
-	_set_debug_bar_visible(true)
+	set_menu_chrome_visible(true)
 	_refresh_start_button_label()
 	_fit_menu_buttons()
-	_show_privacy_consent_if_needed(false)
+	_refresh_achievements_badge()
+	_refresh_levels_badge()
+	_consent.show_if_needed(false)
 
+
+# Hides menu chrome and shows credits.
 func _on_credits_pressed() -> void:
-	_set_main_menu_chrome_visible(false)
-	_set_debug_bar_visible(false)
-	if overlay_blocker: overlay_blocker.visible = true
-	if credits_panel: credits_panel.visible = true
-	var credits_text = credits_panel.get_node_or_null("CreditsText") if credits_panel else null
-	if credits_text:
-		_apply_credits_fonts(credits_text)
-	else:
-		_refresh_credits_version()
-	if close_credits_btn:
-		HudLayout.style_top_bar_close_button(close_credits_btn)
+	_credits.open()
 
-func _on_close_credits() -> void:
-	if overlay_blocker: overlay_blocker.visible = false
-	if credits_panel: credits_panel.visible = false
-	_set_main_menu_chrome_visible(true)
-	# Refresh editor + debug bar now that credits overlay is gone — dev mode may
-	# have been toggled while credits was open and _toggle_dev_mode intentionally
-	# skips visibility changes until we return to the main menu.
+
+# Closes credits and refreshes debug visibility (dev mode may have toggled).
+func _on_credits_closed() -> void:
 	_apply_debug_tools_visibility()
 	_fit_menu_buttons()
+	_refresh_achievements_badge()
+	_refresh_levels_badge()
 
+
+# Opens the level editor.
 func _on_editor_pressed() -> void:
 	GlobalGameManager.go_to_scene("res://scenes/level_editor.tscn")
-
-func _on_debug_star_pressed() -> void:
-	if SpaceBackground:
-		SpaceBackground.debug_spawn_shooting_star()
-
-func _on_debug_comet_pressed() -> void:
-	if SpaceBackground:
-		SpaceBackground.debug_spawn_comet()
-
-func _on_debug_asteroid_pressed() -> void:
-	if SpaceBackground:
-		SpaceBackground.debug_spawn_asteroid()
-
-func _on_debug_asteroid_cloud_pressed() -> void:
-	if SpaceBackground:
-		SpaceBackground.debug_spawn_asteroid_cloud()
-
-func _on_debug_comet_shower_pressed() -> void:
-	if SpaceBackground:
-		SpaceBackground.debug_spawn_meteor_shower()

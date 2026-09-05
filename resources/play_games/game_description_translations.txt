@@ -1,0 +1,37 @@
+# Play Games Services — game description (Configuration > Edit properties > language tabs)
+# Paste the block for each locale into Play Console.
+
+=== en (default) ===
+Welcome to Spaceblox!
+
+Fill empty cells with Yellow, or Blue tiles. Never put three of the same color in a row or column, and keep both colors balanced on every line. Green and Purple tiles add extra twists.
+
+=== es ===
+¡Bienvenido a Spaceblox!
+
+Rellena las celdas vacías con fichas Amarillas o Azules. Nunca pongas tres del mismo color en una fila o columna, y mantén ambos colores equilibrados en cada línea. Las fichas Verdes y Moradas añaden giros extra.
+
+=== de ===
+Willkommen bei Spaceblox!
+
+Fülle leere Felder mit gelben oder blauen Steinen. Setze niemals drei der gleichen Farbe in eine Reihe oder Spalte und halte auf jeder Linie beide Farben ausgeglichen. Grüne und violette Steine bringen zusätzliche Wendungen.
+
+=== fr ===
+Bienvenue dans Spaceblox !
+
+Remplissez les cases vides avec des tuiles Jaunes ou Bleues. Ne mettez jamais trois de la même couleur sur une ligne ou une colonne, et gardez les deux couleurs équilibrées sur chaque ligne. Les tuiles Vertes et Violettes ajoutent des rebondissements.
+
+=== pl ===
+Witaj w Spaceblox!
+
+Wypełniaj puste pola żółtymi lub niebieskimi kafelkami. Nigdy nie układaj trzech tego samego koloru w rzędzie ani kolumnie i utrzymuj oba kolory zrównoważone na każdej linii. Zielone i fioletowe kafelki dodają dodatkowych zwrotów akcji.
+
+=== ka ===
+მოგესალმებით Spaceblox-ში!
+
+შეავსეთ ცარიელი უჯრები ყვითელი ან ლურჯი ფილებით. არასოდეს განათავსოთ ერთი ფერის სამი ფილა რიგში ან სვეტში და შეინარჩუნეთ ორივე ფერის ბალანსი ყველა ხაზზე. მწვანე და იისფერი ფილები დამატებით მობრუნებებს უმატებს.
+
+=== uk ===
+Ласкаво просимо до Spaceblox!
+
+Заповнюйте порожні клітинки жовтими або синіми плитками. Ніколи не ставте три однакові кольори в ряд чи стовпець і тримайте обидва кольори збалансованими на кожній лінії. Зелені та фіолетові плитки додають додаткових поворотів.

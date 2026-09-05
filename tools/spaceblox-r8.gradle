@@ -1,0 +1,43 @@
+// Applied by the Android export plugin. Do not rely on editing build.gradle by string match.
+android {
+    defaultConfig {
+        ndk {
+            debugSymbolLevel 'SYMBOL_TABLE'
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            ndk {
+                debugSymbolLevel 'SYMBOL_TABLE'
+            }
+        }
+    }
+}
+
+// Godot ships prebuilt .so files. AGP does not write outputs/native-debug-symbols
+// for those, so zip the merged JNI libs in the Play Console layout (ABI folders at root).
+afterEvaluate {
+    def zipSymbols = tasks.register("zipStandardReleaseNativeDebugSymbols", Zip) {
+        def libDir = file("$buildDir/intermediates/merged_native_libs/standardRelease/mergeStandardReleaseNativeLibs/out/lib")
+        from(libDir)
+        include("**/*.so")
+        archiveFileName.set("native-debug-symbols.zip")
+        destinationDirectory.set(file("$buildDir/outputs/native-debug-symbols/standardRelease"))
+        onlyIf { libDir.exists() }
+        doLast {
+            def zipFile = archiveFile.get().asFile
+            def aabDir = file("$buildDir/outputs/bundle/standardRelease")
+            if (zipFile.exists() && aabDir.exists()) {
+                ant.copy(file: zipFile, todir: aabDir)
+            }
+        }
+    }
+    def bundle = tasks.findByName("bundleStandardRelease")
+    if (bundle != null) {
+        zipSymbols.configure { dependsOn("mergeStandardReleaseNativeLibs") }
+        bundle.finalizedBy(zipSymbols)
+    }
+}

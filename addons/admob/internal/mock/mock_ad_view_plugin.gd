@@ -39,7 +39,7 @@ func create(ad_view_dictionary: Dictionary) -> int:
 	if is_adaptive:
 		var window_size := DisplayServer.window_get_size()
 		var screen_scale := DisplayServer.screen_get_scale(DisplayServer.window_get_current_screen())
-		width = int(window_size.x / screen_scale)
+		width = int(window_size.x / float(screen_scale))
 	if height <= 0: height = 50
 
 	ui.custom_minimum_size = Vector2(width, height)
@@ -130,7 +130,7 @@ func destroy(uid: int) -> void:
 			_ads[uid]["ui"].get_parent().queue_free()
 		_ads.erase(uid)
 
-func get_response_info(uid: int) -> Dictionary:
+func get_response_info(_uid: int) -> Dictionary:
 	return {
 		"response_id": "mock_response_id",
 		"mediation_adapter_class_name": "MockAdapter",
@@ -162,12 +162,12 @@ func update_position(uid: int, position: int) -> void:
 
 func get_width(uid: int) -> int:
 	if _ads.has(uid):
-		return 0 if _ads[uid].get("is_hidden", false) else _ads[uid]["current_width"]
+		return 0 if _ads[uid].get("is_hidden", false) else int(_ads[uid]["current_width"])
 	return 0
 
 func get_height(uid: int) -> int:
 	if _ads.has(uid):
-		return 0 if _ads[uid].get("is_hidden", false) else _ads[uid]["current_height"]
+		return 0 if _ads[uid].get("is_hidden", false) else int(_ads[uid]["current_height"])
 	return 0
 
 func get_width_in_pixels(uid: int) -> int:
@@ -184,7 +184,7 @@ func get_width_in_pixels(uid: int) -> int:
 	var scale_factor: float = min(viewport_size.x, viewport_size.y) / 360.0
 	if scale_factor <= 0.0:
 		scale_factor = 1.0
-	var width_in_viewport = viewport_size.x if is_adaptive else _ads[uid]["width"] * scale_factor
+	var width_in_viewport: float = viewport_size.x if is_adaptive else float(_ads[uid]["width"]) * scale_factor
 	return int(round(width_in_viewport / gui_scale_factor))
 
 func get_height_in_pixels(uid: int) -> int:
@@ -199,7 +199,7 @@ func get_height_in_pixels(uid: int) -> int:
 		gui_scale_factor = viewport_size.y / float(window_size.y)
 
 	var is_expanded: bool = _ads[uid].get("is_collapsible", false) and not _ads[uid].get("is_collapsed", false)
-	var height_dp: int = 250 if is_expanded else _ads[uid]["height"]
+	var height_dp: int = 250 if is_expanded else int(_ads[uid]["height"])
 	var scale_factor: float = min(viewport_size.x, viewport_size.y) / 360.0
 	if scale_factor <= 0.0:
 		scale_factor = 1.0
@@ -207,7 +207,7 @@ func get_height_in_pixels(uid: int) -> int:
 	return int(round(height_in_viewport / gui_scale_factor))
 
 func is_collapsible(uid: int) -> bool:
-	return _ads[uid].get("is_collapsible", false) if _ads.has(uid) else false
+	return bool(_ads[uid].get("is_collapsible", false)) if _ads.has(uid) else false
 
 func _update_size(uid: int) -> void:
 	if not _ads.has(uid) or not is_instance_valid(_ads[uid]["ui"]): return
@@ -233,7 +233,7 @@ func _update_size(uid: int) -> void:
 		width_in_viewport = ad["width"] * scale_factor
 		ad["current_width"] = ad["width"]
 
-	var height_dp: int = 250 if is_expanded else ad["height"]
+	var height_dp: int = 250 if is_expanded else int(ad["height"])
 	height_in_viewport = height_dp * scale_factor
 	ad["current_height"] = height_dp
 

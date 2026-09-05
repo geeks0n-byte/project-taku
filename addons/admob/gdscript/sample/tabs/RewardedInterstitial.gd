@@ -25,8 +25,8 @@ func _ready() -> void:
 		_log("Ad dismissed")
 		_destroy_ad()
 
-	_content_callback.on_ad_failed_to_show_full_screen_content = func(err: AdError) -> void:
-		_log("Failed to show: " + err.message)
+	_content_callback.on_ad_failed_to_show_full_screen_content = func(_err: AdError) -> void:
+		_log("Failed to show: " + _err.message)
 	_content_callback.on_ad_impression = func() -> void: _log("Impression recorded")
 	_content_callback.on_ad_showed_full_screen_content = func() -> void: _log("Ad showed")
 
@@ -79,7 +79,7 @@ func _on_ad_failed_to_load(error: LoadAdError) -> void:
 func _on_ad_loaded(ad: RewardedInterstitialAd) -> void:
 	_log("Ad loaded successfully (UID: %s)" % str(ad._uid))
 	ad.full_screen_content_callback = _content_callback
-	ad.on_ad_paid = func(ad_value: AdValue) -> void:
+	ad.on_ad_paid = func(_ad_value: AdValue) -> void:
 		var ad_source_name := "N/A"
 		var response_info := ad.get_response_info()
 		if response_info:
@@ -91,9 +91,9 @@ func _on_ad_loaded(ad: RewardedInterstitialAd) -> void:
 			(
 				"Ad paid: %f %s (precision: %d, source: %s)"
 				% [
-					ad_value.value_micros / 1000000.0,
-					ad_value.currency_code,
-					ad_value.precision,
+					_ad_value.value_micros / 1000000.0,
+					_ad_value.currency_code,
+					_ad_value.precision,
 					ad_source_name
 				]
 			)

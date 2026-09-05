@@ -1,14 +1,13 @@
 extends Node2D
-
-# Root controller for the level editor scene.
-# Coordinates the EditorUIManager, PlaytestUIManager, EditorCanvasManager, and
-# EditorPlaytestController — acting as the bridge between all editor subsystems.
+## Root controller for the level editor scene.
+## Coordinates the EditorUIManager, PlaytestUIManager, EditorCanvasManager, and
+## EditorPlaytestController — acting as the bridge between all editor subsystems.
 
 @onready var editor_ui: EditorUIManager = $EditorUIManager
 @onready var pt_ui: PlaytestUIManager = $PlaytestUIManager
 @onready var canvas_manager: EditorCanvasManager = $EditorUI/EditorCanvasManager
-
-var playtest_controller: EditorPlaytestController
+@onready var playtest_controller: EditorPlaytestController = $EditorPlaytestController
+@onready var _loading_overlay: LoadingOverlay = $LoadingOverlay
 
 # Currently selected tile type/brush tool. Determines what is painted on cell click/drag.
 var current_brush_state: int = GameConstants.TileState.EMPTY
@@ -23,22 +22,18 @@ var editor_undo := UndoStack.new()
 var _is_painting: bool = false
 # Tracks the last cell painted during a drag to avoid repainting the same cell each motion event.
 var _last_painted_coord: Vector2i = Vector2i(-9999, -9999)
-var _loading_overlay: LoadingOverlay
 # Prevents stacking multiple async generation requests if the user clicks rapidly.
 var _is_generating: bool = false
 
+## Runs before child _ready — mark English-only editor chrome for Press Start.
 func _enter_tree() -> void:
-	# Runs before child _ready — mark English-only editor chrome for Press Start.
 	EditorUiPolicy.mark_editor_pixel_roots(self)
 
+## Wires playtest, editor UI, and the blank canvas. Loading overlay is authored in the scene.
 func _ready():
 	if AdsManager:
 		AdsManager.hide_menu_banner()
-	_loading_overlay = LoadingOverlay.new()
-	add_child(_loading_overlay)
 	_apply_background_for_mode(false)
-	playtest_controller = EditorPlaytestController.new()
-	add_child(playtest_controller)
 	playtest_controller.setup(canvas_manager, pt_ui, editor_ui)
 
 	_bind_signals()
@@ -57,6 +52,14 @@ func _ready():
 # does not wipe the whole stroke at once.
 func _input(event: InputEvent) -> void:
 	if playtest_controller and playtest_controller.is_active:
+		return
+	if _is_board_pointer_blocked():
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+			_is_painting = false
+		elif event is InputEventScreenTouch and event.index == 0 and not event.pressed:
+			_is_painting = false
+		else:
+			_is_painting = false
 		return
 	if _is_link_brush():
 		# Never leave a paint stroke armed while using two-click link tools.
@@ -96,6 +99,15 @@ func _input(event: InputEvent) -> void:
 
 # Link brushes (shifter, equals, not-equals) require selecting two cells rather than painting,
 # so they are handled separately via canvas_cell_clicked rather than the drag input path.
+func _is_board_pointer_blocked() -> bool:
+	if HudLayout.is_modal_input_blocked(get_tree()):
+		return true
+	var hovered := get_viewport().gui_get_hovered_control() if get_viewport() else null
+	if hovered == null or canvas_manager == null:
+		return false
+	return not canvas_manager.is_ancestor_of(hovered)
+
+
 func _is_link_brush() -> bool:
 	return (
 		current_brush_state == GameConstants.TileState.SHIFTER
@@ -108,6 +120,7 @@ func _coord_from_global(global_pos: Vector2) -> Vector2i:
 	var local := canvas_manager.to_local(global_pos)
 	return Vector2i(floori(local.x / float(GameConstants.CELL_SIZE)), floori(local.y / float(GameConstants.CELL_SIZE)))
 
+## Drag-paint the cell under the cursor; link brushes never paint this way.
 func _try_paint_at_mouse() -> void:
 	if _is_link_brush():
 		return
@@ -131,6 +144,7 @@ func _recenter_editor_layout(width: int, height: int) -> void:
 	editor_ui.update_dynamic_editor_layout(centered_board_y, board_pixel_height)
 	pt_ui.update_dynamic_playtest_layout(centered_board_y, board_pixel_height)
 
+## Connects editor UI, canvas, and playtest controller signals to this root.
 func _bind_signals():
 	editor_ui.brush_changed.connect(_on_brush_changed)
 	editor_ui.save_requested.connect(_on_save_level)
@@ -215,24 +229,28 @@ func _record_editor_change():
 	editor_undo.record(snap)
 	editor_ui.update_editor_undo_redo_buttons(editor_undo.can_undo(), editor_undo.can_redo())
 
+## Restores the previous editor snapshot when the stack allows it.
 func _on_editor_undo_requested():
 	if not editor_undo.can_undo():
 		return
 	_apply_editor_snapshot(editor_undo.undo())
 	editor_ui.update_editor_undo_redo_buttons(editor_undo.can_undo(), editor_undo.can_redo())
 
+## Re-applies the next editor snapshot when the stack allows it.
 func _on_editor_redo_requested():
 	if not editor_undo.can_redo():
 		return
 	_apply_editor_snapshot(editor_undo.redo())
 	editor_ui.update_editor_undo_redo_buttons(editor_undo.can_undo(), editor_undo.can_redo())
 
+## Refreshes the joker counter after the allowed-tile picker changes.
 func _on_allowed_tiles_changed():
 	if playtest_controller.is_active:
 		return
 	editor_ui.update_status("", Color.WHITE)
 	_update_editor_joker_counter_display()
 
+## Generates a random unique puzzle on a worker thread with the loading overlay.
 func _on_random_board_requested():
 	if playtest_controller.is_active:
 		return
@@ -256,9 +274,20 @@ func _on_random_board_requested():
 	var gen_difficulty: int = editor_ui.get_generation_difficulty()
 	var layout_copy: Dictionary = current_layout.duplicate(true)
 	var generated: Variant = await _loading_overlay.run_async(self, func():
-		return PuzzleGenerator.generate_random_layout(
-			target_w, target_h, allowed_tiles, layout_copy, require_unique, lock_walls, gen_difficulty
+		var result := {}
+		var attempts := 25 if require_unique else 10
+		var deadline_msec := Time.get_ticks_msec() + int(
+			GameConstants.GENERATOR_WALL_CLOCK_SEC * 1000.0
 		)
+		for attempt in range(attempts):
+			if Time.get_ticks_msec() > deadline_msec:
+				break
+			result = PuzzleGenerator.generate_random_layout(
+				target_w, target_h, allowed_tiles, layout_copy, require_unique, lock_walls, gen_difficulty
+			)
+			if not result.is_empty():
+				break
+		return result
 	)
 	if not is_instance_valid(self) or not is_inside_tree():
 		return
@@ -278,6 +307,7 @@ func _on_random_board_requested():
 	_update_editor_joker_counter_display()
 	_record_editor_change()
 
+## Rebuilds a blank canvas at the new size and recenters the editor.
 func _on_grid_size_changed(new_width: int, new_height: int):
 	if playtest_controller.is_active:
 		return
@@ -290,6 +320,7 @@ func _on_grid_size_changed(new_width: int, new_height: int):
 	editor_undo.reset(_create_editor_snapshot())
 	editor_ui.update_editor_undo_redo_buttons(false, false)
 
+## Switches the paint brush and aborts an in-progress link selection.
 func _on_brush_changed(state_id: int, _brush_name: String):
 	if playtest_controller.is_active:
 		return
@@ -303,6 +334,7 @@ func _on_brush_changed(state_id: int, _brush_name: String):
 	current_brush_state = state_id
 	link_first_selection = null
 
+## Edit-mode click: link brush or paint; playtest ignores the interceptor.
 func _on_canvas_cell_clicked(coord: Vector2i):
 	if playtest_controller.is_active:
 		# Playtest uses Cell press/release + hold-clear; interceptor is ignored.
@@ -317,6 +349,7 @@ func _on_canvas_cell_clicked(coord: Vector2i):
 		if _apply_paint_brush(coord, true):
 			_update_editor_joker_counter_display()
 
+## Two-click shifter/equals/not-equals pairing, with undo recorded on complete.
 func _handle_link_brush_click(coord: Vector2i) -> void:
 	var cell = canvas_manager.board_cells[coord]
 	if link_first_selection == null:
@@ -351,6 +384,7 @@ func _handle_link_brush_click(coord: Vector2i) -> void:
 			canvas_manager.board_cells[first_coord].update_visuals()
 			editor_ui.update_status("ERR_CELLS_NOT_ADJACENT", Color.WHITE)
 
+## Paints one cell with the current brush; optionally records undo.
 func _apply_paint_brush(coord: Vector2i, record_undo: bool) -> bool:
 	if _is_link_brush():
 		return false
@@ -414,18 +448,15 @@ func _update_editor_joker_counter_display():
 	pt_ui.update_playtest_joker_counter(placed_jokers, total_required)
 
 # Creates a shifter pair between coord_a (active/home) and coord_b (inactive partner).
-# First removes any existing pair that shares coord_a as its active cell, or that already
-# links the same two coords, to enforce a one-pair-per-cell invariant.
-# All affected cell visuals are recalculated after the array is mutated.
+# Pairs may share a cell (chains). Remove an existing pair only if it already uses
+# coord_a as its active cell, or if it already links the same two coords.
 func _execute_pair_link_creation(coord_a: Vector2i, coord_b: Vector2i):
 	var pairs_to_remove: Array = []
 	for i in range(canvas_manager.loaded_shifter_pairs.size() - 1, -1, -1):
 		var p = canvas_manager.loaded_shifter_pairs[i]
-		if p["active"] == coord_a:
+		var same_link: bool = (p["a"] == coord_a and p["b"] == coord_b) or (p["a"] == coord_b and p["b"] == coord_a)
+		if p["active"] == coord_a or same_link:
 			pairs_to_remove.append(i)
-		elif (p["a"] == coord_a and p["b"] == coord_b) or (p["a"] == coord_b and p["b"] == coord_a):
-			if not pairs_to_remove.has(i):
-				pairs_to_remove.append(i)
 	pairs_to_remove.sort()
 	pairs_to_remove.reverse()
 	var changed_cells := [coord_a, coord_b]
@@ -447,6 +478,7 @@ func _execute_pair_link_creation(coord_a: Vector2i, coord_b: Vector2i):
 		_recalculate_cell_pair_state(c)
 	canvas_manager.trigger_redraw()
 
+## Drops shifter and constraint pairs that touch this coord and refreshes those cells.
 func _remove_pair_by_coord(coord: Vector2i):
 	var changed_cells: Array = []
 	for i in range(canvas_manager.loaded_shifter_pairs.size() - 1, -1, -1):
@@ -516,6 +548,7 @@ func _remove_constraint_by_coord(coord: Vector2i):
 			canvas_manager.loaded_constraint_pairs.remove_at(i)
 	canvas_manager.trigger_redraw()
 
+## Clears tiles (optionally keeping walls) and resets pair/joker editor state.
 func _on_clear_board():
 	if playtest_controller.is_active:
 		return
@@ -557,6 +590,7 @@ func _apply_background_for_mode(is_playtest: bool) -> void:
 	if SpaceBackground:
 		SpaceBackground.visible = is_playtest
 
+## Hides editor chrome and starts playtest on the current canvas.
 func _on_test_mode_entered():
 	_apply_background_for_mode(true)
 	link_first_selection = null
@@ -582,6 +616,7 @@ func _on_resume_from_playtest_tutorial():
 	pt_ui.set_playtest_chrome_visible(true)
 	playtest_controller.resume_timer()
 
+## Restores editor chrome after playtest and refreshes the joker counter.
 func _on_test_mode_exited():
 	playtest_controller.exit()
 	link_first_selection = null
@@ -590,6 +625,7 @@ func _on_test_mode_exited():
 	editor_ui.toggle_editor_visibility(false)
 	_update_editor_joker_counter_display()
 
+## Saves to user://, or shows overwrite warning if that level number exists.
 func _on_save_level():
 	if playtest_controller.is_active:
 		return
@@ -606,22 +642,22 @@ func _on_save_level():
 func _execute_save():
 	var level_num = editor_ui.get_level_number()
 	var tiles: Array = editor_ui.get_allowed_tiles()
-	var analysis := PuzzleSolver.analyze_board_cells(
-		canvas_manager.board_cells,
-		canvas_manager.grid_width,
-		canvas_manager.grid_height,
-		tiles,
-		canvas_manager.loaded_constraint_pairs,
-		canvas_manager.loaded_shifter_pairs,
-		editor_ui.is_unique_solution_required()
-	)
-	if not _accept_save_analysis(analysis):
-		return
-
 	var output_layout := {}
 	for coord in canvas_manager.board_cells:
 		var current_state = canvas_manager.board_cells[coord].state
 		output_layout[coord] = GameConstants.TileState.EMPTY if current_state == GameConstants.TileState.SHIFTER else current_state
+	if not LevelUtils.is_shape_only_layout(output_layout):
+		var analysis := PuzzleSolver.analyze_board_cells(
+			canvas_manager.board_cells,
+			canvas_manager.grid_width,
+			canvas_manager.grid_height,
+			tiles,
+			canvas_manager.loaded_constraint_pairs,
+			canvas_manager.loaded_shifter_pairs,
+			editor_ui.is_unique_solution_required()
+		)
+		if not _accept_save_analysis(analysis, output_layout):
+			return
 
 	var new_level_resource: LevelData = LevelData.new()
 	new_level_resource.level_number = level_num
@@ -652,18 +688,16 @@ func _execute_save():
 # Validates a solver analysis result before allowing a save.
 # Blocks saving if the solver timed out (result is ambiguous), the puzzle is unsolvable,
 # or a unique-solution requirement is active but multiple solutions were found.
-func _accept_save_analysis(analysis: Dictionary) -> bool:
-	if bool(analysis.get("timed_out", false)) or int(analysis.get("solution_count", 0)) == PuzzleSolver.SOLUTIONS_UNKNOWN:
-		editor_ui.update_status(HudLayout.english("ED_MSG_SOLVE_TIMEOUT"), Color(1.0, 0.4, 0.4), false)
-		return false
-	if not bool(analysis.get("solvable", false)):
-		editor_ui.update_status(HudLayout.english("ED_MSG_UNSOLVABLE"), Color(1.0, 0.4, 0.4), false)
-		return false
-	if editor_ui.is_unique_solution_required() and not bool(analysis.get("unique", false)):
-		editor_ui.update_status(HudLayout.english("ED_MSG_NOT_UNIQUE"), Color(1.0, 0.4, 0.4), false)
-		return false
-	return true
+func _accept_save_analysis(analysis: Dictionary, layout: Dictionary) -> bool:
+	var reject_key := LevelUtils.editor_save_reject_key(
+		analysis, layout, editor_ui.is_unique_solution_required()
+	)
+	if reject_key.is_empty():
+		return true
+	editor_ui.update_status(HudLayout.english(reject_key), Color(1.0, 0.4, 0.4), false)
+	return false
 
+## Loads user://level_N.tres for the number in the editor field.
 func _on_load_level():
 	if playtest_controller.is_active:
 		return
@@ -698,6 +732,7 @@ func _on_load_level():
 	_rebuild_editor_hidden_hints()
 	_record_editor_change()
 
+## Returns to the main menu unless a generation/load overlay is busy.
 func _on_main_menu():
 	if _is_generating or (_loading_overlay and _loading_overlay.is_busy()):
 		return
@@ -705,6 +740,7 @@ func _on_main_menu():
 		SpaceBackground.visible = true
 	GlobalGameManager.go_to_scene("res://scenes/main_menu.tscn")
 
+## Hardware back leaves the editor the same way as Main Menu.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		if GlobalGameManager and GlobalGameManager.consume_system_back():

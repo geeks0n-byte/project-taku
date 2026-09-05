@@ -8,9 +8,6 @@ extends RefCounted
 const BIT_TIME := 1
 const BIT_NO_HINTS := 2
 const BIT_COMPLETE := 4
-## Legacy aliases.
-const BIT_GREEN := BIT_NO_HINTS
-const BIT_MOVES := BIT_COMPLETE
 ## Display / award order: clear → no hints → time.
 const ALL_GOAL_MASKS: Array = [BIT_COMPLETE, BIT_NO_HINTS, BIT_TIME]
 
@@ -34,6 +31,16 @@ static func count_earned_bits(bits: int) -> int:
 		if bits & int(mask):
 			n += 1
 	return n
+
+
+## True when any saved level earned all three star goals (retroactive three_star_debut).
+static func has_perfect_clear_in_bits_dict(bits_dict: Dictionary) -> bool:
+	if typeof(bits_dict) != TYPE_DICTIONARY:
+		return false
+	for key in bits_dict:
+		if count_earned_bits(int(bits_dict[key])) >= ALL_GOAL_MASKS.size():
+			return true
+	return false
 
 ## Builds the compact 3-star icon row shown on each level-select card.
 ## Earned stars are fully opaque; unearned stars are dimmed.
@@ -76,6 +83,7 @@ static func format_time_limit_detail(
 static func format_time_goal_detail(elapsed_sec: int, time_limit: int) -> String:
 	return "%s / %s" % [format_clock(elapsed_sec), format_time_limit_detail(time_limit)]
 
+## True when the time detail is a Press Start [img] infinity glyph.
 static func _time_detail_uses_infinity_icon(detail: String) -> bool:
 	return HudFonts.uses_pixel_font() and detail.contains("[img")
 
@@ -100,7 +108,7 @@ static func evaluate(
 	goals.append({
 		"id": "complete",
 		"earned": true,
-		"title": _goal_title("STAR_COMPLETE", force_english),
+		"title": _goal_title("UI_STAR_COMPLETE", force_english),
 		"detail": "",
 	})
 
@@ -112,7 +120,7 @@ static func evaluate(
 		"id": "no_hints",
 		"earned": no_hints_earned,
 		"title": _goal_title(
-			"STAR_HINTS" if no_hints_earned else "STAR_HINTS_USED", force_english
+			"UI_STAR_HINTS" if no_hints_earned else "UI_STAR_HINTS_USED", force_english
 		),
 		"detail": "",
 	})
@@ -124,7 +132,7 @@ static func evaluate(
 	goals.append({
 		"id": "time",
 		"earned": time_earned,
-		"title": _goal_title("STAR_TIME", force_english),
+		"title": _goal_title("UI_STAR_TIME", force_english),
 		"detail": format_time_goal_detail(elapsed_sec, time_limit),
 		"detail_bbcode": time_limit <= 0 and HudFonts.uses_pixel_font(),
 	})
@@ -142,6 +150,7 @@ static func evaluate(
 		"elapsed_sec": elapsed_sec,
 	}
 
+## Translated goal title, or English when playtest victory forces it.
 static func _goal_title(key: String, force_english: bool) -> String:
 	if force_english:
 		return HudLayout.english(key)
@@ -167,19 +176,19 @@ static func build_requirements(level: LevelData, earned_bits: int = 0) -> Dictio
 	goals.append({
 		"id": "complete",
 		"earned": (bits & BIT_COMPLETE) != 0,
-		"title": TranslationServer.translate("STAR_COMPLETE"),
+		"title": TranslationServer.translate("UI_STAR_COMPLETE"),
 		"detail": "",
 	})
 	goals.append({
 		"id": "no_hints",
 		"earned": (bits & BIT_NO_HINTS) != 0,
-		"title": TranslationServer.translate("STAR_HINTS"),
+		"title": TranslationServer.translate("UI_STAR_HINTS"),
 		"detail": "",
 	})
 	goals.append({
 		"id": "time",
 		"earned": (bits & BIT_TIME) != 0,
-		"title": TranslationServer.translate("STAR_TIME"),
+		"title": TranslationServer.translate("UI_STAR_TIME"),
 		"detail": format_time_limit_detail(time_limit),
 		"detail_bbcode": time_limit <= 0 and HudFonts.uses_pixel_font(),
 	})
@@ -206,6 +215,7 @@ static func measure_requirements_min_width(level: LevelData, earned_bits: int = 
 		max_w = maxf(max_w, _measure_star_row_min_width(g, font, font_size))
 	return max_w
 
+## Minimum width of one star row: icon + title + optional detail.
 static func _measure_star_row_min_width(goal: Dictionary, font: Font, font_size: int) -> float:
 	var title := str(goal.get("title", ""))
 	var detail := str(goal.get("detail", "")).strip_edges()
@@ -216,6 +226,7 @@ static func _measure_star_row_min_width(goal: Dictionary, font: Font, font_size:
 	var detail_gap := 16.0 if detail_w > 0.0 else 0.0
 	return icon_w + row_sep + title_w + detail_gap + detail_w + 12.0
 
+## Detail column width; infinity [img] uses the results icon size.
 static func _measure_goal_detail_width(
 	detail_text: String, font: Font, font_size: int
 ) -> float:

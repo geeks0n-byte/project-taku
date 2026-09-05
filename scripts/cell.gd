@@ -1,4 +1,5 @@
 extends TextureButton
+## One board tile: tap-to-cycle, hold-to-clear, shifter hop, and highlight overlays.
 
 # Emitted when the player taps the tile (cycles its state).
 signal cell_clicked(coord: Vector2i)
@@ -47,12 +48,16 @@ const ERROR_BORDER_COLOR := Color.RED
 const HIGHLIGHT_INSET := 4.0
 const HIGHLIGHT_BORDER_WIDTH := 4.0
 const HIGHLIGHT_FILL_ALPHA_SCALE := 0.55
+# Tile SVGs are 16×16 with a 1px empty rim, so the painted tile is 14×14.
+const TILE_ART_GRID := 16.0
+const TILE_ART_PAD := 1.0
 
 var _guide_breathe_tween: Tween
 var _focus_breathe_tween: Tween
 var _shake_tween: Tween           # Used for the blocked-move lateral shake.
 var _focus_border_alpha: float = 1.0
 var _shake_rest_position: Vector2 = Vector2.ZERO
+var _tutorial_fill: ColorRect
 
 # Tile textures — assigned in the scene editor, overridable per cell type.
 @export var tex_empty: Texture2D = preload("res://resources/tiles/tile_empty.svg")
@@ -87,23 +92,28 @@ func _notification(what: int) -> void:
 			if tw and tw.is_valid():
 				tw.kill()
 
+## Disables idle process, sizes the tile, and stretches overlay children to the cell.
 func _ready():
 	set_process(false)
 	custom_minimum_size = Vector2(120, 120)
+	clip_contents = false
 
 	_stretch_node_to_parent(error_highlight, 0.0)
 	_stretch_node_to_parent(link_highlight, 0.0)
-	link_highlight.offset_left = HIGHLIGHT_INSET
-	link_highlight.offset_top = HIGHLIGHT_INSET
-	link_highlight.offset_right = -HIGHLIGHT_INSET
-	link_highlight.offset_bottom = -HIGHLIGHT_INSET
 	_stretch_node_to_parent(tile_icon, 0.0)
+	if tile_icon:
+		tile_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tile_icon.stretch_mode = TextureRect.STRETCH_SCALE
+		tile_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		tile_icon.z_index = 3
 
 	if lock_icon:
 		_stretch_node_to_parent(lock_icon, 0.0)
+		lock_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 	if chevron_icon:
 		_stretch_node_to_parent(chevron_icon, 0.0)
+		chevron_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		chevron_icon.z_index = 4
 
 	if error_highlight:
@@ -114,19 +124,41 @@ func _ready():
 		error_highlight.add_theme_stylebox_override("panel", clear_style)
 		if not error_highlight.draw.is_connected(_draw_error_border):
 			error_highlight.draw.connect(_draw_error_border)
+		error_highlight.clip_contents = false
+		_tutorial_fill = ColorRect.new()
+		_tutorial_fill.name = "TutorialFill"
+		_tutorial_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_tutorial_fill.color = Color(
+			FOCUS_BORDER_COLOR.r, FOCUS_BORDER_COLOR.g, FOCUS_BORDER_COLOR.b,
+			FOCUS_BORDER_ALPHA_MAX * HIGHLIGHT_FILL_ALPHA_SCALE
+		)
+		_tutorial_fill.visible = false
+		_tutorial_fill.z_index = 50
+		add_child(_tutorial_fill)
+		_layout_highlight_overlays()
+		if not resized.is_connected(_layout_highlight_overlays):
+			resized.connect(_layout_highlight_overlays)
+		if tile_icon and not tile_icon.resized.is_connected(_layout_highlight_overlays):
+			tile_icon.resized.connect(_layout_highlight_overlays)
 
-	if tile_icon:
-		tile_icon.z_index = 3
-
+## Draws the red validation stroke inset 1px so unfilled rects do not overshoot.
 func _draw_error_border():
 	if error_highlight == null:
 		return
 	if validation_error_active:
+		# Same 1px down-right shift as other overlays; extra -1 on size so
+		# unfilled draw_rect does not sit 1px too far on the right/bottom.
 		error_highlight.draw_rect(
-			Rect2(Vector2.ZERO, error_highlight.size), ERROR_BORDER_COLOR, false, 10.0
+			Rect2(Vector2(1.0, 1.0), error_highlight.size - Vector2(1.0, 1.0)),
+			ERROR_BORDER_COLOR,
+			false,
+			10.0
 		)
 		return
 	if not focus_active:
+		return
+	if guide_active and focus_active:
+		# Fill is a ColorRect sized in layout, not draw_rect (avoids pixel snap).
 		return
 	var inner := _highlight_inner_rect()
 	var border_color := Color(
@@ -135,32 +167,78 @@ func _draw_error_border():
 		FOCUS_BORDER_COLOR.b,
 		_focus_border_alpha
 	)
-	if guide_active and focus_active:
-		var half_border := HIGHLIGHT_BORDER_WIDTH * 0.5
-		var fill_rect := Rect2(
-			inner.position + Vector2(half_border, half_border),
-			inner.size - Vector2(half_border * 2.0, half_border * 2.0)
-		)
-		var fill_alpha := _focus_border_alpha * HIGHLIGHT_FILL_ALPHA_SCALE
-		error_highlight.draw_rect(
-			fill_rect,
-			Color(FOCUS_BORDER_COLOR.r, FOCUS_BORDER_COLOR.g, FOCUS_BORDER_COLOR.b, fill_alpha),
-			true
-		)
-		error_highlight.draw_rect(inner, border_color, false, HIGHLIGHT_BORDER_WIDTH)
-	elif focus_active:
-		error_highlight.draw_rect(inner, border_color, false, HIGHLIGHT_BORDER_WIDTH)
+	error_highlight.draw_rect(inner, border_color, false, HIGHLIGHT_BORDER_WIDTH)
 
+## Inner rect for unfilled highlight strokes, minus 1px on the far edges.
 func _highlight_inner_rect() -> Rect2:
 	var panel_size: Vector2 = error_highlight.size
+	# Unfilled draw_rect includes both far edges, which reads 1px too wide/tall.
 	return Rect2(
 		Vector2(HIGHLIGHT_INSET, HIGHLIGHT_INSET),
-		panel_size - Vector2(HIGHLIGHT_INSET * 2.0, HIGHLIGHT_INSET * 2.0)
+		panel_size - Vector2(HIGHLIGHT_INSET * 2.0 + 1.0, HIGHLIGHT_INSET * 2.0 + 1.0)
 	)
 
+## Positions the tutorial fill overlay using the same frame as other highlights.
+func _layout_tutorial_fill() -> void:
+	_layout_highlight_overlays()
+
+## Frames tutorial fill and the visible link/guide overlay to the tile art.
+func _layout_highlight_overlays() -> void:
+	_apply_tile_art_frame(_tutorial_fill)
+	if link_highlight and link_highlight.visible:
+		_apply_tile_art_frame(link_highlight)
+
+## Authored cell pixel size used when padding highlight overlays.
+func _highlight_cell_size() -> Vector2:
+	return Vector2(GameConstants.CELL_SIZE, GameConstants.CELL_SIZE)
+
+## Insets a control to the tile-art padding so overlays sit inside the glyph.
+func _apply_tile_art_frame(node: Control) -> void:
+	if node == null:
+		return
+	var pad := _highlight_cell_size() / TILE_ART_GRID * TILE_ART_PAD
+	node.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var left := floorf(pad.x)
+	var top := floorf(pad.y)
+	var right := -ceilf(pad.x)
+	var bottom := -ceilf(pad.y)
+	if node == link_highlight or node == _tutorial_fill:
+		left += 1.0
+		top += 1.0
+		right += 1.0
+		bottom += 1.0
+	node.offset_left = left
+	node.offset_top = top
+	node.offset_right = right
+	node.offset_bottom = bottom
+
+## Stretches a control to the full cell (editor masks, no tile-art inset).
+func _apply_full_cell_frame(node: Control) -> void:
+	if node == null:
+		return
+	node.set_anchors_preset(Control.PRESET_FULL_RECT)
+	node.offset_left = 0.0
+	node.offset_top = 0.0
+	node.offset_right = 0.0
+	node.offset_bottom = 0.0
+
+## Shows or hides the tutorial fill using the current focus-border alpha.
+func _set_tutorial_fill_visible(enabled: bool) -> void:
+	if _tutorial_fill == null:
+		return
+	_layout_tutorial_fill()
+	_tutorial_fill.visible = enabled
+	if enabled:
+		_tutorial_fill.color = Color(
+			FOCUS_BORDER_COLOR.r, FOCUS_BORDER_COLOR.g, FOCUS_BORDER_COLOR.b,
+			_focus_border_alpha * HIGHLIGHT_FILL_ALPHA_SCALE
+		)
+
+## True when guide and focus are both on and there is no validation error.
 func _uses_unified_highlight() -> bool:
 	return guide_active and focus_active and not validation_error_active
 
+## Picks unified, guide, or focus breathe — never while a validation error is shown.
 func _update_highlight_breathe() -> void:
 	_stop_guide_breathe()
 	_stop_focus_breathe()
@@ -179,6 +257,7 @@ func _update_highlight_breathe() -> void:
 	elif focus_active:
 		_start_focus_breathe()
 
+## Full-rect anchors with an optional outward margin.
 func _stretch_node_to_parent(node: Control, margin: float = 0.0):
 	if node:
 		node.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -191,9 +270,12 @@ func _stretch_node_to_parent(node: Control, margin: float = 0.0):
 		node.offset_right = margin
 		node.offset_bottom = margin
 
+## Play mode only: tap cycles, hold clears, shifter hops; editor uses canvas interceptors.
 func _gui_input(event):
 	# Editor placement uses canvas interceptors / brush input — never cycle here.
 	if is_editor_mode:
+		return
+	if HudLayout.is_modal_input_blocked(get_tree()):
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
@@ -339,6 +421,7 @@ func _apply_hold_clear() -> void:
 	update_visuals()
 	cell_hold_cleared.emit(coord)
 
+## Tile art nodes that rotate/scale during hold-to-clear.
 func _hold_visual_nodes() -> Array[Control]:
 	var nodes: Array[Control] = []
 	for n in [tile_icon, lock_icon, chevron_icon, link_highlight]:
@@ -346,23 +429,28 @@ func _hold_visual_nodes() -> Array[Control]:
 			nodes.append(n)
 	return nodes
 
+## Centers hold-visual pivots so shake/shrink stays in the cell.
 func _prepare_hold_visual_pivots() -> void:
 	for n in _hold_visual_nodes():
 		n.pivot_offset = n.size * 0.5
 
+## Applies the hold-shake rotation to every hold-visual node.
 func _set_hold_visual_rotation(radians: float) -> void:
 	for n in _hold_visual_nodes():
 		n.rotation = radians
 
+## Applies the hold-shrink scale to every hold-visual node.
 func _set_hold_visual_scale(s: Vector2) -> void:
 	for n in _hold_visual_nodes():
 		n.scale = s
 
+## Restores identity scale/rotation after hold-to-clear ends.
 func _reset_hold_visual_transforms() -> void:
 	for n in _hold_visual_nodes():
 		n.scale = Vector2.ONE
 		n.rotation = 0.0
 
+## Refreshes lock, guide, shifter chevron, and tile art for the current state.
 func update_visuals():
 	if lock_icon:
 		lock_icon.visible = is_locked and state != GameConstants.TileState.WALL
@@ -373,21 +461,30 @@ func update_visuals():
 			if _guide_breathe_tween:
 				_stop_guide_breathe()
 			link_highlight.visible = false
+			_set_tutorial_fill_visible(true)
 		elif show_guide:
-			var alpha: float = (
-				float(link_highlight.color.a) if link_highlight.visible else GUIDE_ALPHA_MAX
-			)
+			_set_tutorial_fill_visible(false)
+			var alpha: float = GUIDE_ALPHA_MAX
+			if link_highlight.visible:
+				alpha = float(link_highlight.color.a)
 			link_highlight.color = Color(GUIDE_COLOR.r, GUIDE_COLOR.g, GUIDE_COLOR.b, alpha)
+			_apply_tile_art_frame(link_highlight)
 			link_highlight.visible = true
+			call_deferred("_layout_highlight_overlays")
 		elif is_linked_pair:
+			_set_tutorial_fill_visible(false)
 			if _guide_breathe_tween:
 				_stop_guide_breathe()
 			link_highlight.color = Color(0.6, 0.36, 0.9, 0.4)
+			_apply_tile_art_frame(link_highlight)
 			link_highlight.visible = true
+			call_deferred("_layout_highlight_overlays")
 		else:
 			if guide_active and _guide_breathe_tween:
 				_stop_guide_breathe()
 			link_highlight.visible = false
+			if not _uses_unified_highlight():
+				_set_tutorial_fill_visible(false)
 
 	if chevron_icon:
 		chevron_icon.offset_left = 0
@@ -403,9 +500,6 @@ func update_visuals():
 				chevron_icon.texture = tex_chevron_down
 			elif shifter_direction == Vector2i(-1, 0):
 				chevron_icon.texture = tex_chevron_left
-				var shift_amount = -3
-				chevron_icon.offset_left = shift_amount
-				chevron_icon.offset_right = shift_amount
 			elif shifter_direction == Vector2i(1, 0):
 				chevron_icon.texture = tex_chevron_right
 		else:
@@ -433,16 +527,18 @@ func update_visuals():
 			else:
 				tile_icon.texture = tex_empty
 		GameConstants.TileState.YELLOW:
-			tile_icon.texture = tex_yellow
+			tile_icon.texture = ColorBlindTiles.resolve_tile_texture(tex_yellow, state)
 		GameConstants.TileState.BLUE:
-			tile_icon.texture = tex_blue
+			tile_icon.texture = ColorBlindTiles.resolve_tile_texture(tex_blue, state)
 		GameConstants.TileState.JOKER:
-			tile_icon.texture = tex_joker
+			tile_icon.texture = ColorBlindTiles.resolve_tile_texture(tex_joker, state)
 		GameConstants.TileState.SHIFTER:
-			tile_icon.texture = tex_shifter
+			tile_icon.texture = ColorBlindTiles.resolve_tile_texture(tex_shifter, state)
 		_:
 			tile_icon.texture = null
+	ColorBlindTiles.finish_tile_icon(tile_icon)
 
+## Turns on the red validation border and pauses breathe tweens.
 func set_error_highlight():
 	validation_error_active = true
 	_stop_guide_breathe()
@@ -453,6 +549,7 @@ func set_error_highlight():
 		error_highlight.visible = true
 		error_highlight.queue_redraw()
 
+## Haptic plus a short axis shake when a shifter hop is blocked.
 func play_blocked_shake() -> void:
 	if UiSfx:
 		UiSfx.play_blocked_haptic()
@@ -473,11 +570,13 @@ func play_blocked_shake() -> void:
 		amp *= 0.65
 	_shake_tween.tween_property(self, "position", _shake_rest_position, 0.04)
 
+## Toggles the white hint overlay and restarts the matching breathe tween.
 func set_guide_highlight(enabled: bool) -> void:
 	guide_active = enabled
 	update_visuals()
 	_update_highlight_breathe()
 
+## Toggles the tutorial focus border (kept visible if a validation error is also on).
 func set_focus_highlight(enabled: bool) -> void:
 	focus_active = enabled
 	if error_highlight:
@@ -487,11 +586,17 @@ func set_focus_highlight(enabled: bool) -> void:
 	update_visuals()
 	_update_highlight_breathe()
 
+## Shows a coloured mask overlay; full-cell in the editor, tile-art inset in play.
 func set_mask_color(mask_color: Color):
 	if link_highlight:
 		link_highlight.color = mask_color
+		if is_editor_mode:
+			_apply_full_cell_frame(link_highlight)
+		else:
+			_apply_tile_art_frame(link_highlight)
 		link_highlight.visible = true
 
+## Clears the validation error; the focus border stays if still focused.
 func clear_highlight():
 	validation_error_active = false
 	if error_highlight:
@@ -500,14 +605,17 @@ func clear_highlight():
 			error_highlight.queue_redraw()
 	_update_highlight_breathe()
 
+## Combined guide+focus breathe on the error-border overlay.
 func _start_unified_breathe() -> void:
 	if error_highlight == null or not _uses_unified_highlight():
 		return
 	if state == GameConstants.TileState.WALL:
 		return
 	_focus_border_alpha = FOCUS_BORDER_ALPHA_MAX
-	error_highlight.visible = true
-	error_highlight.queue_redraw()
+	_set_tutorial_fill_visible(true)
+	if error_highlight:
+		error_highlight.visible = true
+		error_highlight.queue_redraw()
 	_focus_breathe_tween = create_tween().set_loops()
 	_focus_breathe_tween.tween_method(
 		_set_focus_border_alpha, FOCUS_BORDER_ALPHA_MAX, FOCUS_BORDER_ALPHA_MIN, 1.1
@@ -516,13 +624,16 @@ func _start_unified_breathe() -> void:
 		_set_focus_border_alpha, FOCUS_BORDER_ALPHA_MIN, FOCUS_BORDER_ALPHA_MAX, 1.1
 	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
+## Alpha-pulse the white guide overlay (skipped for unified/wall).
 func _start_guide_breathe() -> void:
 	if link_highlight == null or not guide_active or _uses_unified_highlight():
 		return
 	if state == GameConstants.TileState.WALL:
 		return
 	_stop_guide_breathe()
+	_apply_tile_art_frame(link_highlight)
 	link_highlight.visible = true
+	call_deferred("_layout_highlight_overlays")
 	link_highlight.color = Color(GUIDE_COLOR.r, GUIDE_COLOR.g, GUIDE_COLOR.b, GUIDE_ALPHA_MAX)
 	_guide_breathe_tween = create_tween().set_loops()
 	_guide_breathe_tween.tween_property(
@@ -532,6 +643,7 @@ func _start_guide_breathe() -> void:
 		link_highlight, "color:a", GUIDE_ALPHA_MAX, 1.1
 	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
+## Kills the guide tween and restores the resting guide colour.
 func _stop_guide_breathe() -> void:
 	if _guide_breathe_tween:
 		_guide_breathe_tween.kill()
@@ -539,6 +651,7 @@ func _stop_guide_breathe() -> void:
 	if link_highlight and guide_active and state != GameConstants.TileState.WALL:
 		link_highlight.color = GUIDE_COLOR
 
+## Pulses the focus-border alpha, or defers to unified breathe.
 func _start_focus_breathe() -> void:
 	if error_highlight == null or not focus_active or validation_error_active:
 		return
@@ -552,6 +665,7 @@ func _start_focus_breathe() -> void:
 	_focus_breathe_tween.tween_method(_set_focus_border_alpha, FOCUS_BORDER_ALPHA_MAX, FOCUS_BORDER_ALPHA_MIN, 1.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	_focus_breathe_tween.tween_method(_set_focus_border_alpha, FOCUS_BORDER_ALPHA_MIN, FOCUS_BORDER_ALPHA_MAX, 1.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
+## Kills the focus tween and hides tutorial fill unless unified is still on.
 func _stop_focus_breathe() -> void:
 	if _focus_breathe_tween:
 		_focus_breathe_tween.kill()
@@ -559,8 +673,16 @@ func _stop_focus_breathe() -> void:
 	_focus_border_alpha = FOCUS_BORDER_ALPHA_MAX
 	if error_highlight and focus_active:
 		error_highlight.queue_redraw()
+	if not _uses_unified_highlight():
+		_set_tutorial_fill_visible(false)
 
+## Tween target: updates fill alpha and redraws the focus/error stroke.
 func _set_focus_border_alpha(alpha: float) -> void:
 	_focus_border_alpha = alpha
+	if _tutorial_fill and _tutorial_fill.visible:
+		_tutorial_fill.color = Color(
+			FOCUS_BORDER_COLOR.r, FOCUS_BORDER_COLOR.g, FOCUS_BORDER_COLOR.b,
+			_focus_border_alpha * HIGHLIGHT_FILL_ALPHA_SCALE
+		)
 	if error_highlight and error_highlight.visible:
 		error_highlight.queue_redraw()

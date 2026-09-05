@@ -8,12 +8,17 @@ export_presets.cfg
 # Local CI Godot download cache
 .godot-ci/
 
+# Optional machine-local Godot path override
+tools/godot.local.env
+
 # Build / platform
 /build/
 /android/
 /ios/
 .mono/
 bin/
+!addons/play_review/bin/
+!addons/play_review/bin/**
 obj/
 
 # Python
@@ -53,3 +58,13 @@ desktop.ini
 
 # Local scratch / review pads (source of truth is translations.csv)
 resources/localization/english_copy_review.txt
+
+# Offline dev tooling — store graphics, Play Console packaging, one-off refactors (not shipped)
+/dev/
+/docs/
+
+# Play Games import — Godot CSV sidecars, release zips, and generated PNGs (regenerate via dev/play-store/)
+resources/play_games/achievement_import/*.translation
+resources/play_games/achievement_import/*.zip
+resources/play_games/achievement_import/*.png
+resources/play_games/achievement_icons_512/

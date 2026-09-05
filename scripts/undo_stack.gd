@@ -58,9 +58,11 @@ func _trim_undo_if_needed() -> void:
 	while _undo.size() > max_size:
 		_undo.pop_front()
 
+## True when at least one snapshot sits on the undo stack.
 func can_undo() -> bool:
 	return not _undo.is_empty()
 
+## True when at least one snapshot sits on the redo stack.
 func can_redo() -> bool:
 	return not _redo.is_empty()
 

@@ -7,7 +7,10 @@ const BGM_PATH := "res://resources/audio/bgm.mp3"
 
 var _player: AudioStreamPlayer
 
+## Builds the looping BGM player and applies the saved enabled flag once SaveManager is ready.
 func _ready() -> void:
+	if GameConstants.is_headless_run():
+		return
 	# Keep processing even when the game is paused (e.g. on pause-menu screens).
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_player = AudioStreamPlayer.new()
@@ -42,6 +45,8 @@ func _load_stream() -> void:
 # Starts or stops playback based on the player's saved BGM preference.
 # Called on startup and whenever the setting changes at runtime.
 func apply_enabled() -> void:
+	if GameConstants.is_headless_run():
+		return
 	if _player == null or _player.stream == null:
 		return
 	if SaveManager.bgm_enabled:
@@ -50,3 +55,13 @@ func apply_enabled() -> void:
 	else:
 		if _player.playing:
 			_player.stop()
+
+
+func _exit_tree() -> void:
+	if _player != null:
+		if _player.playing:
+			_player.stop()
+		_player.stream = null
+		if is_instance_valid(_player):
+			_player.queue_free()
+		_player = null

@@ -5,6 +5,7 @@ extends Control
 signal resume_pressed
 signal restart_pressed
 signal settings_pressed
+signal achievements_pressed
 signal level_select_pressed
 signal auto_win_pressed
 signal quit_pressed
@@ -16,10 +17,13 @@ const MENU_BTN_SEP := 14
 # Same font size as main menu buttons (main_menu.gd MENU_BTN_FONT).
 const MENU_BTN_FONT := 64
 const PAUSE_TITLE_FONT_SIZE := GameConstants.SCREEN_HEADER_FONT_SIZE + 2
+# Same 3s hold as the credits version label (main_menu_credits_overlay.gd).
+const _AUTO_WIN_HOLD_SEC := 3.0
 
 @onready var resume_btn: Button = $CenterContainer/VBoxContainer/ResumeButton
 @onready var restart_btn: Button = $CenterContainer/VBoxContainer/RestartButton
 @onready var settings_btn: Button = $CenterContainer/VBoxContainer/SettingsButton
+@onready var achievements_btn: Button = $CenterContainer/VBoxContainer/AchievementsButton
 @onready var level_select_btn: Button = $CenterContainer/VBoxContainer/LevelSelectButton
 @onready var auto_win_btn: Button = $CenterContainer/VBoxContainer/AutoWinButton
 @onready var quit_btn: Button = $CenterContainer/VBoxContainer/QuitButton
@@ -29,41 +33,60 @@ const PAUSE_TITLE_FONT_SIZE := GameConstants.SCREEN_HEADER_FONT_SIZE + 2
 
 # The restart button label changes depending on game mode (restart vs new layout).
 var _restart_label_key: String = "UI_NEW_LAYOUT"
+var _menu_badges := MainMenuBadges.new()
+var _auto_win_hold_active: bool = false
+var _auto_win_hold_started_msec: int = 0
 
+## Wires pause buttons and language refresh, then styles the header and rows.
 func _ready() -> void:
+	HudLayout.register_modal_blocker(self)
 	if resume_btn:
 		resume_btn.pressed.connect(_on_resume)
 	if restart_btn:
 		restart_btn.pressed.connect(_on_restart)
 	if settings_btn:
 		settings_btn.pressed.connect(_on_settings)
+	if achievements_btn:
+		achievements_btn.pressed.connect(_on_achievements)
 	if level_select_btn:
 		level_select_btn.pressed.connect(_on_level_select)
 	if auto_win_btn:
-		auto_win_btn.pressed.connect(_on_auto_win)
+		auto_win_btn.gui_input.connect(_on_auto_win_input)
 	if quit_btn:
 		quit_btn.pressed.connect(_on_quit)
 	if SaveManager and not SaveManager.language_changed.is_connected(_on_language_changed):
 		SaveManager.language_changed.connect(_on_language_changed)
+	_menu_badges.setup($CenterContainer, achievements_btn, level_select_btn)
+	_menu_badges.setup_panels()
+	_menu_badges.bind_resize_hooks()
+	if AchievementManager and not AchievementManager.unseen_count_changed.is_connected(_refresh_notification_badges):
+		AchievementManager.unseen_count_changed.connect(_refresh_notification_badges)
+	if SaveManager and not SaveManager.unseen_levels_changed.is_connected(_refresh_notification_badges):
+		SaveManager.unseen_levels_changed.connect(_refresh_notification_badges)
+	_refresh_notification_badges()
 	# Deferred so SaveManager's tree-walk font pass finishes first —
 	# our overrides must be applied last to win.
 	call_deferred("_style_header")
 	call_deferred("_fit_menu_buttons")
+	set_process(false)
 
+## Applies the shared screen-header style to the PAUSED header.
 func _style_header() -> void:
 	if not title_label:
 		return
 	title_label.set_meta("_screen_header_font_size", PAUSE_TITLE_FONT_SIZE)
-	HudLayout._bind_header_translation_key(title_label, "PAUSED")
+	HudLayout._bind_header_translation_key(title_label, "UI_PAUSED")
 	HudLayout.apply_screen_header_style(title_label)
 
+## Pause buttons that are currently shown (debug auto-win may be hidden).
 func _visible_menu_buttons() -> Array[Button]:
 	var buttons: Array[Button] = []
-	for btn in [resume_btn, restart_btn, level_select_btn, settings_btn, quit_btn, auto_win_btn]:
+	for btn in [resume_btn, restart_btn, level_select_btn, achievements_btn, settings_btn, quit_btn, auto_win_btn]:
 		if btn and btn.visible:
 			buttons.append(btn)
 	return buttons
 
+## Row height that fits the visible buttons into the host, clamped to min/max.
 func _menu_row_height() -> float:
 	var buttons := _visible_menu_buttons()
 	var count := buttons.size()
@@ -78,25 +101,56 @@ func _menu_row_height() -> float:
 		return MENU_BTN_ROW_H
 	return maxf(MENU_BTN_ROW_H_MIN, floor(row_h))
 
+## Safe-area, captions, and per-button tile styling for the current locale.
 func _fit_menu_buttons() -> void:
+	HudLayout.apply_content_edge_safe_area(_btn_host)
 	if _btn_vbox:
 		_btn_vbox.add_theme_constant_override("separation", MENU_BTN_SEP)
 	if restart_btn:
 		restart_btn.text = _restart_label_key
 		restart_btn.set_meta("_tr_key", _restart_label_key)
+	if resume_btn:
+		resume_btn.set_meta("_tr_key", "UI_RESUME")
+	if settings_btn:
+		settings_btn.set_meta("_tr_key", "UI_OPTIONS")
 	if quit_btn:
 		quit_btn.text = "UI_MAIN_MENU"
 		quit_btn.set_meta("_tr_key", "UI_MAIN_MENU")
-	var row_h := _menu_row_height()
-	for btn in [resume_btn, restart_btn, level_select_btn, settings_btn, quit_btn]:
-		_apply_pause_button(btn, row_h)
-	_style_auto_win_button(row_h)
+	if achievements_btn:
+		achievements_btn.text = "UI_ACHIEVEMENTS"
+		achievements_btn.set_meta("_tr_key", "UI_ACHIEVEMENTS")
+	if level_select_btn:
+		level_select_btn.set_meta("_tr_key", "UI_LEVEL_SELECT")
 	if title_label:
 		title_label.set_meta("_screen_header_font_size", PAUSE_TITLE_FONT_SIZE)
-		HudLayout._bind_header_translation_key(title_label, "PAUSED")
+		HudLayout._bind_header_translation_key(title_label, "UI_PAUSED")
 		HudLayout.apply_screen_header_style(title_label)
+		var title_top := SafeInsets.padded_top(GameConstants.SCREEN_HEADER_TOP)
+		title_label.offset_top = title_top
+		title_label.offset_bottom = title_top + GameConstants.SCREEN_HEADER_HEIGHT
+	var row_h := _menu_row_height()
+	for btn in [resume_btn, restart_btn, level_select_btn, achievements_btn, settings_btn, quit_btn]:
+		_apply_pause_button(btn, row_h)
+	_style_auto_win_button(row_h)
+	_apply_a11y_labels()
+	_refresh_notification_badges()
+	_menu_badges.layout.call_deferred()
 
-# Keeps Auto Win in the same pause-menu slot, but fully invisible while still clickable.
+
+func refresh_notification_badges(count: int = -1) -> void:
+	_refresh_notification_badges(count)
+
+
+## Refit rows and badge positions after the menu becomes visible (layout is stale while hidden).
+func on_shown() -> void:
+	call_deferred("_fit_menu_buttons")
+
+
+func _refresh_notification_badges(_count: int = -1) -> void:
+	_menu_badges.refresh_achievements(_count)
+	_menu_badges.refresh_levels(_count)
+
+# Keeps Auto Win in the same pause-menu slot, fully invisible; fires after a 3s hold.
 func _style_auto_win_button(row_h: float = MENU_BTN_ROW_H) -> void:
 	if not auto_win_btn or not auto_win_btn.visible:
 		return
@@ -117,6 +171,7 @@ func _style_auto_win_button(row_h: float = MENU_BTN_ROW_H) -> void:
 	auto_win_btn.mouse_filter = Control.MOUSE_FILTER_STOP
 	auto_win_btn.mouse_default_cursor_shape = Control.CURSOR_ARROW
 
+## Flat tile-caption styling for one pause row (no leftover pause icons).
 func _apply_pause_button(button: Button, row_h: float = MENU_BTN_ROW_H) -> void:
 	if not button or not button.visible:
 		return
@@ -151,45 +206,107 @@ func _apply_pause_button(button: Button, row_h: float = MENU_BTN_ROW_H) -> void:
 		button.add_theme_font_size_override("font_size", HudLayout.body_font_size(MENU_BTN_FONT))
 		HudLayout.apply_safe_outline(button, GameConstants.MENU_TEXT_OUTLINE)
 
+## Removes a leftover PauseIcon child if a button still has one.
 func _clear_pause_icon(button: Button) -> void:
 	var host := button.get_node_or_null("PauseIcon") as TextureRect
 	if host:
 		host.queue_free()
 
+## Swaps Restart vs New Layout copy and restyles that row.
 func set_restart_label_key(key: String) -> void:
 	_restart_label_key = key if not key.is_empty() else "UI_NEW_LAYOUT"
 	if restart_btn:
 		restart_btn.text = _restart_label_key
 		restart_btn.set_meta("_tr_key", _restart_label_key)
 		_apply_pause_button(restart_btn, _menu_row_height())
+		_bind_a11y_button(restart_btn)
 
+
+func _apply_a11y_labels() -> void:
+	if title_label:
+		title_label.accessibility_name = tr("UI_PAUSED")
+	for btn in [resume_btn, restart_btn, level_select_btn, achievements_btn, settings_btn, quit_btn]:
+		_bind_a11y_button(btn)
+
+
+func _bind_a11y_button(btn: Button) -> void:
+	if btn == null or not btn.visible:
+		return
+	A11yLabels.bind_button_meta(btn)
+
+## Refits rows and reapplies locale fonts after a language change.
 func _on_language_changed() -> void:
 	_fit_menu_buttons()
+	_apply_a11y_labels()
 	HudLayout.apply_locale_fonts_to_tree(self)
 
+## Shows or hides Auto-Win, then refits the remaining rows.
 func set_debug_tools_visible(visible_state: bool) -> void:
 	if auto_win_btn:
 		auto_win_btn.visible = visible_state
+	if not visible_state:
+		_stop_auto_win_hold()
 	_fit_menu_buttons()
 
+## Refits button rows when this control is resized or shown.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		call_deferred("_fit_menu_buttons")
+	elif what == NOTIFICATION_VISIBILITY_CHANGED:
+		if visible:
+			call_deferred("_fit_menu_buttons")
+		else:
+			_stop_auto_win_hold()
 
+## Forwards Resume to the game scene.
 func _on_resume() -> void:
 	resume_pressed.emit()
 
+## Forwards Restart / New Layout to the game scene.
 func _on_restart() -> void:
 	restart_pressed.emit()
 
+## Forwards Settings to the game scene.
 func _on_settings() -> void:
 	settings_pressed.emit()
 
+## Forwards Achievements to the game scene.
+func _on_achievements() -> void:
+	achievements_pressed.emit()
+
+## Forwards Level Select to the game scene.
 func _on_level_select() -> void:
 	level_select_pressed.emit()
 
+func _on_auto_win_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_auto_win_hold_active = true
+			_auto_win_hold_started_msec = Time.get_ticks_msec()
+			set_process(true)
+		else:
+			_stop_auto_win_hold()
+
+
+func _process(_delta: float) -> void:
+	if not _auto_win_hold_active:
+		set_process(false)
+		return
+	if Time.get_ticks_msec() - _auto_win_hold_started_msec >= int(_AUTO_WIN_HOLD_SEC * 1000.0):
+		_stop_auto_win_hold()
+		_on_auto_win()
+
+
+func _stop_auto_win_hold() -> void:
+	_auto_win_hold_active = false
+	_auto_win_hold_started_msec = 0
+	set_process(false)
+
+
+## Forwards debug Auto-Win to the game scene.
 func _on_auto_win() -> void:
 	auto_win_pressed.emit()
 
+## Forwards Main Menu / quit to the game scene.
 func _on_quit() -> void:
 	quit_pressed.emit()

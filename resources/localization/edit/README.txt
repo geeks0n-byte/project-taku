@@ -5,11 +5,11 @@ These .txt files contain every English string from the game (360 keys).
 
 HOW TO EDIT
 -----------
-1. Open the file for the section you want to change (or 00_all_english.txt for everything).
+1. Open the file for the section you want to change.
 2. Find the [KEY_NAME] block.
 3. Change the text lines below it (not the [KEY] line itself).
 4. Save the file.
-5. Ask to update translations.csv from your edits (or run: python tools/sync_english_text.py import).
+5. Send the edited file(s) back and ask to update translations.csv.
 
 FORMAT
 ------
@@ -37,12 +37,6 @@ FILES
 NOTES
 -----
 - %s, %d, %d/%d are placeholders — keep them in the same order/count.
-- Some strings use BBCode ([b], [img], [color], etc.) — leave tags intact.
+- Some strings use BBCode ([b], [img], etc.) — leave tags intact.
 - Tutorial/HTP strings may include %s where tile icons are inserted.
 - Editor strings (10_editor.txt) are mostly English-only in the editor UI.
-
-SYNC COMMANDS
--------------
-Export from CSV:  python tools/sync_english_text.py export
-Import to CSV:    python tools/sync_english_text.py import
-Import one file:  python tools/sync_english_text.py import 01_tutorial.txt

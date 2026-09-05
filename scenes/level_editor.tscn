@@ -11,6 +11,8 @@
 [ext_resource type="Texture2D" uid="uid://2oyf1pe6n184" path="res://resources/tiles/tile_shifter.svg" id="8_2rodj"]
 [ext_resource type="FontFile" uid="uid://ckwxng7tlmws7" path="res://resources/fonts/PressStart2P-vaV7.ttf" id="font_ps2p"]
 [ext_resource type="Script" uid="uid://8ei7vk8jguhe" path="res://scripts/playtest_ui_manager.gd" id="pt_ui_mgr"]
+[ext_resource type="Script" uid="uid://h7c7u0ps5a3a" path="res://scripts/editor_playtest_controller.gd" id="playtest_ctrl"]
+[ext_resource type="PackedScene" path="res://scenes/loading_overlay.tscn" id="loading_overlay"]
 [ext_resource type="Texture2D" uid="uid://b6rkjjf7g5to4" path="res://resources/icons/icon_ad.svg" id="tex_ad"]
 [ext_resource type="Texture2D" uid="uid://d2ql5f4tsvnk8" path="res://resources/buttons/button_tile_gray_dark.svg" id="tex_btn_bg"]
 [ext_resource type="Texture2D" uid="uid://c0nty0okk7axl" path="res://resources/icons/icon_clear.svg" id="tex_clear"]
@@ -88,13 +90,23 @@ script = ExtResource("1_5u7ie")
 [node name="EditorUIManager" type="Node2D" parent="." unique_id=2105132823]
 script = ExtResource("3_eovuc")
 
+[node name="HoldTimer" type="Timer" parent="EditorUIManager" unique_id=1847392016]
+one_shot = true
+
 [node name="PlaytestUIManager" type="Node2D" parent="." unique_id=379590268]
 script = ExtResource("pt_ui_mgr")
+
+[node name="EditorPlaytestController" type="Node" parent="." unique_id=2105132900]
+script = ExtResource("playtest_ctrl")
+
+[node name="PlaytestTimer" type="Timer" parent="EditorPlaytestController" unique_id=2105132901]
+wait_time = 1.0
+
+[node name="LoadingOverlay" parent="." unique_id=742747990 instance=ExtResource("loading_overlay")]
 
 [node name="EditorUI" type="CanvasLayer" parent="." unique_id=495483212]
 
 [node name="EditorBackground" type="ColorRect" parent="EditorUI" unique_id=1493736825]
-layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -284,8 +296,8 @@ theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
-toggle_mode = true
 disabled = true
+toggle_mode = true
 
 [node name="IconContainer" type="MarginContainer" parent="EditorUI/TopHUD/TopBarRow/RightButtons/EditorHintButton" unique_id=1318201818]
 layout_mode = 1
@@ -959,12 +971,13 @@ alignment = 1
 [node name="TimeTitleLabel" type="Label" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/TimeSelector" unique_id=297670096]
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
+mouse_filter = 0
 tooltip_text = "Star time: beat this to earn the time star. Infinity = no time star."
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 28
-text = "TIME:"
+text = "UI_STAR_TIME"
 vertical_alignment = 1
 
 [node name="TimeMinus" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer/TimeSelector" unique_id=594708071]
@@ -1027,8 +1040,7 @@ theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 toggle_mode = true
 button_pressed = true
-text = "LOCK
-WALLS"
+text = "UI_LOCK_WALLS"
 
 [node name="UniqueSolutionToggle" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer" unique_id=214377135]
 custom_minimum_size = Vector2(140, 100)
@@ -1042,8 +1054,7 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 toggle_mode = true
-text = "UNIQUE
-SOLVE"
+text = "UI_UNIQUE_SOLVE"
 
 [node name="DifficultyButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/GeneratorOptionsContainer" unique_id=214377136]
 custom_minimum_size = Vector2(140, 100)
@@ -1301,7 +1312,7 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 28
-text = "ALLOWED:"
+text = "UI_ALLOW"
 vertical_alignment = 1
 
 [node name="AllowYellow" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/LevelSettingsContainer" unique_id=1103068957]
@@ -1425,7 +1436,7 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 28
-text = "SAVE"
+text = "UI_SAVE"
 vertical_alignment = 1
 
 [node name="LoadButton" type="Button" parent="EditorUI/ControlPanel/ScrollContainer/VBox/ConfigContainer" unique_id=679332885]
@@ -1462,7 +1473,7 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 28
-text = "LOAD"
+text = "UI_LOAD"
 vertical_alignment = 1
 
 [node name="Spacer" type="Control" parent="EditorUI/ControlPanel/ScrollContainer/VBox/ConfigContainer" unique_id=300197724]
@@ -1582,12 +1593,13 @@ alignment = 1
 [node name="WarningLabel" type="Label" parent="EditorUI/OverwriteBlocker/CenterContainer/Panel/VBoxContainer" unique_id=1238171214]
 layout_mode = 2
 size_flags_vertical = 3
+custom_minimum_size = Vector2(568, 0)
 theme_override_colors/font_color = Color(1, 0.45, 0.45, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 0
 theme_override_fonts/font = ExtResource("font_ps2p")
 theme_override_font_sizes/font_size = 24
-text = "LEVEL_EXISTS_OVERWRITE"
+text = "UI_LEVEL_EXISTS_OVERWRITE"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
@@ -1620,75 +1632,6 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
 text = "UI_NO"
-
-[node name="PlaytestVictoryPanel" type="Panel" parent="EditorUI" unique_id=788465914]
-visible = false
-z_index = 4096
-custom_minimum_size = Vector2(600, 400)
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -300.0
-offset_top = -200.0
-offset_right = 300.0
-offset_bottom = 200.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
-
-[node name="VictoryMessageLabel" type="Label" parent="EditorUI/PlaytestVictoryPanel" unique_id=1752832302]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_top = 30.0
-offset_bottom = 180.0
-grow_horizontal = 2
-theme_override_colors/font_color = Color(0.4, 1, 0.4, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 22
-text = "LEVEL IS SOLVABLE!"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="ReturnButton" type="Button" parent="EditorUI/PlaytestVictoryPanel" unique_id=716750123]
-custom_minimum_size = Vector2(350, 100)
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -175.0
-offset_top = -280.0
-offset_right = 175.0
-offset_bottom = -170.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
-theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
-theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
-
-[node name="HBoxContainer" type="HBoxContainer" parent="EditorUI/PlaytestVictoryPanel/ReturnButton" unique_id=28468704]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-alignment = 1
-
-[node name="Label" type="Label" parent="EditorUI/PlaytestVictoryPanel/ReturnButton/HBoxContainer" unique_id=666475911]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 24
-text = "RETURN"
 
 [node name="HowToPlayLayer" type="CanvasLayer" parent="." unique_id=604745175]
 layer = 6
@@ -1939,4 +1882,4 @@ theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_pressed")
 theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
 theme_override_styles/disabled = SubResource("StyleBoxTexture_disabled")
-text = "RETURN"
+text = "UI_RETURN"

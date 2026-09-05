@@ -4,4 +4,158 @@
 # Blank line ends a string block. Use a single blank line inside text if needed.
 # Files in this folder are for editing only; the game reads translations.csv.
 
-# Section: Misc strings
+# Section: Miscellaneous
+
+[ACH_UNLOCKED]
+UNLOCKED
+
+[ACH_LOCKED]
+LOCKED
+
+[ACH_HIDDEN_NAME]
+???
+
+[ACH_FIRST_CLEAR_NAME]
+FIRST CLEAR
+
+[ACH_FIRST_CLEAR_DESC]
+Clear your first campaign puzzle
+
+[ACH_FIRST_HARD_NAME]
+HARD START
+
+[ACH_FIRST_HARD_DESC]
+Clear a hard campaign puzzle
+
+[ACH_NO_HINT_CLEAR_NAME]
+NO SPOILERS
+
+[ACH_NO_HINT_CLEAR_DESC]
+Clear unique campaign puzzles without hints
+
+[ACH_EASY_SET_NAME]
+EASY DOES IT
+
+[ACH_EASY_SET_DESC]
+Clear every easy campaign puzzle
+
+[ACH_MEDIUM_SET_NAME]
+MIDDLE MAN
+
+[ACH_MEDIUM_SET_DESC]
+Clear every medium campaign puzzle
+
+[ACH_HARD_SET_NAME]
+HARD KNOCKS
+
+[ACH_HARD_SET_DESC]
+Clear every hard campaign puzzle
+
+[ACH_HINT_SAVER_NAME]
+NO SPOILERS
+
+[ACH_HINT_SAVER_DESC]
+Clear unique campaign puzzles without hints
+
+[ACH_CLEARS_BRONZE_NAME]
+ONE MORE LEVEL
+
+[ACH_CLEARS_BRONZE_DESC]
+Clear unique campaign puzzles
+
+[ACH_CLEARS_SILVER_NAME]
+ONE MORE LEVEL
+
+[ACH_CLEARS_SILVER_DESC]
+Clear unique campaign puzzles
+
+[ACH_CLEARS_GOLD_NAME]
+ONE MORE LEVEL
+
+[ACH_CLEARS_GOLD_DESC]
+Clear unique campaign puzzles
+
+[ACH_NO_HINT_GOLD_NAME]
+NO SPOILERS
+
+[ACH_NO_HINT_GOLD_DESC]
+Clear unique campaign puzzles without hints
+
+[ACH_ON_TIME_BRONZE_NAME]
+TICK TOCK
+
+[ACH_ON_TIME_BRONZE_DESC]
+Clear unique campaign puzzles in time
+
+[ACH_ON_TIME_SILVER_NAME]
+TICK TOCK
+
+[ACH_ON_TIME_SILVER_DESC]
+Clear unique campaign puzzles in time
+
+[ACH_ON_TIME_GOLD_NAME]
+TICK TOCK
+
+[ACH_ON_TIME_GOLD_DESC]
+Clear unique campaign puzzles in time
+
+[ACH_THREE_STAR_DEBUT_NAME]
+THREE STAR DEBUT
+
+[ACH_THREE_STAR_DEBUT_DESC]
+Earn all three stars on a campaign puzzle
+
+[ACH_UNDO_NOTHING_NAME]
+UNDO NOTHING
+
+[ACH_UNDO_NOTHING_DESC]
+Clear a hard campaign puzzle without using undo
+
+[ACH_AD_FRIEND_NAME]
+AD FRIEND
+
+[ACH_AD_FRIEND_DESC]
+Watch a rewarded ad for hints
+
+[ACH_IM_BLUE_NAME]
+I'M BLUE
+
+[ACH_IM_BLUE_DESC]
+Fill every empty cell with blue
+
+[ACH_SHALL_NOT_PASS_NAME]
+YOU SHALL NOT PASS
+
+[ACH_SHALL_NOT_PASS_DESC]
+Try to hop a shifter that cannot move
+
+[ACH_RULES_READER_NAME]
+RULES READER
+
+[ACH_RULES_READER_DESC]
+Open the rules on ten different levels
+
+[ACH_PURPLE_RAIN_NAME]
+PURPLE RAIN
+
+[ACH_PURPLE_RAIN_DESC]
+Make 30 shifter slides
+
+[ACH_YELLOW_SUBMARINE_NAME]
+YELLOW SUBMARINE
+
+[ACH_YELLOW_SUBMARINE_DESC]
+Fill every empty cell with yellow
+
+[ACH_PAUSE_THINKER_NAME]
+PAUSE THINKER
+
+[ACH_PAUSE_THINKER_DESC]
+Pause for three minutes in one run and still win
+
+[ACH_DEV_MODE_NAME]
+HELLO, DEVELOPER
+
+[ACH_DEV_MODE_DESC]
+Unlock dev mode from the credits screen
+

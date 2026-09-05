@@ -1,5 +1,6 @@
 class_name GameConstants
 extends RefCounted
+## Shared enums, HUD sizes, asset paths, and tile-class helpers used across scenes.
 
 enum TileState {
 	WALL = -2,
@@ -19,6 +20,98 @@ enum BrushTool {
 # Update this if the URL ever changes — it's referenced in consent_popup.gd.
 const PRIVACY_POLICY_URL := "https://geeks0n-byte.github.io/project-taku/privacy-policy.html"
 
+## Deep space void (#00123a) — boot splash, Android window background, parallax base.
+const BOOT_VOID_COLOR := Color(0, 0.0705882, 0.227451, 1)
+## Logical boot-splash icon texel width (export splash uses splash_app_icon_432.png).
+const BOOT_SPLASH_ICON_TEX_PX := 256
+## Android 12 splash icon slot with a separate windowSplashScreenBackground (no icon bg layer).
+const ANDROID_SPLASH_ICON_DP := 288.0
+## In-game tile SVG viewBox is 16 units; visible art insets 1 unit on each side.
+const BOOT_TILE_VIEWBOX_UNITS := 16.0
+const BOOT_TILE_DRAWABLE_UNITS := 14.0
+const BOOT_ICON_LOGICAL_PX := 64
+const BOOT_TILE_DST := 16
+const BOOT_TILE_GAP := 3
+const BOOT_TILE_HALO := 1
+const BOOT_TILE_STRIDE := BOOT_TILE_DST - 2 * BOOT_TILE_HALO + BOOT_TILE_GAP
+const BOOT_TILE_MARGIN := (BOOT_ICON_LOGICAL_PX - (BOOT_TILE_STRIDE + BOOT_TILE_DST)) >> 1
+## Typical phone logical width (dp) used when DisplayServer DPI is unavailable.
+const ANDROID_PHONE_WIDTH_DP := 411.0
+
+## UI density scale (px per dp). Android matches the OS splash (dpi/160).
+## Headless/desktop use viewport width — DisplayServer DPI is often bogus (96).
+static func android_ui_density(viewport_width_px: float = 0.0) -> float:
+	var viewport_density := 0.0
+	if viewport_width_px > 0.0:
+		viewport_density = viewport_width_px / ANDROID_PHONE_WIDTH_DP
+	var dpi_density := 0.0
+	var dpi := float(DisplayServer.screen_get_dpi())
+	if dpi > 0.0:
+		dpi_density = dpi / 160.0
+	if is_headless_run():
+		if viewport_density > 0.0:
+			return viewport_density
+		return 1080.0 / ANDROID_PHONE_WIDTH_DP
+	if OS.get_name() == "Android" and dpi_density > 0.0:
+		return dpi_density
+	if viewport_density > 0.0:
+		return viewport_density
+	if dpi_density > 0.0:
+		return dpi_density
+	return 1080.0 / ANDROID_PHONE_WIDTH_DP
+
+
+## On-screen side length of the centered Android splash icon (px).
+static func android_splash_icon_side_px(viewport_size: Vector2) -> float:
+	return ANDROID_SPLASH_ICON_DP * android_ui_density(viewport_size.x)
+
+
+## Boot-intro tile size on a reference phone width (scatter velocity scaling).
+static func boot_splash_ref_tile_px(viewport_width_px: float = 1080.0) -> float:
+	var side := android_splash_icon_side_px(Vector2(viewport_width_px, 1920.0))
+	return 16.0 * side / float(BOOT_ICON_LOGICAL_PX)
+
+
+## Sprite scale so an imported tile SVG matches one splash-icon tile on screen.
+## Each icon cell is tile_px wide (16 logical); opaque art is 14 logical (1px halo).
+static func boot_splash_tile_sprite_scale(tile_px: float, texture_width_px: float) -> float:
+	return tile_px / maxf(1.0, texture_width_px)
+
+
+## Visible on-screen width/height of one boot splash tile (excludes 1px halo per side).
+static func boot_splash_tile_visible_px(tile_px: float) -> float:
+	return tile_px * (BOOT_TILE_DRAWABLE_UNITS / BOOT_TILE_VIEWBOX_UNITS)
+
+
+## Tile centers for the four app-icon tiles matching the Android splash icon slot.
+static func boot_splash_icon_layout(view_rect: Rect2) -> Dictionary:
+	var viewport_size := view_rect.size
+	var view_origin := view_rect.position
+	var side := android_splash_icon_side_px(viewport_size)
+	var icon_scale := side / float(BOOT_ICON_LOGICAL_PX)
+	var tile_px := float(BOOT_TILE_DST) * icon_scale
+	var origin := view_origin + (viewport_size - Vector2.ONE * side) * 0.5
+	var centers: Array[Vector2] = []
+	var icon_origins: Array[Vector2i] = [
+		Vector2i(BOOT_TILE_MARGIN, BOOT_TILE_MARGIN),
+		Vector2i(BOOT_TILE_MARGIN + BOOT_TILE_STRIDE, BOOT_TILE_MARGIN),
+		Vector2i(BOOT_TILE_MARGIN, BOOT_TILE_MARGIN + BOOT_TILE_STRIDE),
+		Vector2i(BOOT_TILE_MARGIN + BOOT_TILE_STRIDE, BOOT_TILE_MARGIN + BOOT_TILE_STRIDE),
+	]
+	for icon_origin in icon_origins:
+		var tile_origin := Vector2(icon_origin) * icon_scale
+		centers.append(origin + tile_origin + Vector2.ONE * tile_px * 0.5)
+	var cluster_center := Vector2.ZERO
+	for center in centers:
+		cluster_center += center
+	cluster_center /= float(maxi(centers.size(), 1))
+	return {
+		"side_px": side,
+		"tile_px": tile_px,
+		"centers": centers,
+		"cluster_center": cluster_center,
+	}
+
 const CELL_SIZE := 120
 const TOP_HUD_BOTTOM := 236.0
 const BOARD_GAP := 40.0
@@ -29,6 +122,25 @@ const HINT_LIMIT_MEDIUM := 3
 const HINT_LIMIT_HARD := 5
 const HINT_LIMIT_UNLIMITED := -1
 const HINTS_FROM_REWARDED_AD := 3
+## Wall-clock budget for procedural board generation inside the loading overlay.
+const GENERATOR_WALL_CLOCK_SEC := 8.0
+
+## In-app review prompt policy (Google Play).
+const REVIEW_MIN_UNIQUE_CLEARS := 5
+const REVIEW_MIN_EARNED_STARS := 2
+const REVIEW_MAX_PROMPTS := 3
+const REVIEW_MIN_DAYS_BETWEEN := 90
+const REVIEW_MIN_SESSION_SEC := 300.0
+
+# Interstitial cadence (session-only; see AdsManager).
+# First interstitial waits for both a min win count and a min session age so
+# short hop-in sessions are not ad-dense. After the first shown ad, every_n
+# still grows by 1; short sessions also keep an extra gap until they age out.
+const INTERSTITIAL_START_EVERY_N := 3
+const INTERSTITIAL_MIN_WINS_BEFORE_FIRST := 4
+const INTERSTITIAL_MIN_SESSION_SEC := 90.0
+const INTERSTITIAL_SHORT_SESSION_SEC := 180.0
+const INTERSTITIAL_SHORT_SESSION_EXTRA_GAP := 1
 
 const HUD_BUTTON_WIDTH := 140
 const HUD_BUTTON_HEIGHT := 140
@@ -75,6 +187,8 @@ const SCREEN_CONTENT_GAP := 36.0
 const SCREEN_HEADER_COLOR := Color(1.0, 0.84, 0.0, 1.0)
 
 const AD_BANNER_RESERVE := 140.0
+## Distance from the physical screen bottom (above home indicator) to the bottom edge of PREV/NEXT rows.
+const SCREEN_PAGE_NAV_BOTTOM_INSET := 120.0
 const SCREEN_BOTTOM_NAV_TOP := -260.0 - AD_BANNER_RESERVE
 const SCREEN_BOTTOM_NAV_BOTTOM := -160.0 - AD_BANNER_RESERVE
 const SCREEN_NAV_GAP := 28.0
@@ -98,10 +212,11 @@ const UI_DIALOG_RAISE_PX := 160.0
 # Milder lift for the victory screen so the layout stays readable.
 const UI_VICTORY_RAISE_PX := 100.0
 
-const UI_BTN_NAV_SIZE := Vector2(108, 114)
+const UI_BTN_NAV_SIZE := Vector2(124, 130)
+const UI_BTN_NAV_GAP := 56.0
 const UI_BTN_NAV_FONT := 22
 const UI_BTN_NAV_FONT_MIN := 12
-const UI_BTN_NAV_ICON_PX := 56.0
+const UI_BTN_NAV_ICON_PX := 64.0
 
 const UI_BTN_PANEL_SIZE := Vector2(460, 100)
 const UI_BTN_PANEL_FONT := 24
@@ -146,15 +261,19 @@ const CAMPAIGN_MEDIUM_DIR := "res://levels/medium/"
 const CAMPAIGN_HARD_DIR := "res://levels/hard/"
 const DEV_LEVELS_DIR := "user://levels/"
 
+## True for yellow/blue — the two colours that must stay balanced.
 static func is_basic_tile(state: int) -> bool:
 	return state == TileState.YELLOW or state == TileState.BLUE
 
+## True for any tile the solver may place (colours, joker, shifter).
 static func is_solvable_tile(state: int) -> bool:
 	return state in [TileState.YELLOW, TileState.BLUE, TileState.JOKER, TileState.SHIFTER]
 
+## True for tiles the hint system may reveal (same set as solvable).
 static func is_hintable_tile(state: int) -> bool:
 	return is_solvable_tile(state)
 
+## Starting hint quota for a generated puzzle; hard gets more, easy gets fewer.
 static func hint_limit_for_difficulty(difficulty: int) -> int:
 	match difficulty:
 		PuzzleGenerator.Difficulty.EASY:
@@ -163,3 +282,35 @@ static func hint_limit_for_difficulty(difficulty: int) -> int:
 			return HINT_LIMIT_HARD
 		_:
 			return HINT_LIMIT_MEDIUM
+
+
+## True when running without a display (CI, `godot --headless -s`, export pipelines).
+## `OS.has_feature("headless")` is not set for `--headless` CLI launches.
+static func is_headless_run() -> bool:
+	if OS.has_feature("headless"):
+		return true
+	if DisplayServer.get_name().to_lower() == "headless":
+		return true
+	var args := OS.get_cmdline_args()
+	for i in range(args.size()):
+		var arg: String = args[i]
+		if arg == "--headless":
+			return true
+		if arg == "--display-driver" and i + 1 < args.size() and args[i + 1] == "headless":
+			return true
+		if arg.begins_with("--display-driver=") and arg.get_slice("=", 1) == "headless":
+			return true
+	return false
+
+
+## True during `dev/scripts/capture/capture_store_trailer.gd` (`SPACEBLOX_TRAILER_CAPTURE=1`).
+static func is_trailer_capture() -> bool:
+	return OS.get_environment("SPACEBLOX_TRAILER_CAPTURE") == "1"
+
+
+## True while store phone-shot / trailer capture scripts are driving the game.
+static func is_store_asset_capture() -> bool:
+	return (
+		is_trailer_capture()
+		or OS.get_environment("SPACEBLOX_STORE_SHOTS") == "1"
+	)

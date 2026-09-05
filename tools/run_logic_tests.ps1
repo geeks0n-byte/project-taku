@@ -1,9 +1,15 @@
-# Runs headless puzzle logic tests with the local Godot 4.7.2 install.
+# Runs headless puzzle logic tests.
+# Godot path: GODOT_EXE, PATH, .godot-ci cache, or -AllowDownload / GODOT_ALLOW_DOWNLOAD=1.
 param(
-	[string]$GodotExe = "C:\Users\Giga\Desktop\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64.exe"
+	[string]$GodotExe = "",
+	[switch]$AllowDownload
 )
 
 $ErrorActionPreference = "Stop"
+. "$PSScriptRoot\resolve_godot.ps1"
+
+$resolved = Resolve-GodotExecutable -ExplicitPath $GodotExe -AllowDownload:$AllowDownload
 $root = Split-Path -Parent $PSScriptRoot
-& $GodotExe --headless --path $root -s "res://tests/run_logic_tests.gd"
+
+& $resolved --headless --path $root -s "res://tests/run_logic_tests.gd"
 exit $LASTEXITCODE

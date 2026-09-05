@@ -8,6 +8,7 @@ extends RefCounted
 const ICON_SIZE := 44
 const LOCK_ICON_SIZE := 56
 
+## Basename of a level path without extension (e.g. levels/tutorials/level_00.tres → level_00).
 static func script_id_from_path(path: String) -> String:
 	var p := path.strip_edges()
 	if p.is_empty():
@@ -17,17 +18,19 @@ static func script_id_from_path(path: String) -> String:
 		return ""
 	return base.get_basename()
 
+## True when steps_for returns a non-empty sequence for this id.
 static func has_script(script_id: String) -> bool:
 	return not steps_for(script_id).is_empty()
 
+## Ordered TutorialDirector steps for a script id; unknown ids return [].
 static func steps_for(script_id: String) -> Array:
 	match script_id:
-		"level_1":
-			return _level_1()
+		"level_00":
+			return _level_00()
 		_:
 			return []
 
-## Returns the tutorial level when its script is not yet complete, otherwise level_1 for replay.
+## Returns the tutorial level when its script is not yet complete, otherwise level_00 for replay.
 static func first_incomplete_level() -> LevelData:
 	var paths := LevelUtils.scan_directory(GameConstants.CAMPAIGN_TUTORIALS_DIR)
 	LevelUtils.sort_level_paths(paths)
@@ -45,6 +48,7 @@ static func first_incomplete_level() -> LevelData:
 			return resource
 	return fallback
 
+## [img] tag for a tutorial token; lock uses a cropped region, others square.
 static func icon_bbcode(token: String, size: int = -1) -> String:
 	var path := _icon_path(token)
 	if path.is_empty():
@@ -56,9 +60,11 @@ static func icon_bbcode(token: String, size: int = -1) -> String:
 		return "[img height=%d region=36,36,56,64]%s[/img]" % [icon_size, path]
 	return "[img=%dx%d]%s[/img]" % [icon_size, icon_size, path]
 
+## Texture path for a tutorial icon token, or empty when unknown.
 static func _icon_path(token: String) -> String:
 	match token:
 		"lock":  return GameConstants.TILE_LOCK
+		"empty":  return GameConstants.TILE_EMPTY
 		"yellow": return GameConstants.TILE_YELLOW
 		"blue":   return GameConstants.TILE_BLUE
 		"green":  return GameConstants.TILE_GREEN
@@ -68,12 +74,14 @@ static func _icon_path(token: String) -> String:
 		"hint":   return GameConstants.ICON_HINT_ON
 		"undo":   return "res://resources/icons/icon_undo.svg"
 		"redo":   return "res://resources/icons/icon_redo.svg"
+		"pause":  return "res://resources/icons/icon_pause.svg"
+		"random": return "res://resources/icons/icon_random.svg"
 		"star":   return "res://resources/icons/icon_star_on.svg"
 		_:        return ""
 
 # One continuous tutorial: the board rebuilds between phases while the player stays
 # in the same level. Phases — basics → Green → Purple → links → hold/stars/tools → solve.
-static func _level_1() -> Array:
+static func _level_00() -> Array:
 	var y := GameConstants.TileState.YELLOW
 	var b := GameConstants.TileState.BLUE
 	var g := GameConstants.TileState.JOKER
@@ -81,12 +89,18 @@ static func _level_1() -> Array:
 
 	var yb := ["yellow", "blue"]
 
-	# --- Phase 1: starter 4×4 (matches levels/tutorials/level_1.tres) ---
+	# --- Phase 1: starter 4×4 (matches levels/tutorials/level_00.tres) ---
 	var locked_p1 := [
 		Vector2i(0, 0), Vector2i(3, 0),
 		Vector2i(1, 1), Vector2i(2, 1),
 		Vector2i(0, 2), Vector2i(3, 2),
 		Vector2i(1, 3), Vector2i(2, 3),
+	]
+	var empty_p1 := [
+		Vector2i(1, 0), Vector2i(2, 0),
+		Vector2i(0, 1), Vector2i(3, 1),
+		Vector2i(1, 2), Vector2i(2, 2),
+		Vector2i(0, 3), Vector2i(3, 3),
 	]
 	var rule_row_p1 := [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)]
 	var bal_row_p1 := [Vector2i(0, 3), Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3)]
@@ -141,8 +155,10 @@ static func _level_1() -> Array:
 		{
 			"type": "message",
 			"text_key": "TUT1_WELCOME",
-			"icons": yb,
+			"icons": ["empty", "yellow", "blue"],
 			"show_next": true,
+			"mask": empty_p1.duplicate(),
+			"red": empty_p1.duplicate(),
 		},
 		{
 			"type": "message",
@@ -398,9 +414,45 @@ static func _level_1() -> Array:
 			"show_next": true,
 		},
 		{
-			"type": "message",
-			"text_key": "TUT_UI_OVERVIEW",
-			"icons": ["reset", "rules", "hint", "undo", "redo"],
+			"type": "hud_button",
+			"button": "pause",
+			"text_key": "TUT6_PAUSE",
+			"icons": ["pause"],
+			"show_next": true,
+		},
+		{
+			"type": "hud_button",
+			"button": "reset",
+			"text_key": "TUT6_RESET",
+			"icons": ["reset"],
+			"show_next": true,
+		},
+		{
+			"type": "hud_button",
+			"button": "how_to_play",
+			"text_key": "TUT6_RULES",
+			"icons": ["rules"],
+			"show_next": true,
+		},
+		{
+			"type": "hud_button",
+			"button": "hint",
+			"text_key": "TUT6_HINT",
+			"icons": ["hint"],
+			"show_next": true,
+		},
+		{
+			"type": "hud_button",
+			"button": "undo",
+			"text_key": "TUT6_UNDO",
+			"icons": ["undo"],
+			"show_next": true,
+		},
+		{
+			"type": "hud_button",
+			"button": "redo",
+			"text_key": "TUT6_REDO",
+			"icons": ["redo"],
 			"show_next": true,
 		},
 		{

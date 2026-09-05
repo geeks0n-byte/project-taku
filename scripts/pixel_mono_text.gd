@@ -7,6 +7,7 @@ var font_size: int = 64
 var font_color: Color = Color.WHITE
 var font: Font
 
+## Ignores mouse hits and listens for ancestor transforms so the glyph stays centered.
 func _ready() -> void:
 	# This node is purely decorative; it should never block pointer events.
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -22,12 +23,37 @@ func set_mono_text(p_text: String, p_font: Font, p_size: int, p_color: Color = C
 	font_color = p_color
 	queue_redraw()
 
+## Redraws when this control is resized (transform changes also notify).
 func _notification(what: int) -> void:
 	# Also fires for NOTIFICATION_TRANSFORM_CHANGED (enabled via set_notify_transform)
 	# so the label redraws when an ancestor moves or scales it.
 	if what == NOTIFICATION_RESIZED:
 		queue_redraw()
 
+## Local X of the last glyph's trailing edge (centered mono text).
+## Uses the same get_string_size() path as _draw() — do not query TextServer
+## glyph indexes (Font.get_rid() can be null for this pixel font).
+## Pass [param host_width] when the control's own width is not laid out yet.
+func text_trailing_local_x(host_width: float = -1.0) -> float:
+	var host_w := host_width if host_width > 1.0 else size.x
+	if font == null or text.is_empty() or font_size <= 0 or host_w <= 0.0:
+		return host_w * 0.5
+	return ink_trailing_x_for_centered_text(text, font, font_size, host_w)
+
+
+## Shared helper for centered Press Start / mono labels.
+static func ink_trailing_x_for_centered_text(
+	p_text: String, p_font: Font, p_font_size: int, host_w: float
+) -> float:
+	if p_text.is_empty() or p_font == null or p_font_size <= 0 or host_w <= 0.0:
+		return host_w * 0.5
+	var block_w := p_font.get_string_size(
+		p_text, HORIZONTAL_ALIGNMENT_LEFT, -1, p_font_size
+	).x
+	return (host_w + block_w) * 0.5
+
+
+## Centers the string with natural glyph advances rather than a fixed cell width.
 func _draw() -> void:
 	if font == null or text.is_empty() or font_size <= 0:
 		return

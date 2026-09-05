@@ -118,6 +118,7 @@ static func draw_grid(
 		if draw_left:
 			_draw_grid_v_edge(canvas, pos_tl.x, pos_tl.y, pos_bl.y, line_width, line_color)
 
+## Filled horizontal grid stroke, extended by half-width so corners meet.
 static func _draw_grid_h_edge(
 	canvas: CanvasItem, x0: float, x1: float, y: float, width: float, color: Color
 ) -> void:
@@ -126,6 +127,7 @@ static func _draw_grid_h_edge(
 	var right := maxf(x0, x1) + half
 	canvas.draw_rect(Rect2(left, y - half, right - left, width), color, true)
 
+## Filled vertical grid stroke, extended by half-width so corners meet.
 static func _draw_grid_v_edge(
 	canvas: CanvasItem, x: float, y0: float, y1: float, width: float, color: Color
 ) -> void:
