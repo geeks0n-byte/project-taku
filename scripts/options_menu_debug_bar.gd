@@ -90,10 +90,10 @@ func style_buttons() -> void:
 		if _apply_tile_styles.is_valid():
 			_apply_tile_styles.call(btn)
 		HudLayout._clear_pixel_raster(btn)
-		btn.remove_meta("_tr_key")
+		btn.set_meta("_tr_key", String(entry[2]))
 		btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		btn.text = ""
-		btn.tooltip_text = tr(String(entry[2]))
+		btn.tooltip_text = ""
 		btn.custom_minimum_size = Vector2(DEBUG_BTN_SIZE, DEBUG_BTN_SIZE)
 		_apply_debug_icon(btn, entry[1] as Texture2D)
 	layout()

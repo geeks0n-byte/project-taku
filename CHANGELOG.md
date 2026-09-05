@@ -24,6 +24,7 @@ Play Store release after live **1.0.0**.
 - Tutorial and how-to-play HUD layout; achievement cell descriptions no longer clip descenders
 - Level-select NEW badges and card margins
 - Secret pause auto-win requires a 3-second hold (same as the credits version hold); does not push to Play Games
+- Options debug buttons no longer show a hover tooltip
 
 ### Fixed
 - Cloud sync dismiss when Play Games pull/merge finishes
